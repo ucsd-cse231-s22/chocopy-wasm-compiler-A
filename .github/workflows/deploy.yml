@@ -14,6 +14,7 @@ jobs:
       - name: Build
         run: |
           npm install
+          make
           npm run build-web
           
       - name: Deploy
