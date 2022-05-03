@@ -28,4 +28,5 @@ jobs:
       - name: Run and test
         run: |
           npm install
+          make
           npm test
