@@ -40,6 +40,12 @@ type Type =
 | { tag: "callable", params: Array<Type>, ret: Type }
 ```
 
+## Representation of Callables
+We will create an entry in the table with the methods, and represent the
+lambda in memory with the index of the function in the table. When we call 
+a lambda, we simply call indirect with the index. As for captured variables,
+we will store these as fields by reference in the class.
+
 ## Test Cases
 
 ### 1. Z-combinator
