@@ -299,6 +299,32 @@ export type Value<A> =
 
   > The above program must print `1`
 
+  - **Linked list example**
+  ```
+  class List(object):
+    def sum(self : List) -> int:
+      return 1 // 0 
+
+  class Empty(List):
+    def sum(self : Empty) -> int:
+      return 0
+
+  class Link(List):
+    val : int = 0
+    next : List = None
+    def sum(self : Link) -> int:
+      return self.val + self.next.sum()
+    def new(self : Link, val : int, next : List) -> Link:
+      self.val = val
+      self.next = next
+      return self
+
+  l : List = None
+  l = Link().new(5, Link().new(13, Empty()))
+  print(l.sum())
+  ```
+  > The above program must print `18`
+
   <br/>
 
 </details>
