@@ -7,3 +7,4 @@ cli
 mochawesome-report
 *lock*
 .DS_Store
+.vscode/*
