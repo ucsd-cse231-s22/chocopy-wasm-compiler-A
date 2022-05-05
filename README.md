@@ -173,6 +173,130 @@ export type Value<A> =
 
 <details>
 
+  <summary> Inheritance test cases </summary>
+  <br/>
+
+  - **Extending a class** - overriding methods
+  ```
+  class List(object):
+    def sum(self : List) -> int:
+      return 1 // 0 
+
+  class Empty(List):
+    def sum(self : Empty) -> int:
+      return 0
+
+  l : List = None
+  l = Empty()
+  print(l.sum())
+  ```
+  > The above program must print `0`
+
+  - **Overriding fields**
+  ```
+  class Animal(object):
+    legs: int = 0
+
+  class Human(Animal):
+    pass
+
+  human : Animal = None
+  human = Human()
+  print(human.legs)
+  ```
+  > The above program must print `0`
+
+  - **Overriding methods** - overriding constructor
+  ```
+  class Animal(object):
+    legs: int = 0
+
+  class Human(Animal):
+    def __init__(self: Human):
+      self.legs = 2
+
+  human : Animal = None
+  human = Human()
+  print(human.legs)
+  ```
+  > The above program must print `2`
+
+  - **Overriding fields**
+  ```
+  class Animal(object):
+    legs: int = 0
+
+  class Human(Animal):
+    legs: int = 2
+  ```
+  > The above program must throw a `TYPE ERROR` because overriding a field is not allowed in ChocoPy
+
+  - **Overriding fields** - accessing inherited and private field
+  ```
+  class Animal(object):
+    brain: int = 1
+    legs: int = 0
+
+  class Human(Animal):
+    hands: int = 2
+    def __init__(self: Human):
+      self.legs = 2
+    
+  human: Animal = None
+  human = Human()
+  print(human.brain)
+  print(human.hands)
+  ```
+  > The above program must print `1\n2`
+
+  - **Accessing parent's method**
+  ```
+  class Animal(object):
+    brain: int = 1
+    legs: int = 0
+
+    def getLegs(self: Animal) -> int:
+      return self.legs
+
+  class Human(Animal):
+    hands: int = 2
+    def __init__(self: Human):
+      self.legs = 2
+    
+  human: Animal = None
+  human = Human()
+  print(human.getLegs())
+  ```
+
+  > The above program must print `2`
+
+  - **Accessing overridden method**
+  ```
+  class Animal(object):
+    brain: int = 1
+    legs: int = 0
+
+    def getLegs(self: Animal) -> int:
+      return self.legs
+    
+    def walk(self: Animal) -> int:
+      return 1 // 0
+
+  class Human(Animal):
+    hands: int = 2
+    def __init__(self: Human):
+      self.legs = 2
+    
+    def walk(self: Human) -> int:
+      return 1
+    
+  human: Animal = None
+  human = Human()
+  print(human.walk())
+  ```
+
+  > The above program must print `1`
+
   <summary> List Test Cases </summary>
 
   <br/>
