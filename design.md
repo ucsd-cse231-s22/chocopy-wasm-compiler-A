@@ -14,7 +14,7 @@
 - [Expected Behaviours and Scenarios](#expected-behaviours-and-scenarios)
 - [Proposed Changes to ast.ts](#proposed-changes-to-ast)
 - [Proposed Changes to ir.ts](#proposed-changes-to-ir)
-- [Test Cases](#test-cases)
+- [Milestone Test Cases](#test-cases)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 ***
@@ -23,6 +23,13 @@
 ## **Introduction**
 
 This document outlines the behaviours, scenarios and test cases that we intend to build as part of the compiler, during the course of the project for CSE231 - Advanced Compiler Design (Spring 22).
+
+## **Plan for Next Week**
+
+We are planning to implement two features this week:
+
+1. Inheritance
+1. Lists
 
 <br/>
 
@@ -33,19 +40,14 @@ This document outlines the behaviours, scenarios and test cases that we intend t
 ## **Expected Behaviours and Scenarios**
 
 - [ ] Inheritance
-
-- [ ] Nested Functions
-
+  - [ ] Extending any defined class
+  - [ ] Method override
+  - [ ] Virtual table implementation
+  
 - [ ] Lists
   - [ ] Declarations and Assignments
   - [ ] Subscripting and Lookup
   - [ ] Concatenation and Printing
-
-- [ ] Strings
-  - [ ] Declarations and Assignments
-  - [ ] Subscripting and Lookup
-  - [ ] Concatenation and Printing
-
 
 <br/>
 
@@ -67,7 +69,16 @@ export type Parameter<A> =
 export type Program<A> = 
   ....
 
-export type ClassDef<A> =
+export type ClassDef<A> = {
+  a?: A,
+  name: string,
+  superClass: string,
+  methods: FunDef<A>[], // all the methods defined in the class
+  fields: VarInit<A>[], // all the fields (including inherited ones)
+  fieldToIndex: Map<string, number>, // field to index mapping (created this to have a O(1) lookup. could have used `fields` too)
+  methodToVtableIndex: Map<string, number>, // map with key as all the methods (including inherited ones) to their relative index within the class
+  vTablePointer: number, // reference to the vtable entries of this class' methods
+};
   ....
 
 export type VarInit<A> =
@@ -106,7 +117,12 @@ export type Program<A> =
 { .... }
 
 export type Class<A> = 
-{ .... }
+{
+  ....
+  methodToVtableIndex: Map<string, number>,
+  vTablePointer: number,
+  ....
+ }
 
 export type VarInit<A> = 
 { .... }
@@ -121,6 +137,14 @@ export type Stmt<A> =
   ....
 
 export type Expr<A> =
+  ...
+  | {
+      a?: A,
+      tag: "call-indirect",
+      name: string,
+      arguments: Array<Value<A>>,
+      vtableAddress: Value<A> // reference to the vtable index of the method
+    } 
   ....
 
 export type Value<A> = 
@@ -137,94 +161,241 @@ export type Value<A> =
 
 ## **Test Cases**
 
-- **List Declaration and Assignment** - of primitive Data Type
-```
-myList : [[int]] = None
-myList = [[1, 2], [3, 4], [5], [6, 7, 8, 9]]
+<details>
 
-print(myList[3][3])
-```
-> The above program must compile successfully, and print `9`
+  <summary> Inheritance test cases </summary>
+  <br/>
 
-<br/>
+  - **Extending a class** - overriding methods
+  ```
+  class List(object):
+    def sum(self : List) -> int:
+      return 1 // 0 
 
-- **List Declaration and Assignment** - of unknown Data Type
-```
-myList : [[cls]] = None
-myList = [[1, 2], [3, 4], [5], [6, 7, 8, 9]]
+  class Empty(List):
+    def sum(self : Empty) -> int:
+      return 0
 
-print(myList[3][3])
-```
-> The above program must return a `TYPE ERROR`
+  l : List = None
+  l = Empty()
+  print(l.sum())
+  ```
+  > The above program must print `0`
 
-<br/>
+  <br/>
 
-- **List Declaration and Assignment** - of incompatible Data Type
-```
-myList : [bool] = None
-myList = [True, False, True, 1]
+  - **Overriding fields**
+  ```
+  class Animal(object):
+    legs: int = 0
 
-print(myList[0])
-```
-> The above program must return a `TYPE ERROR`
+  class Human(Animal):
+    pass
 
-<br/>
+  human : Animal = None
+  human = Human()
+  print(human.legs)
+  ```
+  > The above program must print `0`
 
-- **List Subscripting** - valid index
-```
-myList : [int] = None
-myList = [99, 88, 77, 66, 55]
+  <br/>
 
-print(myList[2])
-```
-> The above program must compile successfully, and print `77`
+  - **Overriding methods** - overriding constructor
+  ```
+  class Animal(object):
+    legs: int = 0
 
-<br/>
+  class Human(Animal):
+    def __init__(self: Human):
+      self.legs = 2
 
-- **List Subscripting** - index out of bounds
-```
-myList : [int] = None
-myList = [99, 88, 77, 66, 55]
+  human : Animal = None
+  human = Human()
+  print(human.legs)
+  ```
+  > The above program must print `2`
 
-print(myList[20])
-```
-> The above program must return a `RUNTIME ERROR`
+  <br/>
 
-<br/>
+  - **Overriding fields**
+  ```
+  class Animal(object):
+    legs: int = 0
 
-- **List Concatenation** - compatible list types
-```
-myList1 : [int] = None
-myList2 : [int] = None
-myList3 : [int] = None
+  class Human(Animal):
+    legs: int = 2
+  ```
+  > The above program must throw a `TYPE ERROR` because overriding a field is not allowed in ChocoPy
 
-myList1 = [1, 2, 3]
-myList2 = [4, 5, 6]
-myList3 = myList1 + myList2
+  <br/>
 
-print(myList1[3])
-```
-> The above program must compile successfully, and print `4`
+  - **Overriding fields** - accessing inherited and private field
+  ```
+  class Animal(object):
+    brain: int = 1
+    legs: int = 0
 
-<br/>
+  class Human(Animal):
+    hands: int = 2
+    def __init__(self: Human):
+      self.legs = 2
+    
+  human: Animal = None
+  human = Human()
+  print(human.brain)
+  print(human.hands)
+  ```
+  > The above program must print `1\n2`
 
-- **List Concatenation** - incompatible list types
-```
-myList1 : [int] = None
-myList2 : [bool] = None
-myList3 : [int] = None
+  <br/>
 
-myList1 = [1, 2, 3]
-myList2 = [True, False, True]
-myList3 = myList1 + myList2
+  - **Accessing parent's method**
+  ```
+  class Animal(object):
+    brain: int = 1
+    legs: int = 0
 
-print(myList1[3])
-```
-> The above program must return a `TYPE ERROR`
+    def getLegs(self: Animal) -> int:
+      return self.legs
 
-<br/>
+  class Human(Animal):
+    hands: int = 2
+    def __init__(self: Human):
+      self.legs = 2
+    
+  human: Animal = None
+  human = Human()
+  print(human.getLegs())
+  ```
 
+  > The above program must print `2`
 
+  <br/>
+
+  - **Accessing overridden method**
+  ```
+  class Animal(object):
+    brain: int = 1
+    legs: int = 0
+
+    def getLegs(self: Animal) -> int:
+      return self.legs
+    
+    def walk(self: Animal) -> int:
+      return 1 // 0
+
+  class Human(Animal):
+    hands: int = 2
+    def __init__(self: Human):
+      self.legs = 2
+    
+    def walk(self: Human) -> int:
+      return 1
+    
+  human: Animal = None
+  human = Human()
+  print(human.walk())
+  ```
+
+  > The above program must print `1`
+
+  <br/>
+
+</details>
+
+<details>
+  <summary> List Test Cases </summary>
+
+  <br/>
+
+  - **List Declaration and Assignment** - of primitive Data Type
+  ```
+  myList : [[int]] = None
+  myList = [[1, 2], [3, 4], [5], [6, 7, 8, 9]]
+
+  print(myList[3][3])
+  ```
+  > The above program must compile successfully, and print `9`
+
+  <br/>
+
+  - **List Declaration and Assignment** - of unknown Data Type
+  ```
+  myList : [[cls]] = None
+  myList = [[1, 2], [3, 4], [5], [6, 7, 8, 9]]
+
+  print(myList[3][3])
+  ```
+  > The above program must return a `TYPE ERROR`
+
+  <br/>
+
+  - **List Declaration and Assignment** - of incompatible Data Type
+  ```
+  myList : [bool] = None
+  myList = [True, False, True, 1]
+
+  print(myList[0])
+  ```
+  > The above program must return a `TYPE ERROR`
+
+  <br/>
+
+  - **List Subscripting** - valid index
+  ```
+  myList : [int] = None
+  myList = [99, 88, 77, 66, 55]
+
+  print(myList[2])
+  ```
+  > The above program must compile successfully, and print `77`
+
+  <br/>
+
+  - **List Subscripting** - index out of bounds
+  ```
+  myList : [int] = None
+  myList = [99, 88, 77, 66, 55]
+
+  print(myList[20])
+  ```
+  > The above program must return a `RUNTIME ERROR`
+
+  <br/>
+
+  - **List Concatenation** - compatible list types
+  ```
+  myList1 : [int] = None
+  myList2 : [int] = None
+  myList3 : [int] = None
+
+  myList1 = [1, 2, 3]
+  myList2 = [4, 5, 6]
+  myList3 = myList1 + myList2
+
+  print(myList1[3])
+  ```
+  > The above program must compile successfully, and print `4`
+
+  <br/>
+
+  - **List Concatenation** - incompatible list types
+  ```
+  myList1 : [int] = None
+  myList2 : [bool] = None
+  myList3 : [int] = None
+
+  myList1 = [1, 2, 3]
+  myList2 = [True, False, True]
+  myList3 = myList1 + myList2
+
+  print(myList1[3])
+  ```
+  > The above program must return a `TYPE ERROR`
+
+  <br/>
+
+</details>
 
 <br/>
 

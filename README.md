@@ -24,10 +24,12 @@
 
 This document outlines the behaviours, scenarios and test cases that we intend to build as part of the compiler, during the course of the project for CSE231 - Advanced Compiler Design (Spring 22).
 
-## Plan for next week
+## **Plan for Next Week**
+
 We are planning to implement two features this week:
-1. Lists
+
 1. Inheritance
+1. Lists
 
 <br/>
 
@@ -41,23 +43,11 @@ We are planning to implement two features this week:
   - [ ] Extending any defined class
   - [ ] Method override
   - [ ] Virtual table implementation
-  <!-- - [ ] Re-arrangement of inherited fields in a subclass to have consistent indices
-  - [ ] Re-arrangement of methods in subclasses to match indices with that of the superclass(es)
-  - [ ] Declaring all the method types using `(type)` in the compiler
-  - [ ] Defining classes' functions in the vtable using `(elem)` in the compiler
-  - [ ] Storing vtable references at index 0 in the object representation
-  - [ ] Calling methods using `call_indirect` in the compiler -->
-
+  
 - [ ] Lists
   - [ ] Declarations and Assignments
   - [ ] Subscripting and Lookup
   - [ ] Concatenation and Printing
-
-- [ ] Strings
-  - [ ] Declarations and Assignments
-  - [ ] Subscripting and Lookup
-  - [ ] Concatenation and Printing
-
 
 <br/>
 
@@ -192,6 +182,8 @@ export type Value<A> =
   ```
   > The above program must print `0`
 
+  <br/>
+
   - **Overriding fields**
   ```
   class Animal(object):
@@ -205,6 +197,8 @@ export type Value<A> =
   print(human.legs)
   ```
   > The above program must print `0`
+
+  <br/>
 
   - **Overriding methods** - overriding constructor
   ```
@@ -221,6 +215,8 @@ export type Value<A> =
   ```
   > The above program must print `2`
 
+  <br/>
+
   - **Overriding fields**
   ```
   class Animal(object):
@@ -230,6 +226,8 @@ export type Value<A> =
     legs: int = 2
   ```
   > The above program must throw a `TYPE ERROR` because overriding a field is not allowed in ChocoPy
+
+  <br/>
 
   - **Overriding fields** - accessing inherited and private field
   ```
@@ -248,6 +246,8 @@ export type Value<A> =
   print(human.hands)
   ```
   > The above program must print `1\n2`
+
+  <br/>
 
   - **Accessing parent's method**
   ```
@@ -269,6 +269,8 @@ export type Value<A> =
   ```
 
   > The above program must print `2`
+
+  <br/>
 
   - **Accessing overridden method**
   ```
@@ -296,6 +298,8 @@ export type Value<A> =
   ```
 
   > The above program must print `1`
+
+  <br/>
 
 </details>
 
@@ -392,28 +396,6 @@ export type Value<A> =
   <br/>
 
 </details>
-
-<!-- Collapsible Subsection -->
-
-<details>
-
-  <summary> Subsection </summary>
-
-  <br/>
-
-  <!-- Test Cases Template -->
-
-  - **Title** - Description
-  ```
-  python code
-  ```
-  > Expected `Output`
-
-  <br/>
-
-</details>
-
-<br/>
 
 <br/>
 
