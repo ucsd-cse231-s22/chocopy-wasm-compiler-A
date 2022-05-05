@@ -38,12 +38,15 @@ We are planning to implement two features this week:
 ## **Expected Behaviours and Scenarios**
 
 - [ ] Inheritance
-  - [ ] Re-arrangement of inherited fields in a subclass to have consistent indices
+  - [ ] Extending any defined class
+  - [ ] Method override
+  - [ ] Virtual table implementation
+  <!-- - [ ] Re-arrangement of inherited fields in a subclass to have consistent indices
   - [ ] Re-arrangement of methods in subclasses to match indices with that of the superclass(es)
   - [ ] Declaring all the method types using `(type)` in the compiler
   - [ ] Defining classes' functions in the vtable using `(elem)` in the compiler
   - [ ] Storing vtable references at index 0 in the object representation
-  - [ ] Calling methods using `call_indirect` in the compiler
+  - [ ] Calling methods using `call_indirect` in the compiler -->
 
 - [ ] Lists
   - [ ] Declarations and Assignments
@@ -76,7 +79,16 @@ export type Parameter<A> =
 export type Program<A> = 
   ....
 
-export type ClassDef<A> =
+export type ClassDef<A> = {
+  a?: A,
+  name: string,
+  superClass: string,
+  methods: FunDef<A>[], // all the methods defined in the class
+  fields: VarInit<A>[],
+  fieldToIndex: Map<string, number>,
+  methodToVtableIndex: Map<string, number>,
+  vTablePointer: number,
+};
   ....
 
 export type VarInit<A> =
