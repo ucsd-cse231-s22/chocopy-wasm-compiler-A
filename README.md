@@ -158,94 +158,122 @@ export type Value<A> =
 
 ## **Test Cases**
 
-- **List Declaration and Assignment** - of primitive Data Type
-```
-myList : [[int]] = None
-myList = [[1, 2], [3, 4], [5], [6, 7, 8, 9]]
+<details>
 
-print(myList[3][3])
-```
-> The above program must compile successfully, and print `9`
+  <summary> List Test Cases </summary>
+
+  <br/>
+
+  - **List Declaration and Assignment** - of primitive Data Type
+  ```
+  myList : [[int]] = None
+  myList = [[1, 2], [3, 4], [5], [6, 7, 8, 9]]
+
+  print(myList[3][3])
+  ```
+  > The above program must compile successfully, and print `9`
+
+  <br/>
+
+  - **List Declaration and Assignment** - of unknown Data Type
+  ```
+  myList : [[cls]] = None
+  myList = [[1, 2], [3, 4], [5], [6, 7, 8, 9]]
+
+  print(myList[3][3])
+  ```
+  > The above program must return a `TYPE ERROR`
+
+  <br/>
+
+  - **List Declaration and Assignment** - of incompatible Data Type
+  ```
+  myList : [bool] = None
+  myList = [True, False, True, 1]
+
+  print(myList[0])
+  ```
+  > The above program must return a `TYPE ERROR`
+
+  <br/>
+
+  - **List Subscripting** - valid index
+  ```
+  myList : [int] = None
+  myList = [99, 88, 77, 66, 55]
+
+  print(myList[2])
+  ```
+  > The above program must compile successfully, and print `77`
+
+  <br/>
+
+  - **List Subscripting** - index out of bounds
+  ```
+  myList : [int] = None
+  myList = [99, 88, 77, 66, 55]
+
+  print(myList[20])
+  ```
+  > The above program must return a `RUNTIME ERROR`
+
+  <br/>
+
+  - **List Concatenation** - compatible list types
+  ```
+  myList1 : [int] = None
+  myList2 : [int] = None
+  myList3 : [int] = None
+
+  myList1 = [1, 2, 3]
+  myList2 = [4, 5, 6]
+  myList3 = myList1 + myList2
+
+  print(myList1[3])
+  ```
+  > The above program must compile successfully, and print `4`
+
+  <br/>
+
+  - **List Concatenation** - incompatible list types
+  ```
+  myList1 : [int] = None
+  myList2 : [bool] = None
+  myList3 : [int] = None
+
+  myList1 = [1, 2, 3]
+  myList2 = [True, False, True]
+  myList3 = myList1 + myList2
+
+  print(myList1[3])
+  ```
+  > The above program must return a `TYPE ERROR`
+
+  <br/>
+
+</details>
+
+<!-- Collapsible Subsection -->
+
+<details>
+
+  <summary> Subsection </summary>
+
+  <br/>
+
+  <!-- Test Cases Template -->
+
+  - **Title** - Description
+  ```
+  python code
+  ```
+  > Expected `Output`
+
+  <br/>
+
+</details>
 
 <br/>
-
-- **List Declaration and Assignment** - of unknown Data Type
-```
-myList : [[cls]] = None
-myList = [[1, 2], [3, 4], [5], [6, 7, 8, 9]]
-
-print(myList[3][3])
-```
-> The above program must return a `TYPE ERROR`
-
-<br/>
-
-- **List Declaration and Assignment** - of incompatible Data Type
-```
-myList : [bool] = None
-myList = [True, False, True, 1]
-
-print(myList[0])
-```
-> The above program must return a `TYPE ERROR`
-
-<br/>
-
-- **List Subscripting** - valid index
-```
-myList : [int] = None
-myList = [99, 88, 77, 66, 55]
-
-print(myList[2])
-```
-> The above program must compile successfully, and print `77`
-
-<br/>
-
-- **List Subscripting** - index out of bounds
-```
-myList : [int] = None
-myList = [99, 88, 77, 66, 55]
-
-print(myList[20])
-```
-> The above program must return a `RUNTIME ERROR`
-
-<br/>
-
-- **List Concatenation** - compatible list types
-```
-myList1 : [int] = None
-myList2 : [int] = None
-myList3 : [int] = None
-
-myList1 = [1, 2, 3]
-myList2 = [4, 5, 6]
-myList3 = myList1 + myList2
-
-print(myList1[3])
-```
-> The above program must compile successfully, and print `4`
-
-<br/>
-
-- **List Concatenation** - incompatible list types
-```
-myList1 : [int] = None
-myList2 : [bool] = None
-myList3 : [int] = None
-
-myList1 = [1, 2, 3]
-myList2 = [True, False, True]
-myList3 = myList1 + myList2
-
-print(myList1[3])
-```
-> The above program must return a `TYPE ERROR`
-
-<br/>
-
-
 
 <br/>
 
