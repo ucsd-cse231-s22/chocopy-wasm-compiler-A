@@ -84,10 +84,10 @@ export type ClassDef<A> = {
   name: string,
   superClass: string,
   methods: FunDef<A>[], // all the methods defined in the class
-  fields: VarInit<A>[],
-  fieldToIndex: Map<string, number>,
-  methodToVtableIndex: Map<string, number>,
-  vTablePointer: number,
+  fields: VarInit<A>[], // all the fields (including inherited ones)
+  fieldToIndex: Map<string, number>, // field to index mapping (created this to have a O(1) lookup. could have used `fields` too)
+  methodToVtableIndex: Map<string, number>, // map with key as all the methods (including inherited ones) to their relative index within the class
+  vTablePointer: number, // reference to the vtable entries of this class' methods
 };
   ....
 
@@ -127,7 +127,12 @@ export type Program<A> =
 { .... }
 
 export type Class<A> = 
-{ .... }
+{
+  ....
+  methodToVtableIndex: Map<string, number>,
+  vTablePointer: number,
+  ....
+ }
 
 export type VarInit<A> = 
 { .... }
@@ -142,6 +147,14 @@ export type Stmt<A> =
   ....
 
 export type Expr<A> =
+  ...
+  | {
+      a?: A,
+      tag: "call-indirect",
+      name: string,
+      arguments: Array<Value<A>>,
+      vtableAddress: Value<A> // reference to the vtable index of the method
+    } 
   ....
 
 export type Value<A> = 
