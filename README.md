@@ -297,6 +297,9 @@ export type Value<A> =
 
   > The above program must print `1`
 
+</details>
+
+<details>
   <summary> List Test Cases </summary>
 
   <br/>
