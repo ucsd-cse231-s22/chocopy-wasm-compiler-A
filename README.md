@@ -24,6 +24,11 @@
 
 This document outlines the behaviours, scenarios and test cases that we intend to build as part of the compiler, during the course of the project for CSE231 - Advanced Compiler Design (Spring 22).
 
+## Plan for next week
+We are planning to implement two features this week:
+1. Lists
+1. Inheritance
+
 <br/>
 
 ***
@@ -33,8 +38,12 @@ This document outlines the behaviours, scenarios and test cases that we intend t
 ## **Expected Behaviours and Scenarios**
 
 - [ ] Inheritance
-
-- [ ] Nested Functions
+  - [ ] Re-arrangement of inherited fields in a subclass to have consistent indices
+  - [ ] Re-arrangement of methods in subclasses to match indices with that of the superclass(es)
+  - [ ] Declaring all the method types using `(type)` in the compiler
+  - [ ] Defining classes' functions in the vtable using `(elem)` in the compiler
+  - [ ] Storing vtable references at index 0 in the object representation
+  - [ ] Calling methods using `call_indirect` in the compiler
 
 - [ ] Lists
   - [ ] Declarations and Assignments
