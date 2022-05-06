@@ -1,5 +1,6 @@
 Test cases
 ===
+
 ### Inheritance+Polymorphism
 ```python=
 class Number(object):
