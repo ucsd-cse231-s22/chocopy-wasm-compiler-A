@@ -85,7 +85,7 @@ class C(object):
 a = [[0,1,2], [1,2,3]]
 b = [[C(), C()]]
 print(a[0][1])
-print(b[0][1])
+print(b[0][1].x)
 ```
 
 > We expect the list object type to be of type Type so we can support nested lists and classes.
@@ -93,14 +93,30 @@ print(b[0][1])
 9.
 
 ```
-
+Insert elements to lists
+a: [int] = None
+a = []
+a.insert(0, 1)
+print(a[0] == 1)
+a.insert(0, 2)
+print(a[0] == 2)
 ```
+
+> The insert function inserts an element to the list at the given index.
 
 10.
 
 ```
-
+Remove elements from lists
+a: [int] = None
+a = [1,2,2,3]
+a.remove(1)
+print(len(a) == 3)
+a.remove(2)
+print(len(a) == 1)
 ```
+
+> The remove function removes all matching elements from the list.
 
 ## All Changes to Files
 
