@@ -30,6 +30,7 @@ We are planning to implement two features this week:
 
 1. Inheritance
 1. Lists
+1. Nested functions
 
 <br/>
 
@@ -48,6 +49,10 @@ We are planning to implement two features this week:
   - [ ] Declarations and Assignments
   - [ ] Subscripting and Lookup
   - [ ] Concatenation and Printing
+
+- [ ] Nested functions
+  - [ ] Declaration of nested functions inside functions
+  - [ ] Declaring variables in nested functions with `nonlocal` keyword
 
 <br/>
 
@@ -68,6 +73,11 @@ export type Parameter<A> =
 
 export type Program<A> = 
   ....
+
+export type FunDef<A> = {
+  a?: A, name: string, parameters: TypedVar<A>[], ret: Type, inits: VarInit<A>[], body: Stmt<A>[],
+  nestedFunDefs: FunDef<A>[],
+}
 
 export type ClassDef<A> = {
   a?: A,
@@ -420,6 +430,136 @@ export type Value<A> =
   > The above program must return a `TYPE ERROR`
 
   <br/>
+
+</details>
+
+<details>
+<summary> Nested functions </summary>
+<br/>
+
+  - **Singly nested function** - basic test case
+  ```
+  def f(x: int) -> int:
+    def g(y: int) -> int:
+      return x + y
+    return g(2)
+  print(f(1))
+  ```
+  > The above program must print `3`
+
+<br/>
+
+   - **Calling the nested function twice**
+   ```
+    def f(x: int) -> int:
+      def g(y: int) -> int:
+        return x + y
+      return g(10) + g(7)
+    print(f(6))
+  ```
+  > The above program must print "29"
+
+  - **More than 1 nested function**
+  ```
+  def f(x: int) -> int:
+    def g(y: int) -> int:
+      return x + y
+    def h(z: int) -> int:
+      return x + z
+    return g(10) + h(7)
+  print(f(6))
+  ```
+  > The above program must print "29"
+
+  - **Multiple nested functions - one calling the other one**
+  ```
+  def f(x: int) -> int:
+    def g(y: int) -> int:
+      return x + y
+    def h(z: int) -> int:
+      return g(z + x) + 11
+    return g(10) + h(7)
+  print(f(6))
+  ```
+  > The above program must print "46"
+
+  - **Recursion in nested functions**
+  ```
+  def f(x: int) -> int:
+    def factorial(n: int) -> int:
+      if n <= 1:
+        return 1
+      return n * factorial(n - 1)
+    return factorial(x)
+  print(f(5))
+  ```
+  > The above program must print "120"
+
+  - **nested_functions_with_if_statements**
+  ```
+  def f(x : int) -> int:
+    def g(y : int) -> int:
+      if y > 10:
+        return h(y + n)
+      else:
+        return x
+    def h(z : int) -> int:
+      n : int = 0
+      n = 100 + z
+      return x + n
+    n : int = 0
+    n = 500
+    return g(15) + g(7)
+  print(f(6))
+  ```
+  > The above program must print "627"
+
+  - **Incorrect return type in nested function** - function signature returns `int`, but body returns `None`
+  ```
+  def f(x: int) -> int:
+    def g(y: int) -> int:
+      return
+  return g(2)
+  ```
+  > The above program must throw a `TYPE ERROR`
+
+  - **Incorrect type in nested function** - function signature returns `None`, but body returns `int`
+  ```
+  def f(x: int) -> int:
+    def g(y: int):
+      return y
+    return g(2)
+  ```
+  > The above program must throw a `TYPE ERROR`
+
+- **nonlocal keyword tests**
+  ```
+  def f(x: int) -> int:
+    def g(y: int) -> int:
+      nonlocal x
+      x = x + y
+      return x
+    return g(2) + x
+  print(f(7))
+  ```
+  > The above program must print "18"
+
+  - **nonlocal_keyword_triple_nested_functions**
+  ```
+  def f(x : int) -> int:
+    def g(z: int):
+        def h(y: int):
+            nonlocal x
+            nonlocal z
+            x = 4
+            return
+        h(z)
+        return
+    g(1)
+    return x
+  print(f(1))
+  ```
+  > The above program must print "4"
 
 </details>
 
