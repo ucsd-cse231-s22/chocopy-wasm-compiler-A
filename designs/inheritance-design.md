@@ -1,67 +1,91 @@
-1. Multilevel Inheritance
+# Test Cases
 
-class List(object):
+### 1.  Multilevel Inheritance (withour method method overriding)
 
-  def curval(self: List) -> int:
-    return 1/0
+	class Single(object):
+		a : int = 1
 
-class Empty(List):
+		def sum1(self: Single) -> int: 
+			return self.a
 
-  def curval(self: Empty) -> int:
-    return 0
+	class Two(Single):
+		b : int = 2
 
-class Link(List):
+		def sum2(self: Two) -> int: 
+			return self.a + self.b
 
-  val : int = 0
-  next : List = None
+	class Three(Two):
+		c : int = 3
 
-  def curval(self: Link) -> int:
-    return self.val
+		def sum3(self: Three) -> int: 
+			return self.a + self.b + self.c
 
-  def new(self: Link, val: int, )
+	l : Three = None 
+	l = Three().new()
+	print(l.sum3()) # prints 6
 
-l : list = None
-l = Link().new(5, Link().new(13, Empty()))
+### 2.  Inherit from a class that doesn't exist
 
+	class Link(List): # Type Error: Super class not defined: List
+	
+		val : int = 0 
+		next : List = None
 
-2. Inherit from a class that doesn't exist
+		def curval(self: Link) -> int: 
+			return self.val
+			
+	l : Link = None 
+	  
+### 3.  Methods doesn't exist in sub class but present in super class
 
-3. Methods that do not exist in super class
+	class A(object):
+	    x: int = 1
+    
+	    def increment(self: A, i: int) -> int:
+	        return self.x + i
+        
+    
+	class B(A):
 
-4. Order of parsing subclasess and superclass (check in chocopy)
+	    pass
+        
+	a : A = None
+	a = B()
+	print(a.increment(1)) # prints 2
 
-5. Methods that do not exist in subclass
+### 4.  Re-defined field in subclass
 
-6. Order of parsing and storing methods
+	class A(object):
+	    x: int = 1
+    
+	    def increment(self: A, i: int) -> int:
+	        return self.x + i
+        
+    
+  class B(A):
+      x: int = 1 # Type Error: Cannot re-define field x
+        
+	a : B = None
+	a = B()
+    
+### 5.  Methods that do not exist in super class
+    
+### 6.  Order of parsing and storing methods
+    
+### 7.  Constructors (sub class & super class)
+    
+### 8.  Commutative property between inherited clasess
+    
+### 9.  new method for port memory allocation
 
-7. Constructors (sub class & super class)
+### 10.  Check for methods that don't exist in both subclass and super class
+    
+### 11.  Default constructor
 
-8. Commutative property between inherited clasess
+### 12.  Method overriding?
 
-9. new method for port memory allocation
+### 13. Method overriding with different type signature
 
-class Rat(object):
-  n : int = 0
-  d : int = 0
+# All File Changes
 
-  def new (self, n: int, d:int) -> Rat:
-    self.n = n
-    self.d = d
-    return self
-
-r : Rat = None
-r = Rat().new(1,2)
-
-
-10. Check for methods that don't exist in both subclass and super class
-
-11. Default constructor
-
-class Rat(object):
-  n : int = 0
-  d : int = 0
-
-r : Rat = None
-r = Rat()
-
-12. Method overridding?
+// TODO
