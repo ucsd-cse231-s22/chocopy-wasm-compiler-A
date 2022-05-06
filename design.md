@@ -26,7 +26,7 @@ This document outlines the behaviours, scenarios and test cases that we intend t
 
 ## **Plan for Next Week**
 
-We are planning to implement two features this week:
+We are planning to implement following features this week:
 
 1. Inheritance
 1. Lists
