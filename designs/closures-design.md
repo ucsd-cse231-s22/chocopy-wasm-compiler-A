@@ -21,7 +21,7 @@ type Type = ...
 
 ---
 
-## Lambda literal (`mklambda`)
+## Lambda expression (`mklambda`)
 
 ### Grammar
 
@@ -38,28 +38,30 @@ fundef := ...
 ### AST
 
 ```ts
-type FunDef<A> = { 
+type FunDef<A> = {
   ...
-  nonlocals: Array<string>, 
-  parent?: FunDef<A> }
-type Lambda<A> = { 
-  a?: A, 
-  tag: "lambda", 
+  nonlocals: Array<string>,
+  parent?: FunDef<A>
+}
+type Lambda<A> = {
+  a?: A,
+  tag: "lambda",
   params: Array<Parameter<A>>,
-  expr: Expr<A>, 
-  parent?: Lambda<A> | FunDef<A> }
+  expr: Expr<A>,
+  parent?: Lambda<A> | FunDef<A>
+}
 
-type Expr<A> = 
+type Expr<A> =
   ...
   | Lambda<A>
-type Stmt<A> = 
+type Stmt<A> =
   ...
   | FunDef<A>
 ```
 
-We keep a reference to the parent function definition, if any, so that we are able to resolve variables that aren't parameters or locally declared. During type checking, we will search recursively up the tree, checking parameters and local variables along the way. During the lower step, we will handle captured variables by having the function access them through their parent field.
+We keep a reference to the parent function definition, if any, so that we are able to resolve variables that aren't parameters or locally declared. During type checking, we search recursively up the tree, checking parameters and local variables along the way. During the `lower` step, we handle captured variables by storing them as fields in the closure class ([see below](##handling-captured-variables)).
 
-Non-locals are put in a separate array which is checked on any assignment statements of the closure body. Here, nonlocal simply designates that a nonlocal variable is mutable.
+Non-locals are put in a separate array which is checked on any assignment statements of the closure body. Here, `nonlocal` simply designates that a non-local variable is mutable.
 
 ---
 
@@ -85,9 +87,7 @@ type Expr<A> = ...
 
 ## Representation of `Callable`
 
-Each function definition (including builtins) is wrapped in a class
-so that we can store references to them. A function definition in code
-is transformed into a class definition and a variable definition as follows:
+Each function definition (including builtins) is wrapped in a class so that we can store references to them. A function definition in code is transformed into a class definition and a variable definition as follows:
 
 ```python
 def a():
@@ -116,18 +116,13 @@ class lambda_$123(object):
 lambda_$123()
 ```
 
-Callables are nullable because we want to define variables without
-immediately initializing it to a lambda. Calling a null function results
-in a runtime error. We will represent null callables as zeros, which
-is the same way we represent null objects.
+Callables are nullable because we may want to store a function reference without creating a dummy lambda in the declaration. Calling a `None` function results in a runtime error. We will represent `None` callables as zeros, which is the same way we represent `None` objects.
 
 ---
 
 ## Handling captured variables
 
-Nested functions have `parent` fields that reference the function
-that contains it (one level up), and writes to fields of parent objects
-carry reference semantics, getting desired `nonlocal` behavior.
+Nested functions have `parent` fields that reference the function that contains it (one level up), and writes to fields of parent objects carry reference semantics, getting desired `nonlocal` behavior.
 
 ```python
 def f(x: int) -> int:
@@ -141,41 +136,43 @@ def f(x: int) -> int:
 print(f(6))
 ```
 
-Without name mangling for readability:
-
 ```python
-class f_closure:
+class f_$closure:
   x: int = 0
-  def apply(self: f_closure, x: int) -> int:
+  def apply(self: f_$closure, x: int) -> int:
     self.x = x
-    g: g_closure = None
-    h: h_closure = None
+    g: g_$closure = None
+    h: h_$closure = None
     g = g().setParent(self)
     h = h().setParent(self)
     return g.apply(10) + g.apply(7)
-class g_closure:
-  parent: f_closure = None
-  def apply(self: g_closure, y: int) -> int:
+class g_$closure:
+  parent: f_$closure = None
+  def apply(self: g_$closure, y: int) -> int:
     return self.parent.h.apply(y) + self.parent.x
-  def setParent(self: g_closure, parent: f_closure) -> g_closure:
+  def setParent(self: g_$closure, parent: f_$closure) -> g_$closure:
     self.parent = parent
     return self
-class h_closure:
-  parent: f_closure = None
-  def apply(self: h_closure, z: int) -> int:
+class h_$closure:
+  parent: f_$closure = None
+  def apply(self: h_$closure, z: int) -> int:
     self.parent.x = z
     return self.parent.x + 1
-  def setParent(self: h_closure, parent: f_closure) -> h:
+  def setParent(self: h_$closure, parent: f_$closure) -> h:
     self.parent = parent
     return self
-f: f_closure = None
-f = f_closure()
+f: f_$closure = None
+f = f_$closure()
 print(f.apply(6))
 ```
 
-The argument of `setParent` will be self or None depending on whether the function is being declared within another function or in the global scope. The scope of captured variables is known because we keep track of where to find captured variables during type checking by recursively searching up the tree.
+In general, variable definitions in the immediate scope of a function definition are stored as fields of the resulting closure class so that nested functions can read and write these values by reference.
 
-Global variables can't be assigned to via nonlocal within a function, but can be referred to. Because of this, we don't need to do any work to capture them and can simply refer to them by name.
+Other than global variables and functions, since nested functions can only read variables in the scope of direct ancestors (parent, grandparent, etc.), and they can only call functions that are siblings of direct ancestors, it is sufficient to only store references to parent closures.
+
+The argument of `setParent` will be `self` or `None` depending on whether the function is nested or in the global scope. We keep track of captured variable scopes during type-checking by recursively searching up the tree.
+
+Global variables can't be assigned to via `nonlocal` within a function, but can be referred to. Because of this, we don't need to do any work to capture them and can simply refer to them by name.
 
 ---
 
