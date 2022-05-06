@@ -1,4 +1,4 @@
-# Chocopy-design.md
+# ChocoPy-design.md
 
 ## 10 Testcases
 
@@ -117,28 +117,68 @@ print(f())`, ["4"]
 
 
 
-## Changes to AST
+## Changes to AST, IR, and built-in libraries
 
-In order to support string, we need to add string type to `Type`.
+### String
+
+In `ast.ts`, we need to add string type to `Type`.
 ```typescript
 {tag: "str", name: string}
 ```
 
-Also, we need to add string type to `Value<A>` in `ir.ts`.
+In `ir.ts`, we need to add string type to `Value<A>`.
 ```typescript
 { a?: A, tag: "str", name: string }
 ```
 
+
+### Lists
+
+In `ast.ts`, we need to add list and empty to `Type`.
+```typescript
+{tag: "list", type: Type}
+{tag: "empty"}
+```
+
+We need to add list to `Expr<A>`.
+```typescript
+{ a?: A, tag: "list", value: Expr<A>[] }
+```
+
+We need to add empty to `Literal`.
+```typescript
+{ tag: "empty" }
+```
+
+In `ir.ts`, we need to add list and empty to `Value<A>`.
+```typescript
+{ a?: A, tag: "list", value: Value<A>[] }
+{ a?: A, tag: "empty" }
+```
+
 ## New Functions
 
-In order to support string operations, we need to:
+### String
 
 + Add case `str` in `tcString` to annotate a string. 
 + Modify `tcExpr` in `type-check.ts` to make `BinOp.Plus` with 2 strings legal. 
 + Need a function `CodeGenString` in `compiler.ts` to generate wasm code.
 + Need to modify case `binop` in `codeGenExpr` to handle string concatence situation.
 
+### Lists
+
++ In `parser.ts`, support parsing list and empty in `traverseExpr`.
++ In `type-check.ts`, support type checking list and empty in `tcExpr`. 
++ In `lower.ts`, support lowering list and empty in `flattenExprToExpr`, `flattenExprToVal`, and `literalToVal`.
++ In `compiler.ts`, support code generation for list and empty in `codeGenExpr` and `codeGenValue`.
+
 
 ## Value Representation and Memory Layout for New Runtime Values
 
+### String
+
 No change should be made in this part.
+
+### Lists
+
+List elements are placed consecutively on heap memory. Concatenation of two lists returns a new list whose first element is placed on the next available heap address at the time of concatenation.
