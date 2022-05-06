@@ -24,7 +24,9 @@ export type Expr<A> =
 
 # Test Cases
 ### 1. Set constructor
+
 Description:
+
 This test case uses the set() function to create a set object. It adds element 3 into the set, and prints the whole set.
 
 program:
@@ -39,6 +41,7 @@ expected output:
 ```
 ### 2. Set constructor 2
 Description: 
+
 This test case creates set with {x1,x2,...} statements.
 
 program:
@@ -52,6 +55,7 @@ expected output:
 ```
 ### 3. Add duplicate element
 Description:
+
 This test case tries to add duplicate elements into a set, then print the set. The set should ONLY contain 1 element, that is 3.
 
 program:
@@ -81,6 +85,7 @@ expected output:
 ```
 ### 5. Remove element fail 1
 Description:
+
 This test case tries to remove a non-existent element, an error will be thrown.
 
 program:
@@ -95,6 +100,7 @@ KeyError: 6
 ```
 ### 6. Remove element fail 2
 Description:
+
 This test case tries to remove multiple elements at a time, an error will be thrown.
 
 program:
@@ -109,6 +115,7 @@ TypeError: remove() takes exactly one argument (2 given)
 ```
 ### 7. Set.clear()
 Description:
+
 This test case deletes all elements inside the set and turns it into an empty set().
 
 program:
@@ -125,6 +132,7 @@ set()
 ```
 ### 8. Set.update()
 Description:
+
 This test case concatenates two sets into one.
 
 program:
@@ -140,6 +148,7 @@ expected output:
 ```
 ### 9. Set.update() fail
 Description:
+
 This test case tries to update the original set with a non-iterable. The compiler will throw an error.
 
 program:
@@ -155,7 +164,9 @@ TypeError: 'int' object is not iterable
 ```
 ### 10. in keyword
 Description:
+
 This test case uses 'in' keywords to judge whether an element is in the set.
+
 program:
 ```
 x:set = {1,2,3}
