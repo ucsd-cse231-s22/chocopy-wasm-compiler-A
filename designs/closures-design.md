@@ -59,7 +59,7 @@ type Stmt<A> =
   | FunDef<A>
 ```
 
-We keep a reference to the parent function definition, if any, so that we are able to resolve variables that aren't parameters or locally declared. During type checking, we search recursively up the tree, checking parameters and local variables along the way. During the `lower` step, we handle captured variables by storing them as fields in the closure class ([see below](##handling-captured-variables)).
+We keep a reference to the parent function definition, if any, so that we are able to resolve variables that aren't parameters or locally declared. During type checking, we search recursively up the tree, checking parameters and local variables along the way. During the `lower` step, we handle captured variables by storing them as fields in the closure class ([see below](#handling-captured-variables)).
 
 Non-locals are put in a separate array which is checked on any assignment statements of the closure body. Here, `nonlocal` simply designates that a non-local variable is mutable.
 
