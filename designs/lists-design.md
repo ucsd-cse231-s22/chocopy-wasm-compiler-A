@@ -113,7 +113,7 @@ a = [1,2,2,3]
 a.remove(1)
 print(len(a) == 3)
 a.remove(2)
-print(len(a) == 1)
+print(len(a) == 2)
 ```
 
 > The remove function removes all matching elements from the list.
