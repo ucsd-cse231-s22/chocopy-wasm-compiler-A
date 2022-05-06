@@ -427,7 +427,7 @@ export type Value<A> =
 
   print(len(myList))
   ```
-  > The above program must return a `5`
+  > The above program must print `5`
 
   <br/>
 
