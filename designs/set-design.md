@@ -20,11 +20,25 @@ export type Expr<A> =
  | { a?: A, tag: "tuple_expr", contents: Array<Expr<A>> }
  | { a?: A, tag: "dict_expr", entries: Array<[Expr<A>, Expr<A>]> }
 ```
+## Value Representation and Memory Management
+All Values are stored as 8-byte i32. Memory management should use the interface provided by the memory group, the memory usage should be kept below 30% to maintain the efficiency of the hash function. 
+
+## New Functions, Datatypes
+This update will add the "Set" Object to the code base. Currently, it supports following methods:
+
+Set.add()
+
+Set.remove()
+
+Set.clear()
+
+Set.update()
+
+in keyword (x in Set)
 
 
 # Test Cases
 ### 1. Set constructor
-
 Description:
 
 This test case uses the set() function to create a set object. It adds element 3 into the set, and prints the whole set.
