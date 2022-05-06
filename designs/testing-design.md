@@ -1,6 +1,6 @@
 Test cases
 ===
-
+##  Integrated test cases. We will come up with more integrated test cases next week and make sure that the syntex of our test cases align with the design documents of other groups.  
 ### Inheritance+Polymorphism
 ```python=
 class Number(object):
@@ -100,3 +100,9 @@ Expected output:
 False
 True
 ```
+
+## Changes we want to make
+### changes in tests/
+- Add more integrated test cases
+- Add tests on different os(macOS and windows)
+- Add automation testing for webApp(Use Selenium or other tools)
