@@ -7,6 +7,7 @@ export type Type =
   | {tag: "none"}
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
+  | {tag: "list", itemType: Type }
 
 export type Parameter<A> = { name: string, type: Type }
 
@@ -26,6 +27,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "field-assign", obj: Expr<A>, field: string, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
+  | {  a?: A, tag: "item-assign", obj: Expr<A>, idx: number, value: Expr<A> }
 
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal }
@@ -38,6 +40,8 @@ export type Expr<A> =
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
+  | {  a?: A, tag: "construct-list", items: Array<Literal> } // [1,2,3]
+  | {  a?: A, tag: "get-item", idx: number } // a[0]
 
 export type Literal = 
     { tag: "num", value: number }

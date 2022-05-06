@@ -123,7 +123,7 @@ print(len(a) == 2)
 In ast.ts, we plan to add to the Type:
 
 ```
-{ tag: "list", item-type: Type }
+{ tag: "list", itemType: Type }
 ```
 
 add to Stmt:
