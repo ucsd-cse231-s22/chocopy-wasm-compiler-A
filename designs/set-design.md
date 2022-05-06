@@ -71,6 +71,7 @@ expected output:
 ```
 ### 4. Remove element success
 Description:
+
 This test case removes an element that exists in the set.
 
 program:
