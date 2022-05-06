@@ -1,35 +1,14 @@
 # Closures Design Document
 
-## New expression
-
-### Grammar
-
-```pl
-literal :=
-...
-| lambda [<name> [, <name>]*]? : <expr>
-```
-
-### AST
-
-```ts
-// To stay a subset of Python, lambda parameters cannot have type hints,
-// so we defer the type-checking of an anonymous function to the point of use
-// necessitating this new `LambdaParam` type
-type LambdaParam = { name: string, type?: Type }
-type Literal<A> =
-...
-| { a?: A, tag: "lambda", params: Array<LambdaParam>, expr: Expr<A> }
-```
-
 ## New Type __<ins>(parsing requires "@lezer/python": "^0.16.0", or elbow grease)</ins>__
 
 ### Grammar
 
 ```pl
+callable := Callable[[ [<type> [, <type>]* ]? ], <type> ]
 type :=
 ...
-| Callable[[ [<type> [, <type>]* ]? ], <type> ]
+| <callable>
 ```
 
 ### AST
@@ -40,11 +19,87 @@ type Type =
 | { tag: "callable", params: Array<Type>, ret: Type }
 ```
 
+## mklambda, closures
+### Grammar
+
+```pl
+lambda = lambda [<name> [, <name>]*]? : <expr>
+expr :=
+...
+| mklambda(<callable>, <lambda>)
+```
+
+### AST
+
+```ts
+type Literal<A> =
+...
+| { a?: A, tag: "closure", params: Array<Parameter>, expr: Expr<A> }
+```
+
 ## Representation of Callables
 We will create an entry in the table with the methods, and represent the
 lambda in memory with the index of the function in the table. When we call 
 a lambda, we simply call indirect with the index. As for captured variables,
 we will store these as fields by reference in the class.
+
+All function definitions (including builtins) will have to be wrapped in a class
+this way so that we can store references to them. A function definition in code
+will be transformed into a class definition and a variable definition as follows:
+
+```python
+def a():
+  print("hello")
+```
+  
+```python
+class a_closure(object):
+  def apply():
+    print("hello")
+a: a_closure = a_closure()
+```
+
+Lambda definitions will be treated a similar way, but instead of being immediately
+assigned a name we simply call the constructor and leave it as an expression. We
+will have to generate a unique name for the lambda as well:
+
+```python
+lambda: print("hello")
+```
+  
+```python
+class lambda_123(object):
+  def apply():
+    print("hello")
+lambda_123()
+```
+
+## Handling captured variables
+Handling captured variables will involve identifying which variables we need to
+capture and storing them in refboxes so that we can share them. Captured variables
+will be passed into the constructor of closures as arguments and stored as fields:
+
+```python
+x: int = 5
+def a():
+  print(5)
+```
+
+Will be turned into:
+
+```python
+class a_closure(object):
+  x: IntRef = None
+  def apply():
+    print(self.x.val)
+
+x: IntRef = None
+x = IntRef()
+x.val = 5
+
+a = a_closure()
+a.x = x
+```
 
 ## Test Cases
 
