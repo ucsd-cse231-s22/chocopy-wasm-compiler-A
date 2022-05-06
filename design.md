@@ -521,6 +521,18 @@ export type Value<A> =
   print(f(6))
   ```
   > The above program must print `627`
+  
+  - **Shadowing nested functions**
+  ```
+  def f() -> int:
+    def g(y: int) -> int:
+        def f(x: int) -> int:
+            return x + 1
+        return y + f(2)
+    return g(4)
+  print(f())
+  ```
+  > The above program must print `7`
 
   - **Incorrect return type in nested function** - function signature returns `int`, but body returns `None`
   ```
@@ -571,6 +583,22 @@ export type Value<A> =
     pass
   ```
   > The above program must throw a `TYPE ERROR`
+
+  - **forward reference to nonlocal variables**
+  ```
+  def f() -> int:
+    def g() -> int:
+      nonlocal x
+      x = 2
+      return x
+
+    x: int = 0
+    g()
+    return x
+
+  print(f())
+  ```
+  > The above program must print `2`
 
 - **nonlocal keyword tests**
   ```
