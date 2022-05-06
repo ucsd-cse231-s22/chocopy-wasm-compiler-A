@@ -30,34 +30,34 @@ lambda_expr := lambda [<name> [, <name>]*]? : <expr>
 expr := ...
 | mklambda(<callable>, <lambda_expr>)
 
+scopedef := nonlocal <name>
 fundef := ...
-   [(<vardef>|(nonlocal <name>)]*
+   <vardef | scopedef>*
 ```
 
 ### AST
 
 ```ts
-type Scope = number | "global" // either a global variable or in the scope of a function above
 type FunDef<A> = { 
   ...
   nonlocals: Array<string>, 
   parent?: FunDef<A> }
-type Closure<A> = { 
+type Lambda<A> = { 
   a?: A, 
-  tag: "closure", 
+  tag: "lambda", 
   params: Array<Parameter<A>>,
   expr: Expr<A>, 
-  parent?: Closure<A> | FunDef<A> }
+  parent?: Lambda<A> | FunDef<A> }
 
 type Expr<A> = 
   ...
-  | Closure<A>
+  | Lambda<A>
 type Stmt<A> = 
   ...
   | FunDef<A>
 ```
 
-We keep a reference to the parent function definition, if any, so that we are able to resolve variables that aren't parameters or locally declared. During type checking, we will search recursively up the tree, checking parameters and local variables along the way. During the lower step, we will handle captured variables by including them in the constructor for the closure (details later).
+We keep a reference to the parent function definition, if any, so that we are able to resolve variables that aren't parameters or locally declared. During type checking, we will search recursively up the tree, checking parameters and local variables along the way. During the lower step, we will handle captured variables by having the function access them through their parent field.
 
 Non-locals are put in a separate array which is checked on any assignment statements of the closure body. Here, nonlocal simply designates that a nonlocal variable is mutable.
 
