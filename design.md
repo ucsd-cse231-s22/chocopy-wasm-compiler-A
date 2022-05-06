@@ -469,7 +469,7 @@ export type Value<A> =
     return g(10) + h(7)
   print(f(6))
   ```
-  > The above program must print "29"
+  > The above program must print `29`
 
   - **Multiple nested functions - one calling the other one**
   ```
@@ -481,7 +481,7 @@ export type Value<A> =
     return g(10) + h(7)
   print(f(6))
   ```
-  > The above program must print "46"
+  > The above program must print `46`
 
   - **Recursion in nested functions**
   ```
@@ -493,7 +493,7 @@ export type Value<A> =
     return factorial(x)
   print(f(5))
   ```
-  > The above program must print "120"
+  > The above program must print `120`
 
   - **nested_functions_with_if_statements**
   ```
@@ -512,7 +512,7 @@ export type Value<A> =
     return g(15) + g(7)
   print(f(6))
   ```
-  > The above program must print "627"
+  > The above program must print `627`
 
   - **Incorrect return type in nested function** - function signature returns `int`, but body returns `None`
   ```
@@ -542,7 +542,7 @@ export type Value<A> =
     return g(2) + x
   print(f(7))
   ```
-  > The above program must print "18"
+  > The above program must print `18`
 
   - **nonlocal_keyword_triple_nested_functions**
   ```
@@ -559,7 +559,7 @@ export type Value<A> =
     return x
   print(f(1))
   ```
-  > The above program must print "4"
+  > The above program must print `4`
 
 </details>
 
