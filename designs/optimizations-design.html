@@ -58,7 +58,8 @@ write other than a Python program.</p>
 Constant folding:
 If there exists a variable (not a class field access, but a memory variable) of which a constant value can be determined at compile time,
 then for every place.
-<p>Test case #1</p>
+<li>
+Test case #1 
 <pre><code><code><div>a = (4+5)
 </div></code></code></pre>
 <p>transforms to</p>
@@ -66,23 +67,118 @@ then for every place.
 </div></code></code></pre>
 </li>
 <li>
-Constant folding:
 Test case #2
-```
-if (2 != 2): print(5)
-```
-transforms to 
-```
-if (False):
-    print(5)
-```
+<pre><code><code><div>if (not False):
+</div></code></code></pre>
+<p>transforms to</p>
+<pre><code><code><div>if (True):
+</div></code></code></pre>
 </li>
 <li>
 Constant folding:
-Binary expressions of the form where both the arguments to the operator are constant literals (after constant propagation,)
+Test case #3
+<pre><code><code><div>while (3 &lt; (2%(4//1))**4&gt;):
+</div></code></code></pre>
+<p>transforms to</p>
+<pre><code><code><div>while (True)
+</div></code></code></pre>
 </li>
 <li>
-Dead code elimination
+Constant folding:
+Test case #4
+<pre><code><code><div>b = 1/0
+</div></code></code></pre>
+<p>This will not get constant folded due to divide by zero error.</p>
+</li>
+<p>Constant folding:
+Test case #5</p>
+<pre><code><code><div>a: Rat = None
+b: Rat = None
+
+print(a is b)
+</div></code></code></pre>
+<p>transforms to</p>
+<pre><code><code><div>a: Rat = None
+b: Rat = None
+
+print(True)
+</div></code></code></pre>
+</li>
+<li>
+Constant propagation:
+Test case #6
+<pre><code><code><div>b = 3 + 6
+def f(a):
+|  return a + b * 3
+</div></code></code></pre>
+<p>transforms to</p>
+<pre><code><code><div>b = 9 // from folding
+def f(a):
+|  return a + 27 // prpagation and folding 
+</div></code></code></pre>
+</li>
+<li>
+Constant propagation:
+Test case #7
+<pre><code><code><div>a = 4 + 6
+if False:
+|  a = 3
+
+if 2 == 2:
+|  x = a + 3
+</div></code></code></pre>
+<p>This will not get transformed in the current iteration of constant propagation.</p>
+</li>
+<li>
+Constant propagation:
+Test case #8
+<pre><code><code><div>a = 3
+while condition:
+|  print(a)
+</div></code></code></pre>
+<p>transforms to</p>
+<pre><code><code><div>a = 3
+while condition:
+|  print(3)
+</div></code></code></pre>
+</li>
+<li>
+Constant propagation:
+Test case #9
+<pre><code><code><div>a = 3
+if condition:
+|  a = 4
+|  print(a)
+
+else:
+|  a = 5
+|  print(a)
+</div></code></code></pre>
+<p>transforms to</p>
+<pre><code><code><div>a = 3
+if condition:
+|  a = 4
+|  print(4)
+
+else:
+|  a = 5
+|  print(5)
+</div></code></code></pre>
+</li>
+<li>
+Constant propagation:
+Test case #10
+<pre><code><code><div>a = 3
+def f(b):
+|  b = a
+
+a = 5
+f(2)
+
+a = 7
+f(3)
+</div></code></code></pre>
+<p>This will not get transformed in the current iteration of constant propagation.</p>
 </li>
 </ul>
 <h2 id="list-of-changes-to-astir">List of changes to AST/IR</h2>

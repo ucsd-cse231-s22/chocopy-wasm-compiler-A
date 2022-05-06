@@ -17,47 +17,173 @@ Constant folding:
 If there exists a variable (not a class field access, but a memory variable) of which a constant value can be determined at compile time,
 then for every place.
 
-Test case #1
+<li>
+Test case #1 
+
 ```
 a = (4+5)
 ```
 transforms to 
+
 ```
 a = 9
 ```
 </li>
-
 <li>
-Constant folding:
 Test case #2
+
 ```
-if (2 != 2): print(5)
+if (not False):
 ```
 transforms to 
+
 ```
-if (False):
-    print(5)
+if (True):
+```
+
+</li>
+<li>
+Constant folding:
+Test case #3
+
+```
+while (3 < (2%(4//1))**4>):
+```
+transforms to
+
+```
+while (True)
 ```
 </li>
 
 <li>
 Constant folding:
-Binary expressions of the form where both the arguments to the operator are constant literals (after constant propagation,)
+Test case #4
+
+```
+b = 1/0
+```
+This will not get constant folded due to divide by zero error.
+</li>
+
+Constant folding:
+Test case #5
+
+```
+a: Rat = None
+b: Rat = None
+
+print(a is b)
+```
+transforms to
+
+```
+a: Rat = None
+b: Rat = None
+
+print(True)
+```
 </li>
 
 <li>
-Dead code elimination
+Constant propagation:
+Test case #6
+
+```
+b = 3 + 6
+def f(a):
+|  return a + b * 3
+```
+transforms to 
+
+```
+b = 9 // from folding
+def f(a):
+|  return a + 27 // prpagation and folding 
+```
+</li>
+<li>
+Constant propagation:
+Test case #7
+
+```
+a = 4 + 6
+if False:
+|  a = 3
+
+if 2 == 2:
+|  x = a + 3
+```
+This will not get transformed in the current iteration of constant propagation.
+</li>
+<li>
+Constant propagation:
+Test case #8
+
+```
+a = 3
+while condition:
+|  print(a)
+```
+transforms to
+
+```
+a = 3
+while condition:
+|  print(3)
+```
+</li>
+<li>
+Constant propagation:
+Test case #9
+
+```
+a = 3
+if condition:
+|  a = 4
+|  print(a)
+
+else:
+|  a = 5
+|  print(a)
+```
+transforms to
+
+```
+a = 3
+if condition:
+|  a = 4
+|  print(4)
+
+else:
+|  a = 5
+|  print(5)
+```
+</li>
+
+<li>
+Constant propagation:
+Test case #10
+
+```
+a = 3
+def f(b):
+|  b = a
+
+a = 5
+f(2)
+
+a = 7
+f(3)
+```
+This will not get transformed in the current iteration of constant propagation.
 </li>
 </ul>
 
 ## List of changes to AST/IR
 
-A list of all changes you want to make to the AST, IR, and built-in libraries to 
-support your test cases. This can be through a combination of actual changes you 
-make and suggest via PR (e.g. change ast.ts, then push the commit and include it 
-in the PR), and listed descriptions in your design.md file. For AST/IR changes, 
-write out in detail what’s an expression, what’s a value, what’s a string, etc. 
-For new files like memory.wat, describe which functions will go there.
+We will not be making any changes to the IR/AST. We will need to take in changes to these from all teams.
+Our work will be to just update IR statements values and (or) annotations and also to reduce them.
 
 ## Description of files/functions/datatypes to be added/ added
 
