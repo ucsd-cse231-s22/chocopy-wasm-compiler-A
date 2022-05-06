@@ -319,3 +319,20 @@ f()()
 ```
 
 Should print `4\n5`
+
+### 11. Z-Combinator
+
+```python
+def fix(f: Callable[[Callable[[int], int]], Callable[[int], int]]) -> Callable[[int], int]:
+  def f1(x: int) -> int:
+    return f(fix(f))(x)
+  return f1
+def fact_to_fix(rec: Callable[[int], int]) -> Callable[[int], int]:
+  def fact(x: int) -> int:
+    return 1 if x == 0 else rec(x - 1) * x
+  return fact
+fact = fix(fact_to_fix)
+print(fact(5))
+```
+
+Should print `120`
