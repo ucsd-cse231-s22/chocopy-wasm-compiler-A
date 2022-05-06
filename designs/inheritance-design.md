@@ -1,6 +1,6 @@
 # Test Cases
 
-### 1.  Multilevel Inheritance (withour method method overriding)
+### 1.  Multilevel Inheritance (without method method overriding)
 
 	class Single(object):
 		a : int = 1
@@ -36,7 +36,7 @@
 			
 	l : Link = None 
 	  
-### 3.  Methods doesn't exist in sub class but present in super class
+### 3.  Method doesn't exist in sub class but present in super class
 
 	class A(object):
 	    x: int = 1
@@ -68,8 +68,9 @@
 	a : B = None
 	a = B()
     
-### 5a.  Methods that do not exist in super class (Test fails)
-    	class A(object):
+### 5a.  Methods that do not exist in super class (Throws Error)
+
+    class A(object):
 		a : int = 1
 
 		def get_a(self: A) -> int: 
@@ -85,8 +86,9 @@
 	l = A()
 	print(l.sum_a_b()) # Error: There is no function named sum_a_b in class A.
 	
-### 5b.  Methods that do not exist in super class (Test passes)
-    	class A(object):
+### 5b.  Methods that do not exist in super class (Passes)
+
+    class A(object):
 		a : int = 1
 
 		def get_a(self: A) -> int: 
@@ -101,8 +103,31 @@
 	l : B = None 
 	l = B()
 	print(l.sum_a_b()) # Prints 3
+
+### 6.  Check for methods that don't exist in both subclass and super class (Throws Error)
+
+	class A(object):
+		a : int = 1
+
+		def __init__(self: A): pass
+			
+		def get_a(self: A) -> int:
+			return self.a
+
+	class B(A):
+		b : int = 3
+		
+		def __init__(self: B): pass
+			
+		def get_b(self: B) -> int: 
+			return self.b
+			
+	l : B = None
+	l = B()
+	print(l.get_c()) # Error: Method get_c() does not exist in class B'c scope
 	
-### 6.  Order of parsing and storing methods
+### 7.  Order of parsing and storing methods
+
 	class A(object):
 		a : int = 3
 
@@ -123,7 +148,8 @@
 	l = B()
 	print(l.get_a_minus_1()) # Prints 2, not 3
     
-### 7.  Constructors (sub class & super class)
+### 8.  Constructors (sub class & super class)
+
 	class A(object):
 		a : int = 1
 
@@ -145,18 +171,42 @@
 	print(l.get_a()) # Prints 2, not 1
 	print(l.get_b()) # Prints 4, not 3
 	
-### 8.  Commutative property between inherited clasess
+### 9.  Commutative property between inherited classes
+
+	class A(object):
+		a : int = 1
+
+		def __init__(self: A): pass
+
+	class B(A):
+		b : int = 3
+		
+		def __init__(self: B): pass
+	
+	class C(B):
+		c: int = 5
+
+		def __init__(self: C): pass
+			
+	l : C = None
+	l = C()
+	print(l.a) # Print 1
+	print(l.b) # Prints 3
     
-### 9.  new method for port memory allocation
+### 10.  new method for port memory allocation
 
-### 10.  Check for methods that don't exist in both subclass and super class
-    
-### 11.  Default constructor
+	class Pair(object):
+		left : int = 0
+		right : int = 0
 
-### 12.  Method overriding?
+		def __init__(self): pass
 
-### 13. Method overriding with different type signature
-
-# All File Changes
-
-// TODO
+		def new(elf, l : int, r : int): -> Pair
+			self.left = l
+			self.right = r
+			return self
+	
+	p : Pair = None
+	p = Pair().new(8, 9)
+	print(p.left) # Prints 8
+	print(p.right) # Prints 9
