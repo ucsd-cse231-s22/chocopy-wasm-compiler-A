@@ -47,8 +47,8 @@ We are planning to implement following features this week:
   
 - [ ] Lists
   - [ ] Declarations and Assignments
-  - [ ] Subscripting and Lookup
-  - [ ] Concatenation and Printing
+  - [ ] Subscripting and Lookup Elements
+  - [ ] Concatenation and Printing Size of List
 
 - [ ] Nested functions
   - [ ] Declaration of nested functions inside functions/methods
@@ -417,6 +417,17 @@ export type Value<A> =
   print(myList[20])
   ```
   > The above program must return a `RUNTIME ERROR`
+
+  <br/>
+
+  - **List Length** - printing size of list
+  ```
+  myList : [int] = None
+  myList = [99, 88, 77, 66, 55]
+
+  print(len(myList))
+  ```
+  > The above program must return a `5`
 
   <br/>
 
