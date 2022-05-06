@@ -27,19 +27,39 @@ type Type = ...
 
 ```text
 lambda_expr := lambda [<name> [, <name>]*]? : <expr>
-literal := ...
+expr := ...
 | mklambda(<callable>, <lambda_expr>)
+
+fundef := ...
+   [(<vardef>|(nonlocal <name>)]*
 ```
 
 ### AST
 
 ```ts
-type FunDef<A> = { ..., capturedVars: Array<Parameter<A>> }
+type Scope = number | "global" // either a global variable or in the scope of a function above
+type FunDef<A> = { 
+  ...
+  nonlocals: Array<string>, 
+  parent?: FunDef<A> }
+type Closure<A> = { 
+  a?: A, 
+  tag: "closure", 
+  params: Array<Parameter<A>>,
+  expr: Expr<A>, 
+  parent?: Closure<A> | FunDef<A> }
 
-type Literal<A> =
-...
-| { a?: A, tag: "closure", params: Array<Parameter<A>>, expr: Expr<A>, capturedVars: Array<Parameter<A>> }
+type Expr<A> = 
+  ...
+  | Closure<A>
+type Stmt<A> = 
+  ...
+  | FunDef<A>
 ```
+
+We keep a reference to the parent function definition, if any, so that we are able to resolve variables that aren't parameters or locally declared. During type checking, we will search recursively up the tree, checking parameters and local variables along the way. During the lower step, we will handle captured variables by including them in the constructor for the closure (details later).
+
+Non-locals are put in a separate array which is checked on any assignment statements of the closure body. Here, nonlocal simply designates that a nonlocal variable is mutable.
 
 ---
 
@@ -124,67 +144,57 @@ print(f(6))
 Without name mangling for readability:
 
 ```python
-class f:
+class f_closure:
   x: int = 0
-  def apply(self: f, x: int) -> int:
+  def apply(self: f_closure, x: int) -> int:
     self.x = x
-    return g().setParent(self).apply(10) + g().setParent(self).apply(7)
-class g:
-  parent: f = None
-  def apply(self: g, y: int) -> int:
-    return h().setParent(self.parent).apply(y) + self.parent.x
-  def setParent(self: g, parent: f) -> g:
+    g: g_closure = None
+    h: h_closure = None
+    g = g().setParent(self)
+    h = h().setParent(self)
+    return g.apply(10) + g.apply(7)
+class g_closure:
+  parent: f_closure = None
+  def apply(self: g_closure, y: int) -> int:
+    return self.parent.h.apply(y) + self.parent.x
+  def setParent(self: g_closure, parent: f_closure) -> g_closure:
     self.parent = parent
     return self
-class h:
-  parent: f = None
-  def apply(self: h, z: int) -> int:
+class h_closure:
+  parent: f_closure = None
+  def apply(self: h_closure, z: int) -> int:
     self.parent.x = z
     return self.parent.x + 1
-  def setParent(self: h, parent: f) -> h:
+  def setParent(self: h_closure, parent: f_closure) -> h:
     self.parent = parent
     return self
-print(f().apply(6))
+f: f_closure = None
+f = f_closure()
+print(f.apply(6))
 ```
 
-To determine the argument of `setParent` we have to check if the function being called is a child of the current function (`self`), a sibling of the current function (`self.parent`), a sibling of the parent function (`self.parent.parent`), etc. Since the AST parses function definitions into a tree, this is simple to check. The correct scope of captured variables is determined similarly.
+The argument of `setParent` will be self or None depending on whether the function is being declared within another function or in the global scope. The scope of captured variables is known because we keep track of where to find captured variables during type checking by recursively searching up the tree.
+
+Global variables can't be assigned to via nonlocal within a function, but can be referred to. Because of this, we don't need to do any work to capture them and can simply refer to them by name.
 
 ---
 
 ## Test Cases
 
-### 1. Z-combinator
+### 1. Nonlocal
 
 ```python
-make_rec: Callable[
-  [Callable[[Callable[[int], int]], Callable[[int], int]]],
-  Callable[[int], int]
-] = mklambda(
-      Callable[
-        [Callable[[Callable[[int], int]], Callable[[int], int]]],
-        Callable[[int], int]
-      ],
-      lambda g: mklambda(
-        Callable[[Callable[[int], int]], Callable[[int], int]],
-        lambda rec: g(mklambda(
-          Callable[[int], int],
-          lambda y: rec(rec)(y)
-        ))
-      )(mklambda(
-        Callable[[Callable[[int], int]], Callable[[int], int]],
-        lambda rec: g(mklambda(
-          Callable[[int], int],
-          lambda y: rec(rec)(y)
-        ))
-      ))
-    )
-fact: Callable[[int], int] = make_rec(
-  lambda rec: lambda x: 1 if x == 0 else rec(x - 1) * x
-)
-print(fact(5))
+def f(x: int):
+  def g():
+    nonlocal x
+    x = x + 1
+    print(x)
+  g()
+  g()
+f(5)
 ```
 
-Should pass, yielding `120`.
+Should pass, yielding `6\n7`.
 
 ### 2. Lambda as argument
 
@@ -294,10 +304,10 @@ Should pass.
 
 ```python
 a: int = 4
-def f(x: int):
+def f():
   def g():
-    print(x + 1)
-  print(x)
+    print(a + 1)
+  print(a)
   return g
 f()()
 ```
