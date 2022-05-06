@@ -128,7 +128,7 @@ class Rat(object):
 
 x: Rat = None
 x = Rat()
-x
+x.y
 print(x.y)
 ```
 **Expected:**
@@ -240,10 +240,37 @@ assert type of feilds in p is [value, pointer]
 ```
 
 ## Changes to IR
-- 
+
+- ### Addition of `ref` value
+```
+export type Value<A> =
+...
+| { a?: A, tag: "ref"}
+```
+Currently there is no way of differentiating between pointers and values stored in an object. As seen in test case *8: Anonymous object deletion*, we need to follow references stored in an object recursively so that we can update their respective reference counts. This is not possible without knowing which field represents a reference/pointer.
+
+- ### Addition of `allocref` expression
+```
+export type Expr<A> =
+  ...
+  | {  a?: A, tag: "allocref", types: [Value<A>] }
+```
+We need this expression to be called right before all the alloc calls for the fields of the object are made. To follow references and to deallocate memory on the heap, we need the size and the type information of an object which is stored on it. This expression, allows the memory manager to understand how many bytes are to be allocated/ deleted when the object is garbage collected and what will be the type of data in a field.
+
+- ### Remove BigInt type
+We feel that the implementation of `bigint` type would probably be as a contiguous array of `int` and could just be made into an `object` type. This relates to our implementation since we would not not have to account for a special case.
 
 ## Added functions
 - 
 
 ## Value representation and memory layout
-- 
+
+![Memory layout with metadata](./images/memory-metadata.drawio.png)
+
+The type of a field is denoted by a single bit. For the memory manager we feel that it does not really matter what the type of an field is, as long as we are able to differentiate between data and references to data. The current representation that we plan uses 32 bits to represent types in an object, which puts an upper bound on the number of fields in an object to 32. If needed this number can be easily increased, assigning more bits to storing types in the metadata.
+
+The size of the object is stored in bytes, and the number of references is stored along with the object.
+
+### Compaction/ Defragmentation
+Performing defragmentation for the heap will move objects around in the heap. Since, we can't go about modifying all the references, each object we create will have an **immutable reference number**. We plan to maintain a mapping from this reference number to the actual location in memory. When compaction takes place we will update this mapping. All variables in the program will store the **reference number** instead of the actual address in memory.
+
