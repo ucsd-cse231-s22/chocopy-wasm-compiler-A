@@ -162,9 +162,9 @@ Let `o` be the object referred to by variable `x` <br>
 Let `p` be the object referred to by variable `y`
 ```
 assert number of references of o is 1
-assert type of feilds in o is [value, pointer]
+assert type of fields in o is [value, pointer]
 assert number of references of p is 2
-assert type of feilds in p is [value, pointer]
+assert type of fields in p is [value, pointer]
 ```
 
 ### 8. Anonymous object deletion
@@ -207,9 +207,9 @@ Let `o` be the object referred to by variable `x` <br>
 Let `p` be the object referred to by variable `y`
 ```
 assert number of references of o is 1
-assert type of feilds in o is [value, pointer]
+assert type of fields in o is [value, pointer]
 assert number of references of p is 1
-assert type of feilds in p is [value, pointer]
+assert type of fields in p is [value, pointer]
 ```
 
 ### 10. Simple deletion in cycle
@@ -234,9 +234,9 @@ Let `o` be the object referred to by variable `x` <br>
 Let `p` be the object referred to by variable `y`
 ```
 assert number of references of o is 0
-assert type of feilds in o is [value, pointer]
+assert type of fields in o is [value, pointer]
 assert number of references of p is 1
-assert type of feilds in p is [value, pointer]
+assert type of fields in p is [value, pointer]
 ```
 
 ## Changes to IR
@@ -273,4 +273,3 @@ The size of the object is stored in bytes, and the number of references is store
 
 ### Compaction/ Defragmentation
 Performing defragmentation for the heap will move objects around in the heap. Since, we can't go about modifying all the references, each object we create will have an **immutable reference number**. We plan to maintain a mapping from this reference number to the actual location in memory. When compaction takes place we will update this mapping. All variables in the program will store the **reference number** instead of the actual address in memory.
-
