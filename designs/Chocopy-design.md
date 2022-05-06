@@ -96,7 +96,7 @@ ans : int = 0
 x : int = 0
 for x in [1, 2, 3, 4, 5]:
 ans = ans + x
-print(ans)`, [“15”]
+print(ans)`, ["15"]
 );
 ```
 
@@ -111,7 +111,18 @@ for x in [1, 2, 3, 4, 5]:
 	if x > 3:
 		return x
 return x
-print(f())`, [“4”]
+print(f())`, ["4"]
 );
 ```
 
+
+
+## Changes to AST
+
+
+
+## New Functions
+
+
+
+## Value Representation and Memory Layout for New Runtime Values
