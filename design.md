@@ -75,8 +75,16 @@ export type Program<A> =
   ....
 
 export type FunDef<A> = {
-  a?: A, name: string, parameters: TypedVar<A>[], ret: Type, inits: VarInit<A>[], body: Stmt<A>[],
+  a?: A,
+  name: string,
+  parameters: TypedVar<A>[],
+  ret: Type,
+  inits: VarInit<A>[],
+  body: Stmt<A>[],
   nestedFunDefs: FunDef<A>[],
+  isNested: boolean,
+  nonlocals: Set<string>,
+  globals: Set<string>,
 }
 
 export type ClassDef<A> = {
@@ -529,6 +537,27 @@ export type Value<A> =
     def g(y: int):
       return y
     return g(2)
+  ```
+  > The above program must throw a `TYPE ERROR`
+
+  - **nonlocal keyword overrides local variable** - overrides parameter
+  ```
+  def fun(a:A ):
+    def f(x: int):
+      nonlocal x
+      pass
+    pass
+  ```
+  > The above program must throw a `TYPE ERROR`
+
+  - **nonlocal keyword overrides local variable** - overrides local variable
+  ```
+  def fun(a:A ):
+    def f(x: int):
+      z: int = 2
+      nonlocal z
+      pass
+    pass
   ```
   > The above program must throw a `TYPE ERROR`
 
