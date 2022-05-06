@@ -1,6 +1,6 @@
 Testing
 ===
-##  Integrated test cases. 
+##  Integrated test cases
 We will come up with more integrated test cases next week and make sure that the syntex of our test cases align with the design documents of other groups.  
 #### Test Case 1 ( I/O , Lists , For Loops , Strings)
 ```
