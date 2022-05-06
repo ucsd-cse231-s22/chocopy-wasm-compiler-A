@@ -50,6 +50,19 @@ export function assertFail(name: string, source: string) {
 }
 
 
+// Assert an error gets thrown at runtime
+export function assertParseFail(name: string, source: string) {
+  it(name, async () => {
+    try {
+      await run(source);
+      fail("Expected an exception");
+    } catch (err) {
+      expect(err.message).to.contain("PARSE ERROR:");
+    }
+  });
+}
+
+
 export function assertPrint(name: string, source: string, expected: Array<string>) {
   it(name, async () => {
     await run(source);

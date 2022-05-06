@@ -1,4 +1,4 @@
-import { assertPrint, assertFail, assertTCFail, assertTC } from "./asserts.test";
+import { assertPrint, assertFail, assertParseFail, assertTCFail, assertTC } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("PA3 visible tests", () => {
@@ -191,4 +191,11 @@ class C(object):
   x : int = 0
 c : C = None
 c = None`, NONE);
+// 22
+assertParseFail("invalid-var-name", `
+174:int = 9`);
+// 23
+assertParseFail("invalid-class-name", `
+class int(object):
+  pass`);
 });
