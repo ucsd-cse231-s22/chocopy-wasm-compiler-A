@@ -51,8 +51,8 @@ We are planning to implement following features this week:
   - [ ] Concatenation and Printing
 
 - [ ] Nested functions
-  - [ ] Declaration of nested functions inside functions
-  - [ ] Declaring variables in nested functions with `nonlocal` keyword
+  - [ ] Declaration of nested functions inside functions/methods
+  - [ ] Declaration variables in nested functions with `nonlocal` keyword
 
 <br/>
 
