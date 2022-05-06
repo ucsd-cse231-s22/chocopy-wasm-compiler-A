@@ -198,4 +198,28 @@ assertParseFail("invalid-var-name", `
 assertParseFail("invalid-class-name", `
 class int(object):
   pass`);
+// 24
+assertPrint("elif-expression", `
+a:int = 4
+b:bool = False
+if (a == 3):
+  print(True)
+elif (a == 4):
+  print(False)
+  if (b):
+    print(123)
+  else:
+    print(125)`, [`False`, `125`]);
+// 25
+assertTCFail("not-all-path-return", `
+def f() -> int:
+  if (True):
+    return 3
+  elif (False):
+    return 7
+  else:
+    if (True):
+      return 7
+    elif (False):
+      return 12`);
 });

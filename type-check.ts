@@ -163,8 +163,72 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
 }
 
 export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Array<Stmt<null>>) : Array<Stmt<Type>> {
-  var tStmts = stmts.map(stmt => tcStmt(env, locals, stmt));
+  let tStmts : Array<Stmt<Type>> = [];
+  let returnCheck : Boolean = false;
+  stmts.forEach(stmt => {
+    if (stmt.tag === "return")
+      returnCheck = true;
+    tStmts.push(tcStmt(env, locals, stmt));
+  });
+  if (!locals.topLevel) {
+    if (!returnCheck && locals.expectedRet.tag !== "none") {
+      // Check if there's conditional expression that returns for all paths
+      let ifFlag = false;
+      stmts.forEach(stmt => {
+        if (stmt.tag === "if") {
+          ifFlag = true;
+          if (!tcIfReturn(stmt))
+            throw new TypeCheckError("not all paths return");
+        }
+      });
+      if (!ifFlag)
+        throw new TypeCheckError("not all paths return");
+    }
+  }
   return tStmts;
+}
+
+function tcIfReturn(ifStmt : Stmt<Type>) : Boolean {
+  /* Function that checks if a function is properly returned in an if
+   * Input:
+   * ifStmt - given if statements
+   * Output:
+   * ifReturn - true / false indicating if properly returned
+   */
+  // First check if return is existed in every branch
+  if (ifStmt.tag === "if") {
+    var ifCheck : Boolean = false;
+    ifStmt.bodies.forEach(stmts => {
+      stmts.forEach(stmt => {
+        if (stmt.tag === "return")
+          ifCheck = true;
+      });
+    });
+    var elseCheck : Boolean = false;
+    ifStmt.els.forEach(stmt => {
+      if (stmt.tag === "return")
+        elseCheck = true;
+    });
+    if (elseCheck && ifCheck) return true;
+
+    // Not all exist return, check nested if
+    if (!ifCheck) {
+      ifStmt.bodies.forEach(stmts => {
+        stmts.forEach(stmt => {
+          if (stmt.tag === "if")
+            ifCheck = tcIfReturn(stmt);
+        })
+      })
+    }
+    if (!elseCheck) {
+      ifStmt.els.forEach(stmt => {
+        if (stmt.tag === "if")
+          elseCheck = tcIfReturn(stmt);
+      });
+    }
+    return elseCheck && ifCheck;
+  }
+  return true;
 }
 
 export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<null>) : Stmt<Type> {
@@ -186,17 +250,28 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       const tExpr = tcExpr(env, locals, stmt.expr);
       return {a: tExpr.a, tag: stmt.tag, expr: tExpr};
     case "if":
-      var tCond = tcExpr(env, locals, stmt.cond);
-      const tThn = tcBlock(env, locals, stmt.thn);
-      const thnTyp = locals.actualRet;
-      locals.actualRet = NONE;
+      const tConds : Array<Expr<Type>> = [];
+      let thnTyp : Type = NONE;
+      stmt.conds.forEach(cond => {
+        const tCond = tcExpr(env, locals, cond);
+        if (tCond.a !== BOOL)
+          throw new TypeCheckError("Condition Expression Must be a bool");
+        tConds.push(tCond);
+      });
+      const tBodies : Array<Stmt<Type>[]> = [];
+      stmt.bodies.forEach(stmts => {
+        tBodies.push(tcBlock(env, locals, stmts))
+        thnTyp = locals.actualRet;
+        if (!isAssignable(env, locals.actualRet, locals.expectedRet)) 
+          throw new TypeCheckError("expected return type `" + (locals.expectedRet as any).tag + "`; got type `" + (locals.actualRet as any).tag + "`");
+      });
       const tEls = tcBlock(env, locals, stmt.els);
-      const elsTyp = locals.actualRet;
-      if (tCond.a !== BOOL) 
-        throw new TypeCheckError("Condition Expression Must be a bool");
-      if (thnTyp !== elsTyp)
-        locals.actualRet = { tag: "either", left: thnTyp, right: elsTyp }
-      return {a: thnTyp, tag: stmt.tag, cond: tCond, thn: tThn, els: tEls};
+      if (!isAssignable(env, locals.actualRet, locals.expectedRet)) 
+        throw new TypeCheckError("expected return type `" + (locals.expectedRet as any).tag + "`; got type `" + (locals.actualRet as any).tag + "`");
+      // const elsTyp = locals.actualRet; // NOT FOR ChocoPy
+      // if (thnTyp !== elsTyp)
+      //   locals.actualRet = { tag: "either", left: thnTyp, right: elsTyp }
+      return {a: thnTyp, tag: stmt.tag, conds: tConds, bodies: tBodies, els: tEls}
     case "return":
       if (locals.topLevel)
         throw new TypeCheckError("cannot return outside of functions");

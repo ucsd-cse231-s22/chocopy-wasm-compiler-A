@@ -260,32 +260,40 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       return { tag: "expr", expr: expr }
     case "IfStatement":
       c.firstChild(); // Focus on if
-      c.nextSibling(); // Focus on cond
-      var cond = traverseExpr(c, s);
-      // console.log("Cond:", cond);
-      c.nextSibling(); // Focus on : thn
-      c.firstChild(); // Focus on :
-      var thn = [];
-      while(c.nextSibling()) {  // Focus on thn stmts
-        thn.push(traverseStmt(c,s));
+      const conds : Array<Expr<null>> = [];
+      const bodies : Array<Stmt<null>[]> = [];
+      var elseFlag : Boolean = false;
+      while (c.nextSibling()) {
+        conds.push(traverseExpr(c, s));
+        c.nextSibling();
+        const cur_body : Stmt<null>[] = [];
+        c.firstChild();
+        while (c.nextSibling()) {
+          cur_body.push(traverseStmt(c, s));
+        }
+        bodies.push(cur_body);
+        c.parent();
+        c.nextSibling();
+        if (s.substring(c.from, c.to) === "else") {
+          elseFlag = true;
+          break;
+        }
       }
-      // console.log("Thn:", thn);
-      c.parent();
-      
-      c.nextSibling(); // Focus on else
-      c.nextSibling(); // Focus on : els
-      c.firstChild(); // Focus on :
-      var els = [];
-      while(c.nextSibling()) { // Focus on els stmts
-        els.push(traverseStmt(c, s));
+      const else_body : Stmt<null>[] = [];
+      if (elseFlag) {
+        c.nextSibling(); // body
+        c.firstChild(); // :
+        while (c.nextSibling()) {
+          else_body.push(traverseStmt(c, s));
+        }
+        c.parent();
       }
-      c.parent();
       c.parent();
       return {
         tag: "if",
-        cond: cond,
-        thn: thn,
-        els: els
+        conds,
+        bodies,
+        els: else_body
       }
     case "WhileStatement":
       c.firstChild(); // Focus on while
