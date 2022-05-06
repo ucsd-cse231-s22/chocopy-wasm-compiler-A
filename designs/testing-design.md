@@ -1,7 +1,7 @@
 Testing
 ===
 ##  Integrated test cases
-We will come up with more integrated test cases next week and make sure that the syntex of our test cases align with the design documents of other groups.  
+Note : We will come up with more integrated test cases next week and make sure that the syntax of our test cases align with the design documents of other groups.  
 #### Test Case 1 ( I/O , Lists , For Loops , Strings)
 ```
 n: int = 0
@@ -17,6 +17,10 @@ for i in A:
    fo.write(str(i) + "\n")
 fo.close()
 ```
+Expected output:
+```
+A file with should be created with user provided inputs
+```
 #### Test Case 2 ( Comprehensions , Lists , Dictionary , Sets)
 ```
 input_list : List[int] = [1, 2, 3, 4, 4, 5, 6, 7, 7]
@@ -30,6 +34,12 @@ output_gen = (var for var in input_list if var % 2 == 0)
 print(list_using_comp)
 print(dict_using_comp)
 print(output_gen)
+```
+Expected output:
+```
+[2,4,4,6]
+{1:1,3:27,5:125,7:343}
+(2,4,6)
 ```
 
 #### Test Case 3 ( Classes , Fancy Calls , Loops , If)
@@ -45,10 +55,10 @@ class Range:
 	
   def hasnext(self):
     return self.current < self.max
-  def next(self):
+  def next(self)->int:
     s : int = 0
-	while self.hasnext():
-	   s = s + self.current
+	  while self.hasnext():
+	     s = s + self.current
        self.current = self.current + 1
     return s
 
@@ -61,6 +71,12 @@ print(ra1.next())
 ra1.new(5,25,5)
 print(ra1.next())
 ```
+Expected output:
+```
+290
+35
+Error expected 2 args got 3
+```
 
 #### Test Case 4  (Classes, Strings , Builtin Fncs)
 ```
@@ -70,15 +86,15 @@ class Start:
   def set(self, a : string , b : string):
      self.a = a
 	 self.b = b
-  def concatenate(self):
+  def concatenate(self)-> str:
      return self.a + self.b
-  def RAfirst(self):
+  def RAfirst(self) -> str:
      return self.a[0]
-  def RBFirst(self):
+  def RBFirst(self) -> str:
      return self.b[0]
-  def LengthA(self):
+  def LengthA(self) -> int:
      return len(self.a)
-  def LengthB(self):
+  def LengthB(self) -> int:
      return len(self.b)
 A : Start = None
 A = Start()
@@ -87,6 +103,13 @@ print(A.concatenate())
 print(A.RAfirst())
 print(A.RBFirst())
 print(A.LengthA + A.LengthB)
+```
+Expected output:
+```
+FirstSecond
+F
+S
+11
 ```
 #### Test Case 5 (Dictionary , Loops , Sets , Multiple Unpacking)
 ```
@@ -103,9 +126,14 @@ def Checking(n : int)-> Dict[int,int],Set[int]:
   return A,B
 a : Dict[int , int] = None
 b : Set[int] = None
-a,b = Checking(5)
+a,b = Checking(3)
 print(a)
 print(b)
+```
+Expected output:
+```
+{-3:9,-2:4,1:1,0:0,1:1,2:4,3:9}
+(0,1,4,9)
 ```
 #### Test Case 6 (Inheritance+Polymorphism)
 ```
