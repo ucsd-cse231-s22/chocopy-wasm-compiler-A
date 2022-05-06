@@ -181,10 +181,10 @@ export type Value<A> =
 
 <details>
 
-  <summary> Inheritance test cases </summary>
+  <summary> Inheritance </summary>
   <br/>
 
-  - **Extending a class** - overriding methods
+  - **Extending a Class** - overriding methods
   ```
   class List(object):
     def sum(self : List) -> int:
@@ -196,29 +196,14 @@ export type Value<A> =
 
   l : List = None
   l = Empty()
+  
   print(l.sum())
   ```
   > The above program must print `0`
 
   <br/>
 
-  - **Overriding fields**
-  ```
-  class Animal(object):
-    legs: int = 0
-
-  class Human(Animal):
-    pass
-
-  human : Animal = None
-  human = Human()
-  print(human.legs)
-  ```
-  > The above program must print `0`
-
-  <br/>
-
-  - **Overriding methods** - overriding constructor
+  - **Overriding Methods** - overriding constructor
   ```
   class Animal(object):
     legs: int = 0
@@ -229,13 +214,31 @@ export type Value<A> =
 
   human : Animal = None
   human = Human()
+  
   print(human.legs)
   ```
   > The above program must print `2`
 
   <br/>
 
-  - **Overriding fields**
+  - **Overriding Fields**
+  ```
+  class Animal(object):
+    legs: int = 0
+
+  class Human(Animal):
+    pass
+
+  human : Animal = None
+  human = Human()
+  
+  print(human.legs)
+  ```
+  > The above program must print `0`
+
+  <br/>
+
+  - **Overriding Fields**
   ```
   class Animal(object):
     legs: int = 0
@@ -247,7 +250,7 @@ export type Value<A> =
 
   <br/>
 
-  - **Overriding fields** - accessing inherited and private field
+  - **Overriding Fields** - accessing inherited and private field
   ```
   class Animal(object):
     brain: int = 1
@@ -260,14 +263,19 @@ export type Value<A> =
     
   human: Animal = None
   human = Human()
+  
   print(human.brain)
   print(human.hands)
   ```
-  > The above program must print `1\n2`
+  > The above program must print -
+  ```
+  1
+  2
+  ```
 
   <br/>
 
-  - **Accessing parent's method**
+  - **Accessing Super Class' Method**
   ```
   class Animal(object):
     brain: int = 1
@@ -283,6 +291,7 @@ export type Value<A> =
     
   human: Animal = None
   human = Human()
+  
   print(human.getLegs())
   ```
 
@@ -290,7 +299,7 @@ export type Value<A> =
 
   <br/>
 
-  - **Accessing overridden method**
+  - **Accessing Overridden Method**
   ```
   class Animal(object):
     brain: int = 1
@@ -312,12 +321,13 @@ export type Value<A> =
     
   human: Animal = None
   human = Human()
+  
   print(human.walk())
   ```
 
   > The above program must print `1`
 
-  - **Linked list example**
+  - **Linked List Example**
   ```
   class List(object):
     def sum(self : List) -> int:
@@ -330,8 +340,10 @@ export type Value<A> =
   class Link(List):
     val : int = 0
     next : List = None
+    
     def sum(self : Link) -> int:
       return self.val + self.next.sum()
+    
     def new(self : Link, val : int, next : List) -> Link:
       self.val = val
       self.next = next
@@ -339,6 +351,7 @@ export type Value<A> =
 
   l : List = None
   l = Link().new(5, Link().new(13, Empty()))
+  
   print(l.sum())
   ```
   > The above program must print `18`
@@ -348,7 +361,7 @@ export type Value<A> =
 </details>
 
 <details>
-  <summary> List Test Cases </summary>
+  <summary> List </summary>
 
   <br/>
 
@@ -359,7 +372,7 @@ export type Value<A> =
 
   print(myList[3][3])
   ```
-  > The above program must compile successfully, and print `9`
+  > The above program must print `9`
 
   <br/>
 
@@ -370,7 +383,7 @@ export type Value<A> =
 
   print(myList[3][3])
   ```
-  > The above program must return a `TYPE ERROR`
+  > The above program must throw a `TYPE ERROR` because `cls` is not a defined class
 
   <br/>
 
@@ -381,7 +394,7 @@ export type Value<A> =
 
   print(myList[0])
   ```
-  > The above program must return a `TYPE ERROR`
+  > The above program must throw a `TYPE ERROR` because `1` is not a valid element for integer list
 
   <br/>
 
@@ -392,7 +405,7 @@ export type Value<A> =
 
   print(myList[2])
   ```
-  > The above program must compile successfully, and print `77`
+  > The above program must print `77`
 
   <br/>
 
@@ -435,63 +448,77 @@ export type Value<A> =
 
   print(myList1[3])
   ```
-  > The above program must return a `TYPE ERROR`
+  > The above program must throw a `TYPE ERROR` because an list of integers cannot be concatenated with a list of booleans
 
   <br/>
 
 </details>
 
 <details>
-<summary> Nested functions </summary>
-<br/>
+  <summary> Nested Functions </summary>
+  <br/>
 
-  - **Singly nested function** - basic test case
+  - **Singly Nested Function** - basic test case
   ```
   def f(x: int) -> int:
     def g(y: int) -> int:
       return x + y
     return g(2)
+  
   print(f(1))
   ```
   > The above program must print `3`
 
-<br/>
+  <br/>
 
-   - **Calling the nested function twice**
+   - **Calling Nested Function Twice**
    ```
     def f(x: int) -> int:
       def g(y: int) -> int:
         return x + y
       return g(10) + g(7)
+    
     print(f(6))
   ```
-  > The above program must print "29"
+  > The above program must print `29`
 
-  - **More than 1 nested function**
+  <br/>
+
+  - **Multiple Nested Functions**
   ```
   def f(x: int) -> int:
     def g(y: int) -> int:
       return x + y
+    
     def h(z: int) -> int:
       return x + z
+    
     return g(10) + h(7)
+  
   print(f(6))
   ```
   > The above program must print `29`
 
-  - **Multiple nested functions - one calling the other one**
+  <br/>
+
+  - **Multiple Nested Functions** - one calling the other
   ```
   def f(x: int) -> int:
     def g(y: int) -> int:
       return x + y
+    
     def h(z: int) -> int:
       return g(z + x) + 11
+    
     return g(10) + h(7)
+  
   print(f(6))
   ```
   > The above program must print `46`
 
-  - **Recursion in nested functions**
+  <br/>
+
+  - **Recursion in Nested Functions**
   ```
   def f(x: int) -> int:
     def factorial(n: int) -> int:
@@ -499,11 +526,14 @@ export type Value<A> =
         return 1
       return n * factorial(n - 1)
     return factorial(x)
+  
   print(f(5))
   ```
   > The above program must print `120`
 
-  - **nested_functions_with_if_statements**
+  <br/>
+
+  - **Nested Functions with IF Statements**
   ```
   def f(x : int) -> int:
     def g(y : int) -> int:
@@ -511,39 +541,51 @@ export type Value<A> =
         return h(y + n)
       else:
         return x
+    
     def h(z : int) -> int:
       n : int = 0
       n = 100 + z
       return x + n
+    
     n : int = 0
     n = 500
+    
     return g(15) + g(7)
+  
   print(f(6))
   ```
   > The above program must print `627`
   
-  - **Shadowing nested functions**
+  <br/>
+
+  - **Shadowing Nested Functions** - redeclaring `f()` as a nested function inside `g()`, with different signature than original
   ```
   def f() -> int:
     def g(y: int) -> int:
-        def f(x: int) -> int:
-            return x + 1
-        return y + f(2)
+      def f(x: int) -> int:
+          return x + 1
+      return y + f(2)
     return g(4)
+  
   print(f())
   ```
   > The above program must print `7`
 
-  - **Incorrect return type in nested function** - function signature returns `int`, but body returns `None`
+  <br/>
+
+  - **Incorrect Return Type in Nested Function** - function signature returns `int`, but body returns `None`
   ```
   def f(x: int) -> int:
     def g(y: int) -> int:
       return
-  return g(2)
+  
+  print(g(2))
   ```
   > The above program must throw a `TYPE ERROR`
 
-  - **Incorrect type in nested function** - function signature returns `None`, but body returns `int`
+  <br/>
+
+  - **Incorrect Return Type in Nested Function** - function signature returns `None`, but body returns `int`
   ```
   def f(x: int) -> int:
     def g(y: int):
@@ -552,7 +594,9 @@ export type Value<A> =
   ```
   > The above program must throw a `TYPE ERROR`
 
-  - **nonlocal keyword overrides local variable** - overrides parameter
+  <br/>
+
+  - **`nonlocal` Keyword Overrides `local` Variable** - overrides parameter
   ```
   def fun():
     def f(x: int):
@@ -562,7 +606,9 @@ export type Value<A> =
   ```
   > The above program must throw a `TYPE ERROR`
 
-  - **nonlocal keyword overrides local variable** - overrides local variable
+  <br/>
+
+  - **`nonlocal` Keyword Overrides `local` Variable** - overrides local variable
   ```
   def fun():
     def f(x: int):
@@ -573,7 +619,9 @@ export type Value<A> =
   ```
   > The above program must throw a `TYPE ERROR`
 
-  - **nonlocal keyword inside a function that is not nested**
+  <br/>
+
+  - **`nonlocal` Keyword in a Function that is not Nested**
   ```
   z: int = 3
   def fun():
@@ -584,7 +632,9 @@ export type Value<A> =
   ```
   > The above program must throw a `TYPE ERROR`
 
-  - **forward reference to nonlocal variables**
+  <br/>
+
+  - **Forward Reference to `nonlocal` Variables**
   ```
   def f() -> int:
     def g() -> int:
@@ -600,7 +650,9 @@ export type Value<A> =
   ```
   > The above program must print `2`
 
-- **nonlocal keyword tests**
+  <br/>
+
+- **`nonlocal` Keyword Tests**
   ```
   def f(x: int) -> int:
     def g(y: int) -> int:
@@ -608,26 +660,34 @@ export type Value<A> =
       x = x + y
       return x
     return g(2) + x
+  
   print(f(7))
   ```
   > The above program must print `18`
 
-  - **nonlocal_keyword_triple_nested_functions**
+  <br/>
+
+  - **`nonlocal` Keyword in Triple Nested Functions**
   ```
   def f(x : int) -> int:
     def g(z: int):
-        def h(y: int):
-            nonlocal x
-            nonlocal z
-            x = 4
-            return
-        h(z)
+      def h(y: int):
+        nonlocal x
+        nonlocal z
+        x = 4
         return
+      
+      h(z)
+      return
+    
     g(1)
     return x
+  
   print(f(1))
   ```
   > The above program must print `4`
+
+  <br/>
 
 </details>
 
