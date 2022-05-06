@@ -52,7 +52,7 @@ We are planning to implement following features this week:
 
 - [ ] Nested functions
   - [ ] Declaration of nested functions inside functions/methods
-  - [ ] Declaration variables in nested functions with `nonlocal` keyword
+  - [ ] Declaration variables in nested functions with `nonlocal`/`global` keyword
 
 <br/>
 
@@ -542,7 +542,7 @@ export type Value<A> =
 
   - **nonlocal keyword overrides local variable** - overrides parameter
   ```
-  def fun(a:A ):
+  def fun():
     def f(x: int):
       nonlocal x
       pass
@@ -552,10 +552,21 @@ export type Value<A> =
 
   - **nonlocal keyword overrides local variable** - overrides local variable
   ```
-  def fun(a:A ):
+  def fun():
     def f(x: int):
       z: int = 2
       nonlocal z
+      pass
+    pass
+  ```
+  > The above program must throw a `TYPE ERROR`
+
+  - **nonlocal keyword inside a function that is not nested**
+  ```
+  z: int = 3
+  def fun():
+    nonlocal z
+    def f(x: int):
       pass
     pass
   ```
