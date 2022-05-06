@@ -5,14 +5,17 @@ export type Type =
   | {tag: "number"}
   | {tag: "bool"}
   | {tag: "none"}
-  | {tag: "class", name: string}
+  | {tag: "class", name: string, params: Array<Type> }
   | {tag: "either", left: Type, right: Type }
+  | {tag: "typevar", name: string }
 
 export type Parameter<A> = { name: string, type: Type }
 
-export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
+export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, typeVarInits: Array<TypeVar<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
 
-export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
+export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, typeParams: Array<string> }
+
+export type TypeVar<A> = { a?: A, name: string, types: Array<Type> }
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Literal }
 
@@ -43,6 +46,7 @@ export type Literal =
     { tag: "num", value: number }
   | { tag: "bool", value: boolean }
   | { tag: "none" }
+  | { tag: "zero" }
 
 // TODO: should we split up arithmetic ops from bool ops?
 export enum BinOp { Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};
