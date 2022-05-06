@@ -1,8 +1,8 @@
 Testing
 ===
-###  Integrated test cases. 
+##  Integrated test cases. 
 We will come up with more integrated test cases next week and make sure that the syntex of our test cases align with the design documents of other groups.  
-##### Inheritance+Polymorphism
+#### Inheritance+Polymorphism
 ```python=
 class Number(object):
     x: int = 5
@@ -31,7 +31,7 @@ Expected output:
 1
 2
 ```
-##### Closures+For Loops+List
+#### Closures+For Loops+List
 ```python=
 def print_msg(val: int) -> Callable[[], None]:
     def printDouble():
@@ -51,7 +51,7 @@ Expected output:
 8
 ```
 
-##### Destructuring Assignment + I/O
+#### Destructuring Assignment + I/O
 ```python=
 f1 : File, f2: File = None, None
 f1 = open('output1', 'wb')
@@ -72,7 +72,7 @@ Expected output:
 output1: \x00000004\x00000005
 output2: \x00000005\x00000004
 ```
-##### Closures+Iterators+List
+#### Closures+Iterators+List
 ```python=
 def print_msg(arr: [int]) -> Callable[[], None]:
     def printFirstTwo():
@@ -88,7 +88,7 @@ Expected output:
 3
 4
 ```
-##### Anonymous function + String
+#### Anonymous function + String
 
 ```python=
 isEvenLength: Callable[[string], bool] = lambda str:string: len(str)%2==0 
@@ -103,7 +103,7 @@ True
 ```
 
 ## Changes we want to make
-##### changes in tests/
+#### changes in tests/
 - Add more integrated test cases
 - Add tests on different os(macOS and windows)
 - Add automation testing for webApp(Use Selenium or other tools)
