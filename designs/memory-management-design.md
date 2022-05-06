@@ -260,8 +260,8 @@ We need this expression to be called right before all the alloc calls for the fi
 - ### Remove BigInt type
 We feel that the implementation of `bigint` type would probably be as a contiguous array of `int` and could just be made into an `object` type. This relates to our implementation since we would not not have to account for a special case.
 
-## Added functions
-- 
+## Added functions/ data types
+New data types are added only to IR and are same as described above.
 
 ## Value representation and memory layout
 
