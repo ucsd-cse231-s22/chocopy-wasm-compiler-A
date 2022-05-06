@@ -52,7 +52,7 @@ class Rat(Animal):
   b: int = 0
   def __init__(self:Rat):
     self.b = 1
-x : AnimalRat = None
+x : Animal = None
 x = Rat()
 y = x
 z = y
