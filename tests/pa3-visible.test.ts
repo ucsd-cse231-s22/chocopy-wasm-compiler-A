@@ -184,4 +184,11 @@ class C(object):
   x : int = 0
 c : C = None
 c = None`, NONE);
+// 21
+assertTC("comment-check", `
+# Hello world
+class C(object):
+  x : int = 0
+c : C = None
+c = None`, NONE);
 });

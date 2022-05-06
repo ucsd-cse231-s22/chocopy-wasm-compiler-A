@@ -12,6 +12,7 @@ make
 build webpage and run compiler
 
 ```bash
+npm run build-web
 cd build
 python -m SimpleHTTPServer
 ```

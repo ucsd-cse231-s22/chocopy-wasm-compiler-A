@@ -245,32 +245,6 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       const expr = traverseExpr(c, s);
       c.parent(); // pop going into stmt
       return { tag: "expr", expr: expr }
-    // case "FunctionDefinition":
-    //   c.firstChild();  // Focus on def
-    //   c.nextSibling(); // Focus on name of function
-    //   var name = s.substring(c.from, c.to);
-    //   c.nextSibling(); // Focus on ParamList
-    //   var parameters = traverseParameters(c, s)
-    //   c.nextSibling(); // Focus on Body or TypeDef
-    //   let ret : Type = NONE;
-    //   if(c.type.name === "TypeDef") {
-    //     c.firstChild();
-    //     ret = traverseType(c, s);
-    //     c.parent();
-    //   }
-    //   c.firstChild();  // Focus on :
-    //   var body = [];
-    //   while(c.nextSibling()) {
-    //     body.push(traverseStmt(c, s));
-    //   }
-      // console.log("Before pop to body: ", c.type.name);
-    //   c.parent();      // Pop to Body
-      // console.log("Before pop to def: ", c.type.name);
-    //   c.parent();      // Pop to FunctionDefinition
-    //   return {
-    //     tag: "fun",
-    //     name, parameters, body, ret
-    //   }
     case "IfStatement":
       c.firstChild(); // Focus on if
       c.nextSibling(); // Focus on cond
@@ -491,6 +465,10 @@ export function isClassDef(c : TreeCursor, s : string) : Boolean {
   return c.type.name === "ClassDefinition";
 }
 
+export function isComment(c : TreeCursor, s : string) : Boolean {
+  return c.type.name === "Comment";
+}
+
 export function traverse(c : TreeCursor, s : string) : Program<null> {
   switch(c.node.type.name) {
     case "Script":
@@ -507,7 +485,7 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
           funs.push(traverseFunDef(c, s));
         } else if (isClassDef(c, s)) {
           classes.push(traverseClass(c, s));
-        } else {
+        } else if (!isComment(c, s)) {
           break;
         }
         hasChild = c.nextSibling();
