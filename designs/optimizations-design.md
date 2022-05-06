@@ -11,6 +11,45 @@ optimization might not have obvious week-1 candidates. If you’re not sure what
 be able to get done in a week, ask. There is probably some other kind of test you can 
 write other than a Python program.
 
+<ul>
+<li>
+Constant folding:
+If there exists a variable (not a class field access, but a memory variable) of which a constant value can be determined at compile time,
+then for every place.
+
+Test case #1
+```
+a = (4+5)
+```
+transforms to 
+```
+a = 9
+```
+</li>
+
+<li>
+Constant folding:
+Test case #2
+```
+if (2 != 2): print(5)
+```
+transforms to 
+```
+if (False):
+    print(5)
+```
+</li>
+
+<li>
+Constant folding:
+Binary expressions of the form where both the arguments to the operator are constant literals (after constant propagation,)
+</li>
+
+<li>
+Dead code elimination
+</li>
+</ul>
+
 ## List of changes to AST/IR
 
 A list of all changes you want to make to the AST, IR, and built-in libraries to 
