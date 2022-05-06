@@ -31,7 +31,7 @@ print(aString1+aString2)
 assertPrint("string-length",
 `
 print(len("Hello")
-`, [5])
+`, [5]))
 ```
 
 4. 
@@ -119,10 +119,26 @@ print(f())`, ["4"]
 
 ## Changes to AST
 
+In order to support string, we need to add string type to `Type`.
+```typescript
+{tag: "str", name: string}
+```
 
+Also, we need to add string type to `Value<A>` in `ir.ts`.
+```typescript
+{ a?: A, tag: "str", name: string }
+```
 
 ## New Functions
 
+In order to support string operations, we need to:
+
++ Add case `str` in `tcString` to annotate a string. 
++ Modify `tcExpr` in `type-check.ts` to make `BinOp.Plus` with 2 strings legal. 
++ Need a function `CodeGenString` in `compiler.ts` to generate wasm code.
++ Need to modify case `binop` in `codeGenExpr` to handle string concatence situation.
 
 
 ## Value Representation and Memory Layout for New Runtime Values
+
+No change should be made in this part.
