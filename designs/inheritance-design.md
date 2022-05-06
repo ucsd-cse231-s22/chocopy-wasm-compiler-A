@@ -62,8 +62,8 @@
 	        return self.x + i
         
     
-  class B(A):
-      x: int = 1 # Type Error: Cannot re-define field x
+	class B(A):
+	    x: int = 1 # Type Error: Cannot re-define field x
         
 	a : B = None
 	a = B()
