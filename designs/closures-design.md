@@ -198,7 +198,8 @@ Should pass, yielding `6\n7`.
 ```python
 def apply(func: Callable[[int], bool], arg: int) -> bool:
     return func(arg)
-isEven: Callable[[int], bool] = mklambda(
+isEven: Callable[[int], bool] = None
+isEven = mklambda(
   Callable[[int], bool],
   lambda num: num % 2 == 0
 )
@@ -210,7 +211,8 @@ Should pass, yielding `False`.
 ### 3. Type checking in lambda
 
 ```python
-isEven: Callable[[int], bool] = mklambda(
+isEven: Callable[[int], bool] = None
+isEven = mklambda(
   Callable[[int], bool],
   lambda num: num + None == 0
 )
@@ -221,7 +223,8 @@ Should yield type error on BinOp.
 ### 4. Type checking of lambda itself
 
 ```python
-isEven: Callable[[int], bool] = mklambda(
+isEven: Callable[[int], bool] = None
+isEven = mklambda(
   Callable[[int], int],
   lambda num: num
 )
@@ -232,14 +235,16 @@ Should yield type error on assignment.
 ### 5. Currying
 
 ```python
-add: Callable[[int], Callable[[int], int]] = mklambda(
+add: Callable[[int], Callable[[int], int]] = None
+add_5: Callable[[int], int] = None
+add = mklambda(
   Callable[[int], Callable[[int], int]],
   lambda a: mklambda(
     Callable[[int], int],
     lambda b: a + b
   )
 )
-add_5: Callable[[int], int] = add(5)
+add_5 = add(5)
 print(add_5(6))
 ```
 
@@ -250,7 +255,8 @@ Should pass, yielding `11`.
 ```python
 def add(a: int, b: int) -> int:
     return a + b
-add_ref: Callable[[int, int], int] = add
+add_ref: Callable[[int, int], int] = None
+add_ref = add
 print(add_ref(5 + 8))
 ```
 
@@ -261,7 +267,8 @@ Should pass, yielding `13`.
 ```python
 def add(a: int, b: int) -> int:
     return a + b
-add_ref: Callable[[int, int], int] = add
+add_ref: Callable[[int, int], int] = None
+add_ref = add
 print(add_ref(5, 8))
 add_ref = mklambda(
   Callable[[int, int], int],
@@ -275,7 +282,8 @@ Should pass, yielding `13\n14`.
 ### 8. Bad argument to lambda
 
 ```python
-a: Callable[[int], int] = mklambda(
+a: Callable[[int], int] = None
+a = mklambda(
   Callable[[int], int],
   lambda a: a
 )
@@ -288,7 +296,8 @@ Should yield type error on function call.
 ### 9. No arguments
 
 ```python
-noop: Callable[[], None] = mklambda(
+noop: Callable[[], None] = None
+noop = mklambda(
   Callable[[], None],
   lambda: None
 )
