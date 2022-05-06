@@ -140,4 +140,4 @@ and add to Expr:
 { a?:A, tag: "get-item", idx: number } // a[0]
 ```
 
-We also expect to have changes to the globals so we can support a function to print lists, get the length of the list, and also index the element at the correct offset. Since lists are also mutable and expandable, we're thinking of having some notion of the correct offsets or locations in memory that correspond to the list values.
+We also expect to have changes to the globals so we can support a function to print lists, get the length of the list, and also index the element at the correct offset. Since lists are also mutable and expandable, we're thinking of having some notion of the correct offsets or locations in memory that correspond to the list values. We also need to make some changes in parser, typecheck, and compiler that are corresponding to the changes we made in ast and some of the new syntax rules that the data structure list would support. 
