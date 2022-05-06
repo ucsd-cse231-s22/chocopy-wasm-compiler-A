@@ -21,7 +21,7 @@
 			return self.a + self.b + self.c
 
 	l : Three = None 
-	l = Three().new()
+	l = Three()
 	print(l.sum3()) # prints 6
 
 ### 2.  Inherit from a class that doesn't exist
@@ -68,12 +68,83 @@
 	a : B = None
 	a = B()
     
-### 5.  Methods that do not exist in super class
-    
+### 5a.  Methods that do not exist in super class (Test fails)
+    	class A(object):
+		a : int = 1
+
+		def get_a(self: A) -> int: 
+			return self.a
+
+	class B(A):
+		b : int = 2
+
+		def sum_a_b(self: B) -> int: 
+			return self.a + self.b
+
+	l : A = None 
+	l = A()
+	print(l.sum_a_b()) # Error: There is no function named sum_a_b in class A.
+	
+### 5b.  Methods that do not exist in super class (Test passes)
+    	class A(object):
+		a : int = 1
+
+		def get_a(self: A) -> int: 
+			return self.a
+
+	class B(A):
+		b : int = 2
+
+		def sum_a_b(self: B) -> int: 
+			return self.a + self.b
+
+	l : B = None 
+	l = B()
+	print(l.sum_a_b()) # Prints 3
+	
 ### 6.  Order of parsing and storing methods
+	class A(object):
+		a : int = 3
+
+		def get_a(self: A) -> int: 
+			return self.a
+		def get_a_minus_1(self: A) -> int:
+			return self.a - 1
+
+	class B(A):
+		b : int = 2
+
+		def get_a_minus_1(self: B) -> int: 
+			return self.a - 1
+		def get_a(self: B) -> int:
+			return self.a
+
+	l : B = None 
+	l = B()
+	print(l.get_a_minus_1()) # Prints 2, not 3
     
 ### 7.  Constructors (sub class & super class)
-    
+	class A(object):
+		a : int = 1
+
+		def __init__(self: A):
+			self.a = 2
+		def get_a(self: A) -> int:
+			return self.a
+
+	class B(A):
+		b : int = 3
+		
+		def __init__(self: B):
+			self.b = 4
+		def get_b(self: B) -> int: 
+			return self.b
+			
+	l : B = None
+	l = B()
+	print(l.get_a()) # Prints 2, not 1
+	print(l.get_b()) # Prints 4, not 3
+	
 ### 8.  Commutative property between inherited clasess
     
 ### 9.  new method for port memory allocation
