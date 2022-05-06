@@ -162,9 +162,9 @@ Let `o` be the object referred to by variable `x` <br>
 Let `p` be the object referred to by variable `y`
 ```
 assert number of references of o is 1
-assert type of feilds in o is [value, pointer]
+assert type of fields in o is [value, pointer]
 assert number of references of p is 2
-assert type of feilds in p is [value, pointer]
+assert type of fields in p is [value, pointer]
 ```
 
 ### 8. Anonymous object deletion
@@ -207,9 +207,9 @@ Let `o` be the object referred to by variable `x` <br>
 Let `p` be the object referred to by variable `y`
 ```
 assert number of references of o is 1
-assert type of feilds in o is [value, pointer]
+assert type of fields in o is [value, pointer]
 assert number of references of p is 1
-assert type of feilds in p is [value, pointer]
+assert type of fields in p is [value, pointer]
 ```
 
 ### 10. Simple deletion in cycle
@@ -234,9 +234,9 @@ Let `o` be the object referred to by variable `x` <br>
 Let `p` be the object referred to by variable `y`
 ```
 assert number of references of o is 0
-assert type of feilds in o is [value, pointer]
+assert type of fields in o is [value, pointer]
 assert number of references of p is 1
-assert type of feilds in p is [value, pointer]
+assert type of fields in p is [value, pointer]
 ```
 
 ## Changes to IR
