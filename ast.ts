@@ -7,6 +7,7 @@ export type Type =
   | {tag: "none"}
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
+  | { tag: "list", listitems : Array<Type>}
 
 export type Parameter<A> = { name: string, type: Type }
 
@@ -38,6 +39,17 @@ export type Expr<A> =
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
+  | {  a?: A, tag: "list-construct", items: Array<Expr<A>> } // implemented by the list team. 
+  | {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Stmt<A> }
+
+  // Possible Typechecks here ::
+  // 1. iterable.a.tag = list
+  // 2. cond is optional and cond.a.tag = bool and cond.tag = "if"
+  // 3. elem.tag = id
+
+  // [a (left) for b (elem) in C (iterable) if cond (optional)]
+  // [ 2*8, 6<7, 9+0,9, none] = [16, true, 9, 9, none]
+  // The reason we feel items in list-construct should be Expressions is because they can be anything as shown above
 
 export type Literal = 
     { tag: "num", value: number }
@@ -52,3 +64,7 @@ export enum UniOp { Neg, Not };
 export type Value =
     Literal
   | { tag: "object", name: string, address: number}
+
+
+
+  
