@@ -75,9 +75,39 @@
        print(s)
    ```
 
-5. ​
+5. ​Nested Functions
 
+    ``` python
+    def f(x: int) -> int:
+      def nest() -> int:
+        return x + 1
+      return nest()
+    f(10)
+    ```
 
+   For non-local use cases
+
+    ``` python
+    def foo(x: int) -> int:
+        def fie(y: int) -> int:
+            return x + fee(y)
+        def fee(z: int) -> int:
+            nonlocal x
+            x = z
+            return x+1
+        return fie(5) + fie(10)
+    foo(9)
+    ```
+
+    ``` python
+    def foo(x : int) -> int:
+        x: int = 0
+        def fie() -> int:
+            nonlocal x
+            return x+1
+        return fie()
+    foo()
+    ```
 
 
 
