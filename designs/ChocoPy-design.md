@@ -177,7 +177,7 @@ In `ir.ts`, we need to add list and empty to `Value<A>`.
 
 ### String
 
-String elements are placed consecutively on heap memory. Concatenation of two strings returns a new string whose first element is placed on the next available heap address at the time of concatenation.
+String are placed consecutively on heap memory. Concatenation of two strings returns a new string whose first char is placed on the next available heap address at the time of concatenation.
 
 ### Lists
 
