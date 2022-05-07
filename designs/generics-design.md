@@ -212,14 +212,14 @@ Type annotations of the form `<ClassName>[<TypeVar>]` for example `a: C[int] = N
 { tag: "class", name: "C", params: [{ tag: "number" }] }
 ```
 
-During the type checking phase, we'll update the type annotations from class to typeVar, if required. For instance in the following program, 
+Type annotations that use type variables directly are initially marked as having a class type. During the type checking phase, we'll update the type annotations from class to typeVar, if required. For instance in the following program, 
 ```python
 T = TypeVar('T')
 class A(Generic[T]):
     f: T = __ZERO__
 ```
-the field f will intially have the type annotation `class`. During the typechecking phase, we will detect that T is a `TypeVar` and update the type annnotation 
-to `typevar`.
+the field f will intially have the type annotation `class`. During the typechecking phase, we will detect that T is a type variable and update the type annnotation 
+to `typevar`. When the type variables are instantiated and the generic class is monomorphized all type annotations with the `typevar` annotation are replaced with the concrete type.
 
 ---
 
@@ -227,7 +227,7 @@ to `typevar`.
 ...
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, typeVarInits: Array<TypeVar<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
 ...
-export type TypeVar<A> = { a?: A, name: string, types: Array<Type> }
+export type TypeVar<A> = { a?: A, name: string, constraints: Array<Type> }
 ...
 ```
 
@@ -262,6 +262,82 @@ class --> None
 ---
 
 ## Proposed changes to the Parser
+
+### Type Variable Definitions
+
+Parser should identify and parse type-variable definitions as part of the global definitions.
+
+```typescript
+export function traverseDefs(c : TreeCursor, s : string) : [Array<VarInit<null>>, Array<FunDef<null>>, Array<Class<null>>, Array<TypeVar<null>>] {
+  ... 
+  const typevars: Array<TypeVar<null>> = [];
+
+  while(true) {
+    ...
+    else if(isTypeVar(c, s) {
+      typevars.push(traverseTypeVar);  
+    } else {
+      return [inits, funs, classes, typevars];
+    }
+    c.nextSibling();
+  }
+}
+```
+
+### Type Annotations for Generic Types
+
+Parser should be able to pass fancy type annotations of generic types with type parameters.
+
+```typescript
+export function traverseType(c : TreeCursor, s : string) : Type {
+  if(c.type.name === "MemberExpression") {
+    // parse generic type with type parameters
+    ...
+  } else {
+    ... 
+  }
+}
+```
+
+### Generic Class Definitions
+
+Parser should look for classes inheriting from the special Generic superclass and parse the type parameters.
+
+```typescript
+export function traverseClass(c : TreeCursor, s : string) : Class<null> {
+  const fields : Array<VarInit<null>> = [];
+  const methods : Array<FunDef<null>> = [];
+  const typeParams: Array<string> = [];
+  c.firstChild();
+  c.nextSibling(); // Focus on class name
+  const className = s.substring(c.from, c.to);
+  c.nextSibling(); // Focus on arglist/superclass
+  // Parse the superclass list and look for Generic
+  // and parse the type parameters if found
+  ...
+  return {
+    name: className,
+    fields,
+    methods,
+    typeParams
+  };
+}
+```
+
+### __ZERO__ Literal
+
+Parser should properly parse the new __ZERO__ value as a literal.
+
+```typescript
+export function traverseLiteral(c : TreeCursor, s : string) : Literal {
+  switch(c.type.name) {
+    case "VariableName":
+      // check if variable is called __ZERO__ and return literal 
+    default:
+      throw new Error("Not literal")
+  }
+}
+```
 
 ---
 
