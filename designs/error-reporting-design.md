@@ -1,7 +1,8 @@
 # TODOs:
-- Give an example for everything in "Examples of Design"
-- Give some explanation to "Changes to Data Structure".
-- Explain "functions to add" -- we'd like a function that keeps track of stack trace of function calls etc.
+- Review everything in "Examples of Design"
+- Review "Changes to Data Structure".
+- Review "Functions to add"
+- Add examples to "Future Work"
 
 # Error Reporting
 
@@ -42,52 +43,144 @@
 
 
 
-## Changes to Data Structures:
+## Changes to Data Structures
+
+The only changes we would add to the AST is the following:
+
+- We're extending the annotation type `A` to `Annotation` with information of location (line and column numbers) as well as the full line of source code that contains the given component.
+- Such information except for the type information will be added during parsing, and type information will be added after type checking.
+
+Here's an overview of the changes in code:
 
 ```ts
 Annotation = {
-	type: Type,
+	type?: Type,
 	loc: Loc,
+  fullSrc: string
 }
+
 Loc = {
 	line: num,
 	col: num,
 }
 ```
 
-
-
 ## Functions to Add
 
-TODO: `trace` function for accumulating stack traces
+We plan to implement a global `trace()` function that accumulates stack traces at runtime: a trace will be added whenever a function/method frame is entered, which contains the name of the frame and its location. Based on the current architecture, we will add the `trace()` function to `compile.ts`, and the traces will be reused in `runner.ts` when a runtime error is caught for printing out the stack trace.
 
 ## Examples of Design
 
 ### What we aim to achieve by next week
 
-#### Report Line Number
+#### Report Line Number 
+
+We report the line at which an error occurred. See examples below.
 
 #### Report Column Number
+
+We report the beginning column (0-index'd) of the token where an error occurred. See examples below.
+
 #### Report Source Code
+
+We report the full line of source code that contains an error. See examples below.
+
 #### Pretty Source Code
+
+We highlight the part in the source code that led to an error with squiggly lines (similar to Rust error reporting). See examples below.
+
 #### Assignment with different types
+
+```python
+a:int = 10
+a = True
+```
+
+Should report the following static error:
+
+```
+TypeError: assignment value should have assignable type to type `int`, got `bool` on line 1 at col 4
+
+a = True
+    ^^^^ attempt to assign type `bool` to type `int`
+```
+
+
+
 #### Override \_\_init\_\_ signature
+
+```python
+class C(object):
+  def __init__(self:C, other:D):
+    pass
+  
+x:C = None
+x = C()
+```
+
+Should report the following static error:
+
+```
+TypeError: `__init__` takes 1 argument of the same type of the class, got 2 on line 2 at col 21
+
+def __init__(self:C, other:D):
+                   ^^^^^^^^^^^ attempt to have more than 1 argument for `__init__`
+```
+
+
+
 #### Binary operator type hint
+
+```python
+a:bool = True
+a > 10
+```
+
+Should report the following static error:
+
+```
+TypeError: binary operator `>` should take type `int` on both sides, got `bool` and `int`
+
+a > 10
+^^ attempt to use `a` of type `int` with `>`
+```
+
+
+
 #### Condition expression type hint
+
+```python
+a:int = 10
+if a:
+  print(a)
+```
+
+Should report the following static error:
+
+```
+TypeError: a conditional expression should have type `bool`, got `int` on line 2 at col 3
+
+if a:
+   ^^ attempt to use `a` of type `int` as a conditional expression
+```
+
+
+
 #### Type check print/len argument
 
 ```python
-c:C = C()
+c:C = None
+c = C()
 print(c)
 ```
 
 Should report the following static error:
 
 ```
-TypeError: print() only takes types `int` and `bool` as the argument, got `C` on line 2 at col 6
+TypeError: print() only takes types `int` and `bool` as the argument, got `C` on line 3 at col 6
 
 print(c)
-      ^ attempt to call print() on `c` which has type `C`
+      ^^ attempt to call print() on `c` which has type `C`
 ```
 
 
