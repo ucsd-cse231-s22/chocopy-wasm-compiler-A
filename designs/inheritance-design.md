@@ -193,20 +193,28 @@
 	print(l.a) # Print 1
 	print(l.b) # Prints 3
     
-### 10.  new method for port memory allocation
+### 10.  Method overriding
 
-	class Pair(object):
-		left : int = 0
-		right : int = 0
+	class List(object):
+		def sum(self: List) -> int: 
+			return 1/0
 
-		def __init__(self): pass
+	class Empty(List):
+		def sum(self: Empty) -> int: 
+			return 0
 
-		def new(elf, l : int, r : int): -> Pair
-			self.left = l
-			self.right = r
+	class Link(List):
+		val : int = 0
+		next : List = None
+
+		def sum(self: Link) -> int: 
+			return self.next.sum() + self.val
+		
+		def new(self : Link, val : int, next : List) -> Link:
+			self.val = val
+			self.next = next
 			return self
-	
-	p : Pair = None
-	p = Pair().new(8, 9)
-	print(p.left) # Prints 8
-	print(p.right) # Prints 9
+
+	l : List = None 
+	l = Link().new(5, Link().new(13, Empty()))
+	print(l.sum()) # prints 18
