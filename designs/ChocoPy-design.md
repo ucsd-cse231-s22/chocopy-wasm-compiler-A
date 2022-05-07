@@ -160,10 +160,10 @@ In `ir.ts`, we need to add list and empty to `Value<A>`.
 
 ### String
 
-+ Add case `str` in `tcString` to annotate a string. 
-+ Modify `tcExpr` in `type-check.ts` to make `BinOp.Plus` with 2 strings legal. 
-+ Need a function `CodeGenString` in `compiler.ts` to generate wasm code.
-+ Need to modify case `binop` in `codeGenExpr` to handle string concatence situation.
++ In `type-check.ts`, add case `str` in `tcString` to annotate a string. 
++ In `type-check.ts`, modify `tcExpr`  to make `BinOp.Plus` with 2 strings legal. 
++ In `compiler.ts`, need a function `CodeGenString` to generate wasm code.
++ In `compiler.ts`, need to modify case `binop` in `codeGenExpr` to handle string concatence situation.
 
 ### Lists
 
@@ -177,7 +177,7 @@ In `ir.ts`, we need to add list and empty to `Value<A>`.
 
 ### String
 
-No change should be made in this part.
+String elements are placed consecutively on heap memory. Concatenation of two strings returns a new string whose first element is placed on the next available heap address at the time of concatenation.
 
 ### Lists
 
