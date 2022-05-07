@@ -95,7 +95,7 @@ assertPrint("for-loop-basic",
 ans : int = 0
 x : int = 0
 for x in [1, 2, 3, 4, 5]:
-ans = ans + x
+  ans = ans + x
 print(ans)`, ["15"]
 );
 ```
@@ -106,11 +106,11 @@ print(ans)`, ["15"]
 assertPrint("for-loop-return-intermediate",
 `
 def f() -> int:
-x : int = 0
-for x in [1, 2, 3, 4, 5]:
-	if x > 3:
-		return x
-return x
+  x : int = 0
+  for x in [1, 2, 3, 4, 5]:
+    if x > 3:
+      return x
+  return x
 print(f())`, ["4"]
 );
 ```
