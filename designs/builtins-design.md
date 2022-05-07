@@ -1,9 +1,8 @@
-# Built-in Library Design
-
 ## Overview
-
+We will implement a series of standard libraries and built-in functions for ChocoPy. We plan to support a simple version of Python's `import` statements through AST transformations and some compiler refactoring (detailed below); then we plan to implement some of the built-in libraries & functions in ChocoPy itself, utilizing the function / class definitions already in the compiler, plus the `import`  statement support. This design gives us the opportunity of self-hosting some of the built-in library, and at the same time still allows us to write some part of it in TypeScript or WASM.
 
 ## Changes to the Compiler
+These are the potential changes to the compiler that we plan to make in the coming week to support the first iteration of built-in libraries.
 
 #### Compilation Pipeline
 
@@ -25,11 +24,46 @@ To implement our built-in library and simple `import` support, we propose to cha
 ```mermaid
 flowchart LR
     src[(ChocoPy Source)] --parse--> ast{{AST}}
-    ast & src --import handling--> xast{{Expanded AST}}
+    ast & src ==import handling==> xast{{Expanded AST}}
     xast --type check--> tast{{Typed AST}} & tenv[Global Env]
     tast & tenv --lowering--> ir([IR])
     ir & tenv --codegen--> WASM
+    style xast fill:#82CFFD
 ```
+We will need to change the `run()` function in `runner.ts` and the `compile()` function in `compiler.ts`, but our updated compiler should be a drop-in replacement of the original one, and shouldn't affect any other team.
+
+#### Import Handling
+We plan to place the import handling stage right after parsing before doing the type checking. We will use the information in AST, such as `imports` and function calls, to preprocess the input source code. For example, if we get the following source in its AST format, we will be able to recognize the import statement and the corresponding function calls depending on that import:
+
+```python
+from math import gcd, lcm
+print(gcd(12, 16), lcm(12, 16))
+```
+
+Then we rewrite the AST to include our library implementation, essentially replacing the original source file with the updated one below:
+
+```diff
+-from math import gcd, lcm
++def gcd(a: int, b: int) -> int:
++    if(b==0):
++        return a
++    else:
++        return gcd(b,a%b)
+
++def lcm(x: int, y: int) -> int:
++   return (x*y)//gcd(x,y)
++
+print(gcd(12, 16), lcm(12, 16))
+```
+
+After that the compilation procedure would continue as if the new AST were the original program. 
+
+The built-in library will live inside `stdlib/*.py` or `stdlib/*.wat` and will be copied to `build/stdlib/*` so the frontend can fetch the files. We do the AST updates using Python files fetched through HTTP GET at compile time, importing `math` module would mean a request to `/stdlib/math.py`. 
+
+In our first iteration, we'll focus on getting the basic import functionality work, meaning:
+- no circular imports allowed (catching this will be kind of annoying, so we won't implement it yet)
+- during AST construction, add `FunDef`s corresponding to all ImportedModules' functions to `Program.funs`; this will make type-checking seamless
+- add individual functions imported from modules into the AST the same way
 
 #### AST
 - add a new `ImportedModule` type:
@@ -40,13 +74,13 @@ export type ImportedModule = {
 }
 ```
 - add a new field `imports: Array<ImportedModule>` to `Program`
+- add new Statement type called `import`, will be eliminated by Import Handling pass before lowering to IR
 - add new Literal kind `...` (but don't add its type (?), because casting to an ellipsis doesn't make sense)
 - add new Literal kind `float: number`
+
 #### IR
-- this is less a change to the IR and more a change to how the IR is used: we want to add preprocessing for imports!
-    - no circular imports allowed (catching this will be kind of annoying, so we won't implement it yet)
-    - during IR tree construction, add FunDefs corresponding to all ImportedModules' functions to Program.funs; this will make type-checking seamless
-    - add individual functions imported from modules into the IR the same way
+- we won't make changes to IR, at least not in the next few weeks.
+
 #### Built-in libraries
 
 - print() will get changed pretty extensively
@@ -54,7 +88,6 @@ export type ImportedModule = {
         - nullary: prints new line
         - unary: prints the argument
         - n-ary: prints all arguments, separated by spaces
-
 
 ## New functions, types, and/or files
 - `stdlib/math.py`
@@ -110,26 +143,29 @@ NameError: factorial is already the name of a function
 >>> # no error!
 ```
 
-#### 5. `math.factorial()`, in WASM
+#### 5. `math.factorial()`
 
 ```python
->>> print(math.factorial(5))
+>>> from math import factorial
+>>> print(factorial(5))
 120
->>> print(math.factorial(0))
+>>> print(factorial(0))
 1
 ```
 
-#### 6. `math.gcd()`, in WASM
+#### 6. `math.gcd()`
 
 ```python
->>> print(math.gcd(6, 9))
+from math import gcd
+>>> print(gcd(6, 9))
 3
 ```
 
-#### 7. `math.lcm()`, in WASM
+#### 7. `math.lcm()`
 
 ```python
->>> print(math.lcm(6,9))
+>>> from math import lcm
+>>> print(lcm(6,9))
 18
 ```
 
