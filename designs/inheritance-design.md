@@ -171,7 +171,7 @@
 	print(l.get_a()) # Prints 2, not 1
 	print(l.get_b()) # Prints 4, not 3
 	
-### 9.  Commutative property between inherited classes
+### 9.  Super class field accessible in sub class object
 
 	class A(object):
 		a : int = 1
@@ -218,3 +218,19 @@
 	l : List = None 
 	l = Link().new(5, Link().new(13, Empty()))
 	print(l.sum()) # prints 18
+	
+# File Changes
+
+### type-check.ts
+
+  1. Add a new function to check if a class is a sub class of another class.
+
+### compiler.ts
+
+ 1. The compiler will create a WASM table having the all the method calls for each class.
+ 
+ 2. Add a data structure that maps each class to its start index in the vtable where the methods for the class are stored. We also need to store this index as an additional i32 field on each object we create so that we can lookup the correct start index for each object.
+
+ 3. Add a data structure that maps each class-method pair to an offset.
+
+ Adding 2 and 3 i.e the class start index in the vtable & class-method pair offset would help us determine the the correct location of a class's method in the vtable.
