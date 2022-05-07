@@ -36,7 +36,7 @@ a : List = None
 a = [i for i in range(10,5)]
 print(a)
 ```
-This should output ```Error: list range is valid```
+This should output ```Error: list range is invalid```
 
 ```
 a : List = None
