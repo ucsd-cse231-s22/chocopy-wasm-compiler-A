@@ -19,7 +19,8 @@ export class TypeCheckError extends Error {
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>
+  // classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<Type>]> // fields, methods and super class types
 }
 
 export type LocalTypeEnv = {
@@ -41,6 +42,8 @@ export const defaultTypeEnv = {
   functions: defaultGlobalFunctions,
   classes: new Map(),
 };
+
+// Add a new function to check if a class is a sub class of another class.
 
 export function emptyGlobalTypeEnv() : GlobalTypeEnv {
   return {
