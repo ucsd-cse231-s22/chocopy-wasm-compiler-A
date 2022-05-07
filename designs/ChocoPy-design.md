@@ -30,7 +30,7 @@ print(aString1+aString2)
 ```python
 assertPrint("string-length",
 `
-print(len("Hello")
+print(len("Hello"))
 `, [5]))
 ```
 
