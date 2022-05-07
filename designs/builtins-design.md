@@ -1,5 +1,10 @@
+# Built-in Libraries Design
+
 ## Overview
-We will implement a series of standard libraries and built-in functions for ChocoPy. We plan to support a simple version of Python's `import` statements through AST transformations and some compiler refactoring (detailed below); then we plan to implement some of the built-in libraries & functions in ChocoPy itself, utilizing the function / class definitions already in the compiler, plus the `import`  statement support. This design gives us the opportunity of self-hosting some of the built-in library, and at the same time still allows us to write some part of it in TypeScript or WASM.
+We will implement a series of standard libraries and built-in functions for ChocoPy. We want to add a preliminary support for `float()` and `...` (Ellipsis), which includes initialization and value representation. 
+We'd also like to extend `print()` to allow arbitrary length arguments, and `int() / bool()` for type conversions.
+
+Moreover, we plan to support a simplified version of Python's `import` statements through AST transformations and some compiler refactoring (detailed below); then we plan to implement some of the built-in libraries & functions in ChocoPy itself, utilizing the function / class definitions already in the compiler, plus the `import`  statement support. This design gives us the opportunity of self-hosting some of the built-in library, and at the same time still allows us to write some part of it in TypeScript or WASM.
 
 ## Changes to the Compiler
 These are the potential changes to the compiler that we plan to make in the coming week to support the first iteration of built-in libraries.
@@ -64,6 +69,7 @@ In our first iteration, we'll focus on getting the basic import functionality wo
 - no circular imports allowed (catching this will be kind of annoying, so we won't implement it yet)
 - during AST construction, add `FunDef`s corresponding to all ImportedModules' functions to `Program.funs`; this will make type-checking seamless
 - add individual functions imported from modules into the AST the same way
+- for built-in functions available globally without imports, e.g. `len, max` we inject the function implementation when we see the corresponding call to it
 
 #### AST
 - add a new `ImportedModule` type:
@@ -101,7 +107,7 @@ export type ImportedModule = {
     - `from x import y`
 
 ## Value representation / memory layout for new stuff
-- Imported modules and functions get added to the IR tree during preprocessing (modify lower.ts)
+- Imported modules and functions get added to the AST during preprocessing (either through AST transformation or re-parsing)
     - NOTE that this is NOT import's full Python functionality! Files are NOT run before importing them, and we aren't adding support for importing user-made files.
 - floats will be represented as [32-bit wasm floats](https://webassembly.github.io/spec/core/syntax/values.html#syntax-float)
 
