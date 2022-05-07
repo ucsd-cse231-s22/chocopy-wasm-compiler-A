@@ -350,8 +350,8 @@ export type Value<A> =
   - **Iteration over array**
   ```
   a: [int] = None
-  a = [1,2,3]
   x: int = 0
+  a = [1,2,3]
   
   for x in a:
     print(x)
@@ -363,7 +363,7 @@ export type Value<A> =
   - **Iteration over string**
   ```
   a: str = "abc"
-  x: int = 0
+  x: str = ""
   
   for x in a:
     print(x)
@@ -396,13 +396,13 @@ export type Value<A> =
   
    - **Returning from for loop**
    ```
-    def f() -> int:
+   def f() -> int:
       x : int = 0
       for x in [1, 2, 3, 4, 5]:
         if x > 3:
           return x
       return x
-    print(f())
+   print(f())
   ```
   > The above program must print `4`
 
