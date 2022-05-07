@@ -17,22 +17,22 @@ export type openmode = {
 }
 ```
 ### TODOs
-1. Basic methods we might need to support for file objects: 
-    -  Open(int mode m) -> file: open a file in mode m.
-    -  read(int i): read i bytes from file. Currently will return anything. After the implementation of string and bytes, we will add the return type.
-    - write(): write "test" to the file.
-    - close(): close a file.
+Basic methods we might need to support for file objects: 
+-  Open(int mode m) -> file: open a file in mode m.
+-  read(int i): read i bytes from file. Currently will return anything. After the implementation of string and bytes, we will add the return type.
+- write(): write "test" to the file.
+- close(): close a file.
 
-    Thus, we will have a new data type 'File' and also the template for this File class is provided below.
-    ```
-    class File:
-        def read(n: int) -> str
+Thus, we will have a new data type 'File' and also the template for this File class is provided below.
+```
+class File:
+    def read(n: int) -> str
 
-        def write(s: str)
+    def write(s: str)
 
-        def close()
-    ``` 
-2. I think we should discuss this further whether we should implement all of them (tell, readline, readlines, writelines, seek, truncate, next). For tell, seek, next, truncate and readline, we need to record current position of the file. For readlines and writelines, we need support from list objec
+    def close()
+``` 
+
 
 ### test cases
 Since we cannot implement the chocopy portion until the string is implemented. Thus, we test our idea by setting the file path and mode in the runtime values to test our idea, which will be  replaced by the the position of the file as a integer variable later. We provide a test sample of write() below.
