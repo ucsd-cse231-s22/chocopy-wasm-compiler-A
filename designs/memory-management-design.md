@@ -249,16 +249,16 @@ export type Value<A> =
 ```
 Currently there is no way of differentiating between pointers and values stored in an object. As seen in test case *8: Anonymous object deletion*, we need to follow references stored in an object recursively so that we can update their respective reference counts. This is not possible without knowing which field represents a reference/pointer.
 
-- ### Addition of `allocref` expression
+- ### Changes to `alloc` expression
 ```
 export type Expr<A> =
   ...
-  | {  a?: A, tag: "allocref", types: [Value<A>] }
+  | {  a?: A, tag: "alloc", amount: Value<A>[] }
 ```
-We need this expression to be called right before all the alloc calls for the fields of the object are made. To follow references and to deallocate memory on the heap, we need the size and the type information of an object which is stored on it. This expression, allows the memory manager to understand how many bytes are to be allocated/ deleted when the object is garbage collected and what will be the type of data in a field.
+ To follow references and to deallocate memory on the heap, we need the size and the type information of an object which is stored on it. This expression, allows the memory manager to understand how many bytes are to be allocated/ deleted when the object is garbage collected and what will be the type of data in a field.
 
 - ### Remove BigInt type
-We feel that the implementation of `bigint` type would probably be as a contiguous array of `int` and could just be made into an `object` type. This relates to our implementation since we would not not have to account for a special case.
+We feel that the implementation of `bigint` type would probably be as a contiguous array of `int` and could just be made into an `object`. This relates to our implementation since we would not have to account for a special case.
 
 ## Added functions/ data types
 New data types are added only to IR and are same as described above.
