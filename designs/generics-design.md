@@ -343,6 +343,61 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
 
 ## Proposed changes to the Type-Checker
 
+### Tracking Type Variables and Class Type Parameters in Global Environment
+
+```typescript
+export type GlobalTypeEnv = {
+  globals: Map<string, Type>,
+  functions: Map<string, [Array<Type>, Type]>,
+  // classes has a third item in the tuple to track the list of the class' type parameters
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type], Array<string>>]>
+  // list of defined type variables
+  typevars: Map<string, TypeVar>,
+}
+```
+
+### Type Hierarchy and Comparison
+
+The below functions need to be modified to take into account
+type parameters and generic types. With type parameter
+constraints, these ould get pretty complex and we have not
+fleshed the exact details out at the moment.
+
+```typescript
+export function equalType(t1: Type, t2: Type) {
+  return (
+    t1 === t2 ||
+    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
+  );
+}
+
+export function isNoneOrClass(t: Type) {
+  return t.tag === "none" || t.tag === "class";
+}
+
+export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
+  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
+}
+
+export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
+  return isSubtype(env, t1, t2);
+}
+```
+
 ---
 
 ## Proposed new compiler pass : Monomorphizer
+
+```typescript
+export function monomorphize(program : Program<Type>) : Program<Type> {
+  // magic happens here
+}
+```
+
+We propose a new compiler pass - the `Monomorphizer` that sits between the
+Type-Checker and the IR Lowering passes. The job of this pass is to make a
+copy of any generic classes and functions for each combination of concrete
+instantiations of the type variables. Beyond this pass generics and type variables
+should no longer exist. We propose this as a separate pass to avoid unnecessary
+friction with other teams' changes in the type-checker/lowering pass which would
+be the other candidates for doing this.
