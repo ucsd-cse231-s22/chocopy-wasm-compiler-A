@@ -1,14 +1,23 @@
 ## Test Cases
 ---
 
+Generics are a programming language feature that allow classes and functions to
+abstract over the specific types of data that they work with. This is done by
+parameterizing classes and functions over the types that they can work with.
+
 1. **Basic Type Variable Declaration**
 
 ```python
 T = TypeVar('T')
 ```
 
-This should add a type variable T, with the descriptive name 'T', to the global typing environment. 
-This name can be potentially be used for descriptive error messages from the compiler.
+A type variable can be introduced using a TypeVar definition. New type variables
+can be introduced only in global scope and can used across any number of generic
+class/function definitions.
+
+The first parameter to TypeVar can be used to provide a more descriptive name
+for the type variable and can potentially be used for more descriptive error
+messages from the compiler for example.
 
 2. **Class Definition with a Type Variable**
 
@@ -18,18 +27,31 @@ T = TypeVar('T')
 class Box(Generic[T]):
     pass
 ```
-This should typecheck the class **Box** and add this to the global state of classes with a generic type parameter, T.
 
-3. **Object creation using Type Variable instantiated with a Primtive Type**
+A generic class can be defined by inheriting from the special base class Generic
+along with a defined type variable. Any other class that this class
+inherits from in the inheritance hierarchy can be specified after this.
+
+A generic class is type-checked for all possible allowed instantiations of its
+type variables independent of the instantiations actually made in the program.
+
+3. **Object creation using Type Variable instantiated with a Primitive Type**
 ```python
 T = TypeVar('T')
 
 class Box(Generic[T]):
     pass
 
-b: Box[int] = Box()
+b: Box[int] = None
+b = Box()
 ```
-This should 
+
+An object of a generic class can be created by instantiating the type parameter
+with a primitive type in the type annotation for the object's variable declaration.
+
+After type-checking and before lowering a copy of each generic class is made for
+each type that its type variables are instantiated with over the course of the program.
+
 
 4. **Object creation using Type Variable instantiated with a User-Defined Type**
 
@@ -42,9 +64,12 @@ class Box(Generic[T]):
 class Rat():
     pass
 
-b: Box[Rat] = Box()
+b: Box[Rat] = None
+b = Box()
 ```
-This should 
+
+A type parameter of a generic class can also be instantiated with a user-defined
+class.
 
 5. **Type Variables and Generic Classes with Constraints**
 
@@ -61,7 +86,10 @@ class ConstrainedBox(Generic[R]):
 b1: Box[int] = Box()
 cb1: ConstrainedBox[bool] = ConstrainedBox()
 ```
-This should 
+
+A type variable definition may include a list of types that constrains the types
+that the variable can be instantiated with. The list of types are interpreted as
+"OR" constraints on the type variable.
 
 6. **Generic Class with Fields of a Generic Type**
 ```python
@@ -76,6 +104,11 @@ print(b.f) #prints 0 (zero value of int)
 b.f = 10
 print(b.f) #prints 10
 ```
+
+Generic classes can have fields with the type parameter as a type annotation. Since
+fields need to always be initialized but we don't know the actual type of the field, generic
+fields need to be initialized with the special __ZERO__ literal value that automatically uses
+a reasonable default value depending on the type the type-variable is actually instantiated with.
 
 7. **Generic Class with Methods with Generic Types in their signature**
 ```python
@@ -98,6 +131,10 @@ print(b.getF()) #prints 10
 print(b.f) #prints 10
 ```
 
+Generic classes can have methods that use type parameters in their argument and
+return types. Also note the `Box[T]` annotation on the self argument.
+
+
 8. **Type Variables cannot shadow class name**
 ```python
 T = TypeVar('T')
@@ -106,7 +143,11 @@ class T(): # TypeError: Duplicate identifier in the same scope.
     pass
 ```
 
-9. **Classed with multiple Type Parameters**
+Type Variable names cannot overlap with class, function or variable names. This
+is because in some contexts we need to be able to unambiguosly determine if an
+identifier is a type variable.
+
+9. **Generic Class with multiple Type Parameters**
 ```python
 L = TypeVar('L')
 R = TypeVar('R')
@@ -121,6 +162,9 @@ p2 : Pair[int, bool] = None
 p2 = Pair()
 ```
 
+A class can have multiple type parameters. These type parameters can be independently
+instantiated to different types based on their own constraints.
+
 10. **Function that uses Type Parameters**
 ```python
 T = TypeVar('T')
@@ -128,6 +172,9 @@ T = TypeVar('T')
 def id(t: T) -> T:
     return t
 ```
+
+An independent function can also be generic. The arguments and return type can use
+any of the type variables that are declared in the program.
 
 11. **Joe's blessed test case from class**
 ```python
