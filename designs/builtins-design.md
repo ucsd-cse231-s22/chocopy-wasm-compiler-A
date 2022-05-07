@@ -1,3 +1,77 @@
+# Built-in Library Design
+
+## Overview
+
+
+## Changes to the Compiler
+
+#### Compilation Pipeline
+
+The current compiler can be roughly divided into 4 stages:
+1. Parsing (py -> ast)
+2. Type Checking (ast -> typed ast)
+3. Lowering (typed ast -> IR)
+4. Codegen (IR -> WASM)
+and the compilation process follows the diagram below.
+
+```mermaid
+flowchart LR
+    src[(ChocoPy Source)] --parse--> ast{{AST}}
+    ast --type check--> tast{{Typed AST}} & tenv[Global Env]
+    tast & tenv --lowering--> ir([IR])
+    ir & tenv --codegen--> WASM
+```
+To implement our built-in library and simple `import` support, we propose to change the compiler to behave like the following new diagram, adding an **Import Handling** stage to perform code rewrite, AST transformation / re-parsing. 
+```mermaid
+flowchart LR
+    src[(ChocoPy Source)] --parse--> ast{{AST}}
+    ast & src --import handling--> xast{{Expanded AST}}
+    xast --type check--> tast{{Typed AST}} & tenv[Global Env]
+    tast & tenv --lowering--> ir([IR])
+    ir & tenv --codegen--> WASM
+```
+
+#### AST
+- add a new `ImportedModule` type:
+```typescript
+export type ImportedModule = {
+    name: string,
+    importedAs: string
+}
+```
+- add a new field `imports: Array<ImportedModule>` to `Program`
+- add new Literal kind `...` (but don't add its type (?), because casting to an ellipsis doesn't make sense)
+- add new Literal kind `float: number`
+#### IR
+- this is less a change to the IR and more a change to how the IR is used: we want to add preprocessing for imports!
+    - no circular imports allowed (catching this will be kind of annoying, so we won't implement it yet)
+    - during IR tree construction, add FunDefs corresponding to all ImportedModules' functions to Program.funs; this will make type-checking seamless
+    - add individual functions imported from modules into the IR the same way
+#### Built-in libraries
+
+- print() will get changed pretty extensively
+    - print will no longer be unary -- any arity is valid!
+        - nullary: prints new line
+        - unary: prints the argument
+        - n-ary: prints all arguments, separated by spaces
+
+
+## New functions, types, and/or files
+- `stdlib/math.py`
+    - factorial(n : int) -> int
+    - gcd(a : int, b : int) -> int
+    - lcm(a : int, b : int) -> int
+- `float`, as a type
+- various flavors of `import` statement
+    - `import x`
+    - `import x as y`
+    - `from x import y`
+
+## Value representation / memory layout for new stuff
+- Imported modules and functions get added to the IR tree during preprocessing (modify lower.ts)
+    - NOTE that this is NOT import's full Python functionality! Files are NOT run before importing them, and we aren't adding support for importing user-made files.
+- floats will be represented as [32-bit wasm floats](https://webassembly.github.io/spec/core/syntax/values.html#syntax-float)
+
 ## Functionality we'll implement next week
 #### 1. Type-casting for int, bool, NoneType 
 
@@ -83,44 +157,3 @@ NameError: factorial is already the name of a function
 Ellipsis  # this is an object :)
 ```
 
-## Changes we want to make
-#### Changes to the AST
-- add a new `ImportedModule` type:
-```typescript
-export type ImportedModule = {
-    name: string,
-    importedAs: string
-}
-```
-- add a new field `imports: Array<ImportedModule>` to `Program`
-- add new Literal kind `...` (but don't add its type (?), because casting to an ellipsis doesn't make sense)
-- add new Literal kind `float: number`
-#### Changes to the IR
-- this is less a change to the IR and more a change to how the IR is used: we want to add preprocessing for imports!
-    - no circular imports allowed (catching this will be kind of annoying, so we won't implement it yet)
-    - during IR tree construction, add FunDefs corresponding to all ImportedModules' functions to Program.funs; this will make type-checking seamless
-    - add individual functions imported from modules into the IR the same way
-#### Changes to builtin libraries
-
-- print() will get changed pretty extensively
-    - print will no longer be unary -- any arity is valid!
-        - nullary: prints new line
-        - unary: prints the argument
-        - n-ary: prints all arguments, separated by spaces
-
-
-## New functions, types, and/or files
-- math.wat
-    - factorial(n : int) -> int
-    - gcd(a : int, b : int) -> int
-    - lcm(a : int, b : int) -> int
-- `float`, as a type
-- various flavors of `import` statement
-    - `import x`
-    - `import x as y`
-    - `from x import y`
-
-## Value representation / memory layout for new stuff
-- Imported modules and functions get added to the IR tree during preprocessing (modify lower.ts)
-    - NOTE that this is NOT import's full Python functionality! Files are NOT run before importing them, and we aren't adding support for importing user-made files.
-- floats will be represented as [32-bit wasm floats](https://webassembly.github.io/spec/core/syntax/values.html#syntax-float)
