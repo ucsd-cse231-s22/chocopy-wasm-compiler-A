@@ -75,8 +75,6 @@
        print(s)
    ```
 
-<<<<<<< HEAD
-=======
 5. Inheritance
 
    a. multi-level inheritance
@@ -120,9 +118,8 @@
    c = C()
    print(b.getval() + c.getval())
    ```
->>>>>>> 03ee4285ad09d9e088ec58155ef737b2ca64145e
 
-6. ​Nested Functions
+6. Nested Functions
 
     ``` python
     def f(x: int) -> int:
