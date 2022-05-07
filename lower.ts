@@ -148,21 +148,31 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       // }]];
 
     case "if":
-      var thenLbl = generateName("$then")
-      var elseLbl = generateName("$else")
-      var endLbl = generateName("$end")
-      var endjmp : IR.Stmt<Type> = { tag: "jmp", lbl: endLbl };
-      var [cinits, cstmts, cexpr] = flattenExprToVal(s.cond, env);
-      var condjmp : IR.Stmt<Type> = { tag: "ifjmp", cond: cexpr, thn: thenLbl, els: elseLbl };
-      pushStmtsToLastBlock(blocks, ...cstmts, condjmp);
-      blocks.push({  a: s.a, label: thenLbl, stmts: [] })
-      var theninits = flattenStmts(s.thn, blocks, env);
-      pushStmtsToLastBlock(blocks, endjmp);
-      blocks.push({  a: s.a, label: elseLbl, stmts: [] })
+      var allInits : Array<IR.VarInit<Type>> = [];
+      var endLbls : string[] = [];
+      s.conds.forEach((cond, ind) => {
+        const curBody = s.bodies[ind];
+        var thenLbl = generateName("$then")
+        var elseLbl = generateName("$else")
+        var endLbl = generateName("$end")
+        endLbls.push(endLbl);
+        var endjmp : IR.Stmt<Type> = { tag: "jmp", lbl: endLbl };
+        var [cinits, cstmts, cexpr] = flattenExprToVal(cond, env);
+        allInits.push(...cinits);
+        var condjmp : IR.Stmt<Type> = { tag: "ifjmp", cond: cexpr, thn: thenLbl, els: elseLbl };
+        pushStmtsToLastBlock(blocks, ...cstmts, condjmp);
+        blocks.push({  a: s.a, label: thenLbl, stmts: [] })
+        var theninits = flattenStmts(curBody, blocks, env);
+        allInits.push(...theninits);
+        pushStmtsToLastBlock(blocks, endjmp);
+        blocks.push({  a: s.a, label: elseLbl, stmts: [] })
+      });
       var elseinits = flattenStmts(s.els, blocks, env);
-      pushStmtsToLastBlock(blocks, endjmp);
-      blocks.push({  a: s.a, label: endLbl, stmts: [] })
-      return [...cinits, ...theninits, ...elseinits]
+      for (var i = endLbls.length - 1; i >= 0; --i) {
+        pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: endLbls[i] });
+        blocks.push({  a: s.a, label: endLbls[i], stmts: [] })
+      }
+      return [...allInits, ...elseinits]
 
       // return [[...cinits, ...theninits, ...elseinits], [
       //   ...cstmts, 

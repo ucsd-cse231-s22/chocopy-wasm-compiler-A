@@ -4,6 +4,19 @@ import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Cl
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
+const invalidNames = new Set<string>(["int", "bool", "str"]);
+
+export class ParserError extends Error {
+  __proto__: Error
+  constructor(message?: string) {
+   const trueProto = new.target.prototype;
+   super("PARSE ERROR: " + message);
+
+   // Alternatively use Object.setPrototypeOf if you have an ES6 environment.
+   this.__proto__ = trueProto;
+ } 
+}
+
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   switch(c.type.name) {
     case "Number":
@@ -21,7 +34,7 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
         tag: "none"
       }
     default:
-      throw new Error("Not literal")
+      throw new ParserError("Not literal")
   }
 }
 
@@ -76,7 +89,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         }
         return expr;  
       } else {
-        throw new Error("Unknown target while parsing assignment");
+        throw new ParserError("Unknown target while parsing assignment");
       }
 
     case "BinaryExpression":
@@ -129,7 +142,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
           op = BinOp.Or;
           break;
         default:
-          throw new Error("Could not parse op at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to))
+          throw new ParserError("Could not parse op at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to))
       }
       c.nextSibling(); // go to rhs
       const rhsExpr = traverseExpr(c, s);
@@ -158,7 +171,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
           op = UniOp.Not;
           break;
         default:
-          throw new Error("Could not parse op at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to))
+          throw new ParserError("Could not parse op at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to))
       }
       c.nextSibling(); // go to expr
       var expr = traverseExpr(c, s);
@@ -186,7 +199,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         name: "self"
       };
     default:
-      throw new Error("Could not parse expr at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to));
+      throw new ParserError("Could not parse expr at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to));
   }
 }
 
@@ -238,67 +251,49 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
           value: value
         }  
       } else {
-        throw new Error("Unknown target while parsing assignment");
+        throw new ParserError("Unknown target while parsing assignment");
       }
     case "ExpressionStatement":
       c.firstChild();
       const expr = traverseExpr(c, s);
       c.parent(); // pop going into stmt
       return { tag: "expr", expr: expr }
-    // case "FunctionDefinition":
-    //   c.firstChild();  // Focus on def
-    //   c.nextSibling(); // Focus on name of function
-    //   var name = s.substring(c.from, c.to);
-    //   c.nextSibling(); // Focus on ParamList
-    //   var parameters = traverseParameters(c, s)
-    //   c.nextSibling(); // Focus on Body or TypeDef
-    //   let ret : Type = NONE;
-    //   if(c.type.name === "TypeDef") {
-    //     c.firstChild();
-    //     ret = traverseType(c, s);
-    //     c.parent();
-    //   }
-    //   c.firstChild();  // Focus on :
-    //   var body = [];
-    //   while(c.nextSibling()) {
-    //     body.push(traverseStmt(c, s));
-    //   }
-      // console.log("Before pop to body: ", c.type.name);
-    //   c.parent();      // Pop to Body
-      // console.log("Before pop to def: ", c.type.name);
-    //   c.parent();      // Pop to FunctionDefinition
-    //   return {
-    //     tag: "fun",
-    //     name, parameters, body, ret
-    //   }
     case "IfStatement":
       c.firstChild(); // Focus on if
-      c.nextSibling(); // Focus on cond
-      var cond = traverseExpr(c, s);
-      // console.log("Cond:", cond);
-      c.nextSibling(); // Focus on : thn
-      c.firstChild(); // Focus on :
-      var thn = [];
-      while(c.nextSibling()) {  // Focus on thn stmts
-        thn.push(traverseStmt(c,s));
+      const conds : Array<Expr<null>> = [];
+      const bodies : Array<Stmt<null>[]> = [];
+      var elseFlag : Boolean = false;
+      while (c.nextSibling()) {
+        conds.push(traverseExpr(c, s));
+        c.nextSibling();
+        const cur_body : Stmt<null>[] = [];
+        c.firstChild();
+        while (c.nextSibling()) {
+          cur_body.push(traverseStmt(c, s));
+        }
+        bodies.push(cur_body);
+        c.parent();
+        c.nextSibling();
+        if (s.substring(c.from, c.to) === "else") {
+          elseFlag = true;
+          break;
+        }
       }
-      // console.log("Thn:", thn);
-      c.parent();
-      
-      c.nextSibling(); // Focus on else
-      c.nextSibling(); // Focus on : els
-      c.firstChild(); // Focus on :
-      var els = [];
-      while(c.nextSibling()) { // Focus on els stmts
-        els.push(traverseStmt(c, s));
+      const else_body : Stmt<null>[] = [];
+      if (elseFlag) {
+        c.nextSibling(); // body
+        c.firstChild(); // :
+        while (c.nextSibling()) {
+          else_body.push(traverseStmt(c, s));
+        }
+        c.parent();
       }
-      c.parent();
       c.parent();
       return {
         tag: "if",
-        cond: cond,
-        thn: thn,
-        els: els
+        conds,
+        bodies,
+        els: else_body
       }
     case "WhileStatement":
       c.firstChild(); // Focus on while
@@ -321,7 +316,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
     case "PassStatement":
       return { tag: "pass" }
     default:
-      throw new Error("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to));
+      throw new ParserError("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to));
   }
 }
 
@@ -359,11 +354,14 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
 export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
   c.firstChild(); // go to name
   var name = s.substring(c.from, c.to);
+  if (invalidNames.has(name) || c.type.name !== "VariableName")
+    throw new ParserError(`Invalid Variable Name ${name}`);
   c.nextSibling(); // go to : type
 
+  // @ts-ignore
   if(c.type.name !== "TypeDef") {
     c.parent();
-    throw Error("invalid variable init");
+    throw new ParserError("invalid variable init");
   }
   c.firstChild(); // go to :
   c.nextSibling(); // go to type
@@ -425,6 +423,8 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
+  if (invalidNames.has(className) || c.type.name !== "VariableName")
+    throw new ParserError(`Invalid Class Name ${className}`);
   c.nextSibling(); // Focus on arglist/superclass
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
@@ -434,7 +434,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
     } else if (isFunDef(c, s)) {
       methods.push(traverseFunDef(c, s));
     } else {
-      throw new Error(`Could not parse the body of class: ${className}` );
+      throw new ParserError(`Could not parse the body of class: ${className}` );
     }
   } 
   c.parent();
@@ -491,6 +491,10 @@ export function isClassDef(c : TreeCursor, s : string) : Boolean {
   return c.type.name === "ClassDefinition";
 }
 
+export function isComment(c : TreeCursor, s : string) : Boolean {
+  return c.type.name === "Comment";
+}
+
 export function traverse(c : TreeCursor, s : string) : Program<null> {
   switch(c.node.type.name) {
     case "Script":
@@ -507,7 +511,7 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
           funs.push(traverseFunDef(c, s));
         } else if (isClassDef(c, s)) {
           classes.push(traverseClass(c, s));
-        } else {
+        } else if (!isComment(c, s)) {
           break;
         }
         hasChild = c.nextSibling();
@@ -520,7 +524,7 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
       c.parent();
       return { funs, inits, classes, stmts };
     default:
-      throw new Error("Could not parse program at " + c.node.from + " " + c.node.to);
+      throw new ParserError("Could not parse program at " + c.node.from + " " + c.node.to);
   }
 }
 

@@ -1,4 +1,4 @@
-import { assertPrint, assertFail, assertTCFail, assertTC } from "./asserts.test";
+import { assertPrint, assertFail, assertParseFail, assertTCFail, assertTC } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("PA3 visible tests", () => {
@@ -184,4 +184,47 @@ class C(object):
   x : int = 0
 c : C = None
 c = None`, NONE);
+// 21
+assertTC("comment-check", `
+# Hello world
+class C(object):
+  x : int = 0
+c : C = None
+c = None`, NONE);
+// 22
+assertParseFail("invalid-var-name", `
+174:int = 9`);
+// 23
+assertParseFail("invalid-class-name", `
+class int(object):
+  pass`);
+// 24
+assertPrint("elif-expression", `
+a:int = 4
+b:bool = False
+if (a == 3):
+  print(True)
+elif (a == 4):
+  print(False)
+  if (b):
+    print(123)
+  else:
+    print(125)`, [`False`, `125`]);
+// 25
+assertFail("missing-else",`
+if True:
+pass`
+);
+// 26
+assertTCFail("not-all-path-return", `
+def f() -> int:
+  if (True):
+    return 3
+  elif (False):
+    return 7
+  else:
+    if (True):
+      return 7
+    elif (False):
+      return 12`);
 });

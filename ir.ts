@@ -19,7 +19,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "ifjmp", cond: Value<A>, thn: string, els: string }
   | {  a?: A, tag: "jmp", lbl: string }
 
-  | { a?: A, tag: "store", start: Value<A>, offset: Value<A>, value: Value<A> } // start should be an id
+  | {  a?: A, tag: "store", start: Value<A>, offset: Value<A>, value: Value<A> } // start should be an id
 
 export type Expr<A> =
   | {  a?: A, tag: "value", value: Value<A> }
