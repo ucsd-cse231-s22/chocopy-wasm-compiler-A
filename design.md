@@ -11,10 +11,10 @@
 ## Table of Contents
 
 - [Introduction](#introduction)
-- [Expected Behaviours and Scenarios](#expected-behaviours-and-scenarios)
+- [Expected Features](#expected-features)
 - [Proposed Changes to ast.ts](#proposed-changes-to-ast)
 - [Proposed Changes to ir.ts](#proposed-changes-to-ir)
-- [Milestone Test Cases](#test-cases)
+- [Test Cases](#test-cases)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 ***
