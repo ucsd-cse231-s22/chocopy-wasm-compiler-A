@@ -156,6 +156,24 @@ In `ir.ts`, we need to add list and empty to `Value<A>`.
 { a?: A, tag: "empty" }
 ```
 
+### For Statement
+we need to add a new type of statement for “for-loop”,
+the basic structure should be like this:
+```python
+for x in [list]:
+    Array<Stmt>
+```
+
+there should be mainly three parts in this structure: a variable x, an iterator that can assign x with different values, and the “for body”.
+
+x here should be a predefined variable, otherwise chocopy compiler should report the error that the variable is undefined, so x here is a name with the string type; the iterator should be a list in chocopy’s scope, and we can use an expression to represent it.
+The final structure should be like this:
+```typescript
+{ tag: "for", name: name, iterable: iter, body: body}
+```
+
+
+
 ## New Functions
 
 ### String
@@ -172,6 +190,10 @@ In `ir.ts`, we need to add list and empty to `Value<A>`.
 + In `lower.ts`, support lowering list and empty in `flattenExprToExpr`, `flattenExprToVal`, and `literalToVal`.
 + In `compiler.ts`, support code generation for list and empty in `codeGenExpr` and `codeGenValue`.
 
+### For-loop
++ In `parser.ts`, support parsing for "for" statement in `traverseStmt`.
++ In `type-check.ts`, support type checking for "for" statement in `tcStmt`.
++ In `compiler.ts`, support code generation for "for" statement in `codeGenStmt` 
 
 ## Value Representation and Memory Layout for New Runtime Values
 
@@ -182,3 +204,7 @@ String are placed consecutively on heap memory. Concatenation of two strings ret
 ### Lists
 
 List elements are placed consecutively on heap memory. Concatenation of two lists returns a new list whose first element is placed on the next available heap address at the time of concatenation.
+
+### For-loop
+
+The implementation of the for loop can use a helper class with three different fields: initial_state, step, stop_condition; we can utilize this helper class to generate code for the loop
