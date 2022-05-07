@@ -1,8 +1,8 @@
-# TODOs:
+<!-- # TODOs:
 - Review everything in "Examples of Design"
 - Review "Changes to Data Structure".
 - Review "Functions to add"
-- Review "Future Work"
+- Review "Future Work" -->
 
 # Error Reporting
 
