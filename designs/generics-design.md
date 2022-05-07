@@ -3,7 +3,7 @@
 
 Generics are a programming language feature that allow classes and functions to
 abstract over the specific types of data that they work with. This is done by
-parameterizing classes and functions over the types that they can work with.
+parameterizing classes and functions using type variables and type parameters.
 
 1. **Basic Type Variable Declaration**
 
@@ -12,11 +12,11 @@ T = TypeVar('T')
 ```
 
 A type variable can be introduced using a TypeVar definition. New type variables
-can be introduced only in global scope and can used across any number of generic
+can be introduced only in global scope and can be used across any number of generic
 class/function definitions.
 
 The first parameter to TypeVar can be used to provide a more descriptive name
-for the type variable and can potentially be used for more descriptive error
+for the type variable and can potentially be used for better error
 messages from the compiler for example.
 
 2. **Class Definition with a Type Variable**
@@ -252,7 +252,7 @@ export type Literal =
   | { tag: "zero" }
 ```
 
-We introduce a special init value for variables of a generic type : `__ZERO__`. For exisiting types, following are the "zero" values :
+We introduce a special init value for variables of a generic type : `__ZERO__`. For existing types, following are the "zero" values :
 ```
 int --> 0
 bool --> False
@@ -275,7 +275,7 @@ export function traverseDefs(c : TreeCursor, s : string) : [Array<VarInit<null>>
   while(true) {
     ...
     else if(isTypeVar(c, s) {
-      typevars.push(traverseTypeVar);  
+      typevars.push(traverseTypeVar(c, s));  
     } else {
       return [inits, funs, classes, typevars];
     }
@@ -284,7 +284,7 @@ export function traverseDefs(c : TreeCursor, s : string) : [Array<VarInit<null>>
 }
 ```
 
-### Type Annotations for Generic Types
+### Type Annotations of Generic Types
 
 Parser should be able to pass fancy type annotations of generic types with type parameters.
 
@@ -324,7 +324,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
 }
 ```
 
-### __ZERO__ Literal
+### \_\_ZERO\_\_ Literal
 
 Parser should properly parse the new __ZERO__ value as a literal.
 
@@ -360,8 +360,8 @@ export type GlobalTypeEnv = {
 
 The below functions need to be modified to take into account
 type parameters and generic types. With type parameter
-constraints, these ould get pretty complex and we have not
-fleshed the exact details out at the moment.
+constraints, these could get pretty complex and we have not
+fleshed out the exact details completely at the moment.
 
 ```typescript
 export function equalType(t1: Type, t2: Type) {
@@ -399,5 +399,5 @@ Type-Checker and the IR Lowering passes. The job of this pass is to make a
 copy of any generic classes and functions for each combination of concrete
 instantiations of the type variables. Beyond this pass generics and type variables
 should no longer exist. We propose this as a separate pass to avoid unnecessary
-friction with other teams' changes in the type-checker/lowering pass which would
-be the other candidates for doing this.
+friction with other teams' changes in the type-checker/lowering pass which could
+be the other possible candidates for doing this.
