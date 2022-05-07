@@ -75,8 +75,49 @@
        print(s)
    ```
 
-5. ​
+5. Inheritance
 
+   a. multi-level inheritance
+   ```python
+   class A(object):
+      x: int = 0
+      def __init__(self: A):
+         pass
+      
+      def add(self: A, y: int) -> int:
+         return self.x + y
+   
+   class B(A):
+      pass
+      
+   class C(B):
+      pass
+      
+   a: C = None
+   a = C()
+   print(a.add(3))
+   ```
+
+   b. methods with the same name
+   ```python
+   class A(object):
+      def getval(self: A) -> int:
+         return 0
+      
+   class B(A):
+      def getval(self: B) -> int:
+         return 1
+   
+   class C(A):
+      def getval(self: C) -> int:
+         return 2
+         
+   b: B = None
+   c: C = None
+   b = B()
+   c = C()
+   print(b.getval() + c.getval())
+   ```
 
 
 
@@ -86,6 +127,7 @@
 #### Inheritance
 
 - add parent to type class
+- add table as an environment in compile.ts
 
 #### String & Lists
 
