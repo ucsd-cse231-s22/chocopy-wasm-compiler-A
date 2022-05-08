@@ -15,7 +15,7 @@ export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A
 
 export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, typeParams: Array<string> }
 
-export type TypeVar<A> = { a?: A, name: string, types: Array<Type> }
+export type TypeVar<A> = { a?: A, name: string, canonicalName: string, types: Array<Type> }
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Literal }
 
