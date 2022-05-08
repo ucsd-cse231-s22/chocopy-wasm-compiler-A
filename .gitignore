@@ -2,6 +2,7 @@ node_modules
 build
 dist
 debugger
+.vscode
 cli
 *.sw*
 mochawesome-report
