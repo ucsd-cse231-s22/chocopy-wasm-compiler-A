@@ -104,12 +104,12 @@ export type VarInit<A> =
 
 export type Stmt<A> =
   ....
-  | { a?: A, tag: "list-assign", object: Expr<A>, index: Number, value: Expr<A>, typ: Type }
+  | { a?: A, tag: "list-assign", object: Expr<A>, index: Expr<A>, value: Expr<A>, typ: Type }
   ....
 
 export type Expr<A> =
   ....
-  | { a?: A, tag: 'subscript', object: Expr<A>, index: number }  
+  | { a?: A, tag: 'subscript', object: Expr<A>, index: Expr<A> }  
   | { a?: A, tag: 'listexpr', elements: Array<Expr<A>> }
   ....
 
