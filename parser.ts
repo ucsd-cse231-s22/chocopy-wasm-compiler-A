@@ -4,6 +4,8 @@ import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Cl
 import { NUM, BOOL, NONE, CLASS, CALLABLE } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
+const MKLAMBDA = "mklambda";
+
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   switch(c.type.name) {
     case "Number":
@@ -26,6 +28,7 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
 }
 
 export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
+  console.error(c.type.name);
   switch(c.type.name) {
     case "Number":
     case "Boolean":
@@ -70,6 +73,8 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
             left: args[0],
             right: args[1]
           }
+        } else if (callName === MKLAMBDA) {
+          // make sure there are two arguments, first is callable, second is lambda
         }
         else {
           expr = { tag: "call", name: callName, arguments: args};
@@ -180,6 +185,19 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         obj: objExpr,
         field: propName
       }
+    case "LambdaExpression":
+      c.firstChild(); // Focus on object
+      c.nextSibling(); // Focus on .
+      var params = traverseLambdaParams(c, s);
+      console.error(params);
+      c.nextSibling(); // Focus on .
+      c.nextSibling(); // Focus on property
+      var expr = traverseExpr(c, s);
+      c.parent();
+      return {
+        tag: "lambda",
+        params: params, expr
+      }
     case "self":
       return {
         tag: "id",
@@ -202,6 +220,19 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<null>
   } 
   c.parent();       // Pop to ArgList
   return args;
+}
+
+export function traverseLambdaParams(c : TreeCursor, s : string) : Array<string> {
+  let hasNext = c.firstChild();  // Focuses on open paren
+  const params = [];
+  while(hasNext) {
+    let paramName = s.substring(c.from, c.to);
+    params.push(paramName);
+    c.nextSibling(); // Focuses on either "," or ":"
+    hasNext = c.nextSibling(); 
+  } 
+  c.parent();       // Pop to ArgList
+  return params;
 }
 
 export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {

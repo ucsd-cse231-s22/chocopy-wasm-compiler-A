@@ -38,9 +38,24 @@ describe("traverseType(c, s) function", () => {
 
     const type = traverseType(cursor, source);
     expect(type).deep.equal({
-        tag: 'callable',
-        params: [ { tag: 'number' }, { tag: 'bool' } ],
-        ret: { tag: 'callable', params: [], ret: { tag: 'bool' } }
-      });
+      tag: "callable",
+      params: [{ tag: "number" }, { tag: "bool" }],
+      ret: { tag: "callable", params: [], ret: { tag: "bool" } },
+    });
+  });
+
+  describe("traverseExpr(c, s) function", () => {
+    it("lambda", () => {
+      const source = "lambda b, c: print(b)";
+      const cursor = parser.parse(source).cursor();
+
+      // go to statement
+      cursor.firstChild();
+      // go to expression
+      cursor.firstChild();
+
+      const expr = traverseExpr(cursor, source);
+      console.error(expr);
+    });
   });
 });
