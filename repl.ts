@@ -3,6 +3,8 @@ import { run, Config } from "./runner";
 import { GlobalEnv } from "./compiler";
 import { tc, defaultTypeEnv, GlobalTypeEnv } from "./type-check";
 import { Value, Type } from "./ast";
+import { Program } from "./ir";
+import { optimizeProgram } from "./optimizations";
 import { parse } from "./parser";
 
 interface REPL {
@@ -50,6 +52,10 @@ export class BasicREPL {
     });
     this.importObject.env = currentGlobals;
     return result;
+  }
+  optimize(stmt: Program<Type>): Program<Type> {
+    // console.log(stmt);
+    return optimizeProgram(stmt);
   }
   tc(source: string): Type {
     const config: Config = { importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions };
