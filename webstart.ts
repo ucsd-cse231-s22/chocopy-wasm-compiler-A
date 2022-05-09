@@ -1,5 +1,5 @@
 import {BasicREPL} from './repl';
-import { Type, Value } from './ast';
+import { Type, Value,Class } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
 
@@ -41,7 +41,38 @@ function webStart() {
     ).then(bytes => 
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
+    function console_log_class(repl:BasicREPL, pointer:number, classname:string,level:number) : Array<string>{
 
+      var fields_offset_ = repl.currentEnv.classes.get(classname);
+      var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
+      var mem = new Uint32Array(memory.buffer);
+      var display:Array<string> = [];
+      var fields_offset = Array.from(fields_offset_.entries());
+      fields_offset.sort((a,b) =>{
+        return a[1][0] - b[1][0];
+      });
+      const space = " ";
+      display.push(
+      `${space.repeat(level)}${classname} object at addr ${pointer}: {`);
+      fields_offset.forEach(thisfield =>{
+        var thisfield_type = fields_type.get(thisfield[0]);
+        if ( thisfield_type.tag ==="class"){
+          if(mem[pointer/4 + thisfield[1][0]] === 0){
+            display.push(`${space.repeat(level+2)}${thisfield[0]} : none `);
+          }else{
+            display.push(`${space.repeat(level+2)}${thisfield[0]}:{`)
+            display.push(...console_log_class(repl,mem[pointer/4 + thisfield[1][0]],thisfield_type.name,level +5));
+            display.push(`${space.repeat(level+2)}}`)
+          }
+        }else{
+          display.push(`${space.repeat(level+2)}${thisfield[0]} : ${stringify(thisfield_type,mem[pointer/4 + thisfield[1][0]])} `);
+        }
+      }
+      )
+      display.push(
+      `${space.repeat(level+1)}}`);
+      return display;
+    }
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
@@ -72,7 +103,8 @@ function webStart() {
           elt.innerHTML = (result.value) ? "True" : "False";
           break;
         case "object":
-          elt.innerHTML = `<${result.name} object at ${result.address}`
+          // elt.innerHTML = `${result.name} object at ${result.address}`
+          elt.innerHTML = console_log_class(repl,result.address,result.name,0).join("\n");
           break
         default: throw new Error(`Could not render value: ${result}`);
       }
@@ -106,7 +138,9 @@ function webStart() {
           const source = replCodeElement.value;
           elt.value = source;
           replCodeElement.value = "";
-          repl.run(source).then((r) => { renderResult(r); console.log ("run finished") })
+          repl.run(source).then((r) => { renderResult(r); 
+            printMem();
+            console.log ("run finished") })
               .catch((e) => { renderError(e); console.log("run failed", e) });;
         }
       });
@@ -115,7 +149,13 @@ function webStart() {
     function resetRepl() {
       document.getElementById("output").innerHTML = "";
     }
-
+    function printMem(){
+      var mem = new Uint32Array(memory.buffer);
+      for (let i = 0; i < 25; i++) {
+        console.log (mem[i]);
+      }
+      // mem.forEach((x) => console.log(x));
+    }
     document.getElementById("run").addEventListener("click", function(e) {
       repl = new BasicREPL(importObject);
       const source = document.getElementById("user-code") as HTMLTextAreaElement;
