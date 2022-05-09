@@ -41,16 +41,20 @@ function webStart() {
     ).then(bytes => 
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
+    
     function console_log_class(repl:BasicREPL, pointer:number, classname:string,level:number) : Array<string>{
 
       var fields_offset_ = repl.currentEnv.classes.get(classname);
       var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
       var mem = new Uint32Array(memory.buffer);
       var display:Array<string> = [];
+      // A[1][0] refers to the offset value of field A, sorted by the offset value to ensure the iteration has a consistent order. 
       var fields_offset = Array.from(fields_offset_.entries());
       fields_offset.sort((a,b) =>{
         return a[1][0] - b[1][0];
       });
+      // the reason why pointer beacuse mem is u32 array(4 byte addressing) and the pointer value returned by the run method is in raw address(byte adress)
+      // surprisingly(since there is also i64 in wasm), the offset stored int the currentenv is in 4 byte addressing.
       const space = " ";
       display.push(
       `${space.repeat(level)}${classname} object at addr ${pointer}: {`);
