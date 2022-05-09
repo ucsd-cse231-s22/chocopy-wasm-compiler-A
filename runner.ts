@@ -9,7 +9,7 @@ import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS, makeWasmFunType } from "./utils";
-import { lowerProgram } from './lower';
+import { closureName, lowerProgram } from './lower';
 
 export type Config = {
   importObject: any;
@@ -51,6 +51,9 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
     newGlobals.set(v.name, true);
+  });
+  prog.funs.forEach(f => {
+    newClasses.set(closureName(f.name), new Map());
   });
   prog.classes.forEach(cls => {
     const classFields = new Map();

@@ -1,6 +1,6 @@
-import {parser} from "lezer-python";
-import { TreeCursor} from "lezer-tree";
-import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
+import { parser } from "@lezer/python";
+import { TreeCursor } from "@lezer/common";
+import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, NonlocalVarInit } from "./ast";
 import { NUM, BOOL, NONE, CLASS, CALLABLE } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
@@ -466,6 +466,19 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
   return { name, type, value }
 }
 
+export function traverseScopeDef(c : TreeCursor, s : string) : NonlocalVarInit<null> {
+  c.firstChild(); // go to scope
+  if(c.type.name !== "nonlocal") {
+    c.parent();
+    throw Error("invalid variable scope");
+  }
+  c.nextSibling(); // go to name
+  const name = s.substring(c.from, c.to);
+  c.parent();
+
+  return { name };
+}
+
 export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   c.firstChild();  // Focus on def
   c.nextSibling(); // Focus on name of function
@@ -482,6 +495,8 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   }
   c.firstChild();  // Focus on :
   var inits = [];
+  var nonlocals: Array<NonlocalVarInit<null>> = [];
+  var children: Array<FunDef<null>> = [];
   var body = [];
   
   var hasChild = c.nextSibling();
@@ -489,6 +504,10 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   while(hasChild) {
     if (isVarInit(c, s)) {
       inits.push(traverseVarInit(c, s));
+    } else if (isScopeDef(c, s)) {
+      nonlocals.push(traverseScopeDef(c, s));
+    } else if (isFunDef(c, s)) {
+      children.push(traverseFunDef(c, s));
     } else {
       break;
     }
@@ -504,7 +523,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   c.parent();      // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
   c.parent();      // Pop to FunctionDefinition
-  return { name, parameters, ret, inits, body }
+  return { name, parameters, ret, inits, body, nonlocals, children };
 }
 
 export function traverseClass(c : TreeCursor, s : string) : Class<null> {
@@ -529,7 +548,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   c.parent();
 
   if (!methods.find(method => method.name === "__init__")) {
-    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
+    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [] });
   }
   return {
     name: className,
@@ -569,6 +588,10 @@ export function isVarInit(c : TreeCursor, s : string) : Boolean {
   } else {
     return false;
   }
+}
+
+export function isScopeDef(c : TreeCursor, s : string) : Boolean {
+  return c.type.name === "ScopeStatement";
 }
 
 export function isFunDef(c : TreeCursor, s : string) : Boolean {

@@ -17,6 +17,10 @@ function generateName(base : string) : string {
   }
 }
 
+export function closureName(f: string): string {
+  return `${f}_$closure$`;
+}
+
 // function lbl(a: Type, base: string) : [string, IR.Stmt<Type>] {
 //   const name = generateName(base);
 //   return [name, {tag: "label", a: a, name: name}];
@@ -26,27 +30,73 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
-    var classes = lowerClasses(p.classes, env);
+    var [closures, closureinits] = lowerFunDefs(p.funs, blocks, env);
+    var classes = lowerClasses([...closures, ...p.classes], env);
     var [inits, generatedClasses] = flattenStmts(p.stmts, blocks, env);
     return {
         a: p.a,
-        funs: lowerFunDefs(p.funs, env),
-        inits: [...inits, ...lowerVarInits(p.inits, env)],
+        funs: [],
+        inits: [...inits, ...lowerVarInits(p.inits, env), ...closureinits],
         classes: [...classes, ...generatedClasses],
         body: blocks
     }
 }
 
-function lowerFunDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv) : Array<IR.FunDef<Type>> {
-    return fs.map(f => lowerFunDef(f, env)).flat();
+function lowerFunDefs(
+  fs: Array<AST.FunDef<Type>>,
+  blocks: Array<IR.BasicBlock<Type>>,
+  env: GlobalEnv
+): [Array<AST.Class<Type>>, Array<IR.VarInit<Type>>] {
+  const loweredFuns = fs.map(f => lowerFunDef(f, blocks, env));
+  return [loweredFuns.map(x => x[0]), loweredFuns.map(x => x[1]).flat()];
 }
 
-function lowerFunDef(f : AST.FunDef<Type>, env : GlobalEnv) : IR.FunDef<Type> {
+function lowerFunDef(
+  f: AST.FunDef<Type>,
+  blocks: Array<IR.BasicBlock<Type>>,
+  env: GlobalEnv
+): [AST.Class<Type>, Array<IR.VarInit<Type>>] {
+  var type: Type = { tag: "class", name: closureName(f.name) };
+  var fptrinit: AST.VarInit<Type> = { a: type, name: f.name, type, value: { tag: "none" } };
+  var fptrassign: AST.Stmt<Type> = { tag: "assign", name: f.name, value: { tag: "construct", name: closureName(f.name) } };
+  var [finits, _] = flattenStmt(fptrassign, blocks, env);
+
+  // TODO(pashabou): children, populate fields and methods of closure class
+  return [
+    {
+      name: closureName(f.name),
+      fields: [],
+      methods: [
+        {
+          name: "__init__",
+          parameters: [{ name: "self", type }],
+          ret: f.ret,
+          inits: [],
+          body: [],
+          nonlocals: [],
+          children: []
+        },
+        {
+          ...f,
+          name: APPLY,
+          parameters: [{ name: "self", type }, ...f.parameters],
+        }
+      ]
+    },
+    [lowerVarInit(fptrinit, env), ...finits]
+  ];
+}
+
+function lowerMethodDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv) : Array<IR.FunDef<Type>> {
+  return fs.map(f => lowerMethodDef(f, env)).flat();
+}
+
+function lowerMethodDef(f : AST.FunDef<Type>, env : GlobalEnv) : IR.FunDef<Type> {
   var blocks : Array<IR.BasicBlock<Type>> = [];
   var firstBlock : IR.BasicBlock<Type> = {  a: f.a, label: generateName("$startFun"), stmts: [] }
   blocks.push(firstBlock);
   var [bodyinits, _] = flattenStmts(f.body, blocks, env);
-    return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks}
+  return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks}
 }
 
 function lowerVarInits(inits: Array<AST.VarInit<Type>>, env: GlobalEnv) : Array<IR.VarInit<Type>> {
@@ -74,7 +124,7 @@ function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : IR.Class<Type> {
     return {
         ...cls,
         fields: lowerVarInits(cls.fields, env),
-        methods: lowerFunDefs(cls.methods, env)
+        methods: lowerMethodDefs(cls.methods, env)
     }
 }
 
@@ -241,13 +291,16 @@ function flattenExprToExpr(e : AST.Expr<Type>, blocks: Array<IR.BasicBlock<Type>
       const callstmts = callpairs.map(cp => cp[1]).flat();
       const callvals = callpairs.map(cp => cp[2]).flat();
       const callclasses = callpairs.map(cp => cp[3]).flat();
-      return [ [...finits, ...callinits], [...fstmts, ...callstmts],
+      return [
+        [...finits, ...callinits],
+        [...fstmts, ...callstmts],
         {
           ...e,
           tag: "call_indirect",
           fn: fval,
           arguments: [fval, ...callvals]
-        }, [...fclasses, ...callclasses]
+        },
+        [...fclasses, ...callclasses]
       ];
     case "method-call": {
       const [objinits, objstmts, objval, objclasses] = flattenExprToVal(e.obj, blocks, env);
@@ -365,29 +418,30 @@ function lambdaToClass(lambda: AST.Lambda<Type>) : [AST.Class<Type>, AST.Expr<Ty
   }));
   return [
     {
-      a: NONE,
       name: lambdaClassName,
       fields: [],
       methods: [
         { 
-          a: NONE, 
           name: "__init__", 
           parameters: [{ name: "self", type: CLASS(lambdaClassName) }], 
           ret: NONE, 
           inits: [], 
-          body: [] 
+          body: [],
+          nonlocals: [],
+          children: []
         },
         { 
-          a: NONE, 
           name: APPLY, 
           parameters: [{ name: "self", type: CLASS(lambdaClassName) }, ...params], 
           ret: lambda.type.ret, 
           inits: [], 
-          body: [{  a: NONE, tag: "return", value: lambda.expr }]
+          body: [{ a: lambda.type.ret, tag: "return", value: lambda.expr }],
+          nonlocals: [],
+          children: []
         }
       ]
     },
-    {  a: lambda.a, tag: "construct", name: lambdaClassName }
+    { a: lambda.a, tag: "construct", name: lambdaClassName }
   ];
 }
 

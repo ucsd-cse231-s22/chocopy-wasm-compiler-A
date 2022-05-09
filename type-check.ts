@@ -35,6 +35,7 @@ const copyLocals = (locals: LocalTypeEnv): LocalTypeEnv => {
     ...locals
   }
 }
+export type NonlocalTypeEnv = LocalTypeEnv["vars"]
 
 const defaultGlobalFunctions = new Map();
 defaultGlobalFunctions.set("abs", [[NUM], NUM]);
@@ -118,7 +119,7 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   const locals = emptyLocalTypeEnv();
   const newEnv = augmentTEnv(env, program);
   const tInits = program.inits.map(init => tcInit(env, init));
-  const tDefs = program.funs.map(fun => tcDef(newEnv, fun));
+  const tDefs = program.funs.map(fun => tcDef(newEnv, fun, new Map()));
   const tClasses = program.classes.map(cls => tcClass(newEnv, cls));
 
   // program.inits.forEach(init => env.globals.set(init.name, tcInit(init)));
@@ -149,22 +150,25 @@ export function tcInit(env: GlobalTypeEnv, init : VarInit<null>) : VarInit<Type>
   }
 }
 
-export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
+export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>, nonlocalEnv: NonlocalTypeEnv) : FunDef<Type> {
   var locals = emptyLocalTypeEnv();
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
+  var nonlocals = fun.nonlocals.map(init => ({ name: init.name, a: nonlocalEnv.get(init.name) }));
   fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
   fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init).type));
+  nonlocals.forEach(init => locals.vars.set(init.name, init.a));
+  var children = fun.children.map(f => tcDef(env, f, locals.vars));
   
   const tBody = tcBlock(env, locals, fun.body);
   if (!isAssignable(env, locals.actualRet, locals.expectedRet))
     throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`)
-  return {...fun, a: NONE, body: tBody};
+  return {...fun, a: NONE, body: tBody, nonlocals, children};
 }
 
 export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
   const tFields = cls.fields.map(field => tcInit(env, field));
-  const tMethods = cls.methods.map(method => tcDef(env, method));
+  const tMethods = cls.methods.map(method => tcDef(env, method, new Map()));
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
   if (init.parameters.length !== 1 || 
     init.parameters[0].name !== "self" ||
