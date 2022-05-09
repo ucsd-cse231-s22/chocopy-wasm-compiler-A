@@ -23,7 +23,7 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
     case "VariableName":
       let vname = s.substring(c.from, c.to).trim();
       if (vname !== "__ZERO__") {
-        throw new Error("Not a literal");
+        throw new Error("ParseError: Not a literal");
       }
       return { 
         tag: "zero" 
@@ -340,7 +340,7 @@ export function traverseType(c : TreeCursor, s : string) : Type {
       switch(name) {
         case "int": return NUM;
         case "bool": return BOOL;
-        default: return CLASS(name);
+        default: return CLASS(name, []);
       }
     case "MemberExpression":
       c.firstChild(); // focus on class
@@ -538,7 +538,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   c.parent();
 
   if (!methods.find(method => method.name === "__init__")) {
-    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
+    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className, []) }], ret: NONE, inits: [], body: [] });
   }
   return {
     name: className,

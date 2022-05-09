@@ -6,7 +6,7 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-  T = TypeVar('T')
+  T = TypeVar('T', int, bool, C)
 
   class Box(Generic[T]):
       f : T = __ZERO__
