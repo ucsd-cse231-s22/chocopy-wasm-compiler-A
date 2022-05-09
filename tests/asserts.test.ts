@@ -1,10 +1,11 @@
 import "mocha";
 import { expect } from "chai";
 import { BasicREPL } from "../repl";
-import { Value } from "../ast";
+import { Type, Value } from "../ast";
 import { importObject } from "./import-object.test";
-import {run, typeCheck} from "./helpers.test";
+import { run, typeCheck } from "./helpers.test";
 import { fail } from 'assert'
+import { Program } from "../ir";
 
 
 
@@ -15,7 +16,7 @@ beforeEach(function () {
 
 // suppress console logging so output of mocha is clear
 before(function () {
-  console.log = function () {};
+  console.log = function () { };
 });
 
 export function assert(name: string, source: string, expected: Value) {
@@ -24,6 +25,12 @@ export function assert(name: string, source: string, expected: Value) {
     const result = await repl.run(source);
     expect(result).to.deep.eq(expected);
   });
+}
+
+export function assertOptimize(itStmt: Program<Type>, expected: Program<Type>) {
+  const repl = new BasicREPL(importObject);
+  const result = repl.optimize(itStmt);
+  expect(result).to.deep.eq(expected);
 }
 
 export function asserts(name: string, pairs: Array<[string, Value]>) {
@@ -60,16 +67,16 @@ export function assertPrint(name: string, source: string, expected: Array<string
 
 export function assertTC(name: string, source: string, result: any) {
   it(name, async () => {
-      const typ = typeCheck(source);
-      expect(typ).to.deep.eq(result);
+    const typ = typeCheck(source);
+    expect(typ).to.deep.eq(result);
   });
 }
 
 export function assertTCFail(name: string, source: string) {
   it(name, async () => {
-    expect(function(){
+    expect(function () {
       typeCheck(source);
-  }).to.throw('TYPE ERROR:');
+    }).to.throw('TYPE ERROR:');
   });
 }
 
