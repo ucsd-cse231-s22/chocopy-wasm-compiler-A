@@ -30,6 +30,41 @@ function assert_not_none(arg: any) : any {
   return arg;
 }
 
+function get_code_example(name: string) : string {
+  if (name === "basic class") {
+    return "class C:\n" +
+        "    a : int = 1\n" +
+        "    b : int = 2\n" +
+        "c : C = None\n" +
+        "c = C()"
+  } else if (name === "nested class") {
+    return "class E(object):\n" +
+        "    a : int = 1\n" +
+        "class C(object):\n" +
+        "    a : bool = True\n" +
+        "    e : E = None\n" +
+        "    def __init__(self: C):\n" +
+        "        self.e = E()\n" +
+        "    def d(self: C) -> int:\n" +
+        "        return 1\n" +
+        "c : C = None\n" +
+        "c = C()"
+  } else if (name === "uninitialized member variable") {
+    return "class E(object):\n" +
+        "    a : int = 1\n" +
+        "\n" +
+        "class C(E):\n" +
+        "    a : int = 2\n" +
+        "    e : E = None\n" +
+        "    def d(self: C) -> int:\n" +
+        "        return 1\n" +
+        "c : C = None\n" +
+        "c = C()"
+  }
+
+  return "";
+}
+
 function webStart() {
   document.addEventListener("DOMContentLoaded", async function() {
 
@@ -156,6 +191,18 @@ function webStart() {
       }
       // mem.forEach((x) => console.log(x));
     }
+
+    function setupCodeExample() {
+      const sel = document.querySelector("#exampleSelect") as HTMLSelectElement;
+      sel.addEventListener("change", (e) => {
+        const code = get_code_example(sel.value);
+        if (code !== "") {
+          const usercode = document.getElementById("user-code") as HTMLTextAreaElement;
+          usercode.value = code;
+        }
+      })
+    }
+
     document.getElementById("run").addEventListener("click", function(e) {
       repl = new BasicREPL(importObject);
       const source = document.getElementById("user-code") as HTMLTextAreaElement;
@@ -164,6 +211,7 @@ function webStart() {
           .catch((e) => { renderError(e); console.log("run failed", e) });;
     });
     setupRepl();
+    setupCodeExample();
   });
 }
 
