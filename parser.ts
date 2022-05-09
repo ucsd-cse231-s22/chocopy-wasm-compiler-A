@@ -1,7 +1,7 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
-import { NUM, BOOL, NONE, CLASS } from "./utils";
+import { NUM, BOOL, NONE, CLASS, CALLABLE } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
@@ -325,15 +325,47 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
   }
 }
 
-export function traverseType(c : TreeCursor, s : string) : Type {
+export function traverseType(c: TreeCursor, s: string): Type {
   // For now, always a VariableName
+  c.firstChild();
   let name = s.substring(c.from, c.to);
-  switch(name) {
-    case "int": return NUM;
-    case "bool": return BOOL;
-    default: return CLASS(name);
+  switch (name) {
+    case "int":
+      return NUM;
+    case "bool":
+      return BOOL;
+    case "None": // None is mentionable in Callable types
+      return NONE;
+    case "Callable":
+      c.nextSibling();
+      c.nextSibling();
+      const params = traverseTypeList(c, s);
+      c.nextSibling();
+      c.nextSibling();
+      const ret = traverseType(c, s);
+      c.parent();
+      // return NONE;
+      return CALLABLE(params, ret);
+    default:
+      return CLASS(name);
   }
 }
+
+export function traverseTypeList(c: TreeCursor, s: string): Array<Type> {
+  // console.error(s.substring(c.from, c.to));
+  c.firstChild(); // Focuses on open paren
+  const types = [];
+  c.nextSibling(); // Focuses on a VariableName
+  while (c.type.name !== "]") {
+    let typ = traverseType(c, s);
+    c.nextSibling(); // Focuses on "TypeDef", hopefully, or "," if mistake
+    c.nextSibling(); // Move on to comma or ")"
+    types.push(typ);
+  }
+  c.parent(); // Pop to ParamList
+  return types;
+}
+
 
 export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter<null>> {
   c.firstChild();  // Focuses on open paren

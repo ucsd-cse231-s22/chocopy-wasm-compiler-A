@@ -7,6 +7,7 @@ export type Type =
   | {tag: "none"}
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
+  | { tag: "callable"; params: Array<Type>; ret: Type };
 
 export type Parameter<A> = { name: string, type: Type }
 
