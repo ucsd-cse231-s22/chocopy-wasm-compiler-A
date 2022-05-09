@@ -1,6 +1,6 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, TypeVar } from './ast';
+import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, TypeVar, Class } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 
@@ -124,8 +124,9 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   for (let name of locals.vars.keys()) {
     newEnv.globals.set(name, locals.vars.get(name));
   }
-  const tvarInits : Array<TypeVar<null>> = [] // TODO : Added this just to let this file compile
-  const aprogram = {a: lastTyp, inits: tInits, typeVarInits: tvarInits, funs: tDefs, classes: tClasses, stmts: tBody};
+
+  const typeVarInits: Array<TypeVar<Type>> = [];
+  const aprogram = {a: lastTyp, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody, typeVarInits};
   return [aprogram, newEnv];
 }
 
@@ -160,8 +161,8 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
     !equalType(init.parameters[0].type, CLASS(cls.name)) ||
     init.ret !== NONE)
     throw new TypeCheckError("Cannot override __init__ type signature");
-  // TODO : Added this just to let this file compile
-  return {a: NONE, name: cls.name, fields: tFields, methods: tMethods, typeParams: []};
+
+  return {a: NONE, name: cls.name, fields: tFields, methods: tMethods, typeParams: cls.typeParams};
 }
 
 export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Array<Stmt<null>>) : Array<Stmt<Type>> {
