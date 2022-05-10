@@ -91,6 +91,31 @@ function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Typ
   return inits;
 }
 
+//string case 
+/*
+vale = "abcd"
+
+*/
+function storeStr(s:AST.Stmt<Type>,blocks: Array<IR.BasicBlock<Type>>,str: string): IR.Stmt<AST.Type>[]{
+
+  var len = s.length;
+  for (var i = 0; i < len; i++){
+    var ascii = str.charCodeAt(i);
+    var store_stmt = {
+      tag: "store",
+      a: s.a,
+      start: oval,
+      offset: offset,
+      value: nval
+    };
+    blocks[blocks.length - 1].stmts.push()
+
+  }
+  return;
+}
+
+
+
 function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
   switch(s.tag) {
     case "assign":
@@ -293,6 +318,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
   }
 }
+
 
 function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>] {
   var [binits, bstmts, bexpr] = flattenExprToExpr(e, env);
