@@ -2,6 +2,8 @@ import {BasicREPL} from './repl';
 import { Type, Value,Class } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
+import CodeMirror from "codemirror"
+
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -206,6 +208,32 @@ function webStart() {
         }
       })
     }
+    document.getElementById("clear").addEventListener("click", function(e){
+      //repl code disapper (on the right side)
+      resetRepl()
+
+      //reset environment
+      repl = new BasicREPL(importObject)
+
+      //clear editor code
+
+      // var element = document.querySelector(".CodeMirror") as any
+      // var editor = element.CodeMirror
+      // editor.setValue("")
+      // editor.clearHistory()
+      const source = document.getElementById("user-code") as HTMLTextAreaElement
+      source.value = ""
+
+    })
+
+    document.getElementById("save").addEventListener("click", function(e){
+      var FileSaver = require("file-saver");
+      var title = prompt("please input file name: ")
+      var codeNode= document.getElementById("user-code") as HTMLTextAreaElement
+      var code = codeNode.value
+      var blob = new Blob([code], { type: "text/plain;charset=utf-8" });
+      FileSaver.saveAs(blob, title)
+    })
 
     document.getElementById("run").addEventListener("click", function(e) {
       repl = new BasicREPL(importObject);
