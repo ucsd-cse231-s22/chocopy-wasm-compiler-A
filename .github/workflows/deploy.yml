@@ -17,7 +17,6 @@ jobs:
           make
           npm run build-web
           
-          
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
