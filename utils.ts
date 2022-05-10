@@ -6,6 +6,8 @@ export function PyValue(typ: Type, result: number): Value {
       return PyInt(result);
     case "bool":
       return PyBool(Boolean(result));
+    case "string":
+      return PyString(String(result));
     case "class":
       return PyObj(typ.name, result);
     case "none":
@@ -19,6 +21,10 @@ export function PyInt(n: number): Value {
 
 export function PyBool(b: boolean): Value {
   return { tag: "bool", value: b };
+}
+
+export function PyString(s: string): Value {
+  return { tag: "string", value: s};
 }
 
 export function PyObj(name: string, address: number): Value {
