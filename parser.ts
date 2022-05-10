@@ -6,6 +6,11 @@ import { stringifyTree } from "./treeprinter";
 
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   switch(c.type.name) {
+    case "String":
+      return{
+        tag: "string",
+        value: String(s.substring(c.from,c.to))
+      }
     case "Number":
       return {
         tag: "num",
