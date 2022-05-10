@@ -2,6 +2,7 @@
 
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
 export type Type =
+  | {tag: "string"}
   | {tag: "number"}
   | {tag: "bool"}
   | {tag: "none"}
@@ -38,9 +39,10 @@ export type Expr<A> =
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
-
+  | {  a?: A, tag: "indexing", name:Expr<A>, index:number}
 export type Literal = 
-    { tag: "num", value: number }
+  | { tag: "string", value: string}
+  | { tag: "num", value: number }
   | { tag: "bool", value: boolean }
   | { tag: "none" }
 
