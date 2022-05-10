@@ -34,6 +34,7 @@ export type Expr<A> =
 
 export type Value<A> = 
     { a?: A, tag: "num", value: bigint }
+  | { a?: A, tag: "string", value: string}
   | { a?: A, tag: "wasmint", value: number }
   | { a?: A, tag: "bool", value: boolean }
   | { a?: A, tag: "id", name: string }
