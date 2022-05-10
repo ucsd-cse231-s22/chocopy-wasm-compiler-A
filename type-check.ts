@@ -239,11 +239,12 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       const tBin = {...expr, left: tLeft, right: tRight};
       switch(expr.op) {
         case BinOp.Plus:
-          if (tLeft.a.tag == "string" || tRight.a.tag == "string") {
-            if (tLeft.a.tag == "string" && tRight.a.tag !== "string") 
-              throw new Error("Type Error: rhs must be a string")
-            if (tLeft.a.tag !== "string" && tRight.a.tag == "string") 
-              throw new Error("Type Error: lhs must be a string")
+          // "abc" + 3
+          if (tLeft.a.tag == "str" || tRight.a.tag == "str") {
+            if (tLeft.a.tag == "str" && tRight.a.tag !== "str") 
+              throw new TypeCheckError("Plus rhs must be a string")
+            if (tLeft.a.tag !== "str" && tRight.a.tag == "str") 
+              throw new TypeCheckError("Plus lhs must be a string")
           }
         case BinOp.Minus:
         case BinOp.Mul:
@@ -395,7 +396,7 @@ export function tcLiteral(literal : Literal) {
     switch(literal.tag) {
         case "bool": return BOOL;
         case "num": return NUM;
-        case "string": return STRING;
+        case "str": return STRING;
         case "none": return NONE;
     }
 }
