@@ -76,6 +76,8 @@ function literalToVal(lit: AST.Literal) : IR.Value<Type> {
             return { ...lit, value: BigInt(lit.value) }
         case "bool":
             return lit
+        case "string":
+            return lit
         case "none":
             return lit        
     }
