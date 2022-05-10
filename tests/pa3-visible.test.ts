@@ -211,11 +211,6 @@ elif (a == 4):
   else:
     print(125)`, [`False`, `125`]);
 // 25
-assertFail("missing-else",`
-if True:
-pass`
-);
-// 26
 assertTCFail("not-all-path-return", `
 def f() -> int:
   if (True):
