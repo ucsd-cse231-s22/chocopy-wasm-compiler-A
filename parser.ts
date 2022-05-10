@@ -1,7 +1,7 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
-import { NUM, BOOL, NONE, CLASS } from "./utils";
+import { NUM, BOOL, STRING, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
@@ -176,7 +176,16 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
     case "MemberExpression":
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s);
-      c.nextSibling(); // Focus on .
+      c.nextSibling(); // Focus on . or [
+      //Indexing
+      if (s.substring(c.from,c.to) == '['){
+        c.nextSibling();
+        const number = Number(s.substring(c.from,c.to));
+        c.parent();
+        return {tag: "indexing", name:objExpr,index:number};
+      }
+
+
       c.nextSibling(); // Focus on property
       var propName = s.substring(c.from, c.to);
       c.parent();
@@ -336,6 +345,7 @@ export function traverseType(c : TreeCursor, s : string) : Type {
   switch(name) {
     case "int": return NUM;
     case "bool": return BOOL;
+    case "string": return STRING;
     default: return CLASS(name);
   }
 }
