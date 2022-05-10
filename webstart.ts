@@ -71,7 +71,7 @@ function webStart() {
   document.addEventListener("DOMContentLoaded", async function() {
 
     // https://github.com/mdn/webassembly-examples/issues/5
-
+    var codeContent: string | ArrayBuffer
     const memory = new WebAssembly.Memory({initial:10, maximum:100});
     const memoryModule = await fetch('memory.wasm').then(response => 
       response.arrayBuffer()
@@ -221,19 +221,59 @@ function webStart() {
       // var editor = element.CodeMirror
       // editor.setValue("")
       // editor.clearHistory()
-      const source = document.getElementById("user-code") as HTMLTextAreaElement
+      var source = document.getElementById("user-code") as HTMLTextAreaElement
       source.value = ""
 
     })
 
+    document.getElementById("load").addEventListener("change", function(e){
+      resetRepl()
+
+      repl = new BasicREPL(importObject)
+
+      var input: any = e.target
+      var reader = new FileReader()
+      var codeNode = document.getElementById("user-code") as HTMLTextAreaElement
+      codeNode.value = ""
+      
+
+      reader.onload =  function(){
+        
+        if (codeNode.value != ""){
+          codeNode.value = ""
+          codeNode.value = reader.result as string
+        } else {
+          codeNode.value = reader.result as string
+        }
+
+      }
+      reader.readAsText(input.files[0])
+      
+    })
+    // window.onload = function(e: Event){
+    //   var f = document.getElementById("load")
+    //   var reader = new FileReader();
+    //   var readerContent
+    //   f.onchange = function(){
+    //     readerContent = reader.result
+    //   }
+    //   var contentToLoad = readerContent as string
+
+    //   var codeNode= document.getElementById("user-code") as HTMLTextAreaElement
+    //   codeNode.value = contentToLoad
+    // }
+
     document.getElementById("save").addEventListener("click", function(e){
       var FileSaver = require("file-saver");
-      var title = prompt("please input file name: ")
-      var codeNode= document.getElementById("user-code") as HTMLTextAreaElement
-      var code = codeNode.value
-      var blob = new Blob([code], { type: "text/plain;charset=utf-8" });
-      FileSaver.saveAs(blob, title)
+      var title = prompt("please input file name: ", "untitled")
+      if (title != null){
+        var codeNode= document.getElementById("user-code") as HTMLTextAreaElement
+        var code = codeNode.value
+        var blob = new Blob([code], { type: "text/plain;charset=utf-8" });
+        FileSaver.saveAs(blob, title)
+      }
     })
+
 
     document.getElementById("run").addEventListener("click", function(e) {
       repl = new BasicREPL(importObject);
