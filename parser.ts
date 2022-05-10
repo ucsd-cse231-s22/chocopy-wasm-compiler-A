@@ -182,7 +182,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         c.nextSibling();
         const number = Number(s.substring(c.from,c.to));
         c.parent();
-        return {tag: "indexing", name:objExpr,index:number};
+        return {tag: "indexing", name:objExpr, index:number};
       }
 
 
