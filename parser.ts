@@ -339,6 +339,7 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
   c.firstChild();  // Focuses on open paren
   const parameters = [];
   c.nextSibling(); // Focuses on a VariableName
+  let defaultArgStarted = false;
   while(c.type.name !== ")") {
     let name = s.substring(c.from, c.to);
     c.nextSibling(); // Focuses on "TypeDef", hopefully, or "," if mistake
@@ -348,11 +349,24 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
     c.nextSibling(); // Focuses on type itself
     let typ = traverseType(c, s);
     c.parent();
-    c.nextSibling(); // Move on to comma or ")"
-    parameters.push({name, type: typ});
+    c.nextSibling(); // Move on to comma or ")" or AssignOp
+    if (c.type.name === "AssignOp") {
+      defaultArgStarted = true;
+      c.nextSibling(); // Focuses on default value
+      let value = traverseExpr(c, s);
+      parameters.push({name, type: typ, default: value});
+      c.nextSibling(); // Move on to comma or ")"
+    }
+    else if (defaultArgStarted) {
+      throw new Error("SyntaxError: non-default argument follows default argument");
+    }
+    else {
+      parameters.push({name, type: typ});
+    }
     c.nextSibling(); // Focuses on a VariableName
   }
   c.parent();       // Pop to ParamList
+  console.log("Parameters:", parameters);
   return parameters;
 }
 
