@@ -93,23 +93,21 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         const callName = callExpr.name;
         var expr : Expr<null>;
         if (callName === "print" || callName === "abs") {
-          expr = {
+          return {
             tag: "builtin1",
             name: callName,
             arg: args[0]
           };
         } else if (callName === "max" || callName === "min" || callName === "pow") {
-          expr = {
+          return {
             tag: "builtin2",
             name: callName,
             left: args[0],
             right: args[1]
           }
-        } else {
-          expr = { tag: "call", fn: callExpr, arguments: args};
-        }
-        return expr;  
+        } 
       } 
+      return { tag: "call", fn: callExpr, arguments: args};
     case "BinaryExpression":
       c.firstChild(); // go to lhs 
       const lhsExpr = traverseExpr(c, s);
