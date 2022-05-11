@@ -33,6 +33,8 @@ export function makeLocals(locals: Set<string>) : Array<string> {
   return localDefines;
 }
 
+// TODO: create vtable function
+
 export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
 
@@ -47,6 +49,8 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
+  // TODO: order class methods
+  // TODO: generate vtable
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
   const allFuns = funs.concat(classes).join("\n\n");
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
@@ -166,6 +170,8 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       const leftStmts = codeGenValue(expr.left, env);
       const rightStmts = codeGenValue(expr.right, env);
       return [...leftStmts, ...rightStmts, `(call $${expr.name})`]
+
+    // TODO: add call indirect case, lookup offset based on class and method name
 
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();

@@ -420,6 +420,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
 }
 
 export function traverseClass(c : TreeCursor, s : string) : Class<null> {
+  // TODO: parse super classes
   const fields : Array<VarInit<null>> = [];
   const methods : Array<FunDef<null>> = [];
   c.firstChild();

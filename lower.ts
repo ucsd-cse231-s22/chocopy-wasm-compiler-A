@@ -127,7 +127,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var [oinits, ostmts, oval] = flattenExprToVal(s.obj, env);
       var [ninits, nstmts, nval] = flattenExprToVal(s.value, env);
       if(s.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
-      const classdata = env.classes.get(s.obj.a.name);
+      const classdata = env.classes.get(s.obj.a.name); // TODO: add super class fields
       const offset : IR.Value<Type> = { tag: "wasmint", value: classdata.get(s.field)[0] };
       pushStmtsToLastBlock(blocks,
         ...ostmts, ...nstmts, {
@@ -235,6 +235,8 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         }
       ];
     case "method-call": {
+      // TODO: call indirect instead of call
+      // {tag: "indirect_call", name: , class: , args: }
       const [objinits, objstmts, objval] = flattenExprToVal(e.obj, env);
       const argpairs = e.arguments.map(a => flattenExprToVal(a, env));
       const arginits = argpairs.map(cp => cp[0]).flat();
@@ -256,7 +258,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "lookup": {
       const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
       if(e.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
-      const classdata = env.classes.get(e.obj.a.name);
+      const classdata = env.classes.get(e.obj.a.name); // TODO: add super class field support
       const [offset, _] = classdata.get(e.field);
       return [oinits, ostmts, {
         tag: "load",
@@ -267,6 +269,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
+      // TODO: add super class fields alloc
       const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
       const assigns : IR.Stmt<Type>[] = fields.map(f => {
         const [_, [index, value]] = f;
