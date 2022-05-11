@@ -1,6 +1,8 @@
 const python = require('lezer-python');
 
-const input = "-1";
+const input = `
+[1,2,a]
+`;
 
 const tree = python.parser.parse(input);
 
