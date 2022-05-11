@@ -72,6 +72,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
+  console.log(irprogram)
   const progTyp = tprogram.a;
   var returnType = "";
   var returnExpr = "";
@@ -102,6 +103,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
+    (func $assert_valid_access (import "imports" "assert_valid_access") (param i32) (param i32) (result i32))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
@@ -112,6 +114,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $len (import "liblist" "len") (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
