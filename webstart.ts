@@ -79,7 +79,7 @@ function webStart() {
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
     
-    function console_log_class(repl:BasicREPL, pointer:number, classname:string,level:number) : Array<string>{
+    function console_log_class(repl:BasicREPL, pointer:number, classname:string,level:number,met_object: Map<number,number>,object_number:number) : Array<string>{
 
       var fields_offset_ = repl.currentEnv.classes.get(classname);
       var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
@@ -93,8 +93,13 @@ function webStart() {
       // the reason why pointer beacuse mem is u32 array(4 byte addressing) and the pointer value returned by the run method is in raw address(byte adress)
       // surprisingly(since there is also i64 in wasm), the offset stored int the currentenv is in 4 byte addressing.
       const space = " ";
+      if(met_object.has(pointer)){
+        display.push(`${space.repeat(level)}displayed ${met_object.get(pointer)}:${classname} object at addr ${pointer}: ...`);
+        return display;
+      }
       display.push(
-      `${space.repeat(level)}${classname} object at addr ${pointer}: {`);
+      `${space.repeat(level)}${object_number}:${classname} object at addr ${pointer}: {`);
+      met_object.set(pointer,object_number)
       fields_offset.forEach(thisfield =>{
         var thisfield_type = fields_type.get(thisfield[0]);
         if ( thisfield_type.tag ==="class"){
@@ -102,7 +107,7 @@ function webStart() {
             display.push(`${space.repeat(level+2)}${thisfield[0]} : none `);
           }else{
             display.push(`${space.repeat(level+2)}${thisfield[0]}:{`)
-            display.push(...console_log_class(repl,mem[pointer/4 + thisfield[1][0]],thisfield_type.name,level +5));
+            display.push(...console_log_class(repl,mem[pointer/4 + thisfield[1][0]],thisfield_type.name,level +5,met_object,object_number+1));
             display.push(`${space.repeat(level+2)}}`)
           }
         }else{
@@ -145,7 +150,7 @@ function webStart() {
           break;
         case "object":
           // elt.innerHTML = `${result.name} object at ${result.address}`
-          elt.innerHTML = console_log_class(repl,result.address,result.name,0).join("\n");
+          elt.innerHTML = console_log_class(repl,result.address,result.name,0,new Map(), 1).join("\n");
           break
         default: throw new Error(`Could not render value: ${result}`);
       }
