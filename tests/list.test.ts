@@ -55,7 +55,7 @@ print(len(b[0]))
 print(b[1][2])
 `, [`0`, `3`])
 
-// 8 - Lists in  Classes
+// 8 - Lists in Classes
 assertPrint("lists-with-classes",
 `
 class A(object):
@@ -71,5 +71,17 @@ a.x = [1,2,3,6,19]
 a.accessX(12)
 a.accessX(4)
 `, [`False`, `19`])
+
+// 9 - Lists indexed by list
+assertPrint("list-index-by-list",
+`
+a:[int] = None
+b:[int] = None
+a = [1,2,3,6,19]
+b = [0, 1, 3]
+print(a[b[0]])
+print(a[b[1]])
+print(a[b[2]])
+`, [`1`, `2`, `6`])
 
 });

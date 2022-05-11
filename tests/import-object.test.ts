@@ -26,7 +26,7 @@ function assert_not_none(arg: any) : any {
 }
 
 function assert_valid_access(length: number, ind: number) : any {
-  if (ind >= length || ind < 0)
+  if (ind > length || ind < 0)
     throw new Error("RUNTIME ERROR: cannot access list with invalid index");
   return ind;
 }
