@@ -197,11 +197,50 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<null> {
         expr: expr,
       };
     case "MemberExpression":
+      var string = s.substring(c.from, c.to);
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s);
       c.nextSibling(); // Focus on .
+      var isIndex = string.indexOf("]") - string.indexOf("[") === 2; // only one element in between
+      var containsColon = string.indexOf(":") !== -1;
       c.nextSibling(); // Focus on property
       var propName = s.substring(c.from, c.to);
+      // for lists, check if there is a start idx and end idx
+      // if there is only single element in brackets, then treat as index
+      if (isIndex && !containsColon) {
+        var idx = traverseExpr(c, s);
+        c.parent();
+        return {
+          tag: "index",
+          obj: objExpr,
+          index: idx,
+        }
+      // treat as a slice
+      } else if (containsColon) {
+        var idx_s = null;
+        var idx_e = null;
+        // checks if this is start index a[1:]
+        if (s.substring(c.from, c.to) !== ":") {
+          idx_s = traverseExpr(c, s);
+        }
+        c.nextSibling();
+        // checks if this is an end index a[:1]
+        if (s.substring(c.from, c.to) !== ":" && s.substring(c.from, c.to) !== "]") {
+          idx_e = traverseExpr(c, s);
+        }
+        c.nextSibling();
+        // checks if this is an end index a[1:2]
+        if (s.substring(c.from, c.to) !== "]") {
+          idx_e = traverseExpr(c, s);
+        }
+        c.parent();
+        return {
+          tag: "slice",
+          obj: objExpr,
+          index_s: idx_s,
+          index_e: idx_e,
+        }
+      }
       c.parent();
       return {
         tag: "lookup",
@@ -216,6 +255,7 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<null> {
 
     case "ArrayExpression":
       const elements = traverseArray(c, s);
+      // if there are multiple brackets like [1,a][x], treat first section as array construction and second as index
       return {
         tag: "construct-list",
         items: elements,
@@ -293,8 +333,15 @@ export function traverseStmt(c: TreeCursor, s: string): Stmt<null> {
           name: target.name,
           value: value,
         };
+      } else if (target.tag === "index") {
+        return {
+          tag: "index-assign",
+          obj: target.obj,
+          index: target.index,
+          value: value,
+        }
       } else {
-        throw new Error("Unknown target while parsing assignment");
+        throw new Error("Unknown target while parsing assignment " + target.tag);
       }
     case "ExpressionStatement":
       c.firstChild();

@@ -20,12 +20,7 @@ import { parse } from "./parser";
 // `);
 
 var result = parse(`
-a: [int] = None
-x : int = 0
-a = [1,2,3]
-a[1] = 4
-
-[1, 2, 3][x]
+[1,a][x]
 `);
 
 console.log(JSON.stringify(result, null, 4));
