@@ -18,5 +18,4 @@
   ;; that value
   (func (export "store") (param $addr i32) (param $offset i32) (param $val i32)
     (i32.store (i32.add (local.get $addr) (i32.mul (local.get $offset) (i32.const 4))) (local.get $val)))
-
 )

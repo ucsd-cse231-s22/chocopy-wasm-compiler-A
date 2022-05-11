@@ -1,7 +1,7 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
-import { NUM, BOOL, NONE, CLASS } from "./utils";
+import { NUM, BOOL, NONE, CLASS, LIST } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
 const invalidNames = new Set<string>(["int", "bool", "str"]);
@@ -70,7 +70,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
         var expr : Expr<null>;
-        if (callName === "print" || callName === "abs") {
+        if (callName === "print" || callName === "abs" || callName === "len") {
           expr = {
             tag: "builtin1",
             name: callName,
@@ -184,15 +184,44 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
     case "MemberExpression":
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s);
-      c.nextSibling(); // Focus on .
-      c.nextSibling(); // Focus on property
-      var propName = s.substring(c.from, c.to);
+      c.nextSibling(); // Focus on . or []
+      if (s.substring(c.from, c.to) === ".") {
+        c.nextSibling(); // Focus on property
+        var propName = s.substring(c.from, c.to);
+        c.parent();
+        return {
+          tag: "lookup",
+          obj: objExpr,
+          field: propName
+        }
+      } else if (s.substring(c.from, c.to) === "[") {
+        c.nextSibling(); // Focus on index
+        const indExpr = traverseExpr(c, s);
+        c.parent();
+        return {
+          tag: "access",
+          obj: objExpr,
+          ind: indExpr
+        }
+      } else
+        throw new ParserError(`Unknown member expression ${s.substring(c.from, c.to)}`);
+    case "ArrayExpression":
+      c.firstChild(); // [
+      var length : number = 0;
+      var elems : Array<Expr<null>> = [];
+      while (c.nextSibling()) {
+        if (s.substring(c.from, c.to) === "]") break; // check for empty
+        elems.push(traverseExpr(c, s));
+        length = length + 1;
+        c.nextSibling(); // for ,
+        if (s.substring(c.from, c.to) === "]") break;
+      }
       c.parent();
       return {
-        tag: "lookup",
-        obj: objExpr,
-        field: propName
-      }
+        tag: "array",
+        length,
+        elems
+      };
     case "self":
       return {
         tag: "id",
@@ -321,7 +350,13 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
 }
 
 export function traverseType(c : TreeCursor, s : string) : Type {
-  // For now, always a VariableName
+  if (c.type.name === "ArrayExpression") {
+    c.firstChild(); // [
+    c.nextSibling(); // Type name
+    const elemType : Type = traverseType(c, s);
+    c.parent();
+    return LIST(elemType);
+  }
   let name = s.substring(c.from, c.to);
   switch(name) {
     case "int": return NUM;
