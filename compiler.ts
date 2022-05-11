@@ -1,21 +1,25 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp } from "./ast"
-import { BOOL, NONE, NUM } from "./utils";
+import { APPLY, BOOL, createMethodName, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
   classes: Map<string, Map<string, [number, Value<Type>]>>;  
+  classIndices: Map<string, number>;  
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
+  vtableMethods: Array<string>;
 }
 
 export const emptyEnv : GlobalEnv = { 
   globals: new Map(), 
   classes: new Map(),
+  classIndices: new Map(), 
   locals: new Set(),
   labels: [],
-  offset: 0 
+  offset: 0,
+  vtableMethods: [] 
 };
 
 type CompileResult = {
@@ -172,6 +176,15 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
 
+    case "call_indirect":
+      if (expr.fn.a.tag !== "class") {
+        throw new Error("cursed");
+      }
+      
+      var valStmts = codeGenValue(expr.fn, env);
+      var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      return [...fnStmts, ...valStmts, `(i32.const 0)`, `call $load`, `(call_indirect (type $${expr.fn.a.name}$${APPLY}t))`];
+
     case "alloc":
       return [
         ...codeGenValue(expr.amount, env),
@@ -276,7 +289,13 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
   bodyCommands += blockCommands;
   bodyCommands += ") ;; end $loop"
   env.locals.clear();
-  return [`(func $${def.name} ${params} (result i32)
+  let paramType = "";
+  if (def.parameters.length > 0) {
+    paramType = `(param${" i32".repeat(def.parameters.length)})`
+  }
+  return [`
+  (type $${def.name}t (func ${paramType} (result i32)))
+  (func $${def.name} ${params} (result i32)
     ${locals}
     ${inits}
     ${bodyCommands}
@@ -286,7 +305,7 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
 
 function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
-  methods.forEach(method => method.name = `${cls.name}$${method.name}`);
+  methods.forEach(method => method.name = createMethodName(cls.name, method.name));
   const result = methods.map(method => codeGenDef(method, env));
   return result.flat();
   }

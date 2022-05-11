@@ -64,8 +64,8 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         c.firstChild(); // Focus on object
         c.nextSibling(); // Focus on lambda
         var params = traverseLambdaParams(c, s);
-        c.nextSibling(); // Focus on .
-        c.nextSibling(); // Focus on property
+        c.nextSibling(); 
+        c.nextSibling(); 
         var expr = traverseExpr(c, s);
         c.parent();
         return {
@@ -104,12 +104,9 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
             right: args[1]
           }
         } 
-        else {
-          expr = { tag: "call", name: callName, arguments: args};
-        }
         return expr;  
       } else {
-        throw new Error("Unknown target while parsing assignment");
+        return { tag: "call", fn: callExpr, arguments: args};
       }
 
     case "BinaryExpression":
@@ -239,6 +236,9 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<null>
 
 export function traverseLambdaParams(c : TreeCursor, s : string) : Array<string> {
   let hasNext = c.firstChild();  // Focuses on open paren
+  if (!hasNext) {
+    return [];
+  }
   const params = [];
   while(hasNext) {
     let paramName = s.substring(c.from, c.to);

@@ -46,6 +46,7 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
+  const newClassIndices = new Map(env.classIndices);
 
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
@@ -53,15 +54,17 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   });
   prog.classes.forEach(cls => {
     const classFields = new Map();
-    cls.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
+    cls.fields.forEach((field, i) => classFields.set(field.name, [i + 1, field.value]));
     newClasses.set(cls.name, classFields);
   });
   return {
     globals: newGlobals,
     classes: newClasses,
+    classIndices: newClassIndices,
     locals: env.locals,
     labels: env.labels,
-    offset: newOffset
+    offset: newOffset,
+    vtableMethods: env.vtableMethods,
   }
 }
 
@@ -86,6 +89,8 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   // const compiled = compiler.compile(tprogram, config.env);
   const compiled = compile(irprogram, globalEnv);
 
+  const vtable = `(table ${globalEnv.vtableMethods.length} funcref)
+    (elem (i32.const 0) ${globalEnv.vtableMethods.map(method => `$${method}`).join(" ")})`;
   const globalImports = [...globalsBefore.keys()].map(name =>
     `(import "env" "${name}" (global $${name} (mut i32)))`
   ).join("\n");
@@ -114,6 +119,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     ${globalImports}
     ${globalDecls}
+    ${vtable}
     ${config.functions}
     ${compiled.functions}
     (func (export "exported_func") ${returnType}
@@ -121,7 +127,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
       ${returnExpr}
     )
   )`;
-  console.log(wasmSource);
+  console.error(wasmSource);
   const [result, instance] = await runWat(wasmSource, importObject);
 
   return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance];

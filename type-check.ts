@@ -308,7 +308,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       if (!isAssignable(env, ret.a, expr.type.ret)) {
         throw new TypeCheckError("Expected type " + JSON.stringify(expr.type.ret) + " in lambda, got type " + JSON.stringify(ret.a.tag));
       }
-      return {a: expr.type, expr: ret, ...expr}
+      return {a: expr.type, tag: "lambda", params: expr.params, type: expr.type, expr: ret}
     case "builtin1":
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg);
@@ -339,33 +339,49 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         throw new TypeError("Undefined function: " + expr.name);
       }
     case "call":
-      if(env.classes.has(expr.name)) {
-        // surprise surprise this is actually a constructor
-        const tConstruct : Expr<Type> = { a: CLASS(expr.name), tag: "construct", name: expr.name };
-        const [_, methods] = env.classes.get(expr.name);
-        if (methods.has("__init__")) {
-          const [initArgs, initRet] = methods.get("__init__");
-          if (expr.arguments.length !== initArgs.length - 1)
-            throw new TypeCheckError("__init__ didn't receive the correct number of arguments from the constructor");
-          if (initRet !== NONE) 
-            throw new TypeCheckError("__init__  must have a void return type");
-          return tConstruct;
-        } else {
-          return tConstruct;
-        }
-      } else if(env.functions.has(expr.name)) {
-        const [argTypes, retType] = env.functions.get(expr.name);
-        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+      if (expr.fn.tag === "id") { // TODO: don't do this
+        if(env.classes.has(expr.fn.name)) {
+          // surprise surprise this is actually a constructor
+          const tConstruct : Expr<Type> = { a: CLASS(expr.fn.name), tag: "construct", name: expr.fn.name };
+          const [_, methods] = env.classes.get(expr.fn.name);
+          if (methods.has("__init__")) {
+            const [initArgs, initRet] = methods.get("__init__");
+            if (expr.arguments.length !== initArgs.length - 1)
+              throw new TypeCheckError("__init__ didn't receive the correct number of arguments from the constructor");
+            if (initRet !== NONE) 
+              throw new TypeCheckError("__init__  must have a void return type");
+            return tConstruct;
+          } else {
+            return tConstruct;
+          }
+        } else if(env.functions.has(expr.fn.name)) {
+          const [argTypes, retType] = env.functions.get(expr.fn.name);
+          const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
 
-        if(argTypes.length === expr.arguments.length &&
-           tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
-             return {...expr, a: retType, arguments: expr.arguments};
-           } else {
-            throw new TypeError("Function call type mismatch: " + expr.name);
-           }
+          if(argTypes.length === expr.arguments.length &&
+            tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
+              return {...expr, a: retType, arguments: expr.arguments};
+            } else {
+              throw new TypeError("Function call type mismatch: " + expr.fn.name);
+            }
+        } else {
+          throw new TypeError("Undefined function: " + expr.fn.name);
+        }
       } else {
-        throw new TypeError("Undefined function: " + expr.name);
+        const newFn = tcExpr(env, locals, expr.fn);
+        if(newFn.a.tag !== "callable") {
+          throw new TypeError("Cannot call non-callable expression");
+        }
+        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        
+        if(newFn.a.params.length === expr.arguments.length &&
+          newFn.a.params.every((param, i) => param === tArgs[i].a)) {
+            return {...expr, a: newFn.a.ret, arguments: expr.arguments, fn: newFn};
+        } else {
+          throw new TypeError("Function call type mismatch");
+        }
       }
+      break;
     case "lookup":
       var tObj = tcExpr(env, locals, expr.obj);
       if (tObj.a.tag === "class") {

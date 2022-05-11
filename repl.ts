@@ -26,9 +26,11 @@ export class BasicREPL {
     this.currentEnv = {
       globals: new Map(),
       classes: new Map(),
+      classIndices: new Map(),
       locals: new Set(),
       labels: [],
-      offset: 1
+      offset: 1,
+      vtableMethods: []
     };
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";

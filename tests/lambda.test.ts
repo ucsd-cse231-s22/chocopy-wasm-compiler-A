@@ -10,6 +10,8 @@ import {
 } from "../parser";
 import { emptyGlobalTypeEnv, tc } from "../type-check";
 import { assert } from "console";
+import { importObject } from "./import-object.test";
+import {run, typeCheck} from "./helpers.test";
 
 // We write tests for each function in parser.ts here. Each function gets its
 // own describe statement. Each it statement represents a single test. You
@@ -120,6 +122,13 @@ describe("traverseType(c, s) function", () => {
         const prog = traverse(cursor, source);
         tc(emptyGlobalTypeEnv(), prog);
       }).throws();
+    });
+  });
+
+  describe("lower", () => {
+    it("run lambda", async () => {
+      await run("mklambda(Callable[[], int], lambda: print(5))()");
+      console.error(importObject.output);
     });
   });
 });
