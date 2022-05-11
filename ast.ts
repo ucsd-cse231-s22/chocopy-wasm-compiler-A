@@ -7,7 +7,7 @@ export type Type =
   | {tag: "none"}
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
-  | { tag: "list", listitems : Array<Type>}
+  // | { tag: "list", listitems : Array<Type>}
 
 export type Parameter<A> = { name: string, type: Type }
 
@@ -25,6 +25,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "expr", expr: Expr<A> }
   | {  a?: A, tag: "pass" }
   | {  a?: A, tag: "field-assign", obj: Expr<A>, field: string, value: Expr<A> }
+  | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> } // added by prof
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
 
@@ -37,10 +38,11 @@ export type Expr<A> =
   | {  a?: A, tag: "builtin2", name: string, left: Expr<A>, right: Expr<A>}
   | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>> } 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
+  | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> } // added by prof
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
-  | {  a?: A, tag: "list-construct", items: Array<Expr<A>> } // implemented by the list team. 
-  | {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Stmt<A> }
+  // | {  a?: A, tag: "list-construct", items: Array<Expr<A>> } // implemented by the list team. 
+  | {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Expr<A> }
 
   // Possible Typechecks here ::
   // 1. iterable.a.tag = list

@@ -313,6 +313,33 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeError("Undefined function: " + expr.name);
       }
+    case "list-comp":
+      // check if iterable is instance of Range class
+      const iterable = tcExpr(env, locals, expr.iterable);
+      if (iterable.a.tag === "class" && iterable.a.name === "Range"){
+        const classData = env.classes.get(iterable.a.name);
+        // check if next and hasNext methods are there
+        if (!classData[1].has("next") || !classData[1].has("hasNext"))
+          throw new Error("Class of the instance must have next() and hasNext() methods");
+        // need to create a local env to store elems of iterable
+        var loc = emptyLocalTypeEnv();
+        if (expr.elem.tag === "id"){
+          loc.vars.set(expr.elem.name, NUM);
+          const elem = {...expr.elem, a: NUM};
+          const left = tcExpr(env, loc, expr.left); // need to modify
+
+
+
+          // need to add cond
+          return {...expr, left, elem, iterable, a: CLASS(iterable.a.name)};
+        }
+        else
+          throw new Error("elem has to be an id");
+      }
+      else if (iterable.a.tag === "class")
+        throw new Error("Only instances of Range class supported currently");
+      else
+        throw new Error("Iterable must be an instance of a class");
     case "call":
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
@@ -384,6 +411,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
 }
+
+// export function tcListComp(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<null>) : Expr<Type> {
+//   console.log(env,locals,expr);
+//   return;
+// }
 
 export function tcLiteral(literal : Literal) {
     switch(literal.tag) {

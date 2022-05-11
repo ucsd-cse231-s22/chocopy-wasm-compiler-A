@@ -39,6 +39,33 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         tag: "id",
         name: s.substring(c.from, c.to)
       }
+    case "ArrayComprehensionExpression":
+      c.firstChild(); // '['
+      c.nextSibling();
+      const left = traverseExpr(c, s); // left
+      c.nextSibling(); // for
+      c.nextSibling();
+      const elem = traverseExpr(c, s); // elem
+      c.nextSibling(); // in
+      c.nextSibling();
+      // conditions for parsing iterable to be added --!!
+      const iterable = traverseExpr(c, s); // iterable
+      c.nextSibling();
+      var cond;
+      if (s.substring(c.from, c.to) !== ']'){
+        if (s.substring(c.from, c.to) !== 'if')
+          throw new Error("PARSE ERROR: only if condition allowed in comprehensions");
+        c.nextSibling();
+        cond = traverseExpr(c, s); // cond which evaluates to a binary expr
+      }
+      c.parent();
+      return {
+        tag: "list-comp",
+        left,
+        elem,
+        iterable,
+        cond
+      }
     case "CallExpression":
       c.firstChild();
       const callExpr = traverseExpr(c, s);
