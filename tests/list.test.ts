@@ -84,4 +84,18 @@ print(a[b[1]])
 print(a[b[2]])
 `, [`1`, `2`, `6`])
 
+// 10 - List for loops
+assertPrint("list-for-loops",
+`
+a:[int] = None
+b:[int] = None
+i:int = 0
+a = [1,2,3,6,19]
+b = [0, 1, 3]
+for i in a:
+  print(i)
+for i in b:
+  print(a[i])
+`, [`1`, `2`, `3`, `6`, `19`, `1`, `2`, `6`])
+
 });

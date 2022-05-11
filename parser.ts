@@ -59,7 +59,6 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       let args = traverseArguments(c, s);
       c.parent(); // pop CallExpression
 
-
       if (callExpr.tag === "lookup") {
         return {
           tag: "method-call",
@@ -324,13 +323,35 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
         bodies,
         els: else_body
       }
+    case "ForStatement":
+      c.firstChild(); // For
+      c.nextSibling();
+      var itvar = traverseExpr(c, s);
+      c.nextSibling(); // in
+      c.nextSibling(); // iterable
+      var iterable = traverseExpr(c, s);
+      c.nextSibling(); // Focus on body
+
+      var body : Array<Stmt<null>> = [];
+      c.firstChild(); // :
+      while (c.nextSibling()) {
+        body.push(traverseStmt(c, s));
+      }
+      c.parent();
+      c.parent();
+      return {
+        tag: "for",
+        itvar,
+        iterable,
+        body
+      }
     case "WhileStatement":
       c.firstChild(); // Focus on while
       c.nextSibling(); // Focus on condition
       var cond = traverseExpr(c, s);
       c.nextSibling(); // Focus on body
 
-      var body = [];
+      var body : Array<Stmt<null>> = [];
       c.firstChild(); // Focus on :
       while(c.nextSibling()) {
         body.push(traverseStmt(c, s));

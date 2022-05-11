@@ -2,6 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
+import { BOOL, NONE, NUM } from './utils'
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -22,6 +23,7 @@ function generateName(base : string) : string {
 // }
 
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
+    console.log(JSON.stringify(p, null, 4));
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
@@ -186,6 +188,50 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       //   endlbl,
       // ]];
     
+    case "for":
+      var forStartLbl = generateName("$forstart");
+      var forbodyLbl = generateName("$forbody");
+      var forEndLbl = generateName("$forend");
+
+      // create a new var i for loop iteration indices
+      var newName = generateName("forloopind");
+      var setNewName : IR.Stmt<Type> = {
+        tag: "assign",
+        a: NONE,
+        name: newName,
+        value: { a: NUM, tag: "value", value: { tag: "wasmint", value: 0 } } 
+      };
+      pushStmtsToLastBlock(blocks, setNewName);
+      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl });
+
+      // for loop condition
+      blocks.push({  a: s.a, label: forStartLbl, stmts: [] });
+      var [cinits, cstmts, cexpr] =
+        flattenExprToVal({ a: BOOL, tag: "binop", op: AST.BinOp.Lt,
+          left: {  a: NUM, tag: "id", name: newName }, right: { a: NUM, tag: "builtin1", name: "len", arg: s.iterable} }, env);
+      pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: forbodyLbl, els: forEndLbl });
+
+      // for loop body preparation
+      blocks.push({  a: s.a, label: forbodyLbl, stmts: [] });
+      var [itvinits, itvstmts, itvval] = flattenExprToVal(s.itvar, env);
+      if (itvval.tag !== "id") throw new Error("For loop variable cannot be literal");
+      var [itbinits, itbstmts, itbval] = flattenExprToVal(s.iterable, env);
+      pushStmtsToLastBlock(blocks, ...itvstmts, ...itbstmts);
+      // assign itvval to itbval[newName]
+      pushStmtsToLastBlock(blocks, { tag: "assign", a: NONE, name: itvval.name,
+        value: { tag: "load", start: itbval, list: true, offset: { a: NUM, tag: "id", name: newName } } });
+      
+      // body statement
+      var bodyinits = flattenStmts(s.body, blocks, env);
+      pushStmtsToLastBlock(blocks, { tag: "assign", a: NONE, name: newName,
+        value: {a: NUM, tag: "binop", op: AST.BinOp.Plus, left: { a: NUM, tag: "id", name: newName },
+          right: { a: NUM, tag: "wasmint", value: 1 } } }) // ind = ind + 1
+      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl });
+
+      blocks.push({  a: s.a, label: forEndLbl, stmts: [] })
+
+      return [...itbinits, ...itvinits, ...cinits, ...bodyinits, { a: s.a, name: newName, type: s.a, value: { tag: "none" } }];
+
     case "while":
       var whileStartLbl = generateName("$whilestart");
       var whilebodyLbl = generateName("$whilebody");
@@ -314,8 +360,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           value: lval
         })
       });
-      console.log("==============");
-      console.log(linits);
       return [
         [...linits, { name: arrayName, type: e.a, value: { tag: "none" } }],
         [...lstmts, { tag: "assign", name: arrayName, value: alloc }, ...assigns],

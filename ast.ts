@@ -28,6 +28,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "pass" }
   | {  a?: A, tag: "field-assign", obj: Expr<A>, field: string, value: Expr<A> }
   | {  a?: A, tag: "if", conds: Array<Expr<A>>, bodies: Array<Stmt<A>[]>, els: Array<Stmt<A>> }
+  | {  a?: A, tag: "for", itvar: Expr<A>, iterable: Expr<A>, body: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
 
 export type Expr<A> =

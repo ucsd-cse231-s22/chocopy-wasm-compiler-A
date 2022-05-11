@@ -81,6 +81,10 @@ export function isListObject(t: Type) : boolean {
   return t.tag === "list" || t.tag === "empty";
 }
 
+export function iterable(t: Type) : boolean {
+  return isListObject(t) || t.tag === "str";
+}
+
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type) : boolean {
   return (
     equalType(t1, t2) ||
@@ -291,6 +295,17 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
         throw new TypeCheckError("expected return type `" + (locals.expectedRet as any).tag + "`; got type `" + (tRet.a as any).tag + "`");
       locals.actualRet = tRet.a;
       return {a: tRet.a, tag: stmt.tag, value:tRet};
+    case "for":
+      var tIterVar = tcExpr(env, locals, stmt.itvar);
+      var tIterable = tcExpr(env, locals, stmt.iterable);
+      if (!iterable(tIterable.a))
+        throw new TypeCheckError(`not iterable type ${tIterable.a.tag}`);
+      if (tIterable.a.tag === "str" && tIterVar.a.tag !== "str")
+        throw new TypeCheckError(`iterative var should be str, get ${tIterVar.a.tag} instead`);
+      if (tIterable.a.tag === "list" && !equalType(tIterable.a.elem, tIterVar.a))
+        throw new TypeCheckError(`iterative var should be ${tIterable.a.elem.tag}, get ${tIterVar.a.tag} instead`);
+      const tfBody = tcBlock(env, locals, stmt.body);
+      return {...stmt, a: NONE, itvar: tIterVar, iterable: tIterable, body: tfBody};
     case "while":
       var tCond = tcExpr(env, locals, stmt.cond);
       const tBody = tcBlock(env, locals, stmt.body);
