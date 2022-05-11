@@ -1,6 +1,6 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
+import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Callable } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 
@@ -27,6 +27,13 @@ export type LocalTypeEnv = {
   expectedRet: Type,
   actualRet: Type,
   topLevel: Boolean
+}
+
+const copyLocals = (locals: LocalTypeEnv): LocalTypeEnv => {
+  return {
+    vars: new Map(locals.vars),
+    ...locals
+  }
 }
 
 const defaultGlobalFunctions = new Map();
@@ -63,10 +70,15 @@ export type TypeError = {
   message: string
 }
 
+export function equalCallable(t1: Callable, t2: Callable): boolean {
+  return t1.params.every((param, i) => equalType(param, t2.params[i])) && equalType(t1.ret, t2.ret);
+}
+
 export function equalType(t1: Type, t2: Type) {
   return (
     t1 === t2 ||
-    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
+    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
+    (t1.tag === "callable" && t2.tag === "callable" && equalCallable(t1, t2))
   );
 }
 
@@ -75,7 +87,7 @@ export function isNoneOrClass(t: Type) {
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
+  return equalType(t1, t2) || t1.tag === "none" && (t2.tag === "class" || t2.tag === "callable")
 }
 
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
@@ -284,6 +296,19 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeCheckError("Unbound id: " + expr.name);
       }
+    case "lambda":
+      if (expr.params.length !== expr.type.params.length) {
+        throw new TypeCheckError("Mismatch in number of parameters: " + expr.type.params.length + " != " + expr.params.length);
+      }
+      const lambdaLocals = copyLocals(locals);
+      expr.params.forEach((param, i) => {
+        lambdaLocals.vars.set(param, expr.type.params[i]);
+      })
+      let ret = tcExpr(env, lambdaLocals, expr.expr);
+      if (!isAssignable(env, ret.a, expr.type.ret)) {
+        throw new TypeCheckError("Expected type " + JSON.stringify(expr.type.ret) + " in lambda, got type " + JSON.stringify(ret.a.tag));
+      }
+      return {a: expr.type, expr: ret, ...expr}
     case "builtin1":
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg);

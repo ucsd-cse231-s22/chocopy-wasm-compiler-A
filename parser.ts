@@ -28,7 +28,6 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
 }
 
 export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
-  console.error(c.type.name);
   switch(c.type.name) {
     case "Number":
     case "Boolean":
@@ -45,7 +44,38 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
     case "CallExpression":
       c.firstChild();
       const callExpr = traverseExpr(c, s);
+
       c.nextSibling(); // go to arglist
+      if (callExpr.tag === "id" && callExpr.name === MKLAMBDA) {
+        c.firstChild();
+        c.nextSibling(); 
+        const callableType = traverseType(c, s);
+        if (callableType.tag !== "callable") {
+          throw new Error(`First argument to ${MKLAMBDA} must be callable.`);
+        }
+
+        c.nextSibling(); // Focus on ,
+        c.nextSibling(); // Focus on lambda
+        let exprName = c.type.name;
+        // @ts-ignore
+        if(exprName !== "LambdaExpression") {
+          throw new Error(`Second argument to ${MKLAMBDA} must be a lamdba.`);
+        }
+        c.firstChild(); // Focus on object
+        c.nextSibling(); // Focus on lambda
+        var params = traverseLambdaParams(c, s);
+        c.nextSibling(); // Focus on .
+        c.nextSibling(); // Focus on property
+        var expr = traverseExpr(c, s);
+        c.parent();
+        return {
+          tag: "lambda",
+          type: callableType,
+          params,
+          expr,
+        };
+      }
+
       let args = traverseArguments(c, s);
       c.parent(); // pop CallExpression
 
@@ -73,9 +103,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
             left: args[0],
             right: args[1]
           }
-        } else if (callName === MKLAMBDA) {
-          // make sure there are two arguments, first is callable, second is lambda
-        }
+        } 
         else {
           expr = { tag: "call", name: callName, arguments: args};
         }
@@ -184,19 +212,6 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         tag: "lookup",
         obj: objExpr,
         field: propName
-      }
-    case "LambdaExpression":
-      c.firstChild(); // Focus on object
-      c.nextSibling(); // Focus on .
-      var params = traverseLambdaParams(c, s);
-      console.error(params);
-      c.nextSibling(); // Focus on .
-      c.nextSibling(); // Focus on property
-      var expr = traverseExpr(c, s);
-      c.parent();
-      return {
-        tag: "lambda",
-        params: params, expr
       }
     case "self":
       return {

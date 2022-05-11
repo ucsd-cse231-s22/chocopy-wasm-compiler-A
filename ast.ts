@@ -1,13 +1,14 @@
 // import { TypeCheckError } from "./type-check";
 
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
+export type Callable = {tag: "callable"; params: Array<Type>; ret: Type };
 export type Type =
   | {tag: "number"}
   | {tag: "bool"}
   | {tag: "none"}
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
-  | { tag: "callable"; params: Array<Type>; ret: Type };
+  | Callable;
 
 export type Parameter<A> = { name: string, type: Type }
 
@@ -39,7 +40,7 @@ export type Expr<A> =
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
-  | {  a?: A, tag: "lambda", params: Array<Parameter<A>>, expr: Expr<A> }
+  | {  a?: A, tag: "lambda", params: Array<string>, type: Callable, expr: Expr<A> }
 
 export type Literal = 
     { tag: "num", value: number }
