@@ -28,7 +28,6 @@ export type Stmt<A> =
   | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
-  | {  a?: A, tag: "item-assign", obj: Expr<A>, idx: number, value: Expr<A> }
 
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal }
@@ -42,8 +41,7 @@ export type Expr<A> =
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
-  | {  a?: A, tag: "construct-list", items: Array<Literal> } // [1,2,3]
-  | {  a?: A, tag: "get-item", idx: number } // a[0]
+  | {  a?: A, tag: "construct-list", items: Array<Expr<A>> } // [1,2,3] or [A(), A()]
 
 export type Literal = 
     { tag: "num", value: number }
