@@ -94,7 +94,7 @@ function webStart() {
       // surprisingly(since there is also i64 in wasm), the offset stored int the currentenv is in 4 byte addressing.
       const space = " ";
       if(met_object.has(pointer)){
-        display.push(`${space.repeat(level)}diplayed ${met_object.get(pointer)}:${classname} object at addr ${pointer}: ...`);
+        display.push(`${space.repeat(level)}displayed ${met_object.get(pointer)}:${classname} object at addr ${pointer}: ...`);
         return display;
       }
       display.push(
