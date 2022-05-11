@@ -214,6 +214,17 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         tag: "id",
         name: "self"
       };
+    case "ConditionalExpression":
+      c.firstChild();
+      var thn = traverseExpr(c, s);
+      c.nextSibling();//if
+      c.nextSibling();
+      var cond = traverseExpr(c, s);
+      c.nextSibling();//else
+      c.nextSibling();
+      var els = traverseExpr(c, s);
+      c.parent();
+      return {tag:"if-expr", thn, cond, els};
     default:
       throw new Error("Could not parse expr at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to));
   }

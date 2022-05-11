@@ -407,6 +407,13 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeCheckError("method calls require an object");
       }
+    case "if-expr":
+      var tThn = tcExpr(env, locals, expr.thn);
+      var tCond = tcExpr(env, locals, expr.cond);
+      var tEls = tcExpr(env, locals, expr.els);
+      if(tCond.a !== BOOL) throw new TypeCheckError("Condition Expression Must be a bool");
+      if(tThn.a !== tEls.a) throw new TypeCheckError(`if-expr type mismatch: ${tThn.a} is not the same as ${tEls.a}`);
+      return {...expr, a: tThn.a, cond: tCond, thn: tThn, els: tEls};
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
 }
