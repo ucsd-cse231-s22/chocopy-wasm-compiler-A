@@ -30,12 +30,6 @@ function assert_not_none(arg: any) : any {
   return arg;
 }
 
-function assert_valid_access(length: number, ind: number) : any {
-  if (ind >= length)
-    throw new Error("RUNTIME ERROR: cannot access list with invalid index");
-  return ind;
-}
-
 function webStart() {
   document.addEventListener("DOMContentLoaded", async function() {
 
@@ -51,7 +45,6 @@ function webStart() {
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
-        assert_valid_access: (length: number, ind: number) => assert_valid_access(length, ind),
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),

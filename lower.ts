@@ -271,50 +271,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       return [oinits, ostmts, {
         tag: "load",
         start: oval,
-        list: false,
         offset: { tag: "wasmint", value: offset }}];
-    }
-    case "access": {
-      const [linits, lstmts, lval] = flattenExprToVal(e.obj, env);
-      if(e.obj.a.tag !== "list") { throw new Error("Compiler's cursed, go home"); }
-      const [vinits, vstmts, vval] = flattenExprToVal(e.ind, env);
-      return [
-        [...linits, ...vinits], [...lstmts, ...vstmts], {
-          tag: "load",
-          start: lval,
-          list: true,
-          offset: vval
-        }
-      ];
-    }
-    case "array": {
-      const arrayName = generateName("newList");
-      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: e.length + 1 } }
-      const linits : IR.VarInit<Type>[] = [];
-      const lstmts : IR.Stmt<Type>[] = [];
-      const assigns : IR.Stmt<Type>[] = [];
-      assigns.push({
-        tag: "store",
-        start: { tag: "id", name: arrayName },
-        offset: { tag: "wasmint", value: 0 },
-        value: { tag: "wasmint", value: e.length }
-      });
-      e.elems.forEach((elem, ind) => {
-        const [linit, lstmt, lval] = flattenExprToVal(elem, env);
-        linits.concat(linit);
-        lstmts.concat(lstmt);
-        assigns.push({
-          tag: "store",
-          start: { tag: "id", name: arrayName },
-          offset: { tag: "wasmint", value: ind + 1 },
-          value: lval
-        })
-      });
-      return [
-        [...linits, { name: arrayName, type: e.a, value: { tag: "none" } }],
-        [...lstmts, { tag: "assign", name: arrayName, value: alloc }, ...assigns],
-        { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: arrayName } }
-      ]
     }
     case "construct":
       const classdata = env.classes.get(e.name);

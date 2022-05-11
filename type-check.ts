@@ -1,7 +1,7 @@
 
 import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
-import { NUM, BOOL, NONE, EMPTY, CLASS, LIST } from './utils';
+import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
@@ -63,26 +63,19 @@ export type TypeError = {
   message: string
 }
 
-export function equalType(t1: Type, t2: Type) : boolean {
+export function equalType(t1: Type, t2: Type) {
   return (
     t1 === t2 ||
-    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
-    (t1.tag === "list" && t2.tag === "list" && equalType(t1.elem, t2.elem)) ||
-    (t1.tag === "list" && t2.tag === "empty") ||
-    (t1.tag === "empty" && t2.tag === "list")
+    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
   );
 }
 
-export function isMemoryObject(t: Type) : boolean {
-  return t.tag === "none" || t.tag === "class" || t.tag === "list" || t.tag === "empty";
+export function isNoneOrClass(t: Type) {
+  return t.tag === "none" || t.tag === "class";
 }
 
-export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type) : boolean {
-  return (
-    equalType(t1, t2) ||
-    (t1.tag === "none" && (t2.tag === "class" || t2.tag === "list" )) ||
-    (t1.tag === "empty" && t2.tag === "list")
-  );
+export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
+  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
 }
 
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
@@ -321,9 +314,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       const tBin = {...expr, left: tLeft, right: tRight};
       switch(expr.op) {
         case BinOp.Plus:
-          if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
-          else if (tLeft.a.tag === "list" && equalType(tRight.a, tLeft.a)) { return {a: LIST(tLeft.a.elem), ...tBin}; }
-          else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Minus:
         case BinOp.Mul:
         case BinOp.IDiv:
@@ -332,8 +322,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
         case BinOp.Neq:
-          if(tLeft.a.tag === "class" || tRight.a.tag === "class" ||
-            tLeft.a.tag === "list" || tRight.a.tag === "list") throw new TypeCheckError(`cannot apply operator '==' on class / list types`)
+          if(tLeft.a.tag === "class" || tRight.a.tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")
           if(equalType(tLeft.a, tRight.a)) { return {a: BOOL, ...tBin} ; }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op)}
         case BinOp.Lte:
@@ -347,8 +336,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           if(equalType(tLeft.a, BOOL) && equalType(tRight.a, BOOL)) { return {a: BOOL, ...tBin} ; }
           else { throw new TypeCheckError("Type mismatch for boolean op" + expr.op); }
         case BinOp.Is:
-          if(!isMemoryObject(tLeft.a) || !isMemoryObject(tRight.a))
-            throw new TypeCheckError("is operands must be objects in memory");
+          if(!isNoneOrClass(tLeft.a) || !isNoneOrClass(tRight.a))
+            throw new TypeCheckError("is operands must be objects");
           return {a: BOOL, ...tBin};
       }
     case "uniop":
@@ -443,30 +432,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeCheckError("field lookups require an object");
       }
-    case "access":
-      var tObj = tcExpr(env, locals, expr.obj);
-      if (tObj.a.tag === "list") {
-        var tInd = tcExpr(env, locals, expr.ind);
-        if (!equalType(tInd.a, NUM)) throw new TypeCheckError(`cannot access with index type ${tInd.a.tag}`);
-        return {...expr, a: tObj.a.elem, obj: tObj, ind: tInd};
-      } else {
-        throw new TypeCheckError(`cannot access type ${tObj.a.tag}`);
-      }
-    case "array":
-      if (expr.length === 0) {
-        return {...expr, a: EMPTY};
-      }
-      const tElems : Array<Expr<Type>> = [];
-      // Check the first element
-      const tElem1 = tcExpr(env, locals, expr.elems[0]);
-      const eType : Type = tElem1.a;
-      // Typecheck
-      expr.elems.forEach(elem => {
-        const tElem = tcExpr(env, locals, elem);
-        if (!equalType(tElem.a, eType)) throw new TypeCheckError(`unconsistent type in a list ${tElem.a.tag} and ${eType.tag}`);
-        tElems.push(tElem);
-      });
-      return {...expr, a: LIST(eType)};
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj);
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));

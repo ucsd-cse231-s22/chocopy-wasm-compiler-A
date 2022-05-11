@@ -18,6 +18,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "pass" }
   | {  a?: A, tag: "ifjmp", cond: Value<A>, thn: string, els: string }
   | {  a?: A, tag: "jmp", lbl: string }
+
   | {  a?: A, tag: "store", start: Value<A>, offset: Value<A>, value: Value<A> } // start should be an id
 
 export type Expr<A> =
@@ -27,8 +28,9 @@ export type Expr<A> =
   | {  a?: A, tag: "builtin1", name: string, arg: Value<A> }
   | {  a?: A, tag: "builtin2", name: string, left: Value<A>, right: Value<A>}
   | {  a?: A, tag: "call", name: string, arguments: Array<Value<A>> } 
+
   | {  a?: A, tag: "alloc", amount: Value<A> }
-  | {  a?: A, tag: "load", start: Value<A>, offset: Value<A>, list: boolean }
+  | {  a?: A, tag: "load", start: Value<A>, offset: Value<A> }
 
 export type Value<A> = 
     { a?: A, tag: "num", value: bigint }
