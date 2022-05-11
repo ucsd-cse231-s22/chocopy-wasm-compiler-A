@@ -25,12 +25,6 @@ function assert_not_none(arg: any) : any {
   return arg;
 }
 
-function assert_valid_access(length: number, ind: number) : any {
-  if (ind >= length)
-    throw new Error("RUNTIME ERROR: cannot access list with invalid index");
-  return ind;
-}
-
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
   const memory = new WebAssembly.Memory({initial:10, maximum:100});
@@ -48,7 +42,6 @@ export const importObject : any = {
     //  We can then examine output to see what would have been printed in the
     //  console.
     assert_not_none: (arg: any) => assert_not_none(arg),
-    assert_valid_access: (length: number, ind: number) => assert_valid_access(length, ind),
     print: (arg: any) => print(Type.Num, arg),
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),

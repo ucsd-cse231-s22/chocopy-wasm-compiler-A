@@ -6,8 +6,6 @@ export type Type =
   | {tag: "bool"}
   | {tag: "none"}
   | {tag: "str"}
-  | {tag: "empty"}
-  | {tag: "list", elem: Type}
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
 
@@ -40,7 +38,6 @@ export type Expr<A> =
   | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>> } 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "access", obj: Expr<A>, ind: Expr<A> }
-  | {  a?: A, tag: "array", length: number, elems: Array<Expr<A>>}
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
 
