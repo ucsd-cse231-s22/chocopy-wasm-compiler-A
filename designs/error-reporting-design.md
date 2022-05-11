@@ -1,8 +1,12 @@
-<!-- # TODOs:
-- Review everything in "Examples of Design"
-- Review "Changes to Data Structure".
-- Review "Functions to add"
-- Review "Future Work" -->
+# TODOs:
+- implement offset -> line / col algorithm
+  - TODO: image
+- pretty source code: AST (with from and to) -> draw squiggly
+- better type error (wrapped inside functions based on lisa's code) + print/len type check
+- kw as arg names????
+- division by zero???? (how to get src locs for runtime errors)
+
+
 
 # Error Reporting
 
@@ -54,12 +58,13 @@ Annotation = {
     type?: Type,
     fromLoc: Loc,
     toLoc: Loc,
-    fullSrc: string
+    // fullSrc: string,
 }
 
 Loc = {
     line: num,
     col: num,
+    srcIdx: num
 }
 ```
 
