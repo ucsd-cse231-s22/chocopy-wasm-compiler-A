@@ -266,6 +266,8 @@ function webStart() {
     document.getElementById("save").addEventListener("click", function(e){
       var FileSaver = require("file-saver");
       var title = prompt("please input file name: ", "untitled")
+
+      //If we click "cancel", the title returned is null
       if (title != null){
         var codeNode= document.getElementById("user-code") as HTMLTextAreaElement
         var code = codeNode.value
@@ -273,7 +275,6 @@ function webStart() {
         FileSaver.saveAs(blob, title)
       }
     })
-
 
     document.getElementById("run").addEventListener("click", function(e) {
       repl = new BasicREPL(importObject);
