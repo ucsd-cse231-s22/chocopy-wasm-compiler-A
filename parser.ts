@@ -215,9 +215,10 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<null> {
       };
 
     case "ArrayExpression":
+      const elements = traverseArray(c, s);
       return {
         tag: "construct-list",
-        items: traverseArray(c, s),
+        items: elements,
       };
 
     default:
