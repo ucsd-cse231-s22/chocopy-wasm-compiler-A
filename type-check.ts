@@ -65,8 +65,9 @@ export type TypeError = {
 
 export function equalType(t1: Type, t2: Type) {
   return (
-    t1 === t2 ||
-    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
+    t1 === t2 
+    || (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
+    || (t1.tag === "list" && t2.tag == "list" && t1.elementtype.tag === t2.elementtype.tag)
   );
 }
 
@@ -75,7 +76,9 @@ export function isNoneOrClass(t: Type) {
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
+  return equalType(t1, t2) 
+  || t1.tag === "none" && t2.tag === "class" 
+  || t1.tag === "none" && t2.tag === "list"
 }
 
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
@@ -381,6 +384,32 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeCheckError("method calls require an object");
       }
+    case "list-obj":
+      // Note: [1,2,3, True, 4] is legal in Chocopy, but cannot be assigned to any var
+      var typedentries = expr.entries.map(entry => tcExpr(env, locals, entry));
+      var flag = true;
+      var a0 = typedentries[0].a;
+      typedentries.forEach(typedentry =>{
+        if(typedentry.a.tag!= a0.tag){
+          flag = false;
+        }
+      })
+      if(flag == true){ // if all entries have same type
+        return {...expr, entries: typedentries, a: {tag: "list", elementtype: a0}};
+      }
+      else{  //
+        return {...expr, entries: typedentries, a: {tag: "list", elementtype: {tag: "none"}}};
+      }
+    case "list-lookup":
+      var typedlist = tcExpr(env, locals, expr.list);
+      var typedindex = tcExpr(env, locals, expr.index);
+      if(typedlist.a.tag !== "list"){
+        throw new TypeCheckError(`cannot index into this variable`);
+      }
+      if(typedindex.a.tag !== "number"){
+        throw new TypeCheckError(`index is not a number`);
+      }
+      return {...expr, list: typedlist, index: typedindex, a: typedlist.a.elementtype};
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
 }
