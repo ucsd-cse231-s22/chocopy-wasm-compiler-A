@@ -1,6 +1,6 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp } from "./ast"
-import { APPLY, BOOL, createMethodName, NONE, NUM } from "./utils";
+import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -9,7 +9,7 @@ export type GlobalEnv = {
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
-  vtableMethods: Array<string>;
+  vtableMethods: Array<[string, number]>;
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -177,13 +177,14 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       return valStmts;
 
     case "call_indirect":
-      if (expr.fn.a.tag !== "class") {
+      if (expr.fn.a.tag !== "callable") {
         throw new Error("cursed");
       }
       
       var valStmts = codeGenValue(expr.fn, env);
       var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
-      return [...fnStmts, ...valStmts, `(i32.const 0)`, `call $load`, `(call_indirect (type $${expr.fn.a.name}$${APPLY}t))`];
+      // +1 for self
+      return [...fnStmts, ...valStmts, `(i32.const 0)`, `call $load`, `(call_indirect (type ${makeWasmFunType(expr.fn.a.params.length + 1)}))`];
 
     case "alloc":
       return [
@@ -289,12 +290,7 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
   bodyCommands += blockCommands;
   bodyCommands += ") ;; end $loop"
   env.locals.clear();
-  let paramType = "";
-  if (def.parameters.length > 0) {
-    paramType = `(param${" i32".repeat(def.parameters.length)})`
-  }
   return [`
-  (type $${def.name}t (func ${paramType} (result i32)))
   (func $${def.name} ${params} (result i32)
     ${locals}
     ${inits}

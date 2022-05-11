@@ -8,7 +8,7 @@ import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
-import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
+import { PyValue, NONE, BOOL, NUM, CLASS, makeWasmFunType } from "./utils";
 import { lowerProgram } from './lower';
 
 export type Config = {
@@ -68,7 +68,6 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   }
 }
 
-
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   const parsed = parse(source);
@@ -90,7 +89,18 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const compiled = compile(irprogram, globalEnv);
 
   const vtable = `(table ${globalEnv.vtableMethods.length} funcref)
-    (elem (i32.const 0) ${globalEnv.vtableMethods.map(method => `$${method}`).join(" ")})`;
+    (elem (i32.const 0) ${globalEnv.vtableMethods.map(method => `$${method[0]}`).join(" ")})`;
+  const typeSet = new Set<number>();
+  globalEnv.vtableMethods.forEach(([_, paramNum])=>typeSet.add(paramNum));
+  let types = "";
+  typeSet.forEach(paramNum => {
+    let paramType = "";
+    if (paramNum > 0) {
+      paramType = `(param${" i32".repeat(paramNum)})`
+    }
+    types += `(type ${makeWasmFunType(paramNum)} (func ${paramType} (result i32)))\n`;
+  })
+  console.error(types);
   const globalImports = [...globalsBefore.keys()].map(name =>
     `(import "env" "${name}" (global $${name} (mut i32)))`
   ).join("\n");
@@ -117,6 +127,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    ${types}
     ${globalImports}
     ${globalDecls}
     ${vtable}

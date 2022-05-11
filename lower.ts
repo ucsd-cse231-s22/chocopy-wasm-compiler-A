@@ -70,7 +70,7 @@ function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : IR.Class<Type> {
     // (we currently do no reordering, we leave that to inheritance team)
     env.vtableMethods.push(...cls.methods
       .filter(method => !method.name.includes("__init__"))
-      .map(method => createMethodName(cls.name, method.name)));
+      .map((method): [string, number] => [createMethodName(cls.name, method.name), method.parameters.length]));
     return {
         ...cls,
         fields: lowerVarInits(cls.fields, env),
@@ -295,7 +295,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         }
       });
 
-      console.error( env.classIndices.get(e.name));
       return [
         [ { name: newName, type: e.a, value: { tag: "none" } }],
         [ { tag: "assign", name: newName, value: alloc }, { // store class offset
@@ -320,6 +319,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       classDef.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
       env.classes.set(classDef.name, classFields);
       const irClass = lowerClass(classDef, env);
+      irClass.a = e.a;
 
       const [cinits, cstmts, cval, cclasses] = flattenExprToExpr(constrExpr, env);
 
@@ -354,7 +354,7 @@ function lambdaToClass(lambda: AST.Lambda<Type>) : [AST.Class<Type>, AST.Expr<Ty
         body: [{  a: NONE, tag: "return", value: lambda.expr }]
       }
     ]}
-  , {  a: CLASS(lambdaClassName), tag: "construct", name: lambdaClassName }]
+  , {  a: lambda.a, tag: "construct", name: lambdaClassName }]
 }
 
 function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>, Array<IR.Class<Type>>] {

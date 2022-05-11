@@ -1,4 +1,4 @@
-import { Value, Type } from "./ast";
+import { Value, Type, Callable } from "./ast";
 
 export function PyValue(typ: Type, result: number): Value {
   switch (typ.tag) {
@@ -37,6 +37,10 @@ export function CLASS(name : string) : Type {return {tag: "class", name}};
 export function CALLABLE(params: Array<Type>, ret: Type) : Type {return {tag: "callable", params, ret}};
 
 export const APPLY : string = "apply";
-export function createMethodName(cls: string, method: string) {
+export function createMethodName(cls: string, method: string): string{
   return `${cls}$${method}`;
+}
+
+export function makeWasmFunType(paramNum: number): string {
+  return `$callable${paramNum}param`;
 }
