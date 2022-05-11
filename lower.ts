@@ -2,6 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
+import { NONE } from './utils';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -289,6 +290,40 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+    case "list-obj":
+      var flattenentries:[Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>][]= e.entries.map(e =>flattenExprToVal(e, env))
+      var listName = generateName("newList");
+      var listalloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: e.length } };
+      var listassign:  IR.Stmt<Type>[] = [];
+      var entryinits: Array<IR.VarInit<Type>> = [];
+      var entrystmts: Array<IR.Stmt<Type>> = [];
+      for(var i=0; i<e.length; i++){
+        entryinits = entryinits.concat(flattenentries[i][0]);
+        entrystmts = entrystmts.concat(flattenentries[i][1]);
+        listassign.push(
+          {
+            tag: "store",
+            start: { tag: "id", name: listName },
+            offset: { tag: "wasmint", value: i },
+            value: flattenentries[i][2]
+          }
+        )
+      }
+      return[
+        [...entryinits, {name: listName, type: e.a, value: { tag: "none" } }],
+        [...entrystmts, { tag: "assign", name: listName, value: listalloc}, ...listassign],
+        { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: listName } }
+      ]
+    case "list-lookup":
+      var [startinits, startstmts, startval] = flattenExprToVal(e.list, env);
+      var [idxinits, idxstmts, idxval]:any = flattenExprToVal(e.index, env);
+      return[
+        [...startinits, ...idxinits],
+        [...startstmts, ...idxstmts],
+        {tag: "load",
+        start: startval,
+        offset: idxval}
+      ]
   }
 }
 
