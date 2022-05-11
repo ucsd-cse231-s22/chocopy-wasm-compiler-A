@@ -68,6 +68,8 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         c.nextSibling(); 
         var expr = traverseExpr(c, s);
         c.parent();
+        c.parent();
+        c.parent();
         return {
           tag: "lambda",
           type: callableType,
@@ -103,12 +105,11 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
             left: args[0],
             right: args[1]
           }
-        } 
+        } else {
+          expr = { tag: "call", fn: callExpr, arguments: args};
+        }
         return expr;  
-      } else {
-        return { tag: "call", fn: callExpr, arguments: args};
-      }
-
+      } 
     case "BinaryExpression":
       c.firstChild(); // go to lhs 
       const lhsExpr = traverseExpr(c, s);

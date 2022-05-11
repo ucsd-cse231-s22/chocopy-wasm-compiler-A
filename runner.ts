@@ -100,7 +100,6 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     }
     types += `(type ${makeWasmFunType(paramNum)} (func ${paramType} (result i32)))\n`;
   })
-  console.error(types);
   const globalImports = [...globalsBefore.keys()].map(name =>
     `(import "env" "${name}" (global $${name} (mut i32)))`
   ).join("\n");
@@ -138,7 +137,6 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
       ${returnExpr}
     )
   )`;
-  console.error(wasmSource);
   const [result, instance] = await runWat(wasmSource, importObject);
 
   return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance];

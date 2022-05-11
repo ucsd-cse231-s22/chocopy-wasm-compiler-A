@@ -130,5 +130,14 @@ describe("traverseType(c, s) function", () => {
       await run("mklambda(Callable[[], int], lambda: print(5))()");
       console.error(importObject.output);
     });
+
+    it("run lambda reassign", async () => {
+      await run(`a: Callable[[], int] = None
+      a = mklambda(Callable[[], int], lambda: print(5))
+      a()
+      a = mklambda(Callable[[], int], lambda: print(7))
+      a()`);
+      console.error(importObject.output);
+    });
   });
 });
