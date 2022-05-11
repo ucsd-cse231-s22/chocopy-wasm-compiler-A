@@ -316,7 +316,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, blocks: Array<IR.BasicBlock<Type>
       var thenLbl = generateName("$then");
       var elseLbl = generateName("$else");
       var endLbl = generateName("$end");
-      var ifExprTmpVal = generateName("$ifExprTmpVal");
+      var ifExprTmpVal = generateName("$ifExprTmp");
 
       var endjmp : IR.Stmt<Type> = { tag: "jmp", lbl: endLbl };
       let [cinits, cstmts, cexpr] = flattenExprToVal(e.cond, blocks, env);
@@ -326,15 +326,11 @@ function flattenExprToExpr(e : AST.Expr<Type>, blocks: Array<IR.BasicBlock<Type>
 
       blocks.push({ a: e.a, label: thenLbl, stmts: [] });
       var [thninits, thnstmts, thnexpr] = flattenExprToExpr(e.thn, blocks, env);
-      thnstmts.push( { a: e.a, tag: "assign", name: ifExprTmpVal, value: thnexpr});
-      pushStmtsToLastBlock(blocks, ...thnstmts);
-      pushStmtsToLastBlock(blocks, endjmp);
+      pushStmtsToLastBlock(blocks, ...thnstmts, { a: e.a, tag: "assign", name: ifExprTmpVal, value: thnexpr}, endjmp);
 
       blocks.push({ a: e.a, label: elseLbl, stmts: [] });
       var [elsinits, elsstmts, elsexpr] = flattenExprToExpr(e.els, blocks, env);
-      elsstmts.push({ a: e.a, tag: "assign", name: ifExprTmpVal, value: elsexpr});
-      pushStmtsToLastBlock(blocks,...elsstmts);
-      pushStmtsToLastBlock(blocks, endjmp);
+      pushStmtsToLastBlock(blocks,...elsstmts, { a: e.a, tag: "assign", name: ifExprTmpVal, value: elsexpr}, endjmp);
 
       blocks.push({ a: e.a, label: endLbl, stmts: [] });
       var varDefForTmp: IR.VarInit<Type> = { a: e.a, name: ifExprTmpVal, type: e.a, value: { a: { tag: "none"}, tag: "none" } };
