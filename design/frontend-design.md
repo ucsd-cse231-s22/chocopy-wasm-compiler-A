@@ -144,4 +144,3 @@ we do not need to change the AST, IR, and built-in libraries.
 
 3. A description of the value representation and memory layout for any new runtime values you will add:
 no value representation or memory layout would be add.
-
