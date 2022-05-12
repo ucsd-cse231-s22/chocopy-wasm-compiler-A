@@ -197,7 +197,6 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<null> {
         expr: expr,
       };
     case "MemberExpression":
-      var string = s.substring(c.from, c.to);
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s);
       c.nextSibling(); // Focus on . or [
