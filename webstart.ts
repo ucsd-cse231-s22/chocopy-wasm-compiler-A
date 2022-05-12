@@ -77,7 +77,7 @@ function webStart() {
   document.addEventListener("DOMContentLoaded", async function () {
 
     // https://github.com/mdn/webassembly-examples/issues/5
-
+    var codeContent: string | ArrayBuffer
     const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
     const memoryModule = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()
@@ -109,7 +109,7 @@ function webStart() {
     }
     const editorBox = initCodeMirror();
 
-    function console_log_class(repl: BasicREPL, pointer: number, classname: string, level: number): Array<string> {
+    function console_log_class(repl: BasicREPL, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number): Array<string> {
 
       var fields_offset_ = repl.currentEnv.classes.get(classname);
       var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
@@ -123,8 +123,13 @@ function webStart() {
       // the reason why pointer beacuse mem is u32 array(4 byte addressing) and the pointer value returned by the run method is in raw address(byte adress)
       // surprisingly(since there is also i64 in wasm), the offset stored int the currentenv is in 4 byte addressing.
       const space = " ";
+      if (met_object.has(pointer)) {
+        display.push(`${space.repeat(level)}displayed ${met_object.get(pointer)}:${classname} object at addr ${pointer}: ...`);
+        return display;
+      }
       display.push(
-        `${space.repeat(level)}${classname} object at addr ${pointer}: {`);
+        `${space.repeat(level)}${object_number}:${classname} object at addr ${pointer}: {`);
+      met_object.set(pointer, object_number)
       fields_offset.forEach(thisfield => {
         var thisfield_type = fields_type.get(thisfield[0]);
         if (thisfield_type.tag === "class") {
@@ -132,7 +137,7 @@ function webStart() {
             display.push(`${space.repeat(level + 2)}${thisfield[0]} : none `);
           } else {
             display.push(`${space.repeat(level + 2)}${thisfield[0]}:{`)
-            display.push(...console_log_class(repl, mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5));
+            display.push(...console_log_class(repl, mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5, met_object, object_number + 1));
             display.push(`${space.repeat(level + 2)}}`)
           }
         } else {
@@ -175,7 +180,7 @@ function webStart() {
           break;
         case "object":
           // elt.innerHTML = `${result.name} object at ${result.address}`
-          elt.innerHTML = console_log_class(repl, result.address, result.name, 0).join("\n");
+          elt.innerHTML = console_log_class(repl, result.address, result.name, 0, new Map(), 1).join("\n");
           break
         default: throw new Error(`Could not render value: ${result}`);
       }
@@ -240,6 +245,73 @@ function webStart() {
         }
       })
     }
+    document.getElementById("clear").addEventListener("click", function (e) {
+      //repl code disapper (on the right side)
+      resetRepl()
+
+      //reset environment
+      repl = new BasicREPL(importObject)
+
+      //clear editor code
+
+      // var element = document.querySelector(".CodeMirror") as any
+      // var editor = element.CodeMirror
+      // editor.setValue("")
+      // editor.clearHistory()
+      var source = document.getElementById("user-code") as HTMLTextAreaElement
+      source.value = ""
+
+    })
+
+    document.getElementById("load").addEventListener("change", function (e) {
+      resetRepl()
+
+      repl = new BasicREPL(importObject)
+
+      var input: any = e.target
+      var reader = new FileReader()
+      var codeNode = document.getElementById("user-code") as HTMLTextAreaElement
+      codeNode.value = ""
+
+
+      reader.onload = function () {
+
+        if (codeNode.value != "") {
+          codeNode.value = ""
+          codeNode.value = reader.result as string
+        } else {
+          codeNode.value = reader.result as string
+        }
+
+      }
+      reader.readAsText(input.files[0])
+
+    })
+    // window.onload = function(e: Event){
+    //   var f = document.getElementById("load")
+    //   var reader = new FileReader();
+    //   var readerContent
+    //   f.onchange = function(){
+    //     readerContent = reader.result
+    //   }
+    //   var contentToLoad = readerContent as string
+
+    //   var codeNode= document.getElementById("user-code") as HTMLTextAreaElement
+    //   codeNode.value = contentToLoad
+    // }
+
+    document.getElementById("save").addEventListener("click", function (e) {
+      var FileSaver = require("file-saver");
+      var title = prompt("please input file name: ", "untitled")
+
+      //If we click "cancel", the title returned is null
+      if (title != null) {
+        var codeNode = document.getElementById("user-code") as HTMLTextAreaElement
+        var code = codeNode.value
+        var blob = new Blob([code], { type: "text/plain;charset=utf-8" });
+        FileSaver.saveAs(blob, title)
+      }
+    })
 
     document.getElementById("run").addEventListener("click", function (e) {
       repl = new BasicREPL(importObject);
