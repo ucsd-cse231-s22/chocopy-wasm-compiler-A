@@ -6,7 +6,7 @@ export type Type =
   | {tag: "bool"}
   | {tag: "none"}
   | {tag: "class", name: string}
-  | {tag: "list", elementtype: Type}
+  | {tag: "list", listsize: number, elementtype: Type}
   | {tag: "either", left: Type, right: Type }
 
 export type Parameter<A> = { name: string, type: Type }
