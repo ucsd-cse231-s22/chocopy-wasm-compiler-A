@@ -140,14 +140,30 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
         });
       return [...oinits, ...ninits];
     }
-      // return [[...oinits, ...ninits], [...ostmts, ...nstmts, {
-      //   tag: "field-assign",
-      //   a: s.a,
-      //   obj: oval,
-      //   field: s.field,
-      //   value: nval
-      // }]];
-
+    case "index-assign":
+      var [linits, lstmts, lval] = flattenExprToVal(s.list, env);
+      var [idxinits, idxstmts, idxval]:any = flattenExprToVal(s.index, env);
+      var [vinits, vstmts, vval] = flattenExprToVal(s.value, env);
+      if(idxval.tag=="num"){
+        idxval.value +=BigInt('1');
+      }
+      else if(idxval.tag == "id"){
+        idxstmts.push({
+          a:{tag: "number"},
+          tag: "assign",
+          name: idxval.name,
+          value: {a: {tag: "number"}, tag: "binop", left: idxval, op: 0, right: {tag: "num", value: 1}}
+        })
+      }
+      pushStmtsToLastBlock(blocks,
+        ...lstmts, ...idxstmts, ...vstmts, {
+          tag: "store",
+          a: s.a,
+          start: lval,
+          offset: idxval,
+          value: vval
+        });
+      return [...linits, ...idxinits, ...vinits];
     case "if":
       var thenLbl = generateName("$then")
       var elseLbl = generateName("$else")
@@ -224,11 +240,62 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "binop":
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
-      return [[...linits, ...rinits], [...lstmts, ...rstmts], {
+      
+      if (lval.a.tag === "list" && rval.a.tag === "list"){
+        var listconstruct:  IR.Stmt<Type>[] = [];
+        var newlength = lval.a.listsize+rval.a.listsize
+        var listalloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: newlength } };
+        var listName = generateName("newList");
+        var newlistinits:IR.VarInit<AST.Type>[] = [];
+        listconstruct.push(  // first element of a list should be length
+          {
+            tag: "store",
+            start: { tag: "id", name: listName },
+            offset: { tag: "wasmint", value: 0 },
+            value: {tag: "wasmint", value: newlength}
+          }
+        )
+        for(var i=0; i<lval.a.listsize; i++){
+          var entryname = generateName("e");
+          newlistinits.push({name: entryname, type: (e.a as any).elementtype, value: { tag: "wasmint", value: 0 } })
+          listconstruct.push(
+            {tag: "assign", 
+            name: entryname, 
+            value: {tag: "load", start: lval, offset: { tag: "wasmint", value: i+1 }}}
+          )
+        }
+        for(var i=0; i<rval.a.listsize; i++){
+          var entryname = generateName("e");
+          newlistinits.push({name: entryname, type: (e.a as any).elementtype, value: { tag: "wasmint", value: 0 } })
+          listconstruct.push(
+            {tag: "assign", 
+            name: entryname, 
+            value: {tag: "load", start: rval, offset: { tag: "wasmint", value: i+1 }}}
+          )
+        }
+        for(var i=0; i<newlength; i++){
+          listconstruct.push(
+            {
+              tag: "store",
+              start: { tag: "id", name: listName },
+              offset: { tag: "wasmint", value: i+1 },
+              value: { tag: "id", name: (listconstruct[i+1] as any).name }
+            }
+          )
+        }
+        return[
+          [...linits, ...rinits, ...newlistinits, {name: listName, type: e.a, value: { tag: "none" } }],
+          [...lstmts, ...rstmts, { tag: "assign", name: listName, value: listalloc}, ...listconstruct],
+          { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: listName } }
+        ]
+      }
+      else{
+        return [[...linits, ...rinits], [...lstmts, ...rstmts], {
           ...e,
           left: lval,
           right: rval
         }];
+      }
     case "builtin1":
       var [inits, stmts, val] = flattenExprToVal(e.arg, env);
       return [inits, stmts, {tag: "builtin1", a: e.a, name: e.name, arg: val}];
@@ -303,9 +370,9 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
       ];
     case "id":
-      return [[], [], {tag: "value", value: { ...e }} ];
+      return [[], [], {a: e.a, tag: "value", value: { ...e }} ];
     case "literal":
-      return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+      return [[], [], {a: e.a, tag: "value", value: literalToVal(e.value) } ];
     case "list-obj":
       var flattenentries:[Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>][]= e.entries.map(e =>flattenExprToVal(e, env))
       var listName = generateName("newList");
@@ -343,29 +410,40 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       var [idxinits, idxstmts, idxval]:any = flattenExprToVal(e.index, env);
       if(idxval.tag=="num"){
         idxval.value +=BigInt('1');
+        return[
+          [...startinits, ...idxinits],
+          [...startstmts, ...idxstmts],
+          {tag: "load",
+          start: startval,
+          offset: idxval}
+        ]
       }
       else if(idxval.tag == "id"){
+        var offset = generateName("offset");
+        idxinits.push({name: offset, type: {tag: "number"}, value: {tag:"num", value: 0}})
         idxstmts.push({
           a:{tag: "number"},
           tag: "assign",
-          name: idxval.name,
+          name: offset,
           value: {a: {tag: "number"}, tag: "binop", left: idxval, op: 0, right: {tag: "num", value: 1}}
         })
+        return[
+          [...startinits, ...idxinits],
+          [...startstmts, ...idxstmts],
+          {tag: "load",
+          start: startval,
+          offset: {tag: "id", name: offset}}
+        ]
       }
-      return[
-        [...startinits, ...idxinits],
-        [...startstmts, ...idxstmts],
-        {tag: "load",
-        start: startval,
-        offset: idxval}
-      ]
+      
   }
 }
 
 function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>] {
   var [binits, bstmts, bexpr] = flattenExprToExpr(e, env);
   if(bexpr.tag === "value") {
-    return [binits, bstmts, bexpr.value];
+    var typedvalue: any = {...bexpr.value, a:bexpr.a};
+    return [binits, bstmts, typedvalue];
   }
   else {
     var newName = generateName("valname");

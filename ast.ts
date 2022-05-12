@@ -6,7 +6,7 @@ export type Type =
   | {tag: "bool"}
   | {tag: "none"}
   | {tag: "class", name: string}
-  | {tag: "list", elementtype: Type}
+  | {tag: "list", listsize: number, elementtype: Type}
   | {tag: "either", left: Type, right: Type }
 
 export type Parameter<A> = { name: string, type: Type }
@@ -25,7 +25,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "expr", expr: Expr<A> }
   | {  a?: A, tag: "pass" }
   | {  a?: A, tag: "field-assign", obj: Expr<A>, field: string, value: Expr<A> }
-  | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
+  | {  a?: A, tag: "index-assign", list: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
   | { a?: A; tag: "for"; name: string; iterable: Expr<A>; body: Array<Stmt<A>> }

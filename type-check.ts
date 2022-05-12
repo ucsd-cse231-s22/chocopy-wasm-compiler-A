@@ -176,8 +176,14 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       const tValExpr = tcExpr(env, locals, stmt.value);
       var nameTyp;
       if (locals.vars.has(stmt.name)) {
+        if(tValExpr.a.tag === "list"){
+          locals.vars.set(stmt.name, tValExpr.a);
+        }
         nameTyp = locals.vars.get(stmt.name);
       } else if (env.globals.has(stmt.name)) {
+        if(tValExpr.a.tag === "list"){
+          env.globals.set(stmt.name, tValExpr.a);
+        }
         nameTyp = env.globals.get(stmt.name);
       } else {
         throw new TypeCheckError("Unbound id: " + stmt.name);
@@ -245,6 +251,13 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       if (!isAssignable(env, tVal.a, fields.get(stmt.field)))
         throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
       return {...stmt, a: NONE, obj: tObj, value: tVal};
+    case "index-assign":
+      var typedlist = tcExpr(env, locals, stmt.list);
+      var typedvalue = tcExpr(env, locals, stmt.value);
+      var typedindex = tcExpr(env, locals, stmt.index);
+      return {
+        ...stmt, a: NONE, list: typedlist, index: typedindex, value: typedvalue
+      }
   }
 }
 
@@ -258,6 +271,12 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       const tBin = {...expr, left: tLeft, right: tRight};
       switch(expr.op) {
         case BinOp.Plus:
+          if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
+          else if(equalType(tLeft.a, tRight.a) && tLeft.a.tag === "list" && tRight.a.tag === "list" ){
+            var a = {tag:"list", length: tLeft.a.listsize+tRight.a.listsize, elementtype: tLeft.a.elementtype};
+            return {a: a as Type, ...tBin}
+          }
+          else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Minus:
         case BinOp.Mul:
         case BinOp.IDiv:
@@ -401,7 +420,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         throw new TypeCheckError("method calls require an object");
       }
     case "list-obj":
-      // Note: [1,2,3, True, 4] is legal in Chocopy, but cannot be assigned to any var
+      // Note: [1,2,3, True, 4] is legal in Chocopy, but cannot be assigned to any var --- let's ignore it
+      // we assume the only legal situation now is all the elements in the list are the same type
       var typedentries = expr.entries.map(entry => tcExpr(env, locals, entry));
       var flag = true;
       var a0 = typedentries[0].a;
@@ -411,10 +431,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         }
       })
       if(flag == true){ // if all entries have same type
-        return {...expr, entries: typedentries, a: {tag: "list", elementtype: a0}};
+        return {...expr, entries: typedentries, a: {tag: "list", listsize: expr.length, elementtype: a0}};
       }
       else{  //
-        return {...expr, entries: typedentries, a: {tag: "list", elementtype: {tag: "none"}}};
+        throw new TypeCheckError("not support different types in one list");;
       }
     case "list-lookup":
       var typedlist = tcExpr(env, locals, expr.list);
