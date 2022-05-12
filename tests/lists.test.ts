@@ -257,6 +257,32 @@ describe('tc for lists', () => {
   a : [int] = None
   a = [1,2,3]
   a[0]`, NUM);
+  // index assign tests
+  assertTC("basic index assign", `
+  a : [int] = None
+  a = [1,2,3]
+  a[0] = 2`, NONE);
+  assertTC("list of lists index assign", `
+  a : [[int]] = None
+  a = [[1,2],[3,4]]
+  a[0] = [5,6]
+  a[0][0] = 2`, NONE);
+  assertTC("index is expr", `
+  a : [int] = None
+  i : int = 1
+  a = [1,2,3]
+  a[i] = 2`, NONE);
+  assertTCFail("item type not match", `
+  a : [int] = None
+  a = [1,2,3]
+  a[0] = True`);
+  assertTCFail("index type not integer", `
+  a : [int] = None
+  a = [1,2,3]
+  a[True] = 0`);
+  assertTCFail("not a list", `
+  a : int = 1
+  a[0] = 0`);
 });
 
 

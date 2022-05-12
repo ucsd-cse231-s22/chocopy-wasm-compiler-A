@@ -226,6 +226,19 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       if (!isAssignable(env, tVal.a, fields.get(stmt.field)))
         throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
       return {...stmt, a: NONE, obj: tObj, value: tVal};
+    case "index-assign":
+      const tList = tcExpr(env, locals, stmt.obj)
+      if (tList.a.tag !== "list")
+        throw new TypeCheckError("index assignments require an list");
+      const tIndex = tcExpr(env, locals, stmt.index);
+      if (tIndex.a.tag !== "number")
+        throw new TypeCheckError(`index is of non-integer type \'${tIndex.a.tag}\'`);
+      const tValue = tcExpr(env, locals, stmt.value);
+      const expectType = tList.a.itemType;
+      if (!isAssignable(env, expectType, tValue.a))
+        throw new TypeCheckError("Non-assignable types");
+
+      return {a: NONE, tag: stmt.tag, obj: tList, index: tIndex, value: tValue}
   }
 }
 
