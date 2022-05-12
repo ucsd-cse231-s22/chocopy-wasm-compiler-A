@@ -19,7 +19,8 @@ export class TypeCheckError extends Error {
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<string>]>,
+  typeVars: Map<string, [string, Array<Type>, Type]>
 }
 
 export type LocalTypeEnv = {
@@ -40,13 +41,15 @@ export const defaultTypeEnv = {
   globals: new Map(),
   functions: defaultGlobalFunctions,
   classes: new Map(),
+  typeVars: new Map()
 };
 
 export function emptyGlobalTypeEnv() : GlobalTypeEnv {
   return {
     globals: new Map(),
     functions: new Map(),
-    classes: new Map()
+    classes: new Map(),
+    typeVars: new Map()
   };
 }
 
@@ -97,9 +100,9 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
     const methods = new Map();
     cls.fields.forEach(field => fields.set(field.name, field.type));
     cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
-    newClasses.set(cls.name, [fields, methods]);
+    newClasses.set(cls.name, [fields, methods, []]);
   });
-  return { globals: newGlobs, functions: newFuns, classes: newClasses };
+  return { globals: newGlobs, functions: newFuns, classes: newClasses, typeVars: new Map() };
 }
 
 export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type>, GlobalTypeEnv] {
