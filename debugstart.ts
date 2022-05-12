@@ -16,11 +16,11 @@ a[2] = 5
 c = a+b
 print(c[6])
 `
-// a comprehensive test that test all features of list
+// a comprehensive test that tests all features of list
 // 1. list assignment(entries can be expr)
 // 2. list index(index can be expr)
 // 3. lists concat
-  var comprehensivetest = 
+  var list_comprehensive_test = 
 `
 a:[int] = None
 b:[int] = None
