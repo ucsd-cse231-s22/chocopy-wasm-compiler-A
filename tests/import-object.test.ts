@@ -25,6 +25,14 @@ function assert_not_none(arg: any) : any {
   return arg;
 }
 
+
+function assert_out_of_bound(length: any, index: any): any{
+  if(index > length){
+    throw new Error("RUNTIME ERROR: index out of bound");
+  }
+  return index;
+}
+
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
   const memory = new WebAssembly.Memory({initial:10, maximum:100});
@@ -41,6 +49,7 @@ export const importObject : any = {
     // the compiler easier, we define print so it logs to a string object.
     //  We can then examine output to see what would have been printed in the
     //  console.
+    assert_out_of_bound: (length:any, index: any)=> assert_out_of_bound(length, index),
     assert_not_none: (arg: any) => assert_not_none(arg),
     print: (arg: any) => print(Type.Num, arg),
     print_num: (arg: number) => print(Type.Num, arg),

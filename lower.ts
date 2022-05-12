@@ -326,7 +326,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       var [startinits, startstmts, startval] = flattenExprToVal(e.list, env);
       var [idxinits, idxstmts, idxval]:any = flattenExprToVal(e.index, env);
       if(idxval.tag=="num"){
-        idxval.value +=1;
+        idxval.value +=BigInt('1');
       }
       else if(idxval.tag == "id"){
         idxstmts.push({
