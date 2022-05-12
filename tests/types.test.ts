@@ -102,41 +102,41 @@ describe('tc', () => {
 });
 
 // Week6: Project Milestone Tests
-describe("proj-tuple-test", ()=>{
+// describe("proj-tuple-test", ()=>{
   
-  assertTC("tc-assign-tuple-mixed",`
-  x:tuple = (3,False,None)
-  x`,TUPLE([NUM,BOOL,NONE]));
+//   assertTC("tc-assign-tuple-mixed",`
+//   x:tuple = (3,False,None)
+//   x`,TUPLE([NUM,BOOL,NONE]));
 
-  assertPrint("pr-tuple-indexing",`
-  x:tuple = (3,False,None)
-  print(x[0])
-  print(x[1])
-  print(x[2])`,["3","False","None"])
-});
+//   assertPrint("pr-tuple-indexing",`
+//   x:tuple = (3,False,None)
+//   print(x[0])
+//   print(x[1])
+//   print(x[2])`,["3","False","None"])
+// });
 
-describe("proj-set-test", ()=>{
+// describe("proj-set-test", ()=>{
 
-  assertTC("tc-assign-set-int",`
-  x:set = {3,76,5}
-  x`, SET(NUM));
+//   assertTC("tc-assign-set-int",`
+//   x:set = {3,76,5}
+//   x`, SET(NUM));
     
-  assertPrint("pr-set-add-dupl",`
-  x:set = {1,2}
-  x.add(1)
-  print(x)`,["{1,2}"])
-});
+//   assertPrint("pr-set-add-dupl",`
+//   x:set = {1,2}
+//   x.add(1)
+//   print(x)`,["{1,2}"])
+// });
    
-describe("proj-dict-test", ()=>{
+// describe("proj-dict-test", ()=>{
     
-  assertTC("tc-assign-dict-int-bool",`
-  x:set = {1:True,2:False}`, DICT(NUM,BOOL))
+//   assertTC("tc-assign-dict-int-bool",`
+//   x:set = {1:True,2:False}`, DICT(NUM,BOOL))
 
-  assertPrint("pr-dict-int-bool-key",`
-  x:dict = {1:True,2:False}
-  print(x[1])
-  x[1] = False
-  print(x[1])
-  x[1] = False
-  print(x[1])`,["True","False"])
-});
+//   assertPrint("pr-dict-int-bool-key",`
+//   x:dict = {1:True,2:False}
+//   print(x[1])
+//   x[1] = False
+//   print(x[1])
+//   x[1] = False
+//   print(x[1])`,["True","False"])
+// });

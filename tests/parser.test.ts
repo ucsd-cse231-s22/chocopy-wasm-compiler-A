@@ -43,22 +43,22 @@ describe('parse(source) function', () => {
   // TODO: add additional tests here to ensure parse works as expected
 
   // Week6: Project Milestone Tests
-  it("parse an empty dict expression", () => {
-    const parsed = parse("d = {}");
-    expect(parsed).to.deep.equal([
-      { tag: "assign", name: "d", value: {tag: "dict_expr", entries: [] }}]);
-  });
+//   it("parse an empty dict expression", () => {
+//     const parsed = parse("d = {}");
+//     expect(parsed).to.deep.equal([
+//       { tag: "assign", name: "d", value: {tag: "dict_expr", entries: [] }}]);
+//   });
 
-  it ('parse a set', () =>{
-    const parsed = parse("s = {34,False,None}");
-    expect(parsed).to.deep.equal([
-      {tag: "assign", name: "s", value:{tag: "set_expr", contents: ["int", "bool", "none"] }}]);
-  });
+//   it ('parse a set', () =>{
+//     const parsed = parse("s = {34,False,None}");
+//     expect(parsed).to.deep.equal([
+//       {tag: "assign", name: "s", value:{tag: "set_expr", contents: ["int", "bool", "none"] }}]);
+//   });
   
-  it ('parse a tuple', () =>{
-    const parsed = parse("t = (34,True,None)");
-    expect(parsed).to.deep.equal([
-      {tag: "assign", name: "t", value:{tag: "tuple_expr", contents: ["int", "bool", "none"] }}]);
-  });
+//   it ('parse a tuple', () =>{
+//     const parsed = parse("t = (34,True,None)");
+//     expect(parsed).to.deep.equal([
+//       {tag: "assign", name: "t", value:{tag: "tuple_expr", contents: ["int", "bool", "none"] }}]);
+//   });
  
 });
