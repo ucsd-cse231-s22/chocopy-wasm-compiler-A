@@ -39,6 +39,8 @@ export type Expr<A> =
 
   | {  a?: A, tag: "alloc", amount: Value<A> }
   | {  a?: A, tag: "load", start: Value<A>, offset: Value<A> }
+  // array-expr should be plain format like 1, 2, 3 without brackets
+  | {  a?: A; tag: "array-expr", elements: Array<Expr<A>> }
 
 export type Value<A> = 
     { a?: A, tag: "num", value: bigint }

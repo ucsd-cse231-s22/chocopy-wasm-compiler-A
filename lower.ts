@@ -93,7 +93,23 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
   switch(s.tag) {
     case "assign":
       var [valinits, valstmts, vale] = flattenExprToExpr(s.value, env);
-      blocks[blocks.length - 1].stmts.push(...valstmts, { a: s.a, tag: "assign", name: s.name, value: vale});
+      var irVars : IR.AssignVar<AST.Type>[] = [];
+      for(var assVar of s.destruct.vars) {
+        var irExpr : IR.Expr<AST.Type>;
+        switch(assVar.target.tag) {
+          case "id":
+          case "lookup":
+            var [assValinits, assValstmts, assVale] = flattenExprToExpr(assVar.target, env);
+            valinits = assValinits.concat(valinits);
+            valstmts = assValstmts.concat(valstmts);
+            irExpr = assVale;
+            break;
+          default:
+            throw new Error(`Compiler would not accept the type`);
+        }
+      }
+      var irDestructureAss : IR.DestructuringAssignment<AST.Type> = { ...s.destruct, vars: irVars };
+      blocks[blocks.length - 1].stmts.push(...valstmts, { a: s.a, tag: "assign", destruct: irDestructureAss, value: vale});
       return valinits
       // return [valinits, [
       //   ...valstmts,
@@ -267,6 +283,8 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
+      // TODO: should it be a specific type?
+      var destructAss : IR.DestructuringAssignment<null> = { isSimple: true, vars: [{ target: {tag: "id", name: newName}, ignorable: false }] };
       const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
       const assigns : IR.Stmt<Type>[] = fields.map(f => {
         const [_, [index, value]] = f;
@@ -280,7 +298,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
 
       return [
         [ { name: newName, type: e.a, value: { tag: "none" } }],
-        [ { tag: "assign", name: newName, value: alloc }, ...assigns,
+        [ { tag: "assign", destruct: destructAss, value: alloc }, ...assigns,
           { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
@@ -289,6 +307,21 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+    case "array-expr":
+      var valinits : IR.VarInit<AST.Type>[] = [];
+      var valstmts : IR.Stmt<AST.Type>[] = [];
+      var vales : IR.Expr<AST.Type>[] = [];
+      for(var expr of e.elements) {
+        var [exprinits, exprstmts, vale] = flattenExprToExpr(expr, env);
+        valinits = valinits.concat(exprinits);
+        valstmts = valstmts.concat(exprstmts);
+        vales.push(vale);
+      }
+      return [
+        valinits,
+        valstmts,
+        { ...e, elements: vales }
+      ];
   }
 }
 
@@ -299,10 +332,12 @@ function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarIn
   }
   else {
     var newName = generateName("valname");
+    // TODO: should it be a specific type?
+    var destructAss : IR.DestructuringAssignment<null> = { isSimple: true, vars: [{ target: {tag: "id", name: newName}, ignorable: false }] };
     var setNewName : IR.Stmt<Type> = {
       tag: "assign",
       a: e.a,
-      name: newName,
+      destruct: destructAss,
       value: bexpr 
     };
     // TODO: we have to add a new var init for the new variable we're creating here.
