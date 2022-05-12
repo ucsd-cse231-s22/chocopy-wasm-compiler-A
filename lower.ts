@@ -140,14 +140,30 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
         });
       return [...oinits, ...ninits];
     }
-      // return [[...oinits, ...ninits], [...ostmts, ...nstmts, {
-      //   tag: "field-assign",
-      //   a: s.a,
-      //   obj: oval,
-      //   field: s.field,
-      //   value: nval
-      // }]];
-
+    case "index-assign":
+      var [linits, lstmts, lval] = flattenExprToVal(s.list, env);
+      var [idxinits, idxstmts, idxval]:any = flattenExprToVal(s.index, env);
+      var [vinits, vstmts, vval] = flattenExprToVal(s.value, env);
+      if(idxval.tag=="num"){
+        idxval.value +=BigInt('1');
+      }
+      else if(idxval.tag == "id"){
+        idxstmts.push({
+          a:{tag: "number"},
+          tag: "assign",
+          name: idxval.name,
+          value: {a: {tag: "number"}, tag: "binop", left: idxval, op: 0, right: {tag: "num", value: 1}}
+        })
+      }
+      pushStmtsToLastBlock(blocks,
+        ...lstmts, ...idxstmts, ...vstmts, {
+          tag: "store",
+          a: s.a,
+          start: lval,
+          offset: idxval,
+          value: vval
+        });
+      return [...linits, ...idxinits, ...vinits];
     case "if":
       var thenLbl = generateName("$then")
       var elseLbl = generateName("$else")

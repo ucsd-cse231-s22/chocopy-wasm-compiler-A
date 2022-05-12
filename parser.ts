@@ -264,7 +264,15 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
           name: target.name,
           value: value
         }  
-      } else {
+      } else if(target.tag === "list-lookup"){
+          return{
+            tag: "index-assign",
+            list: target.list,
+            index: target.index,
+            value: value, 
+          }
+      }
+      else {
         throw new Error("Unknown target while parsing assignment");
       }
     case "ExpressionStatement":

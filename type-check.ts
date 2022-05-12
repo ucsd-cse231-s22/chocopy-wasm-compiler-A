@@ -229,6 +229,13 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       if (!isAssignable(env, tVal.a, fields.get(stmt.field)))
         throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
       return {...stmt, a: NONE, obj: tObj, value: tVal};
+    case "index-assign":
+      var typedlist = tcExpr(env, locals, stmt.list);
+      var typedvalue = tcExpr(env, locals, stmt.value);
+      var typedindex = tcExpr(env, locals, stmt.index);
+      return {
+        ...stmt, a: NONE, list: typedlist, index: typedindex, value: typedvalue
+      }
   }
 }
 
