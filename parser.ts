@@ -42,6 +42,10 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
     case "CallExpression":
       c.firstChild();
       const callExpr = traverseExpr(c, s);
+      if (callExpr.tag === "id" && callExpr.name === "set") {
+        c.parent();
+        return { tag: "set_expr", contents: []};
+      }
       c.nextSibling(); // go to arglist
       let args = traverseArguments(c, s);
       c.parent(); // pop CallExpression
@@ -185,6 +189,22 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         tag: "id",
         name: "self"
       };
+    
+    case "SetExpression": // set() add/remove/clear/update
+      let elements: Array<Expr<any>> = [];
+      c.firstChild(); // Focus on "{"
+      while (c.nextSibling()) {
+        if (s.substring(c.from, c.to) === "}") {
+          // check for empty dictionary - TODO
+          break;
+        }
+        let key = traverseExpr(c, s);
+        elements.push(key);
+        c.nextSibling(); // Focus on } or ,
+      }
+      c.parent(); // Pop to SetExpression
+      return { tag: "set_expr", contents: elements };
+
     default:
       throw new Error("Could not parse expr at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to));
   }
@@ -220,6 +240,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       c.firstChild(); // go to name
       const target = traverseExpr(c, s);
       c.nextSibling(); // go to equals
+      if (c.type.name === "TypeDef") c.nextSibling(); // Set Initialization -> go to AssignOp (=)
       c.nextSibling(); // go to value
       var value = traverseExpr(c, s);
       c.parent();
@@ -476,6 +497,12 @@ export function isVarInit(c : TreeCursor, s : string) : Boolean {
     c.nextSibling(); // go to : type
 
     const isVar = c.type.name as any === "TypeDef";
+    c.firstChild();
+    c.nextSibling();
+    if (s.substring(c.from, c.to) === "set") {
+      c.parent();
+      c.parent();
+      return false;}
     c.parent();
     return isVar;  
   } else {
