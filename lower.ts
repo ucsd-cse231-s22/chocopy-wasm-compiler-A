@@ -394,22 +394,32 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       var [idxinits, idxstmts, idxval]:any = flattenExprToVal(e.index, env);
       if(idxval.tag=="num"){
         idxval.value +=BigInt('1');
+        return[
+          [...startinits, ...idxinits],
+          [...startstmts, ...idxstmts],
+          {tag: "load",
+          start: startval,
+          offset: idxval}
+        ]
       }
       else if(idxval.tag == "id"){
+        var offset = generateName("offset");
+        idxinits.push({name: offset, type: {tag: "number"}, value: {tag:"num", value: 0}})
         idxstmts.push({
           a:{tag: "number"},
           tag: "assign",
-          name: idxval.name,
-          value: {a: {tag: "number"}, tag: "binop", left: idxval, op: 0, right: {tag: "num", value: 1}}
+          name: offset,
+          value: {a: {tag: "number"}, tag: "binop", left: {tag: "id", name: offset}, op: 0, right: {tag: "num", value: 1}}
         })
+        return[
+          [...startinits, ...idxinits],
+          [...startstmts, ...idxstmts],
+          {tag: "load",
+          start: startval,
+          offset: {tag: "id", name: offset}}
+        ]
       }
-      return[
-        [...startinits, ...idxinits],
-        [...startstmts, ...idxstmts],
-        {tag: "load",
-        start: startval,
-        offset: idxval}
-      ]
+      
   }
 }
 
