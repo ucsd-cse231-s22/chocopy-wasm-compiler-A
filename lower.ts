@@ -275,7 +275,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       return [oinits, ostmts, {
         tag: "load",
         start: oval,
-        offset: { tag: "wasmint", value: offset }}];
+        offset: { tag: "wasmint", value: (offset + METADATA_AMT) }}];
     }
     case "construct":
       const classdata = env.classes.get(e.name);
