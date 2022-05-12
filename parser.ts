@@ -19,19 +19,20 @@ export function binarySearch(arr: Array<number>, target: number): number {
   var ans = 0;
   while (left <= right) {
     const mid = (left + right) >> 1;
-    if (arr[mid] <= target) {
+    if (arr[mid] < target) {
       ans = mid;
       left = mid + 1;
     } else {
       right = mid - 1;
     }
   }
+  // console.log(arr, target, ans)
   return ans
 }
 
 export function indToLoc(srcIdx: number): Location {
-    const col = binarySearch(lineBreakIndices, srcIdx);
-    const row = srcIdx - lineBreakIndices[col-1];
+    const row = binarySearch(lineBreakIndices, srcIdx) + 1;
+    const col = srcIdx - lineBreakIndices[row-1];
     return {row, col, srcIdx}
 }
 
@@ -577,6 +578,7 @@ export function traverseHelper(c : TreeCursor, s : string) : Program<Annotation>
 }
 
 export function parse(source : string) : Program<Annotation> {
+  source += "\n";
   lineBreakIndices = [-1];
   for (var i=0; i < source.length; i++) {
     if (source[i] == '\n') {

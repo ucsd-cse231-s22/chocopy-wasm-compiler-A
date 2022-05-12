@@ -243,7 +243,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<A
         case BinOp.Mul:
         case BinOp.IDiv:
         case BinOp.Mod:
-          console.log(expr.a)
           if(equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return {...tBin, a: {...expr.a, type: NUM}}}
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
