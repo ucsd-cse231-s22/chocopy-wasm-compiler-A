@@ -539,7 +539,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
 
   if (!methods.find(method => method.name === "__init__")) {
     const typeVars : Type[] = typeParams.map(tp => {
-      return { tag: "typevar", name: tp };
+      return CLASS(tp);
     })
     methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className, typeVars) }], ret: NONE, inits: [], body: [] });
   }
