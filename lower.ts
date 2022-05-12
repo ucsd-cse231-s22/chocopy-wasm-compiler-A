@@ -212,7 +212,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       return [...cinits, ...bodyinits]
 
     case "for":
-      const idx = "for-idx"
+      const idx = generateName("$foridx")
       var idxInit : AST.VarInit<Type> = { a: NONE, name: idx, type: NUM, value: PyLiteralInt(0) };
       var irIdx = lowerVarInit(idxInit, env);
       if (s.iterable.tag !== "list-obj") throw new Error("Compiler is cursed, go home.")

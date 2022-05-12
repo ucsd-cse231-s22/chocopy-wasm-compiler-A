@@ -17,16 +17,11 @@ def f() -> int:
 print(f())
 `
   var source2 = `
-def f() -> int:
-  x : int = 1
-  while x<100:
-    if x > 3:
-      return x
-    else:
-      pass
-    x = x+1
-  return x
-print(f())
+x : int = 0
+y : int = 1
+for x in [1,2,3,4,5]:
+  y = y*x
+print(y)
   `
 // a comprehensive test that tests all features of list
 // 1. list assignment(entries can be expr)
@@ -48,7 +43,7 @@ print(c[2*3+1]) `
   // const ast = parse(source);
   
   const repl = new BasicREPL(await addLibs());
-  const result = repl.run(source).then(result => {
+  const result = repl.run(source2).then(result => {
     console.log(result);    
   })  
 }
