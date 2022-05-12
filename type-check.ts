@@ -243,7 +243,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<A
         case BinOp.Mul:
         case BinOp.IDiv:
         case BinOp.Mod:
-          if(equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return {a: {...expr.a, type: NUM}, ...tBin}}
+          console.log(expr.a)
+          if(equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return {...tBin, a: {...expr.a, type: NUM}}}
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
         case BinOp.Neq:
@@ -254,11 +255,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<A
         case BinOp.Gte:
         case BinOp.Lt:
         case BinOp.Gt:
-          if(equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return {a: {...expr.a, type: BOOL}, ...tBin} ; }
+          if(equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return {...tBin, a: {...expr.a, type: BOOL}} ; }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op) }
         case BinOp.And:
         case BinOp.Or:
-          if(equalType(tLeft.a.type, BOOL) && equalType(tRight.a.type, BOOL)) { return {a: {...expr.a, type: BOOL}, ...tBin} ; }
+          if(equalType(tLeft.a.type, BOOL) && equalType(tRight.a.type, BOOL)) { return {...tBin, a: {...expr.a, type: BOOL}} ; }
           else { throw new TypeCheckError("Type mismatch for boolean op" + expr.op); }
         case BinOp.Is:
           if(!isNoneOrClass(tLeft.a.type) || !isNoneOrClass(tRight.a.type))
@@ -278,9 +279,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<A
       }
     case "id":
       if (locals.vars.has(expr.name)) {
-        return {a: {...expr.a, type: locals.vars.get(expr.name)}, ...expr};
+        return {...expr, a: {...expr.a, type: locals.vars.get(expr.name)}};
       } else if (env.globals.has(expr.name)) {
-        return {a: {...expr.a, type: env.globals.get(expr.name)}, ...expr};
+        return {...expr, a: {...expr.a, type: env.globals.get(expr.name)}};
       } else {
         throw new TypeCheckError("Unbound id: " + expr.name);
       }
