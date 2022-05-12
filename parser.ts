@@ -347,7 +347,7 @@ export function traverseType(c : TreeCursor, s : string) : Type {
   switch(name) {
     case "int": return NUM;
     case "bool": return BOOL;
-    case "string": return STRING;
+    case "str": return STRING;
     default: return CLASS(name);
   }
 }
