@@ -132,6 +132,9 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         case "or":
           op = BinOp.Or;
           break;
+        // case "in":
+        //   op = BinOp.In;
+        //   break;
         default:
           throw new Error("Could not parse op at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to))
       }
@@ -497,12 +500,13 @@ export function isVarInit(c : TreeCursor, s : string) : Boolean {
     c.nextSibling(); // go to : type
 
     const isVar = c.type.name as any === "TypeDef";
-    c.firstChild();
-    c.nextSibling();
-    if (s.substring(c.from, c.to) === "set") {
-      c.parent();
-      c.parent();
-      return false;}
+    // c.firstChild();
+    // c.nextSibling();
+    // if (s.substring(c.from, c.to) === "set") {
+    //   c.parent();
+    //   c.parent();
+    //   return false;}
+    // c.parent();
     c.parent();
     return isVar;  
   } else {
