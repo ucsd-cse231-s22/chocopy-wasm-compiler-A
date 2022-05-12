@@ -15,10 +15,11 @@ describe("if-exper tests", () => {
 `x : bool = True
  x = 55 if False else 10`)
  //Test it works in a method
- assertPrint("In a Class method",`class Foo(object):
- x: int = 10
- def f(self: Foo, q: int) -> bool:
-   return True if q > self.x else False
+ assertPrint("In a Class method",
+`class Foo(object):
+  x: int = 10
+  def f(self: Foo, q: int) -> bool:
+    return True if q > self.x else False
 foobar: Foo = None
 foobar = Foo()
 print(foobar.f(0))
@@ -33,9 +34,9 @@ class Foo(object):
 foobar: Foo = None
 foobar = Foo()
 print(foobar.x)
-foobar.x = 2 if True else 1)
+foobar.x = 2 if True else 1
 print(foobar.x)
-foobar.x = 2 if False else 1)
+foobar.x = 2 if False else 1
 print(foobar.x)`,["0","2","1"])
 //Test it works in arguments
 assertPrint("Functions",
@@ -63,7 +64,7 @@ assertPrint("If Expr in while loop body",`
 def printRetNone(x: int):
   print(x)
 i: int = 0
-while(i<11):
+while i<11:
    printRetNone(i) if i % 2 == 0 else None
    i=i+1
 `,["0","2","4","6","8","10"])
@@ -71,7 +72,7 @@ assertPrint("If Expr in while loop cond",`
 def printRetNone(x: int):
   print(x)
 i: int = 0
-while(True if i<11 else False):
+while True if i<11 else False:
    printRetNone(i) if i % 2 == 0 else None
    i=i+1
 `,["0","2","4","6","8","10"])
