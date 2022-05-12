@@ -18,26 +18,27 @@ class MemError extends Error {
 
 
 let refMap: Map<ref, memAddr>;
-let refNum = 0;
+let refNum = 0; 
 
 export function memInit() {
     refMap = new Map();
     refNum = 0;
 }
 
-export function memGenRef(arg: memAddr) {
-    refMap.set(arg, refNum);
+export function memGenRef(addr: memAddr): ref {
     refNum++;
-    // TODO: add a way to recliam reference numbers.
     if (refNum > 2147483647) {
         throw new MemError("maximum references allocated");
     }
+    refMap.set(refNum, addr);
+    return refNum;
+    // TODO: add a way to recliam reference numbers.
+    
 }
 
-export function refLookup(arg: ref) :  ref {
-    if (refMap.has(arg)) {
-        return refMap.get(arg);
+export function refLookup(r: ref) :  ref {
+    if (refMap.has(r)) {
+        return refMap.get(r);
     }
-
     throw new MemError("invalid reference")
 }

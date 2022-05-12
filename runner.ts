@@ -113,6 +113,8 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $mem_gen_ref (import "libmemory" "memGenRef") (param i32) (result i32))
+    (func $ref_lookup (import "libmemory" "refLookup") (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}

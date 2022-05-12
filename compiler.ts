@@ -175,13 +175,15 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
     case "alloc":
       return [
         ...codeGenValue(expr.amount, env),
-        `call $alloc`
+        `call $alloc`,
+        //`call $mem_gen_ref` // uncomment when load is defined
       ];
     case "load":
       return [
         ...codeGenValue(expr.start, env),
         `call $assert_not_none`,
         ...codeGenValue(expr.offset, env),
+        //`call $ref_lookup`, // only when data to be accessed is a reference
         `call $load`
       ]
   }
