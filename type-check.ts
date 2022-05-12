@@ -129,6 +129,7 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
 }
 
 export function tcInit(env: GlobalTypeEnv, init : VarInit<null>) : VarInit<Type> {
+  
   const valTyp = tcLiteral(init.value);
   if (isAssignable(env, valTyp, init.type)) {
     return {...init, a: NONE};
@@ -231,7 +232,12 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
 
 export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<null>) : Expr<Type> {
   switch(expr.tag) {
-    case "literal": 
+    case "literal":
+      //console.log(expr.value.tag);
+      if (expr.value.tag == "str"){
+        const strConstruct: Expr<Type> = {a: STRING, tag:"construct-string", value: expr.value.value};
+        return strConstruct;
+      }
       return {...expr, a: tcLiteral(expr.value)};
     case "binop":
       const tLeft = tcExpr(env, locals, expr.left);

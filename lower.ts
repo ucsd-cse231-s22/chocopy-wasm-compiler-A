@@ -2,6 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
+import { NUM, STRING } from './utils';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -311,6 +312,32 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
+      ];
+    case "construct-string":
+      // const classdata = env.classes.get(e.name);
+      // const fields = [...classdata.entries()];
+      // const newName = generateName("newObj");
+      const strLength = e.value.length;
+      const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength } };
+      var assigns_string : IR.Stmt<Type>[];
+      const newStrName = generateName("newStr"); 
+      for (var i=0; i<strLength;i++){
+        const ascii = e.value.charCodeAt(i);
+        const newAsciiName = generateName("newAscii");
+        assigns_string.push({
+          tag: "store",
+          start: {tag: "id", name: newAsciiName},
+          offset: {tag:"wasmint", value: i},
+          value: {a:NUM , tag:"wasmint", value:ascii}
+        });
+      }
+      console.log("OKOK");
+      return [
+        [ { name: newStrName, type: e.a, value: { tag: "str", value:e.value } }],
+        [ { tag: "assign", name: newStrName, value: alloc_string }, ...assigns_string,
+        //  { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
+        ],
+        { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newStrName } }
       ];
     case "id":
       return [[], [], {tag: "value", value: { ...e }} ];
