@@ -47,7 +47,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
   const newClassIndices = new Map(env.classIndices);
-  const functionNames = new Map();
+  const functionNames = new Map(env.functionNames);
 
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
