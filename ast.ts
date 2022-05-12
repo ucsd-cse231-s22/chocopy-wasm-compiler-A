@@ -48,6 +48,7 @@ export type Expr<A> =
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
+  // array-expr should be plain format like 1, 2, 3 without brackets
   | {  a?: A; tag: "array-expr", elements: Array<Expr<A>> }
 
 export type Literal = 
