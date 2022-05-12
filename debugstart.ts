@@ -8,10 +8,9 @@ async function debug() {
   var source = `
 idx : int = 0
 x : [int] = None
-x = [1,3,5,7,9]
-while idx < 5:
-  print(x[idx])
-  idx = idx + 1
+x = [1,3,5,7,9]+[2,4,6,8+9,10]
+x[2*4]
+  
 `
 // a comprehensive test that tests all features of list
 // 1. list assignment(entries can be expr)

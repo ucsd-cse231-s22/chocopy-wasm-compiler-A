@@ -409,7 +409,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           a:{tag: "number"},
           tag: "assign",
           name: offset,
-          value: {a: {tag: "number"}, tag: "binop", left: {tag: "id", name: offset}, op: 0, right: {tag: "num", value: 1}}
+          value: {a: {tag: "number"}, tag: "binop", left: idxval, op: 0, right: {tag: "num", value: 1}}
         })
         return[
           [...startinits, ...idxinits],
