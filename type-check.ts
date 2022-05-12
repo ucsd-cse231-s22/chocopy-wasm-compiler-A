@@ -1,6 +1,6 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
+import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Parameter } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 
@@ -18,7 +18,8 @@ export class TypeCheckError extends Error {
 
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
-  functions: Map<string, [Array<Type>, Type]>,
+  // functions: Map<string, [Array<string>, Array<Type>, Type]>,
+  functions: Map<string, [Array<Parameter<Type>>, Type]>,
   classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>
 }
 
@@ -91,7 +92,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
-  program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
+  program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters, fun.ret]));
   program.classes.forEach(cls => {
     const fields = new Map();
     const methods = new Map();
@@ -289,7 +290,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         const tArg = tcExpr(env, locals, expr.arg);
         return {...expr, a: tArg.a, arg: tArg};
       } else if(env.functions.has(expr.name)) {
-        const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
+        // const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
+        const [[expectedParam], retTyp] = env.functions.get(expr.name);
+        const expectedArgTyp = expectedParam.type;
         const tArg = tcExpr(env, locals, expr.arg);
         
         if(isAssignable(env, tArg.a, expectedArgTyp)) {
@@ -302,7 +305,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       }
     case "builtin2":
       if(env.functions.has(expr.name)) {
-        const [[leftTyp, rightTyp], retTyp] = env.functions.get(expr.name);
+        // const [[leftTyp, rightTyp], retTyp] = env.functions.get(expr.name);
+        const [[leftParam, rightParam], retTyp] = env.functions.get(expr.name);
+        const leftTyp = leftParam.type;
+        const rightTyp = rightParam.type;
         const tLeftArg = tcExpr(env, locals, expr.left);
         const tRightArg = tcExpr(env, locals, expr.right);
         if(isAssignable(env, leftTyp, tLeftArg.a) && isAssignable(env, rightTyp, tRightArg.a)) {
@@ -329,15 +335,62 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           return tConstruct;
         }
       } else if(env.functions.has(expr.name)) {
-        const [argTypes, retType] = env.functions.get(expr.name);
-        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        // const [argNames, argTypes, retType] = env.functions.get(expr.name);
+        const [expectedParams, retType] = env.functions.get(expr.name);
+        const expectedArgTypes = expectedParams.map(p => p.type);
+        const expectedArgNames = expectedParams.map(p => p.name);
+        if (expr.arguments.length > expectedArgTypes.length){
+          throw new TypeCheckError(`${expr.name}() takes from 1 to ${expectedArgTypes.length} positional arguments but ${expr.arguments.length} were given`);
+        }
+        const tAllArgs = Array<Expr<Type>>(expectedArgTypes.length).fill(null);
+        expr.arguments.map((arg, i) => {
+          const tArg = tcExpr(env, locals, arg);
+          if(!isAssignable(env, expectedArgTypes[i], tArg.a)) {
+            throw new TypeError(`${expr.name}() expected type ${JSON.stringify(expectedArgTypes[i])} for argument ${i}. Got ${JSON.stringify(tArg.a)}`);
+          }
+          tAllArgs[i] = tArg;
+        });
+        expr.kwarguments.forEach((value: Expr<null>, name: string) => {
+          const argIndex = expectedArgNames.findIndex(argName => argName == name);
+          if(argIndex == -1) {
+            throw new TypeCheckError(`${expr.name}() got an unexpected keyword argument ${name}`);
+          }
+          if(tAllArgs[argIndex] !== null) {
+            throw new TypeCheckError(`${expr.name}() got multiple values for argument ${name}`);
+          }
+          const tKwArg = tcExpr(env, locals, value);
+          if(!isAssignable(env, expectedArgTypes[argIndex], tKwArg.a)) {
+            throw new TypeError(`${expr.name}() expected type ${JSON.stringify(expectedArgTypes[argIndex])} for argument ${name}. Got ${JSON.stringify(tKwArg.a)}`);
+          }
+          tAllArgs[argIndex] = tKwArg;
+        });
 
-        if(argTypes.length === expr.arguments.length &&
-           tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
-             return {...expr, a: retType, arguments: expr.arguments};
-           } else {
-            throw new TypeError("Function call type mismatch: " + expr.name);
-           }
+        const defaultValues = expectedParams.reduce((map, obj) => {
+          if(obj.value) {
+            map.set(obj.name, obj.value);
+          }
+          return map;
+        }, new Map<string, Expr<Type>>());
+
+        tAllArgs.forEach((tArg, i) => {
+          if(tArg === null && defaultValues.has(expectedArgNames[i])) {
+            tAllArgs[i] = {...defaultValues.get(expectedArgNames[i])};
+          }
+        });
+
+        // TODO: Only non-default args are required
+        if(tAllArgs.findIndex(arg => arg === null) !== -1) {
+          let missingArgs = tAllArgs.filter(arg => arg === null);
+          throw new TypeCheckError(`${expr.name}() missing ${missingArgs.length} required positional argument: ${missingArgs.join(", ")}`);
+        }
+        return {...expr, a: retType, arguments: tAllArgs};
+        // if(argTypes.length === expr.arguments.length &&
+        //    tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
+        //   return {...expr, a: retType, arguments: tArgs};
+        // } 
+        // else {
+        //   throw new TypeError("Function call type mismatch: " + expr.name);
+        // }
       } else {
         throw new TypeError("Undefined function: " + expr.name);
       }

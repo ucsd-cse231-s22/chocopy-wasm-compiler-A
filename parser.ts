@@ -366,7 +366,6 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
     c.nextSibling(); // Focuses on a VariableName
   }
   c.parent();       // Pop to ParamList
-  console.log("Parameters:", parameters);
   return parameters;
 }
 
