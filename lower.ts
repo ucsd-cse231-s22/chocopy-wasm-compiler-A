@@ -4,6 +4,20 @@ import { Type } from './ast';
 import { GlobalEnv } from './compiler';
 
 const nameCounters : Map<string, number> = new Map();
+const METADATA_AMT : number = 4;
+const NUM_INT_BITS : number = 32;
+
+function generateBitString(binArr: number[]) : number {
+  let ret : number = 0;
+  for ( let i = 0; i < NUM_INT_BITS - 1; i++) {
+    if (i < binArr.length) {
+      ret = ret + binArr[i];
+    }
+    ret = ret << 1;
+  }
+  return ret;
+}
+
 function generateName(base : string) : string {
   if(nameCounters.has(base)) {
     var cur = nameCounters.get(base);
@@ -73,7 +87,7 @@ function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : IR.Class<Type> {
 function literalToVal(lit: AST.Literal) : IR.Value<Type> {
     switch(lit.tag) {
         case "num":
-            return { ...lit, value: BigInt(lit.value) }
+            return { ...lit, tag: "wasmint", value: Number(lit.value) }
         case "bool":
             return lit
         case "none":
@@ -266,21 +280,50 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "construct":
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
-      const newName = generateName("newObj");
-      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
+      const newName = generateName(e.name);
+      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: (METADATA_AMT + fields.length) } };
+      
+      // Metadata Generation
+      const fieldTypesArray : number[] = fields.map(f => {
+        const fieldType : IR.Value<Type> = f[1][1]
+        if (fieldType.a.tag === "class") {
+          return 1;
+        }
+        return 0;
+      });
+
+      const fieldTypesBitString : number = generateBitString(fieldTypesArray);
+
+      let metadataStore : IR.Stmt<Type>[] = Array(METADATA_AMT)
+      const metadataVals : IR.Value<Type>[] = [
+        { tag: "wasmint", value: nameCounters.get(e.name) },
+        alloc.amount,
+        { tag: "wasmint", value: fieldTypesBitString },
+        { tag: "wasmint", value: 1 }
+      ]
+
+      for ( let i = 0; i < METADATA_AMT; i++ ) {
+        metadataStore[i] = {
+          tag: "store",
+          start: { tag: "id", name: newName },
+          offset: { tag: "wasmint", value: i },
+          value: metadataVals[i]
+        }
+      }
+
       const assigns : IR.Stmt<Type>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {
           tag: "store",
           start: { tag: "id", name: newName },
-          offset: { tag: "wasmint", value: index },
+          offset: { tag: "wasmint", value: (index + METADATA_AMT) },
           value: value
         }
       });
 
       return [
         [ { name: newName, type: e.a, value: { tag: "none" } }],
-        [ { tag: "assign", name: newName, value: alloc }, ...assigns,
+        [ { tag: "assign", name: newName, value: alloc }, ...metadataStore, ...assigns,
           { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }

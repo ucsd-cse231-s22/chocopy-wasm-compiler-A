@@ -189,8 +189,6 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
 
 function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
   switch (val.tag) {
-    case "num":
-      return ["(i32.const " + val.value + ")"];
     case "wasmint":
       return ["(i32.const " + val.value + ")"];
     case "bool":
