@@ -1,8 +1,8 @@
 import * as AST from './ast';
 import * as IR from './ir';
-import { Type } from './ast';
+import {BinOp, Expr, Literal, Type} from './ast';
 import { GlobalEnv } from './compiler';
-import { NONE } from './utils';
+import {BOOL, NONE, NUM, PyInt, PyLiteralExpr, PyLiteralInt} from './utils';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -194,6 +194,22 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       blocks.push({  a: s.a, label: whileEndLbl, stmts: [] })
 
       return [...cinits, ...bodyinits]
+
+    case "for":
+      const idx = "for-idx"
+      var idxInit : AST.VarInit<Type> = { a: NONE, name: idx, type: NUM, value: PyLiteralInt(0) };
+      var irIdx = lowerVarInit(idxInit, env);
+      if (s.iterable.tag !== "list-obj") throw new Error("Compiler is cursed, go home.")
+      var curState : AST.Expr<Type> = {  a: NUM, tag: "list-lookup", list: s.iterable, index: {  a: NUM, tag: "id", name: idx }};
+      var assignStmt : AST.Stmt<Type> = {  a: NONE, tag: "assign", name: s.name, value: curState };
+
+      var stepExpr : AST.Expr<Type> = {  a: NUM, tag: "binop", op: BinOp.Plus, left: {  a: NUM, tag: "id", name: idx }, right: PyLiteralExpr(PyInt(1))};
+      var stepStmt : AST.Stmt<Type> = {  a: NONE, tag: "assign", name: idx, value: stepExpr };
+
+      var whileBody : Array<AST.Stmt<Type>> = [assignStmt, ...s.body, stepStmt];
+      var condExpr : AST.Expr<Type> = {  a: BOOL, tag: "binop", op: BinOp.Lt, left: {  a: NUM, tag: "id", name: idx }, right: PyLiteralExpr(PyInt(s.iterable.length))};
+      var whileStmt : AST.Stmt<Type> = {  a: NONE, tag: "while", cond: condExpr, body: whileBody };
+      return [irIdx, ...flattenStmt(whileStmt, blocks, env)]
   }
 }
 

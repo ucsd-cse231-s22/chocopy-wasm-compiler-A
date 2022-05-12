@@ -1,4 +1,4 @@
-import { Value, Type } from "./ast";
+import {Value, Type, Expr, Literal} from "./ast";
 
 export function PyValue(typ: Type, result: number): Value {
   switch (typ.tag) {
@@ -24,6 +24,15 @@ export function PyBool(b: boolean): Value {
 export function PyObj(name: string, address: number): Value {
   if (address === 0) return PyNone();
   else return { tag: "object", name, address };
+}
+
+export function PyLiteralInt(n: number): Literal {
+  return { tag: "num", value: n }
+}
+
+export function PyLiteralExpr(v: Value) : Expr<Type> {
+  if (v.tag === "object") throw new Error("Can not transfer object to literal, check your implementation.")
+  return {  a: NUM, tag: "literal", value: v }
 }
 
 export function PyNone(): Value {
