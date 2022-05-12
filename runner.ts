@@ -7,7 +7,7 @@ import wabt from 'wabt';
 import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
-import { Program, Type, Value } from './ast';
+import { FunDef, Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS, makeWasmFunType } from "./utils";
 import { closureName, lowerProgram } from './lower';
 
@@ -47,13 +47,19 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
   const newClassIndices = new Map(env.classIndices);
+  const functionNames = new Map();
 
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
     newGlobals.set(v.name, true);
   });
   prog.funs.forEach(f => {
-    newClasses.set(closureName(f.name), new Map());
+    functionNames.set(f.name, closureName(f.name, []));
+    const addClasses = (f: FunDef<Type>, ancestors: Array<FunDef<Type>>) => {
+      newClasses.set(closureName(f.name, ancestors), new Map());
+      f.children.forEach(c => addClasses(c, [f, ...ancestors]));
+    }
+    addClasses(f, []);
   });
   prog.classes.forEach(cls => {
     const classFields = new Map();
@@ -64,6 +70,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
     globals: newGlobals,
     classes: newClasses,
     classIndices: newClassIndices,
+    functionNames,
     locals: env.locals,
     labels: env.labels,
     offset: newOffset,

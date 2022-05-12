@@ -17,8 +17,8 @@ function generateName(base : string) : string {
   }
 }
 
-export function closureName(f: string): string {
-  return `${f}_$closure$`;
+export function closureName(f: string, ancestors: Array<AST.FunDef<Type>>): string {
+  return `${[f, ...ancestors.map(f => f.name)].reverse().join("_$")}_$closure$`;
 }
 
 // function lbl(a: Type, base: string) : [string, IR.Stmt<Type>] {
@@ -30,13 +30,14 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
-    var [closures, closureinits] = lowerFunDefs(p.funs, blocks, env);
+    p.funs.forEach(f => env.functionNames.set(f.name, closureName(f.name, [])));
+    var closures = lowerFunDefs(p.funs, env);
     var classes = lowerClasses([...closures, ...p.classes], env);
     var [inits, generatedClasses] = flattenStmts(p.stmts, blocks, env);
     return {
         a: p.a,
         funs: [],
-        inits: [...inits, ...lowerVarInits(p.inits, env), ...closureinits],
+        inits: [...inits, ...lowerVarInits(p.inits, env)],
         classes: [...classes, ...generatedClasses],
         body: blocks
     }
@@ -44,32 +45,32 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
 
 function lowerFunDefs(
   fs: Array<AST.FunDef<Type>>,
-  blocks: Array<IR.BasicBlock<Type>>,
   env: GlobalEnv
-): [Array<AST.Class<Type>>, Array<IR.VarInit<Type>>] {
-  const loweredFuns = fs.map(f => lowerFunDef(f, blocks, env));
-  return [loweredFuns.map(x => x[0]), loweredFuns.map(x => x[1]).flat()];
+): Array<AST.Class<Type>> {
+  return fs.map(f => lowerFunDef(f, env, [])).flat();
 }
 
 function lowerFunDef(
   f: AST.FunDef<Type>,
-  blocks: Array<IR.BasicBlock<Type>>,
-  env: GlobalEnv
-): [AST.Class<Type>, Array<IR.VarInit<Type>>] {
-  var type: Type = { tag: "class", name: closureName(f.name) };
-  var fptrinit: AST.VarInit<Type> = { a: type, name: f.name, type, value: { tag: "none" } };
-  var fptrassign: AST.Stmt<Type> = { tag: "assign", name: f.name, value: { tag: "construct", name: closureName(f.name) } };
-  var [finits, _] = flattenStmt(fptrassign, blocks, env);
+  env: GlobalEnv,
+  ancestors: Array<AST.FunDef<Type>>
+): Array<AST.Class<Type>> {
+  var name = closureName(f.name, ancestors);
+  var type: Type = { tag: "class", name };
+  var self: AST.Parameter<Type> = { name: "self", type };
+
+  var envCopy = { ...env, functionNames: new Map(env.functionNames) };
+  f.children.forEach(c => envCopy.functionNames.set(c.name, closureName(c.name, [f, ...ancestors])));
 
   // TODO(pashabou): children, populate fields and methods of closure class
   return [
     {
-      name: closureName(f.name),
+      name,
       fields: [],
       methods: [
         {
           name: "__init__",
-          parameters: [{ name: "self", type }],
+          parameters: [self],
           ret: f.ret,
           inits: [],
           body: [],
@@ -79,11 +80,11 @@ function lowerFunDef(
         {
           ...f,
           name: APPLY,
-          parameters: [{ name: "self", type }, ...f.parameters],
+          parameters: [self, ...f.parameters],
         }
       ]
     },
-    [lowerVarInit(fptrinit, env), ...finits]
+    ...f.children.map(x => lowerFunDef(x, envCopy, [f, ...ancestors])).flat()
   ];
 }
 

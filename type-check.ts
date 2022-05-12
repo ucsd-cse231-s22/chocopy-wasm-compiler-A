@@ -31,10 +31,18 @@ export type LocalTypeEnv = {
 
 const copyLocals = (locals: LocalTypeEnv): LocalTypeEnv => {
   return {
-    vars: new Map(locals.vars),
-    ...locals
+    ...locals,
+    vars: new Map(locals.vars)
   }
 }
+const copyGlobals = (env: GlobalTypeEnv): GlobalTypeEnv => {
+  return {
+    globals: new Map(env.globals),
+    functions: new Map(env.functions),
+    classes: new Map(env.classes)
+  };
+}
+
 export type NonlocalTypeEnv = LocalTypeEnv["vars"]
 
 const defaultGlobalFunctions = new Map();
@@ -158,10 +166,12 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>, nonlocalEnv: Nonl
   fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
   fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init).type));
   nonlocals.forEach(init => locals.vars.set(init.name, init.a));
-  var children = fun.children.map(f => tcDef(env, f, locals.vars));
+  var envCopy = copyGlobals(env);
+  fun.children.forEach(f => envCopy.functions.set(f.name, [f.parameters.map(x => x.type), f.ret]));
+  var children = fun.children.map(f => tcDef(envCopy, f, locals.vars));
   
-  const tBody = tcBlock(env, locals, fun.body);
-  if (!isAssignable(env, locals.actualRet, locals.expectedRet))
+  const tBody = tcBlock(envCopy, locals, fun.body);
+  if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))
     throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`)
   return {...fun, a: NONE, body: tBody, nonlocals, children};
 }

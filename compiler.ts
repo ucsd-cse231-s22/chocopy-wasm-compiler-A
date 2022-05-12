@@ -5,7 +5,8 @@ import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./uti
 export type GlobalEnv = {
   globals: Map<string, boolean>;
   classes: Map<string, Map<string, [number, Value<Type>]>>;  
-  classIndices: Map<string, number>;  
+  classIndices: Map<string, number>;
+  functionNames: Map<string, string>;
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
@@ -16,6 +17,7 @@ export const emptyEnv : GlobalEnv = {
   globals: new Map(), 
   classes: new Map(),
   classIndices: new Map(), 
+  functionNames: new Map(),
   locals: new Set(),
   labels: [],
   offset: 0,
