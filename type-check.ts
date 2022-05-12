@@ -1,8 +1,8 @@
-
-import { table } from 'console';
+// import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
-import { NUM, BOOL, NONE, CLASS } from './utils';
+import { NUM, BOOL, NONE, CLASS, SET } from './utils';
 import { emptyEnv } from './compiler';
+// import common from 'mocha/lib/interfaces/common';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends Error {
@@ -69,15 +69,24 @@ export function equalType(t1: Type, t2: Type) {
     (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
   );
 }
+export function equalSet(t1: Type, t2: Type) {
+  console.debug(t1,t2);
+  return (
+    t1 === t2 ||
+    (t1.tag === "set" && t2.tag === "set" && t1.content_type.tag === t2.content_type.tag)
+  );
+}
 
 export function isNoneOrClass(t: Type) {
   return t.tag === "none" || t.tag === "class";
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
+  console.debug("isSubtype:",t1,t2);
+  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" || equalSet(t1,t2)
+  // set is assignable to none
+  || t1.tag === "none" && t2.tag === "set" 
 }
-
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
   return isSubtype(env, t1, t2);
 }
@@ -379,8 +388,79 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           throw new TypeCheckError("method call on an unknown class");
         }
       } else {
+        if (tObj.a.tag == "set"){
+          let numArgs = expr.arguments.length;
+          //Set related Method Call
+          switch(expr.method){
+            case "add":
+              
+              if (numArgs != 1){
+                throw new TypeCheckError("Set.remove only takes 1 parameter")
+              } else {
+                if (!tObj.hasOwnProperty('name')){
+                  throw new TypeCheckError("The object of Set.remove does not have a name")
+                }
+                // if (!(Set_exist (tObj,expr.arguments[0]))){
+                //   throw new TypeCheckError (`Set.remove tries to remove a non-exist arg ${expr.arguments[0]} from ${tObj}`)
+                // }
+              }
+              break;
+            case "remove":
+              if (numArgs != 1){
+                throw new TypeCheckError("Set.remove only takes 1 parameter")
+              } else {
+                if (!tObj.hasOwnProperty('name')){
+                  throw new TypeCheckError("The object of Set.remove does not have a name")
+                }
+                // if (!(Set_exist (tObj,expr.arguments[0]))){
+                //   throw new TypeCheckError (`Set.remove tries to remove a non-exist arg ${expr.arguments[0]} from ${tObj.tag}`)
+                // }
+              }
+              break;
+            case "clear":
+              if (numArgs != 0){
+                throw new TypeCheckError("Set.clear only takes no parameter")
+              }
+              break;
+            case "update":
+              for (i=1;i<numArgs;i++){
+                  let ele_typ = tcExpr(env,locals,expr.arguments[i]);
+                  if (!isAssignable(env,ele_typ.a,tObj.a)){
+                    throw new TypeCheckError(`Set.update failed as ${ele_typ.a} cannot be assigned to $(tObj.a)`)
+                  }
+              }
+              break;
+          }
+          
+        } 
         throw new TypeCheckError("method calls require an object");
       }
+      case "set_expr":
+        //Type annotation currently only takes 1 argument,
+        //Therefore we only allow a single type of variables here
+        var commonType = null;
+        const setExpr = expr.contents.map((content) => tcExpr(env, locals, content));
+        if (setExpr.length == 0) {
+          commonType = null;
+        } else {
+          //Fetch Set data Type
+          commonType = setExpr[0].a;
+          for (var i = 1; i < setExpr.length; ++i) {
+            var lexprType = setExpr[i].a;
+            if (!equalType(lexprType, commonType)) {
+              if (equalType(commonType, NONE) && isNoneOrClass(lexprType)) {
+                commonType = lexprType;
+              } else if (!(equalType(lexprType, NONE) && isNoneOrClass(commonType))) {
+                throw new TypeCheckError(`set statement wants type ${lexprType}, but get type ${commonType}`);
+              }
+            }
+          }
+        }
+        return {
+          ...expr,
+          a: { tag: "set", content_type: commonType },
+          contents: setExpr,
+        };
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
 }
@@ -390,5 +470,6 @@ export function tcLiteral(literal : Literal) {
         case "bool": return BOOL;
         case "num": return NUM;
         case "none": return NONE;
+        case "set": return SET(NUM);  
     }
 }
