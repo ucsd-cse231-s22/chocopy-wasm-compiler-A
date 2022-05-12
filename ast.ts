@@ -7,9 +7,9 @@ export type Type =
   | {tag: "none"}
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
-  | { tag: "set"; content_type: Type }
-  | { tag: "dict"; key: Type; value: Type }
-  | { tag: "tuple"; contentTypes: Array<Type> }
+  | { tag: "set", content_type: Type }
+  | { tag: "dict", key: Type; value: Type }
+  | { tag: "tuple", contentTypes: Array<Type> }
 
 export type Parameter<A> = { name: string, type: Type }
 

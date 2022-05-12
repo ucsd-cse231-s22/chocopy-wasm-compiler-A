@@ -197,16 +197,43 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       let elements: Array<Expr<any>> = [];
       c.firstChild(); // Focus on "{"
       while (c.nextSibling()) {
-        if (s.substring(c.from, c.to) === "}") {
-          // check for empty dictionary - TODO
-          break;
-        }
         let key = traverseExpr(c, s);
         elements.push(key);
         c.nextSibling(); // Focus on } or ,
       }
       c.parent(); // Pop to SetExpression
       return { tag: "set_expr", contents: elements };
+    
+    case "DictionaryExpression":
+      // entries: Array<[Expr<A>, Expr<A>]>
+      let keyValuePairs: Array<[Expr<any>, Expr<any>]> = [];
+      c.firstChild(); // Focus on "{"
+      while (c.nextSibling()) {
+        if (s.substring(c.from, c.to) === "}") {
+          // check for empty dict
+          break;
+        }
+        let key = traverseExpr(c, s);
+        c.nextSibling(); // Focus on :
+        c.nextSibling(); // Focus on Value
+        let value = traverseExpr(c, s);
+        keyValuePairs.push([key, value]);
+        c.nextSibling(); // Focus on } or ,
+      }
+      c.parent(); // Pop to DictionaryExpression
+      return { tag: "dict_expr", entries: keyValuePairs };
+    
+    case "TupleExpression":
+      let tupleExpr: Expr<any>[] = [];
+      c.firstChild(); // Open parenthesis "("
+      c.nextSibling();
+      while (c.name !== ")") {
+        tupleExpr.push(traverseExpr(c, s));
+        c.nextSibling(); // comma ","
+        c.nextSibling(); // next expression or closing parenthesis ")"
+      }
+      c.parent();
+      return { tag: "tuple_expr", contents: tupleExpr };
 
     default:
       throw new Error("Could not parse expr at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to));
@@ -244,12 +271,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       const target = traverseExpr(c, s);
       c.nextSibling(); // go to equals
       if (c.type.name === "TypeDef") { // Set Initialization -> go to AssignOp (=)
-        // c.firstChild();
-        // c.nextSibling();
-        // if (s.substring(c.from, c.to) === "set") {
-        //   c.parent();
           c.nextSibling(); // go to equal
-        // }
       }
       c.nextSibling(); // go to value
       var value = traverseExpr(c, s);
