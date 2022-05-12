@@ -43,7 +43,7 @@ export type Expr<A> =
   | {  a?: A, tag: "construct", name: string }
   | {  a?: A, tag: "indexing", name:Expr<A>, index:number}
 export type Literal = 
-  | { tag: "str", value: string}
+  | { tag: "str", value: string, length: number}
   | { tag: "num", value: number }
   | { tag: "bool", value: boolean }
   | { tag: "none" }

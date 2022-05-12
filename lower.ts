@@ -96,23 +96,23 @@ function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Typ
 vale = "abcd"
 
 */
-function storeStr(s:AST.Stmt<Type>,blocks: Array<IR.BasicBlock<Type>>,str: string): IR.Stmt<AST.Type>[]{
+// function storeStr(s:AST.Stmt<Type>,blocks: Array<IR.BasicBlock<Type>>,str: string): IR.Stmt<AST.Type>[]{
 
-  var len = s.length;
-  for (var i = 0; i < len; i++){
-    var ascii = str.charCodeAt(i);
-    var store_stmt = {
-      tag: "store",
-      a: s.a,
-      start: oval,
-      offset: offset,
-      value: nval
-    };
-    blocks[blocks.length - 1].stmts.push()
+//   var len = s.length;
+//   for (var i = 0; i < len; i++){
+//     var ascii = str.charCodeAt(i);
+//     var store_stmt = {
+//       tag: "store",
+//       a: s.a,
+//       start: oval,
+//       offset: offset,
+//       value: nval
+//     };
+//     blocks[blocks.length - 1].stmts.push()
 
-  }
-  return;
-}
+//   }
+//   return;
+// }
 
 
 

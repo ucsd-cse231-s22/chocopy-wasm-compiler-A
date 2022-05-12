@@ -24,7 +24,7 @@ export function PyBool(b: boolean): Value {
 }
 
 export function PyString(s: string): Value {
-  return { tag: "str", value: s};
+  return { tag: "str", value: s, length: s.length};
 }
 
 export function PyObj(name: string, address: number): Value {
