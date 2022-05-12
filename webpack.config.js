@@ -19,8 +19,9 @@ module.exports = {
     ],
   },
   devServer: {
-    contentBase: "./build",
     hot: true,
+    port: 8000,
+    static: path.join(__dirname, 'build'),
   },
   devtool: 'inline-source-map',
   externals: {
