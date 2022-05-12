@@ -110,6 +110,8 @@ def f() -> int:
   for x in [1, 2, 3, 4, 5]:
     if x > 3:
       return x
+    else:
+      pass
   return x
 print(f())`, ["4"]
 );
