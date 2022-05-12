@@ -243,7 +243,14 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       c.firstChild(); // go to name
       const target = traverseExpr(c, s);
       c.nextSibling(); // go to equals
-      if (c.type.name === "TypeDef") c.nextSibling(); // Set Initialization -> go to AssignOp (=)
+      if (c.type.name === "TypeDef") { // Set Initialization -> go to AssignOp (=)
+        // c.firstChild();
+        // c.nextSibling();
+        // if (s.substring(c.from, c.to) === "set") {
+        //   c.parent();
+          c.nextSibling(); // go to equal
+        // }
+      }
       c.nextSibling(); // go to value
       var value = traverseExpr(c, s);
       c.parent();
@@ -500,13 +507,15 @@ export function isVarInit(c : TreeCursor, s : string) : Boolean {
     c.nextSibling(); // go to : type
 
     const isVar = c.type.name as any === "TypeDef";
-    // c.firstChild();
-    // c.nextSibling();
-    // if (s.substring(c.from, c.to) === "set") {
-    //   c.parent();
-    //   c.parent();
-    //   return false;}
-    // c.parent();
+    if (isVar === true){
+      c.firstChild();
+      c.nextSibling();
+      if (s.substring(c.from, c.to) === "set") {
+        c.parent();
+        c.parent();
+        return false;}
+      c.parent();
+    }
     c.parent();
     return isVar;  
   } else {
