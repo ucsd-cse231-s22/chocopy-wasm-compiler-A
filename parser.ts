@@ -345,6 +345,22 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
         cond,
         body
       }
+    case "ForStatement":
+      c.firstChild(); // Focus on for
+      c.nextSibling(); // Focus on variable name
+      let name = s.substring(c.from, c.to);
+      c.nextSibling(); // Focus on in / ','
+      c.nextSibling(); // Focus on iterable expression
+      var iter = traverseExpr(c, s);
+      c.nextSibling(); // Focus on body
+      var body = [];
+      c.firstChild(); // Focus on :
+      while(c.nextSibling()) {
+        body.push(traverseStmt(c, s));
+      }
+      c.parent();
+      c.parent();
+      return { tag: "for", name: name, iterable: iter, body: body}
     case "PassStatement":
       return { tag: "pass" }
     default:
