@@ -339,8 +339,9 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
   c.firstChild();  // Focuses on open paren
   const parameters = [];
   c.nextSibling(); // Focuses on a VariableName
+  var default_start = false
   while(c.type.name !== ")") {
-    let name = s.substring(c.from, c.to);
+    let name = s.substring(c.from, c.to);// variablemName
     c.nextSibling(); // Focuses on "TypeDef", hopefully, or "," if mistake
     let nextTagName = c.type.name; // NOTE(joe): a bit of a hack so the next line doesn't if-split
     if(nextTagName !== "TypeDef") { throw new Error("Missed type annotation for parameter " + name)};
@@ -348,14 +349,28 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
     c.nextSibling(); // Focuses on type itself
     let typ = traverseType(c, s);
     c.parent();
-    c.nextSibling(); // Move on to comma or ")"
-    parameters.push({name, type: typ});
-    c.nextSibling(); // Focuses on a VariableName
+    c.nextSibling(); // Move on to comma or ")" or "="
+    if (s.substring(c.from, c.to) ===','){//no default value
+      parameters.push({name, type: typ});
+      c.nextSibling(); // Focuses on a VariableName
+      if (default_start){
+        throw new Error("SyntaxError: non-default argument follows default argument")
+      }
+    }
+    else if(s.substring(c.from, c.to) ==='='){// has default value
+      c.nextSibling(); // Focuses on a Expression
+      let expr = traverseExpr(c, s)
+      parameters.push({name, type: typ, value: expr});
+      c.nextSibling();// focus on "," or ")"
+      c.nextSibling(); // Focuses on a VariableName
+    }
+    else{// should be an error
+      throw new Error("SyntaxError: Unexpected Op in default value assign " + name)
+    }
   }
   c.parent();       // Pop to ParamList
   return parameters;
 }
-
 export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
   c.firstChild(); // go to name
   var name = s.substring(c.from, c.to);
