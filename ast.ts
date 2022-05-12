@@ -52,6 +52,7 @@ export type Literal =
     { tag: "num", value: number }
   | { tag: "bool", value: boolean }
   | { tag: "none" }
+  | { tag: "set" } // For set initialization [None or set() ?]
 
 // TODO: should we split up arithmetic ops from bool ops?
 export enum BinOp { Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};
