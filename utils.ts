@@ -1,4 +1,4 @@
-import { Value, Type } from "./ast";
+import { Value, Type, Literal } from "./ast";
 
 export function PyValue(typ: Type, result: number): Value {
   switch (typ.tag) {
@@ -30,9 +30,12 @@ export function PyNone(): Value {
   return { tag: "none" };
 }
 
+export function PyZero(): Literal {
+  return { tag: "zero" };
+}
+
 export const NUM : Type = {tag: "number"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
-export function CLASS(name : string, params: Array<Type> = []) : Type {
-  return {tag: "class", name, params}
-};
+export function CLASS(name : string, params: Array<Type> = []) : Type {return {tag: "class", name, params}};
+export function TYPEVAR(name: string) : Type {return {tag: "typevar", name}};

@@ -1,7 +1,7 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, TypeVar } from './ast';
-import { NUM, BOOL, NONE, CLASS } from './utils';
+import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, TypeVar, Class, Parameter } from './ast';
+import { NUM, BOOL, NONE, CLASS, TYPEVAR } from './utils';
 import { emptyEnv } from './compiler';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
@@ -19,7 +19,8 @@ export class TypeCheckError extends Error {
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<string>]>,
+  typevars: Map<string, [string, Array<Type>, Type]>
 }
 
 export type LocalTypeEnv = {
@@ -28,6 +29,8 @@ export type LocalTypeEnv = {
   actualRet: Type,
   topLevel: Boolean
 }
+
+export const UNCONSTRAINED = '__UNCONSTRAINED__';
 
 const defaultGlobalFunctions = new Map();
 defaultGlobalFunctions.set("abs", [[NUM], NUM]);
@@ -40,13 +43,15 @@ export const defaultTypeEnv = {
   globals: new Map(),
   functions: defaultGlobalFunctions,
   classes: new Map(),
+  typevars: new Map(),
 };
 
 export function emptyGlobalTypeEnv() : GlobalTypeEnv {
   return {
     globals: new Map(),
     functions: new Map(),
-    classes: new Map()
+    classes: new Map(),
+    typevars: new Map(),
   };
 }
 
@@ -63,19 +68,57 @@ export type TypeError = {
   message: string
 }
 
-export function equalType(t1: Type, t2: Type) {
+// combine the elements of two arrays into an array of tuples
+// NOTE: behaves weirdly with arrays of different length
+function zip<A, B>(l1: Array<A>, l2: Array<B>) : Array<[A, B]> {
+  return l1.map((el, i) => [el, l2[i]]); 
+}
+
+export function equalType(env: GlobalTypeEnv, t1: Type, t2: Type) {
+  if(t1.tag === "typevar") {
+    t1 = env.typevars.get(t1.name)[2];
+  }
+
+  if(t2.tag === "typevar") {
+    t2 = env.typevars.get(t2.name)[2];
+  }
+  
   return (
     t1 === t2 ||
-    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
+    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name && equalTypeParams(env, t1.params, t2.params))
   );
 }
 
-export function isNoneOrClass(t: Type) {
+export function equalTypeParams(env: GlobalTypeEnv, params1: Type[], params2: Type[]) : boolean {
+  // TODO: differentiate between equal and subtype for type-params
+  if(params1.length !== params2.length) {
+    return false;
+  }
+
+  return zip(params1, params2).reduce((isEqual, [p1, p2]) => {
+    return isEqual && equalType(env, p1, p2);
+  }, true);
+}
+
+export function isNoneOrClass(env: GlobalTypeEnv, t: Type) {
+  if(t.tag === "typevar") {
+    t = env.typevars.get(t.name)[2];
+  }
+
+  // TODO: decide if something with type-parameters is considered a class
   return t.tag === "none" || t.tag === "class";
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
+  if(t1.tag === "typevar") {
+    t1 = env.typevars.get(t1.name)[2];
+  }
+
+  if(t2.tag === "typevar") {
+    t2 = env.typevars.get(t2.name)[2];
+  }
+
+  return equalType(env, t1, t2) || t1.tag === "none" && t2.tag === "class" 
 }
 
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
@@ -86,10 +129,50 @@ export function join(env : GlobalTypeEnv, t1 : Type, t2 : Type) : Type {
   return NONE
 }
 
+export function isValidType(env: GlobalTypeEnv, t: Type) : boolean {
+  // primitive types are valid types
+  if(t.tag === "number" || t.tag === "bool" || t.tag === "none") {
+    return true;
+  }
+
+  // TODO: haven't taken the time to understand what either is, 
+  // but handling it for now
+  if(t.tag === "either") {
+    return true;
+  }
+
+  // TODO: type-variables always valid types in this context ?
+  if(t.tag === "typevar") {
+    return true; 
+  }
+
+  // TODO: handle all other newer non-class types here
+
+  // At this point we know t is a CLASS
+  if(!env.classes.has(t.name)) {
+    return false;  
+  }
+  
+  if(t.params.length === 0) {
+    return true;
+  }
+
+  let [_fieldsTy, _methodsTy, typeparams] = env.classes.get(t.name);
+  return zip(typeparams, t.params).reduce((isValid, [typevar, typeparam]) => {
+    let [_canonicalName, constraints, _mapping] = env.typevars.get(typevar); 
+
+    // TODO: check if typeparam satisfies constraints
+
+    return isValid && isValidType(env, typeparam);
+  }, true);
+}
+
 export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : GlobalTypeEnv {
   const newGlobs = new Map(env.globals);
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
+  const newTypevars = new Map(env.typevars);
+
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
   program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
   program.classes.forEach(cls => {
@@ -97,17 +180,42 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
     const methods = new Map();
     cls.fields.forEach(field => fields.set(field.name, field.type));
     cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
-    newClasses.set(cls.name, [fields, methods]);
+    const typeParams = cls.typeParams;
+    newClasses.set(cls.name, [fields, methods, [...typeParams]]);
   });
-  return { globals: newGlobs, functions: newFuns, classes: newClasses };
+
+  program.typeVarInits.forEach(tv => {
+    if(newGlobs.has(tv.name) || newTypevars.has(tv.name) || newClasses.has(tv.name)) {
+      throw new TypeCheckError(`Duplicate identifier '${tv.name}' for type-variable`);
+    }
+    newTypevars.set(tv.name, [tv.canonicalName, [...tv.types], CLASS(UNCONSTRAINED)]);
+  });
+  return { globals: newGlobs, functions: newFuns, classes: newClasses, typevars: newTypevars };
+}
+
+export function addUnconstrainedTEnv(env: GlobalTypeEnv) {
+  env.classes.set(UNCONSTRAINED, [new Map(), new Map(), []]);
+}
+
+export function removeUnconstrainedTEnv(env: GlobalTypeEnv) {
+  env.classes.delete(UNCONSTRAINED);
 }
 
 export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type>, GlobalTypeEnv] {
   const locals = emptyLocalTypeEnv();
   const newEnv = augmentTEnv(env, program);
-  const tInits = program.inits.map(init => tcInit(env, init));
+  addUnconstrainedTEnv(newEnv);
+  const tTypeVars = program.typeVarInits.map(tv => tcTypeVars(newEnv, tv));
+  const tInits = program.inits.map(init => tcInit(newEnv, init));
   const tDefs = program.funs.map(fun => tcDef(newEnv, fun));
-  const tClasses = program.classes.map(cls => tcClass(newEnv, cls));
+  const tClasses = program.classes.map(cls => {
+    if(cls.typeParams.length === 0) {
+      return tcClass(newEnv, cls);
+    } else {
+      let rCls = resolveClassTypeParams(newEnv, cls)
+      return tcGenericClass(newEnv, rCls);
+    }
+  });
 
   // program.inits.forEach(init => env.globals.set(init.name, tcInit(init)));
   // program.funs.forEach(fun => env.functions.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
@@ -124,12 +232,26 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   for (let name of locals.vars.keys()) {
     newEnv.globals.set(name, locals.vars.get(name));
   }
-  const tvarInits : Array<TypeVar<null>> = [] // TODO : Added this just to let this file compile
-  const aprogram = {a: lastTyp, inits: tInits, typeVarInits: tvarInits, funs: tDefs, classes: tClasses, stmts: tBody};
+
+  removeUnconstrainedTEnv(newEnv);
+
+  const aprogram = {a: lastTyp, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody, typeVarInits: tTypeVars};
   return [aprogram, newEnv];
 }
 
 export function tcInit(env: GlobalTypeEnv, init : VarInit<null>) : VarInit<Type> {
+  if(!isValidType(env, init.type)) {
+    throw new TypeCheckError(`Invalid type annotation '${JSON.stringify(init.type)}' for '${init.name}'`);
+  }
+
+  if(init.type.tag === "typevar") {
+    if(init.value.tag !== "zero") {
+      throw new TypeCheckError(`Generic variables must be initialized with __ZERO__`);
+    }
+
+    return {...init, a: NONE};
+  }
+
   const valTyp = tcLiteral(init.value);
   if (isAssignable(env, valTyp, init.type)) {
     return {...init, a: NONE};
@@ -151,17 +273,152 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
   return {...fun, a: NONE, body: tBody};
 }
 
+export function tcGenericClass(env: GlobalTypeEnv, cls: Class<null>) : Class<Type> {
+  // ensure all the type parameters are defined as type variables
+  cls.typeParams.forEach(param => {
+    if(!env.typevars.has(param)) {
+      throw new TypeCheckError(`undefined type variable ${param} used in definition of class ${cls.name}`);
+    }
+  });
+
+  // combine the bounds for each type parameter
+  const typeBounds = combineTypeBounds(env, cls);
+
+  let newCls = null;
+
+  typeBounds.forEach((bounds) => {
+    bounds.forEach((tvType, tvName) => {
+      let [canonicalName, tvBounds, _] = env.typevars.get(tvName);
+      env.typevars.set(tvName, [canonicalName, tvBounds, tvType]);
+    });
+
+    let tyCls = tcClass(env, cls);
+    newCls = {...tyCls, a: NONE};
+  });
+
+  return newCls;
+}
+
+export function resolveClassTypeParams(env: GlobalTypeEnv, cls: Class<null>) : Class<null> { 
+  let [fieldsTy, methodsTy, typeparams] = env.classes.get(cls.name);
+
+  let newFieldsTy = new Map(Array.from(fieldsTy.entries()).map(([name, type]) => {
+    let [_, newType] = resolveTypeTypeParams(cls.typeParams, type);
+    return [name, newType];
+  }));
+
+  let newMethodsTy: Map<string, [Type[], Type]> = new Map(Array.from(methodsTy.entries()).map(([name, [params, ret]]) => {
+    let [_, newRet] = resolveTypeTypeParams(cls.typeParams, ret); 
+    let newParams = params.map(p => {
+      let [_, newP] = resolveTypeTypeParams(cls.typeParams, p);
+      return newP;
+    });
+
+    return [name, [newParams, newRet]];
+  }));
+
+  env.classes.set(cls.name, [newFieldsTy, newMethodsTy, typeparams]);
+
+  let newFields = cls.fields.map(field => resolveVarInitTypeParams(cls.typeParams, field));
+  let newMethods = cls.methods.map(method => resolveFunDefTypeParams(cls.typeParams, method));
+
+  return {...cls, fields: newFields, methods: newMethods};
+}
+
+export function resolveVarInitTypeParams(env: string[], init: VarInit<null>) : VarInit<null> {
+  let [_, newType] = resolveTypeTypeParams(env, init.type);
+  return {...init, type: newType};
+}
+
+export function resolveFunDefTypeParams(env: string[], fun: FunDef<null>) : FunDef<null> {
+  let newParameters = fun.parameters.map(p => resolveParameterTypeParams(env, p));
+  let [_, newRet] = resolveTypeTypeParams(env, fun.ret);
+  let newInits = fun.inits.map(i => resolveVarInitTypeParams(env, i));
+
+  return {...fun, ret: newRet, parameters: newParameters, inits: newInits};
+}
+
+export function resolveParameterTypeParams(env: string[], param: Parameter<null>) : Parameter<null> {
+  let [_, newType] = resolveTypeTypeParams(env, param.type);
+  return {...param, type: newType}
+}
+
+export function resolveTypeTypeParams(env: string[], type: Type) : [boolean, Type] {
+  if(type.tag !== "class") {
+    return [false, type];
+  }
+
+  if(env.indexOf(type.name) !== -1) {
+    return [true, TYPEVAR(type.name)]
+  }
+
+  let newParams: Type[]= type.params.map((p) => {
+    let [_, newType] = resolveTypeTypeParams(env, p);
+    return newType;
+  });
+
+  return [true, {...type, params: newParams}];
+}
+
+export function combineTypeBounds(env: GlobalTypeEnv, cls: Class<null>) : Array<Map<string, Type>> {
+  let typeParams = cls.typeParams;
+  let combinedBounds: Array<Map<string, Type>> = typeParams.reduce((combinedBounds, param, i) => {
+    const newCombinedBounds: Array<Map<string, Type>> = [];
+    const [_, bounds] = env.typevars.get(param);  
+    if(bounds.length === 0) {
+      bounds.push(CLASS(UNCONSTRAINED));
+    }
+
+    if(i == 0) {
+      bounds.forEach(bound => {
+        let m: Map<string, Type> = new Map();
+        m.set(param, bound);
+        newCombinedBounds.push(m);
+      });
+    } else {
+      combinedBounds.forEach(cb => {
+        bounds.forEach(bound => {
+          let m: Map<string, Type> = new Map(cb); 
+          m.set(param, bound);
+          newCombinedBounds.push(m);
+        });
+      });
+    }
+
+    return newCombinedBounds;
+  }, []);
+
+  return combinedBounds;
+}
+
 export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
   const tFields = cls.fields.map(field => tcInit(env, field));
   const tMethods = cls.methods.map(method => tcDef(env, method));
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
+  
+  const tParams = cls.typeParams.map(TYPEVAR);
   if (init.parameters.length !== 1 || 
     init.parameters[0].name !== "self" ||
-    !equalType(init.parameters[0].type, CLASS(cls.name)) ||
+    !equalType(env, init.parameters[0].type, CLASS(cls.name, tParams)) ||
     init.ret !== NONE)
     throw new TypeCheckError("Cannot override __init__ type signature");
-  // TODO : Added this just to let this file compile
-  return {a: NONE, name: cls.name, fields: tFields, methods: tMethods, typeParams: []};
+
+  return {a: NONE, name: cls.name, fields: tFields, methods: tMethods, typeParams: cls.typeParams};
+}
+
+export function tcTypeVars(env: GlobalTypeEnv, tv: TypeVar<null>) : TypeVar<Type> {
+  tv.types.forEach(typeBound => {
+    if(typeBound.tag === "class") {
+      if(!env.classes.has(typeBound.name)) {
+        throw new TypeCheckError(`type-variable with undefined class '${typeBound.name}' in it's bounds`);
+      }
+
+      // TODO: check recrusive reference to type-parameter in bounds
+      
+    } 
+  });
+
+  return {...tv, a: NONE};
 }
 
 export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Array<Stmt<null>>) : Array<Stmt<Type>> {
@@ -181,6 +438,19 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       } else {
         throw new TypeCheckError("Unbound id: " + stmt.name);
       }
+
+      // TODO: this is a ugly temporary hack for generic constructor
+      // calls until explicit annotations are supported.
+      // Until then constructors for generic classes are properly checked only
+      // when directly assigned to variables and will fail in unexpected ways otherwise.
+      if(nameTyp.tag === 'class' && nameTyp.params.length !== 0 && tValExpr.a.tag === 'class' && tValExpr.a.name === nameTyp.name && tValExpr.tag === 'construct') {
+        // it would have been impossible for the inner type-checking
+        // code to properly infer and fill in the type parameters for
+        // the constructor call. So we copy it from the type of the variable
+        // we are assigning to.
+        tValExpr.a.params = [...nameTyp.params]; 
+      }
+
       if(!isAssignable(env, tValExpr.a, nameTyp)) 
         throw new TypeCheckError("Non-assignable types");
       return {a: NONE, tag: stmt.tag, name: stmt.name, value: tValExpr};
@@ -210,7 +480,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
     case "while":
       var tCond = tcExpr(env, locals, stmt.cond);
       const tBody = tcBlock(env, locals, stmt.body);
-      if (!equalType(tCond.a, BOOL)) 
+      if (!equalType(env, tCond.a, BOOL)) 
         throw new TypeCheckError("Condition Expression Must be a bool");
       return {a: NONE, tag:stmt.tag, cond: tCond, body: tBody};
     case "pass":
@@ -245,25 +515,25 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Mul:
         case BinOp.IDiv:
         case BinOp.Mod:
-          if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
+          if(equalType(env, tLeft.a, NUM) && equalType(env, tRight.a, NUM)) { return {a: NUM, ...tBin}}
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
         case BinOp.Neq:
           if(tLeft.a.tag === "class" || tRight.a.tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")
-          if(equalType(tLeft.a, tRight.a)) { return {a: BOOL, ...tBin} ; }
+          if(equalType(env, tLeft.a, tRight.a)) { return {a: BOOL, ...tBin} ; }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op)}
         case BinOp.Lte:
         case BinOp.Gte:
         case BinOp.Lt:
         case BinOp.Gt:
-          if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: BOOL, ...tBin} ; }
+          if(equalType(env, tLeft.a, NUM) && equalType(env, tRight.a, NUM)) { return {a: BOOL, ...tBin} ; }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op) }
         case BinOp.And:
         case BinOp.Or:
-          if(equalType(tLeft.a, BOOL) && equalType(tRight.a, BOOL)) { return {a: BOOL, ...tBin} ; }
+          if(equalType(env, tLeft.a, BOOL) && equalType(env, tRight.a, BOOL)) { return {a: BOOL, ...tBin} ; }
           else { throw new TypeCheckError("Type mismatch for boolean op" + expr.op); }
         case BinOp.Is:
-          if(!isNoneOrClass(tLeft.a) || !isNoneOrClass(tRight.a))
+          if(!isNoneOrClass(env, tLeft.a) || !isNoneOrClass(env, tRight.a))
             throw new TypeCheckError("is operands must be objects");
           return {a: BOOL, ...tBin};
       }
@@ -272,10 +542,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       const tUni = {...expr, a: tExpr.a, expr: tExpr}
       switch(expr.op) {
         case UniOp.Neg:
-          if(equalType(tExpr.a, NUM)) { return tUni }
+          if(equalType(env, tExpr.a, NUM)) { return tUni }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op);}
         case UniOp.Not:
-          if(equalType(tExpr.a, BOOL)) { return tUni }
+          if(equalType(env, tExpr.a, BOOL)) { return tUni }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op);}
       }
     case "id":
