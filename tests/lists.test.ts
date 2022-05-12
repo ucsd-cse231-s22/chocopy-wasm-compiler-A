@@ -88,7 +88,7 @@ describe('traverseExpr(c, s) function', () => {
     expect(parsedExpr).to.deep.equal({
       tag: "call",
       name: "len",
-      arguments: { tag: "id", name: "a" },
+      arguments: [{ tag: "id", name: "a" }],
     });
   });
   it('parses list concatenation 1', () => {
@@ -145,8 +145,8 @@ describe('traverseExpr(c, s) function', () => {
       }
     });
   });
-  it('parses list slicing', () => {
-    const source = "a[1:2]";
+  it('parses list slicing 1', () => {
+    const source = "a[1:x]";
     const cursor = parser.parse(source).cursor();
 
     // go to statement
@@ -158,15 +158,63 @@ describe('traverseExpr(c, s) function', () => {
 
     // Note: we have to use deep equality when comparing objects
     expect(parsedExpr).to.deep.equal({
-      tag: "binop",
-      op: BinOp.Plus,
-      left: { tag: "id", name: "a" },
-      right: {
-        tag: "construct-list",
-        items: [
-          { tag: "literal", value: { tag: "num", value: 3 } },
-        ]
-      }
+      tag: "slice",
+      obj: { tag: "id", name: "a" },
+      index_s: { tag: "literal", value: { tag: "num", value: 1 } },
+      index_e: { tag: "id", name: "x" }
+    });
+  });
+  it('parses list slicing 2', () => {
+    const source = "a[:3]";
+    const cursor = parser.parse(source).cursor();
+
+    // go to statement
+    cursor.firstChild();
+    // go to expression
+    cursor.firstChild();
+
+    const parsedExpr = traverseExpr(cursor, source);
+
+    // Note: we have to use deep equality when comparing objects
+    expect(parsedExpr).to.deep.equal({
+      tag: "slice",
+      obj: { tag: "id", name: "a" },
+      index_e: { tag: "literal", value: { tag: "num", value: 3 } },
+    });
+  });
+  it('parses list slicing 3', () => {
+    const source = "a[1:]";
+    const cursor = parser.parse(source).cursor();
+
+    // go to statement
+    cursor.firstChild();
+    // go to expression
+    cursor.firstChild();
+
+    const parsedExpr = traverseExpr(cursor, source);
+
+    // Note: we have to use deep equality when comparing objects
+    expect(parsedExpr).to.deep.equal({
+      tag: "slice",
+      obj: { tag: "id", name: "a" },
+      index_s: { tag: "literal", value: { tag: "num", value: 1 } },
+    });
+  });
+  it('parses list slicing 4', () => {
+    const source = "a[:]";
+    const cursor = parser.parse(source).cursor();
+
+    // go to statement
+    cursor.firstChild();
+    // go to expression
+    cursor.firstChild();
+
+    const parsedExpr = traverseExpr(cursor, source);
+
+    // Note: we have to use deep equality when comparing objects
+    expect(parsedExpr).to.deep.equal({
+      tag: "slice",
+      obj: { tag: "id", name: "a" },
     });
   });
 });

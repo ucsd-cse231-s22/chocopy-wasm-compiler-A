@@ -200,53 +200,48 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<null> {
       var string = s.substring(c.from, c.to);
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s);
-      c.nextSibling(); // Focus on .
-      var isIndex = string.indexOf("]") - string.indexOf("[") === 2; // only one element in between
-      var containsColon = string.indexOf(":") !== -1;
-      c.nextSibling(); // Focus on property
-      var propName = s.substring(c.from, c.to);
-      // for lists, check if there is a start idx and end idx
-      // if there is only single element in brackets, then treat as index
-      if (isIndex && !containsColon) {
-        var idx = traverseExpr(c, s);
+      c.nextSibling(); // Focus on . or [
+      if(s.substring(c.from, c.to) == "[") {
+        // Start with :
+        c.nextSibling();  // Focus on start index or : or index
+        if(s.substring(c.from, c.to) == ":") {
+          c.nextSibling();  // Focus on end index or ]
+          if(s.substring(c.from, c.to) == "]") {
+            c.parent();
+            return { tag: "slice", obj: objExpr };
+          }
+          var endIndex = traverseExpr(c, s);
+          c.parent();
+          return { tag: "slice", obj: objExpr, index_e: endIndex };
+        }
+
+        // Start index or index
+        var startIndex = traverseExpr(c, s);
+        c.nextSibling();  // Focus on : or ]
+        if(s.substring(c.from, c.to) == "]") {
+          c.parent();
+          return { tag: "index", obj: objExpr, index: startIndex };
+        }
+        
+        // Start index and :
+        c.nextSibling();  // Focus on end index or ]
+        if(s.substring(c.from, c.to) == "]") {
+          c.parent();
+          return { tag: "slice", obj: objExpr, index_s: startIndex };
+        }
+        var endIndex = traverseExpr(c, s);
+        c.parent();
+        return { tag: "slice", obj: objExpr, index_s: startIndex, index_e: endIndex };
+      } else {
+        c.nextSibling(); // Focus on property
+        var propName = s.substring(c.from, c.to);
         c.parent();
         return {
-          tag: "index",
+          tag: "lookup",
           obj: objExpr,
-          index: idx,
-        }
-      // treat as a slice
-      } else if (containsColon) {
-        var idx_s = null;
-        var idx_e = null;
-        // checks if this is start index a[1:]
-        if (s.substring(c.from, c.to) !== ":") {
-          idx_s = traverseExpr(c, s);
-        }
-        c.nextSibling();
-        // checks if this is an end index a[:1]
-        if (s.substring(c.from, c.to) !== ":" && s.substring(c.from, c.to) !== "]") {
-          idx_e = traverseExpr(c, s);
-        }
-        c.nextSibling();
-        // checks if this is an end index a[1:2]
-        if (s.substring(c.from, c.to) !== "]") {
-          idx_e = traverseExpr(c, s);
-        }
-        c.parent();
-        return {
-          tag: "slice",
-          obj: objExpr,
-          index_s: idx_s,
-          index_e: idx_e,
-        }
+          field: propName,
+        };
       }
-      c.parent();
-      return {
-        tag: "lookup",
-        obj: objExpr,
-        field: propName,
-      };
     case "self":
       return {
         tag: "id",
