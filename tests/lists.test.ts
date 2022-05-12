@@ -271,7 +271,8 @@ describe('tc for lists', () => {
   a : [int] = None
   i : int = 1
   a = [1,2,3]
-  a[i] = 2`, NONE);
+  a[i] = 2
+  a[1+1] = 9`, NONE);
   assertTCFail("item type not match", `
   a : [int] = None
   a = [1,2,3]

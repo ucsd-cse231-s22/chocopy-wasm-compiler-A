@@ -77,7 +77,8 @@ export function equalType(t1: Type, t2: Type): boolean {
   return (
     t1 === t2 ||
     (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
-    (t1.tag === "list" && t2.tag === "list" && equalType(t1.itemType, t2.itemType))
+    (t1.tag === "list" && t2.tag === "list" && equalType(t1.itemType, t2.itemType)) ||
+    (t1.tag === "list" && t2.tag === "list" && t1.itemType.tag === "none")
   );
 }
 
@@ -90,7 +91,7 @@ export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
 }
 
 export function isAssignable(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  console.log(t1.tag, t2.tag)
+  console.log(t1, t2)
   return isSubtype(env, t1, t2);
 }
 
