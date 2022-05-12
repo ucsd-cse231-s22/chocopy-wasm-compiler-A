@@ -8,7 +8,7 @@ async function debug() {
   var source = `
 a:[int] = None
 a = [1,2,3*4+4,4,5]
-print(a[2*2-2])
+print(a[2*2-1])
 `
 
   var source1 = `

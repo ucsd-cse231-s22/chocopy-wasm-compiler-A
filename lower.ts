@@ -297,6 +297,14 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       var listassign:  IR.Stmt<Type>[] = [];
       var entryinits: Array<IR.VarInit<Type>> = [];
       var entrystmts: Array<IR.Stmt<Type>> = [];
+      listassign.push(  // first element of a list should be length
+        {
+          tag: "store",
+          start: { tag: "id", name: listName },
+          offset: { tag: "wasmint", value: 0 },
+          value: {tag: "wasmint", value: e.length}
+        }
+      )
       for(var i=0; i<e.length; i++){
         entryinits = entryinits.concat(flattenentries[i][0]);
         entrystmts = entrystmts.concat(flattenentries[i][1]);
@@ -304,7 +312,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           {
             tag: "store",
             start: { tag: "id", name: listName },
-            offset: { tag: "wasmint", value: i },
+            offset: { tag: "wasmint", value: i+1 },
             value: flattenentries[i][2]
           }
         )
@@ -317,6 +325,17 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "list-lookup":
       var [startinits, startstmts, startval] = flattenExprToVal(e.list, env);
       var [idxinits, idxstmts, idxval]:any = flattenExprToVal(e.index, env);
+      if(idxval.tag=="num"){
+        idxval.value +=1;
+      }
+      else if(idxval.tag == "id"){
+        idxstmts.push({
+          a:{tag: "number"},
+          tag: "assign",
+          name: idxval.name,
+          value: {a: {tag: "number"}, tag: "binop", left: idxval, op: 0, right: {tag: "num", value: 1}}
+        })
+      }
       return[
         [...startinits, ...idxinits],
         [...startstmts, ...idxstmts],
