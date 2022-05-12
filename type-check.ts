@@ -174,57 +174,79 @@ export function tcAssignable(env : GlobalTypeEnv, locals : LocalTypeEnv, assigna
   switch(assignable.tag) {
     case "id":
     case "lookup":
+    // TODO: if we need to support more types, add them here
       return typedAss;
     default:
       throw new TypeCheckError(`unimplemented type checking for assignment: ${assignable}`);
   }
 }
 
-export function tcDestructuringAssignment(env : GlobalTypeEnv, locals : LocalTypeEnv, destruct : DestructuringAssignment<null>) {
+export function tcDestructuringAssignment(env : GlobalTypeEnv, locals : LocalTypeEnv, destruct : DestructuringAssignment<null>) : [DestructuringAssignment<Type>, boolean] {
   if(destruct.isSimple) {
     if(destruct.vars.length != 1) {
       throw new TypeCheckError(`variable number mismatch, expected 1, got ${destruct.vars.length}`);
     }
+    if(destruct.vars[0].star) {
+      throw new TypeCheckError('starred assignment target must be in a list or tuple');
+    }
     var typedAss : Assignable<Type> = tcAssignable(env, locals, destruct.vars[0].target);
     var variable: AssignVar<Type> = { ...destruct.vars[0], target: typedAss, a: typedAss.a };
-    return { ...destruct, vars: [variable], a: variable.a };
+    return [{ ...destruct, vars: [variable], a: variable.a }, false];
   } else {
     // there should be more than 0 elements at left
     if(destruct.vars.length == 0) {
       throw new TypeCheckError(`variable number mismatch, expected more than 1, got 0`);
     }
+    var hasStar = false;
     var typedVars : AssignVar<Type>[] = [];
     for(var v of destruct.vars) {
+      if(v.star) {
+        if(hasStar) {
+          throw new TypeCheckError(`there could not be more than 1 star expression in assignment`);
+        }
+        hasStar = true;
+      }
       var typedAss : Assignable<Type> = tcAssignable(env, locals, v.target);
       var variable: AssignVar<Type> = { ...v, target: typedAss, a: typedAss.a }; 
       typedVars.push(variable);
     }
-    return { ...destruct, vars: typedVars, a: NONE };
+    return [{ ...destruct, vars: typedVars, a: NONE }, hasStar];
   }
 }
 
 export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<null>) : Stmt<Type> {
   switch(stmt.tag) {
     case "assign":
-      const tDestruct = tcDestructuringAssignment(env, locals, stmt.destruct);
+      const [tDestruct, hasStar] = tcDestructuringAssignment(env, locals, stmt.destruct);
       const tValExpr = tcExpr(env, locals, stmt.value);
-      if(tDestruct.isSimple && tValExpr.tag === "array-expr" && tValExpr.elements.length != 1) {
-        throw new TypeCheckError(`value number mismatch, expected ${tDestruct.vars.length} values`);
-      }
       if(tDestruct.isSimple && !isAssignable(env, tValExpr.a, tDestruct.a)) {
         throw new TypeCheckError(`Non-assignable types: ${tValExpr.a} to ${tDestruct.a}`);
       }
       if(!tDestruct.isSimple && tValExpr.tag === "array-expr") {
         // for plain destructure like a, b, c = 1, 2, 3
         // we can perform type check
-        // TODO: this should be updated after * has been introduced
-        if(tDestruct.vars.length != tValExpr.elements.length) {
+        if(!hasStar && tDestruct.vars.length != tValExpr.elements.length) {
           throw new TypeCheckError(`value number mismatch, expected ${tDestruct.vars.length} values, but got ${tValExpr.elements.length}`);
+        } else if(hasStar && tDestruct.vars.length-1 > tValExpr.elements.length) {
+          throw new TypeCheckError(`not enough values to unpack (expected at least ${tDestruct.vars.length-1}, got ${tValExpr.elements.length})`);
         }
         for(var i=0; i<tDestruct.vars.length; i++) {
           if(!isAssignable(env, tDestruct.vars[i].a, tValExpr.elements[i].a)) {
             throw new TypeCheckError(`Non-assignable types: ${tValExpr.elements[i].a} to ${tDestruct.vars[i].a}`);
           }
+        }
+      } else if(!tDestruct.isSimple && (tValExpr.tag === "call" || tValExpr.tag === "method-call")) {
+        // the expr should be iterable, which means the return type should be a iterable one
+        // but there is no such a type currently, so
+        // TODO: add specific logic then
+        if(tValExpr.a != CLASS('iterator')) {
+          throw new TypeCheckError(`cannot unpack non-iterable ${tValExpr.a} object`)
+        }
+        // other checks should be pushed to runtime
+      } else if(!tDestruct.isSimple) {
+        // TODO: support other types like list, tuple, which are plain formatted, we could also perform type check
+        if(tValExpr.a != CLASS('iterator')) {
+          throw new TypeCheckError(`cannot unpack non-iterable ${tValExpr.a} object`)
         }
       }
       return {a: NONE, tag: stmt.tag, destruct: tDestruct, value: tValExpr};

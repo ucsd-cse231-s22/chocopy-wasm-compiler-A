@@ -23,7 +23,7 @@ export type Stmt<A> =
 
 export type DestructuringAssignment<A> = { a?: A, isSimple: boolean, vars: AssignVar<A>[] }
 
-export type AssignVar<A> = { a?: A, target: Assignable<A>, ignorable: boolean }
+export type AssignVar<A> = { a?: A, target: Assignable<A>, ignorable: boolean, star: boolean }
 
 export type Assignable<A> =
   | { a?: A; tag: "id"; name: string }

@@ -284,7 +284,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
       // TODO: should it be a specific type?
-      var destructAss : IR.DestructuringAssignment<null> = { isSimple: true, vars: [{ target: {tag: "id", name: newName}, ignorable: false }] };
+      var destructAss : IR.DestructuringAssignment<null> = { isSimple: true, vars: [{ target: {tag: "id", name: newName}, ignorable: false, star: false }] };
       const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
       const assigns : IR.Stmt<Type>[] = fields.map(f => {
         const [_, [index, value]] = f;
@@ -333,7 +333,7 @@ function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarIn
   else {
     var newName = generateName("valname");
     // TODO: should it be a specific type?
-    var destructAss : IR.DestructuringAssignment<null> = { isSimple: true, vars: [{ target: {tag: "id", name: newName}, ignorable: false }] };
+    var destructAss : IR.DestructuringAssignment<null> = { isSimple: true, vars: [{ target: {tag: "id", name: newName}, ignorable: false, star: false }] };
     var setNewName : IR.Stmt<Type> = {
       tag: "assign",
       a: e.a,
