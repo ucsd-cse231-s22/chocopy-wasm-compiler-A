@@ -420,6 +420,11 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
   }
   c.firstChild(); // go to :
   c.nextSibling(); // go to type
+  if (s.substring(c.from, c.to) === "set") {
+    c.parent();
+    c.parent();
+    return { name, type: { tag: "set", content_type: {tag: "number"} }, value: { tag: "set"}};
+  }
   const type = traverseType(c, s);
   c.parent();
   
@@ -529,15 +534,15 @@ export function isVarInit(c : TreeCursor, s : string) : Boolean {
     c.nextSibling(); // go to : type
 
     const isVar = c.type.name as any === "TypeDef";
-    if (isVar === true){
-      c.firstChild();
-      c.nextSibling();
-      if (s.substring(c.from, c.to) === "set") {
-        c.parent();
-        c.parent();
-        return false;}
-      c.parent();
-    }
+    // if (isVar === true){
+    //   c.firstChild();
+    //   c.nextSibling();
+    //   if (s.substring(c.from, c.to) === "set") {
+    //     c.parent();
+    //     c.parent();
+    //     return false;}
+    //   c.parent();
+    // }
     c.parent();
     return isVar;  
   } else {
