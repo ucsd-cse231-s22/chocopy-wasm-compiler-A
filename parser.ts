@@ -1,7 +1,7 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
-import { NUM, BOOL, NONE, CLASS } from "./utils";
+import { NUM, BOOL, NONE, CLASS, LIST } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
@@ -38,6 +38,21 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       return {
         tag: "id",
         name: s.substring(c.from, c.to)
+      }
+    case "ArrayExpression":
+      var entries: Array<Expr<null>> = [];
+      var length: number = 0;
+      c.firstChild();
+      while(c.nextSibling()){
+        entries.push(traverseExpr(c,s));
+        c.nextSibling();
+      }
+      c.parent();
+      length = entries.length;
+      return {
+        tag: "list-obj",
+        length: length,
+        entries: entries
       }
     case "CallExpression":
       c.firstChild();
@@ -171,14 +186,26 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
     case "MemberExpression":
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s);
-      c.nextSibling(); // Focus on .
-      c.nextSibling(); // Focus on property
-      var propName = s.substring(c.from, c.to);
-      c.parent();
-      return {
-        tag: "lookup",
-        obj: objExpr,
-        field: propName
+      c.nextSibling(); // Focus on . or [
+      if(c.type.name as any=="."){  // object lookup
+        c.nextSibling(); // Focus on property
+        var propName = s.substring(c.from, c.to);
+        c.parent();
+        return {
+          tag: "lookup",
+          obj: objExpr,
+          field: propName
+        }
+      }
+      else{  // list lookup
+        c.nextSibling();
+        var index = traverseExpr(c,s);
+        c.parent();
+        return{
+          tag: "list-lookup",
+          list: objExpr,
+          index: index
+        }
       }
     case "self":
       return {
@@ -327,11 +354,20 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
 
 export function traverseType(c : TreeCursor, s : string) : Type {
   // For now, always a VariableName
-  let name = s.substring(c.from, c.to);
-  switch(name) {
-    case "int": return NUM;
-    case "bool": return BOOL;
-    default: return CLASS(name);
+  if(c.type.name =="ArrayExpression"){
+    c.firstChild();
+    c.nextSibling();
+    var elementtype = traverseType(c , s);
+    c.parent();
+    return LIST(elementtype);
+  }
+  else{
+    let name = s.substring(c.from, c.to);
+    switch(name) {
+      case "int": return NUM;
+      case "bool": return BOOL;
+      default: return CLASS(name);
+    }
   }
 }
 

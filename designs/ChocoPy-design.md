@@ -30,7 +30,7 @@ print(aString1+aString2)
 ```python
 assertPrint("string-length",
 `
-print(len("Hello")
+print(len("Hello"))
 `, [5]))
 ```
 
@@ -50,7 +50,7 @@ print(aString[1])
 assertTC("list-basic", 
 `
 a : [int] = None
-a = [1, 2, 3, 4, 5]`, "list");
+a = [1, 2, 3, 4, 5]`, LIST({tag: "number"}));
 ```
 
 6. 
@@ -72,11 +72,11 @@ b : [int] = None
 c : [int] = None
 i : int = 0
 a = [1, 2, 3, 4, 5]
-b = [4 ,5 ,6, 7, 8]
+b = [6, 7, 8, 9, 10]
 c = a + b
 
 for i in c:
-    print(i)`, [`1`, `2`, `3`, `4`, `5`, `4`, `5`, `6`, `7`, `8`]);
+    print(i)`, [`1`, `2`, `3`, `4`, `5`, `6`, `7`, `8`, `9`, `10`]);
 ```
 
 8. 
@@ -95,7 +95,7 @@ assertPrint("for-loop-basic",
 ans : int = 0
 x : int = 0
 for x in [1, 2, 3, 4, 5]:
-ans = ans + x
+  ans = ans + x
 print(ans)`, ["15"]
 );
 ```
@@ -106,11 +106,11 @@ print(ans)`, ["15"]
 assertPrint("for-loop-return-intermediate",
 `
 def f() -> int:
-x : int = 0
-for x in [1, 2, 3, 4, 5]:
-	if x > 3:
-		return x
-return x
+  x : int = 0
+  for x in [1, 2, 3, 4, 5]:
+    if x > 3:
+      return x
+  return x
 print(f())`, ["4"]
 );
 ```
