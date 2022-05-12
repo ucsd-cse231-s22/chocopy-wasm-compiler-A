@@ -214,6 +214,22 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       if (!equalType(tCond.a, BOOL)) 
         throw new TypeCheckError("Condition Expression Must be a bool");
       return {a: NONE, tag:stmt.tag, cond: tCond, body: tBody};
+    case "for":
+      const tListExpr = tcExpr(env, locals, stmt.iterable);
+      if (tListExpr.a.tag !== "list")
+        throw new TypeCheckError("Cannot iterate over type of " + tListExpr.a.tag)
+      var nameTyp;
+      if (locals.vars.has(stmt.name)) {
+        nameTyp = locals.vars.get(stmt.name);
+      } else if (env.globals.has(stmt.name)) {
+        nameTyp = env.globals.get(stmt.name);
+      } else {
+        throw new TypeCheckError("Not a variable: " + stmt.name);
+      }
+      if(!isAssignable(env, tListExpr.a.elementtype, nameTyp))
+        throw new TypeCheckError("Expected type "+nameTyp+"; got type "+tListExpr.a.elementtype);
+      const tForBody = tcBlock(env, locals, stmt.body);
+      return {a: NONE, tag: stmt.tag, name: stmt.name, iterable: tListExpr, body: tForBody};
     case "pass":
       return {a: NONE, tag: stmt.tag};
     case "field-assign":
