@@ -13,7 +13,7 @@ import {
   Class,
   Literal,
 } from "./ast";
-import { NUM, BOOL, NONE, CLASS } from "./utils";
+import { NUM, BOOL, NONE, CLASS, LIST } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
 export function traverseLiteral(c: TreeCursor, s: string): Literal {
@@ -439,6 +439,10 @@ export function traverseType(c: TreeCursor, s: string): Type {
       return NUM;
     case "bool":
       return BOOL;
+    case "[" + "int" + "]":
+      return LIST(NUM);
+    case "[" + "bool" + "]":
+      return LIST(BOOL);
     default:
       return CLASS(name);
   }
