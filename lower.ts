@@ -309,13 +309,13 @@ function flattenExprToExpr(e : AST.Expr<Type>, blocks: Array<IR.BasicBlock<Type>
         []
       ];
     case "id":
-      return [[], [], {tag: "value", value: { ...e }} , []];
+      return [[], [], {tag: "value", value: { ...e }}, []];
     case "literal":
-      return [[], [], {tag: "value", value: literalToVal(e.value) } , []];
+      return [[], [], {tag: "value", value: literalToVal(e.value) }, [] ];
     case "if-expr": {
-      var thenLbl = generateName("$then");
-      var elseLbl = generateName("$else");
-      var endLbl = generateName("$end");
+      var thenLbl = generateName("$ifExprThen");
+      var elseLbl = generateName("$ifExprElse");
+      var endLbl = generateName("$ifExprEnd");
       var ifExprTmpVal = generateName("$ifExprTmp");
 
       var endjmp : IR.Stmt<Type> = { tag: "jmp", lbl: endLbl };

@@ -411,8 +411,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       var tThn = tcExpr(env, locals, expr.thn);
       var tCond = tcExpr(env, locals, expr.cond);
       var tEls = tcExpr(env, locals, expr.els);
-      if(tCond.a !== BOOL) throw new TypeCheckError("Condition Expression Must be a bool");
-      if(tThn.a !== tEls.a) throw new TypeCheckError(`if-expr type mismatch: ${tThn.a} is not the same as ${tEls.a}`);
+      if(!equalType(tCond.a, BOOL)) throw new TypeCheckError("Condition Expression Must be a bool");
+      //TODO (Michael Maddy, Closures): Might not work for inheritence...
+      if(!equalType(tThn.a, tEls.a)) throw new TypeCheckError(`if-expr type mismatch: ${JSON.stringify(tThn.a)} is not the same as ${JSON.stringify(tEls.a)}`);
+      //Instead the type could be either the type of thn or els, and not error if they are not the same type.
+      // var newType = join(env, tThn.a, tEls.a)
       return {...expr, a: tThn.a, cond: tCond, thn: tThn, els: tEls};
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
