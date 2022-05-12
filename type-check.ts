@@ -1,6 +1,6 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
+import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, DestructuringAssignment, Assignable, AssignVar } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 
@@ -167,21 +167,67 @@ export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Arra
   return tStmts;
 }
 
+export function tcAssignable(env : GlobalTypeEnv, locals : LocalTypeEnv, assignable : Assignable<null>) : Assignable<Type> {
+  var expr : Expr<null> = { ...assignable };
+  var typedExpr = tcExpr(env, locals, expr);
+  var typedAss : Assignable<Type> = { ...assignable, a: typedExpr.a };
+  switch(assignable.tag) {
+    case "id":
+    case "lookup":
+      return typedAss;
+    default:
+      throw new TypeCheckError(`unimplemented type checking for assignment: ${assignable}`);
+  }
+}
+
+export function tcDestructuringAssignment(env : GlobalTypeEnv, locals : LocalTypeEnv, destruct : DestructuringAssignment<null>) {
+  if(destruct.isSimple) {
+    if(destruct.vars.length != 1) {
+      throw new TypeCheckError(`variable number mismatch, expected 1, got ${destruct.vars.length}`);
+    }
+    var typedAss : Assignable<Type> = tcAssignable(env, locals, destruct.vars[0].target);
+    var variable: AssignVar<Type> = { ...destruct.vars[0], target: typedAss, a: typedAss.a };
+    return { ...destruct, vars: [variable], a: variable.a };
+  } else {
+    // there should be more than 0 elements at left
+    if(destruct.vars.length == 0) {
+      throw new TypeCheckError(`variable number mismatch, expected more than 1, got 0`);
+    }
+    var typedVars : AssignVar<Type>[] = [];
+    for(var v of destruct.vars) {
+      var typedAss : Assignable<Type> = tcAssignable(env, locals, v.target);
+      var variable: AssignVar<Type> = { ...v, target: typedAss, a: typedAss.a }; 
+      typedVars.push(variable);
+    }
+    return { ...destruct, vars: typedVars, a: NONE };
+  }
+}
+
 export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<null>) : Stmt<Type> {
   switch(stmt.tag) {
     case "assign":
+      const tDestruct = tcDestructuringAssignment(env, locals, stmt.destruct);
       const tValExpr = tcExpr(env, locals, stmt.value);
-      var nameTyp;
-      if (locals.vars.has(stmt.name)) {
-        nameTyp = locals.vars.get(stmt.name);
-      } else if (env.globals.has(stmt.name)) {
-        nameTyp = env.globals.get(stmt.name);
-      } else {
-        throw new TypeCheckError("Unbound id: " + stmt.name);
+      if(tDestruct.isSimple && tValExpr.tag === "array-expr" && tValExpr.elements.length != 1) {
+        throw new TypeCheckError(`value number mismatch, expected ${tDestruct.vars.length} values`);
       }
-      if(!isAssignable(env, tValExpr.a, nameTyp)) 
-        throw new TypeCheckError("Non-assignable types");
-      return {a: NONE, tag: stmt.tag, name: stmt.name, value: tValExpr};
+      if(tDestruct.isSimple && !isAssignable(env, tValExpr.a, tDestruct.a)) {
+        throw new TypeCheckError(`Non-assignable types: ${tValExpr.a} to ${tDestruct.a}`);
+      }
+      if(!tDestruct.isSimple && tValExpr.tag === "array-expr") {
+        // for plain destructure like a, b, c = 1, 2, 3
+        // we can perform type check
+        // TODO: this should be updated after * has been introduced
+        if(tDestruct.vars.length != tValExpr.elements.length) {
+          throw new TypeCheckError(`value number mismatch, expected ${tDestruct.vars.length} values, but got ${tValExpr.elements.length}`);
+        }
+        for(var i=0; i<tDestruct.vars.length; i++) {
+          if(!isAssignable(env, tDestruct.vars[i].a, tValExpr.elements[i].a)) {
+            throw new TypeCheckError(`Non-assignable types: ${tValExpr.elements[i].a} to ${tDestruct.vars[i].a}`);
+          }
+        }
+      }
+      return {a: NONE, tag: stmt.tag, destruct: tDestruct, value: tValExpr};
     case "expr":
       const tExpr = tcExpr(env, locals, stmt.expr);
       return {a: tExpr.a, tag: stmt.tag, expr: tExpr};
@@ -381,6 +427,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeCheckError("method calls require an object");
       }
+    case "array-expr":
+      const arrayExpr = expr.elements.map((element) => tcExpr(env, locals, element));
+      return { ...expr, a: NONE, elements: arrayExpr };
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
 }
