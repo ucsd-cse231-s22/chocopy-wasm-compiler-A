@@ -7,8 +7,8 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 async function debug() {
   var source = `
 a:[int] = None
-a = [1,2,3*4+4,4,5]
-print(a[2*2-1])
+a = [1,3,3*4+4,7,9]
+print(a[3])
 `
 
   var source1 = `

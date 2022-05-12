@@ -178,12 +178,27 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         `call $alloc`
       ];
     case "load":
-      return [
-        ...codeGenValue(expr.start, env),
-        `call $assert_not_none`,
-        ...codeGenValue(expr.offset, env),
-        `call $load`
-      ]
+      if(expr.start.a.tag=="class"){
+        return [
+          ...codeGenValue(expr.start, env),
+          `call $assert_not_none`,
+          ...codeGenValue(expr.offset, env),
+          `call $load`
+        ]
+      }
+      else{
+        return [
+          ...codeGenValue(expr.start, env),
+          ...codeGenValue(expr.start, env),
+          `call $assert_not_none`,
+          `(i32.const 0)`,
+          `call $load`,
+          ...codeGenValue(expr.offset, env),
+          `call $assert_out_of_bound`,
+          `call $load`
+        ]
+      }
+      
   }
 }
 
