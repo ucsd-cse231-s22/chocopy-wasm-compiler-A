@@ -1,5 +1,16 @@
 // import { TypeCheckError } from "./type-check";
 
+export type Annotation = {
+  type?: Type,
+  fromLoc?: Location, // include
+  endLoc?: Location, // exclude
+}
+export type Location = {
+  row: number,
+  col: number,
+  srcIdx: number,
+}
+
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
 export type Type =
   | {tag: "number"}
@@ -10,7 +21,7 @@ export type Type =
 
 export type Parameter<A> = { name: string, type: Type }
 
-export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
+export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>>}
 
 export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
 

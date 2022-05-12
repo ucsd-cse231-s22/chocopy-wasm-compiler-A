@@ -1,8 +1,48 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
-import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
+import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, Annotation, Location } from "./ast";
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
+
+export var lineBreakIndices : Array<number>;
+/**
+ * Binary search on sorted array. 
+ * Returns the index at which target should be inserted in arr.
+ * 
+ * @param arr sorted array
+ * @param target target to insert
+ * @returns idx to insert target in arr
+ */
+export function binarySearch(arr: Array<number>, target: number): number {
+  var left = 0;
+  var right = arr.length;
+  var ans = 0;
+  while (left <= right) {
+    const mid = (left + right) >> 1;
+    if (arr[mid] <= target) {
+      ans = mid;
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+  return ans
+}
+
+export function indToLoc(srcIdx: number): Location {
+    const col = binarySearch(lineBreakIndices, srcIdx);
+    const row = srcIdx - lineBreakIndices[col-1];
+    return {row, col, srcIdx}
+}
+
+function wrap_locs<T extends Function>(traverser: T): T {
+  return <any>function(c: TreeCursor, ...args: any) {
+      const fromLoc = indToLoc(c.from);
+      const node = traverser(c,...args);
+      const endLoc = indToLoc(c.to);
+      return {...node, a:{...node.a, fromLoc, endLoc}}
+  };
+}
 
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   switch(c.type.name) {
@@ -25,7 +65,8 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   }
 }
 
-export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
+export const traverseExpr = wrap_locs(traverseExprHelper);
+export function traverseExprHelper(c : TreeCursor, s : string) : Expr<Annotation> {
   switch(c.type.name) {
     case "Number":
     case "Boolean":
@@ -56,7 +97,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         }
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
-        var expr : Expr<null>;
+        var expr : Expr<Annotation>;
         if (callName === "print" || callName === "abs") {
           expr = {
             tag: "builtin1",
@@ -190,7 +231,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
   }
 }
 
-export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<null>> {
+export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<Annotation>> {
   c.firstChild();  // Focuses on open paren
   const args = [];
   c.nextSibling();
@@ -204,12 +245,13 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<null>
   return args;
 }
 
-export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
+export const traverseStmt = wrap_locs(traverseStmtHelper);
+export function traverseStmtHelper(c : TreeCursor, s : string) : Stmt<Annotation> {
   switch(c.node.type.name) {
     case "ReturnStatement":
       c.firstChild();  // Focus return keyword
       
-      var value : Expr<null>;
+      var value : Expr<Annotation>;
       if (c.nextSibling()) // Focus expression
         value = traverseExpr(c, s);
       else
@@ -335,28 +377,35 @@ export function traverseType(c : TreeCursor, s : string) : Type {
   }
 }
 
-export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter<null>> {
+export const traverseParameter = wrap_locs(traverseParameterHelper);
+export function traverseParameterHelper(c : TreeCursor, s : string) : Parameter<Annotation> {
+  let name = s.substring(c.from, c.to);
+  c.nextSibling(); // Focuses on "TypeDef", hopefully, or "," if mistake
+  let nextTagName = c.type.name; // NOTE(joe): a bit of a hack so the next line doesn't if-split
+  if(nextTagName !== "TypeDef") { throw new Error("Missed type annotation for parameter " + name)};
+  c.firstChild();  // Enter TypeDef
+  c.nextSibling(); // Focuses on type itself
+  let typ = traverseType(c, s);
+  c.parent();
+  return {name, type: typ};
+}
+
+
+export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter<Annotation>> {
   c.firstChild();  // Focuses on open paren
   const parameters = [];
   c.nextSibling(); // Focuses on a VariableName
   while(c.type.name !== ")") {
-    let name = s.substring(c.from, c.to);
-    c.nextSibling(); // Focuses on "TypeDef", hopefully, or "," if mistake
-    let nextTagName = c.type.name; // NOTE(joe): a bit of a hack so the next line doesn't if-split
-    if(nextTagName !== "TypeDef") { throw new Error("Missed type annotation for parameter " + name)};
-    c.firstChild();  // Enter TypeDef
-    c.nextSibling(); // Focuses on type itself
-    let typ = traverseType(c, s);
-    c.parent();
+    parameters.push(traverseParameter(c,s));
     c.nextSibling(); // Move on to comma or ")"
-    parameters.push({name, type: typ});
-    c.nextSibling(); // Focuses on a VariableName
+    c.nextSibling(); // Focuses on a VariableName or 
   }
   c.parent();       // Pop to ParamList
   return parameters;
 }
 
-export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
+export const traverseVarInit = wrap_locs(traverseVarInitHelper);
+export function traverseVarInitHelper(c : TreeCursor, s : string) : VarInit<Annotation> {
   c.firstChild(); // go to name
   var name = s.substring(c.from, c.to);
   c.nextSibling(); // go to : type
@@ -378,7 +427,8 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
   return { name, type, value }
 }
 
-export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
+export const traverseFunDef = wrap_locs(traverseFunDefHelper);
+export function traverseFunDefHelper(c : TreeCursor, s : string) : FunDef<Annotation> {
   c.firstChild();  // Focus on def
   c.nextSibling(); // Focus on name of function
   var name = s.substring(c.from, c.to);
@@ -419,9 +469,10 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   return { name, parameters, ret, inits, body }
 }
 
-export function traverseClass(c : TreeCursor, s : string) : Class<null> {
-  const fields : Array<VarInit<null>> = [];
-  const methods : Array<FunDef<null>> = [];
+export const traverseClass = wrap_locs(traverseClassHelper);
+export function traverseClassHelper(c : TreeCursor, s : string) : Class<Annotation> {
+  const fields : Array<VarInit<Annotation>> = [];
+  const methods : Array<FunDef<Annotation>> = [];
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
@@ -450,10 +501,10 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   };
 }
 
-export function traverseDefs(c : TreeCursor, s : string) : [Array<VarInit<null>>, Array<FunDef<null>>, Array<Class<null>>] {
-  const inits : Array<VarInit<null>> = [];
-  const funs : Array<FunDef<null>> = [];
-  const classes : Array<Class<null>> = [];
+export function traverseDefs(c : TreeCursor, s : string) : [Array<VarInit<Annotation>>, Array<FunDef<Annotation>>, Array<Class<Annotation>>] {
+  const inits : Array<VarInit<Annotation>> = [];
+  const funs : Array<FunDef<Annotation>> = [];
+  const classes : Array<Class<Annotation>> = [];
 
   while(true) {
     if (isVarInit(c, s)) {
@@ -491,13 +542,14 @@ export function isClassDef(c : TreeCursor, s : string) : Boolean {
   return c.type.name === "ClassDefinition";
 }
 
-export function traverse(c : TreeCursor, s : string) : Program<null> {
+export const traverse = wrap_locs(traverseHelper);
+export function traverseHelper(c : TreeCursor, s : string) : Program<Annotation> {
   switch(c.node.type.name) {
     case "Script":
-      const inits : Array<VarInit<null>> = [];
-      const funs : Array<FunDef<null>> = [];
-      const classes : Array<Class<null>> = [];
-      const stmts : Array<Stmt<null>> = [];
+      const inits : Array<VarInit<Annotation>> = [];
+      const funs : Array<FunDef<Annotation>> = [];
+      const classes : Array<Class<Annotation>> = [];
+      const stmts : Array<Stmt<Annotation>> = [];
       var hasChild = c.firstChild();
 
       while(hasChild) {
@@ -524,8 +576,15 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
   }
 }
 
-export function parse(source : string) : Program<null> {
+export function parse(source : string) : Program<Annotation> {
+  lineBreakIndices = [-1];
+  for (var i=0; i < source.length; i++) {
+    if (source[i] == '\n') {
+      lineBreakIndices.push(i);
+    }
+  }
   const t = parser.parse(source);
   const str = stringifyTree(t.cursor(), source, 0);
-  return traverse(t.cursor(), source);
+  const ast = traverse(t.cursor(), source);
+  return ast;
 }
