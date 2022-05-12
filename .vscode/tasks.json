@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "build-web",
+			"group": "build",
+			"problemMatcher": [],
+			"label": "npm: build-web",
+			"detail": "webpack && cp index.html build/"
+		}
+	]
+}
