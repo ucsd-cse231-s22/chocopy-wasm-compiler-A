@@ -69,12 +69,13 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   const parsed = parse(source);
+  console.log("parsed",parsed);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   console.log("tc success :: ",tprogram, tenv);
   const globalEnv = augmentEnv(config.env, tprogram);
-  console.log("before ir");
+  // console.log("before ir");
   const irprogram = lowerProgram(tprogram, globalEnv);
-  console.log("irprogram :: ");
+  // console.log("irprogram :: ",irprogram);
   const progTyp = tprogram.a;
   var returnType = "";
   var returnExpr = "";
@@ -124,7 +125,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
       ${returnExpr}
     )
   )`;
-  console.log(wasmSource);
+  // console.log(wasmSource);
   const [result, instance] = await runWat(wasmSource, importObject);
 
   return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance];
