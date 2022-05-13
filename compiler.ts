@@ -194,12 +194,12 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       // return ["(i32.const " + val.value + ")"];
 
 
-      var x = Number(val.value) // for division
+      var x = val.value // for division
       var n = 0
       var digits : Number[] = []
       while(x >= 1) {
-          digits.push(parseInt(String(x % (2**31))))
-          x = x / (2**31) 
+          digits.push(parseInt(String(x % BigInt(1 << 31))))
+          x = x / BigInt(1 << 31) 
           n = n + 1
       }
 
