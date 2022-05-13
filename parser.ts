@@ -360,25 +360,45 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
 
 function traverseDestructure(c: TreeCursor, s: string): DestructuringAssignment<null> {
   const vars: AssignVar<null>[] = [];
-  vars.push(traverseAssignment(c, s));
-  let isSimple = true;
-  c.nextSibling();
-  while (c.name !== "AssignOp") {
-    isSimple = false;
+  if (c.type.name === "ArrayExpression" || c.type.name === "TupleExpression") {
+    c.firstChild();
     c.nextSibling();
-    if (c.name === "AssignOp") break;
-    let variable = traverseAssignment(c, s);
-    vars.push(variable);
+    vars.push(traverseAssignVar(c, s));
     c.nextSibling();
+    while (c.name !== "]" && c.name !== ")") {
+      c.nextSibling();
+      if (c.name === "]" || c.name === ")") break;
+      let variable = traverseAssignVar(c, s);
+      vars.push(variable);
+      c.nextSibling();
+    }
+    c.parent();
+    return {
+      isSimple: false,
+      vars,
+    };
+  } else {
+    vars.push(traverseAssignVar(c, s));
+    let isSimple = true;
+    c.nextSibling();
+    while (c.name !== "AssignOp") {
+      isSimple = false;
+      c.nextSibling();
+      if (c.name === "AssignOp") break;
+      let variable = traverseAssignVar(c, s);
+      vars.push(variable);
+      c.nextSibling();
+    }
+    c.prevSibling();
+    return {
+      isSimple,
+      vars,
+    };
   }
-  c.prevSibling();
-  return {
-    isSimple,
-    vars,
-  };
 }
 
-function traverseAssignment(c: TreeCursor, s: string): AssignVar<null> {
+function traverseAssignVar(c: TreeCursor, s: string): AssignVar<null> {
+  // todo check if target is *
   let target = traverseExpr(c, s);
   let ignorable = false;
   if (target.tag !== "id" && target.tag !== "lookup") {
