@@ -191,9 +191,6 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
 function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
   switch (val.tag) {
     case "num":
-      // return ["(i32.const " + val.value + ")"];
-
-
       var x = val.value // for division
       var n = 0
       var digits : Number[] = []
@@ -205,7 +202,6 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
           x = x / BigInt(1 << 31) 
           n = n + 1
       }
-
       n = n + 1 // store (n+1) blocks (n: number of digits)
 
       var i = 0
@@ -214,33 +210,22 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       return_val.push(`(i32.const ${n})`);
       return_val.push(`(call $alloc)`);
       return_val.push(`(local.set $$scratch)`);
-
-      // console.log(n);
       
       // store the bignum in (n+1) blocks
       for (i; i < n; i++) {
-          if (i == 0) {
-            if (val.value < 0) {
-              return_val.push(`(local.get $$scratch)`);
-              return_val.push(`(i32.const ${i})`);
-              return_val.push(`((i32.sub) (i32.const 0) (i32.const ${n-1}))`);
-              return_val.push(`call $store`);
-            } else {
-              return_val.push(`(local.get $$scratch)`);
-              return_val.push(`(i32.const ${i})`);
-              return_val.push(`(i32.const ${n-1})`);
-              return_val.push(`call $store`);
-            }
-              
-          } else {
-              return_val.push(`(local.get $$scratch)`);
-              return_val.push(`(i32.const ${i})`);
-              return_val.push(`(i32.const ${digits[i-1]})`);
-              return_val.push(`call $store`);
-          }
+        if (i == 0) {
+          return_val.push(`(local.get $$scratch)`);
+          return_val.push(`(i32.const ${i})`);
+          return_val.push(`(i32.const ${n-1})`);
+          return_val.push(`call $store`);        
+        } else {
+          return_val.push(`(local.get $$scratch)`);
+          return_val.push(`(i32.const ${i})`);
+          return_val.push(`(i32.const ${digits[i-1]})`);
+          return_val.push(`call $store`);
+        }
       }
       return_val.push(`(local.get $$scratch)`)
-      // console.log(return_val);
       return return_val;
     case "wasmint":
       return ["(i32.const " + val.value + ")"];
