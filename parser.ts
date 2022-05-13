@@ -1,7 +1,7 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
-import { NUM, BOOL, NONE, CLASS, LIST } from "./utils";
+import { NUM, BOOL, NONE, CLASS, LIST, STR } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
 const invalidNames = new Set<string>(["int", "bool", "str"]);
@@ -33,6 +33,18 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
       return {
         tag: "none"
       }
+    case "String":
+      var stringVal : string = s.substring(c.from, c.to);
+      const fChar = stringVal.charAt(0);
+      const lChar = stringVal.charAt(stringVal.length - 1);
+      if (fChar !== "\'" && fChar !== "\"")
+        throw new ParserError(`Unknown string started with ${fChar}`);
+      if (lChar !== "\'" && lChar !== "\"")
+        throw new ParserError(`Unknown string ended with ${lChar}`);
+      return {
+        tag: "str",
+        value: s.substring(c.from + 1, c.to - 1)
+      }
     default:
       throw new ParserError("Not literal")
   }
@@ -42,6 +54,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
   switch(c.type.name) {
     case "Number":
     case "Boolean":
+    case "String":
     case "None":
       return { 
         tag: "literal", 
@@ -247,6 +260,8 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<null>
 
 export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
   switch(c.node.type.name) {
+    case "Comment":
+      return { tag: "comment" }
     case "ReturnStatement":
       c.firstChild();  // Focus return keyword
       
@@ -382,6 +397,7 @@ export function traverseType(c : TreeCursor, s : string) : Type {
   switch(name) {
     case "int": return NUM;
     case "bool": return BOOL;
+    case "str": return STR;
     default: return CLASS(name);
   }
 }

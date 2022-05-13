@@ -1,7 +1,7 @@
 import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
+import { NUM, BOOL, NONE, STR } from './utils';
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -11,13 +11,28 @@ function stringify(typ: Type, arg: any) : string {
       return (arg as boolean)? "True" : "False";
     case "none":
       return "None";
+    case "str":
+      return String.fromCharCode(arg as number);
     case "class":
       return typ.name;
   }
 }
 
+var stringPrint : string = "";
+
 function print(typ: Type, arg : number) : any {
   console.log("Logging from WASM: ", arg);
+  if (typ.tag === "str") {
+    const curChar = stringify(typ, arg);
+    if (curChar === "\0") {
+      const elt = document.createElement("pre");
+      document.getElementById("output").appendChild(elt);
+      elt.innerText = stringPrint;
+      stringPrint = "";
+    }
+    stringPrint += curChar
+    return arg;
+  }
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
   elt.innerText = stringify(typ, arg);
@@ -31,9 +46,13 @@ function assert_not_none(arg: any) : any {
 }
 
 function assert_valid_access(length: number, ind: number) : any {
-  if (ind > length || ind < 0)
+  if (ind >= length || ind < 0)
     throw new Error("RUNTIME ERROR: cannot access list with invalid index");
   return ind;
+}
+
+function rte_printarg(arg: any) {
+  throw new Error("RUNTIME ERROR: Invalid argument type for print")
 }
 
 function webStart() {
@@ -42,33 +61,37 @@ function webStart() {
     // https://github.com/mdn/webassembly-examples/issues/5
 
     const memory = new WebAssembly.Memory({initial:10, maximum:100});
+    var heap = new WebAssembly.Global({value: 'i32', mutable: true}, 4);
     const memoryModule = await fetch('memory.wasm').then(response => 
       response.arrayBuffer()
     ).then(bytes => 
-      WebAssembly.instantiate(bytes, { js: { mem: memory } })
+      WebAssembly.instantiate(bytes, { js: { mem: memory, heap: heap } })
     );
-    const listModule = await fetch('list.wasm').then(response => 
+    const iterModule = await fetch('iterable.wasm').then(response => 
       response.arrayBuffer()
     ).then(bytes => 
-      WebAssembly.instantiate(bytes, { js: { mem: memory } })
+      WebAssembly.instantiate(bytes,
+        { imports: { print_char: (arg: number) => print(STR, arg) }, js: { mem: memory, heap: heap } })
     );
 
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
         assert_valid_access: (length: number, ind: number) => assert_valid_access(length, ind),
+        rte_printarg: (arg: any) => rte_printarg(arg),
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),
+        print_char: (arg: number) => print(STR, arg),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
         pow: Math.pow
       },
       libmemory: memoryModule.instance.exports,
-      liblist: listModule.instance.exports,
+      libiter: iterModule.instance.exports,
       memory_values: memory,
-      js: {memory: memory}
+      js: {memory: memory, heap: heap}
     };
     var repl = new BasicREPL(importObject);
 
@@ -136,7 +159,7 @@ function webStart() {
       repl.run(source.value).then((r) => { renderResult(r); console.log ("run finished") })
           .catch((e) => { renderError(e); console.log("run failed", e) });;
     });
-    setupRepl();
+    // setupRepl();
   });
 }
 
