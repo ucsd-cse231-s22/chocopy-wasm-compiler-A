@@ -305,8 +305,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           const v = flattenExprToVal(n, env);
           return {
             tag: "expr",
-            expr: { tag: "call", name: `set$add`, arguments: [{  tag: "id", name: name },v[2]] } 
-            // expr: { tag: "call", name: `set$add`, arguments: [v[2]] } 
+            expr: { tag: "call", name: `set$add`, arguments: [{ tag: "id", name: name },v[2]] }
           }
         });
         return [

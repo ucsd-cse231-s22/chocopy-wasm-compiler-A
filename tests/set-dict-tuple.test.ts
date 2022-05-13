@@ -57,14 +57,15 @@ describe("proj-set-test", ()=>{
 });
      
 describe("proj-dict-test", ()=>{
-    
   assertPrint("pr-dict-int-bool-key",`
   x:set = set()
-  x.add(8)
-  x.add(2)
+  x.add(9)
   x.add(3)
-  x = {2,3,4,5,6,7,8,8}
-  x.add(2)
-  print(x.size())
+  x.add(13)
+  x.add(23)
+  x.add(43)
+  x.remove(23)
+  x.remove(3)
+  print(x.has(9))
   `,["True"])
 });

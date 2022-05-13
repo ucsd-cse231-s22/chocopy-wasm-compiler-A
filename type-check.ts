@@ -411,10 +411,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
                 if (!tObj.hasOwnProperty('name')){
                   throw new TypeCheckError("The object of Set.remove does not have a name")
                 }
-                // if (!(Set_exist (tObj,expr.arguments[0]))){
-                //   throw new TypeCheckError (`Set.remove tries to remove a non-exist arg ${expr.arguments[0]} from ${tObj.tag}`)
-                // }
               }
+              return {...expr,a:BOOL,obj:{...expr.obj,a:SET(NUM)}}
               break;
             case "size":
               return {...expr,a:NUM,obj:{...expr.obj,a:SET(NUM)}};
