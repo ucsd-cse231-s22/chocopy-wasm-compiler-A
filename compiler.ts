@@ -460,74 +460,6 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         "",
       ]
     );
-  
-    //This function returns a memory address for the value of a key. It returns -1 if not found.
-    // setFunStmts.push(
-    //   ...[
-    //     "(func $ha$htable$Lookup (param $baseAddr i32) (param $key i32) (param $hashtablesize i32) (result i32)",
-    //     "(local $nodePtr i32)", // Local variable to store the address of nodes in linkedList
-    //     "(local $tagHitFlag i32)", // Local bool variable to indicate whether tag is hit
-    //     "(local $returnVal i32)",
-    //     "(i32.const -1)",
-    //     "(local.set $returnVal)", // Initialize returnVal to -1
-    //     "(i32.const 0)",
-    //     "(local.set $tagHitFlag)", // Initialize tagHitFlag to False
-    //     "(local.get $baseAddr)",
-    //     "(local.get $key)",
-    //     "(local.get $hashtablesize)",
-    //     "(i32.rem_u)", //Compute hash
-    //     "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
-    //     "(i32.add)", //Reaching the proper bucket. Call this bucketAddress
-    //     "(i32.load)",
-    //     "(local.set $nodePtr)",
-    //     "(local.get $nodePtr)",
-    //     "(i32.const 0)", //None
-    //     "(i32.eq)",
-    //     "(if",
-    //     "(then", // if the literal in bucketAddress is None
-    //     "(i32.const -1)",
-    //     "(local.set $returnVal)", // Initialize returnVal to -1
-    //     ")", //close then
-    //     "(else",
-    //     "(block",
-    //     "(loop", // While loop till we find a node whose next is None
-    //     "(local.get $nodePtr)",
-    //     "(i32.load)", //Loading head of linkedList
-    //     "(local.get $key)",
-    //     "(i32.eq)", // if tag is same as the provided one
-    //     "(if",
-    //     "(then",
-    //     "(local.get $nodePtr)",
-    //     "(i32.const 4)",
-    //     "(i32.add)", // Value
-    //     "(local.set $returnVal)",
-    //     "(i32.const 1)",
-    //     "(local.set $tagHitFlag)", // Set tagHitFlag to True
-    //     ")", // closing then
-    //     ")", // closing if
-    //     "(local.get $nodePtr)",
-    //     "(i32.const 8)",
-    //     "(i32.add)", // Next pointer
-    //     "(i32.load)",
-    //     "(local.set $nodePtr)",
-    //     "(br_if 0", // Opening br_if
-    //     "(local.get $nodePtr)",
-    //     "(i32.const 0)", //None
-    //     "(i32.ne)", // If nodePtr not None
-    //     "(local.get $tagHitFlag)",
-    //     "(i32.eqz)",
-    //     "(i32.and)",
-    //     ")", // Closing br_if
-    //     "(br 1)",
-    //     ")", // Closing loop
-    //     ")", // Closing Block
-    //     ")", //close else
-    //     ")", // close if
-    //     "(local.get $returnVal)",
-    //     "(return))",
-    //     "",
-    //   ]
-    // );
 
     setFunStmts.push(
       ...[
@@ -631,10 +563,10 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         "(return))", //
       ]
     );
-  
+
     setFunStmts.push(
       ...[
-        "(func $set$add (param $baseAddr i32) (param $val i32)",
+        "(func $set$add (param $baseAddr i32) (param $val i32) (result i32)",
         "(local $nodePtr i32)", // Local variable to store the address of nodes in linkedList
         "(local $tagHitFlag i32)", // Local bool variable to indicate whether tag is hit
         "(local $$allocPointer i32)",
@@ -743,6 +675,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         ")", // Closing if inside else
         ")", // Closing else
         ")", // Closing if
+        "(i32.const 0)",
         "(return))", //
       ]
     );

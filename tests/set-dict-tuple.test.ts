@@ -60,6 +60,8 @@ describe("proj-dict-test", ()=>{
     
   assertPrint("pr-dict-int-bool-key",`
   x:set = set()
-  x = {3,76,5}
+  x = {1,2,3,7}
+  x.add(2)
+  print(x.has(7))
   `,["True"])
 });

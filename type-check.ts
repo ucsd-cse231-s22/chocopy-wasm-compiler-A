@@ -402,6 +402,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
                 //   throw new TypeCheckError (`Set.remove tries to remove a non-exist arg ${expr.arguments[0]} from ${tObj}`)
                 // }
               }
+              return {...expr,a:{tag:"none"},obj:{...expr.obj,a:SET(NUM)}}
               break;
             case "remove":
               if (numArgs != 1){
