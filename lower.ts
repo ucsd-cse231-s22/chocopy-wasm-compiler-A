@@ -340,7 +340,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       if (e.value.tag == "str") {
         let v = e.value;
         const strLength:number = v.value.length;
-        const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength } };
+        const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength + 1 } };
         var assigns_string : IR.Stmt<Type>[] = [];
         const newStrName = generateName("newStr"); 
         console.log(strLength);

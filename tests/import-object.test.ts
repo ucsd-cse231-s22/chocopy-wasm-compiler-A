@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 
-enum Type { Num, Bool, None }
+enum Type { Num, Bool, None, String }
 
 function stringify(typ: Type, arg: any): string {
   switch (typ) {
@@ -14,6 +14,12 @@ function stringify(typ: Type, arg: any): string {
 }
 
 function print(typ: Type, arg: any): any {
+  importObject.output += stringify(typ, arg);
+  importObject.output += "\n";
+  return arg;
+}
+
+function print_str(typ: Type, arg: any): any {
   importObject.output += stringify(typ, arg);
   importObject.output += "\n";
   return arg;
@@ -46,6 +52,7 @@ export const importObject : any = {
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
+    print_str: (arg: number) => print(Type.String, arg),
     abs: Math.abs,
     min: Math.min,
     max: Math.max,
