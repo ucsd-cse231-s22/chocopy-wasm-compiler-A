@@ -73,7 +73,7 @@ describe("basic-set-functions", ()=>{
   assertPrint("set-remove",`
   s:set = set()
   s = {1,2,5,7}
-  s.remove(7)
+  s.remove(6)
   print(len(s))`,["3"]);
 
   assertPrint("set-clear-has",`

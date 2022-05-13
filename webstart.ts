@@ -44,6 +44,7 @@ function webStart() {
 
     var importObject = {
       imports: {
+        remove_err: () => {throw new Error("element does not exist")},
         assert_not_none: (arg: any) => assert_not_none(arg),
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),

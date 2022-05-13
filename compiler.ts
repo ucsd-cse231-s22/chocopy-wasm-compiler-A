@@ -647,6 +647,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
       ...[
         "(func $set$remove (param $baseAddr i32) (param $val i32) (result i32)",
         "(local $prePtr i32)",
+        "(local $dump i32)",
         "(local $nodePtr i32)", // Local variable to store the address of nodes in linkedList
         "(local $tagHitFlag i32)", // Local bool variable to indicate whether tag is hit
         "(local $$allocPointer i32)",
@@ -763,6 +764,19 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
           ")", // Closing Block
         ")", // Closing else
         ")", // Closing if
+
+        "(local.get $tagHitFlag)",
+        "(i32.const 0)",
+        "(i32.eq)",
+        "(if", // if tag is same as the provided one
+        "(then",
+          "(local.get $val)",
+          "(call $remove_err)",
+          "(local.set $dump)",
+        ")", // closing then
+        ")", // closing if
+
+
         "(local.get $tagHitFlag)",
         "(return))", //
         ""
