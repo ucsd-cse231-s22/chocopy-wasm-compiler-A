@@ -766,15 +766,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         ")", // Closing if
 
         "(local.get $tagHitFlag)",
-        "(i32.const 0)",
-        "(i32.eq)",
-        "(if", // if tag is same as the provided one
-        "(then",
-          "(local.get $val)",
-          "(call $remove_err)",
-          "(local.set $dump)",
-        ")", // closing then
-        ")", // closing if
+        "(call $ele_not_found)",
 
 
         "(local.get $tagHitFlag)",

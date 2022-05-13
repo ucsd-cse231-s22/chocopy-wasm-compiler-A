@@ -29,6 +29,11 @@ function assert_not_none(arg: any) : any {
     throw new Error("RUNTIME ERROR: cannot perform operation on none");
   return arg;
 }
+function ele_not_found(arg:any) : any{
+if (arg === 0)
+  throw new Error("RUNTIME ERROR: element not found in iterable");
+return arg;
+}
 
 function webStart() {
   document.addEventListener("DOMContentLoaded", async function() {
@@ -44,8 +49,8 @@ function webStart() {
 
     var importObject = {
       imports: {
-        remove_err: () => {throw new Error("element does not exist")},
         assert_not_none: (arg: any) => assert_not_none(arg),
+        ele_not_found: (arg:any) => ele_not_found(arg),
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),

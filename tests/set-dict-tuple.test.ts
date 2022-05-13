@@ -3,6 +3,7 @@ import { NUM, BOOL, NONE, TUPLE, SET, DICT } from '../utils';
 import {expect} from 'chai';
 import { parser } from 'lezer-python';
 import { traverseExpr, traverseStmt, traverse, parse } from '../parser';
+import { assertFail} from './asserts.test';
 
 describe('parse(source) function', () => {
   // TODO: add additional tests here to ensure parse works as expected
@@ -50,6 +51,11 @@ describe("set-test", ()=>{
   x:set = set()
   x = {3,76,5}
   x`, SET(NUM));
+  assertFail("fail-remove-non-exist",`
+  x:set = set()
+  x.add(1)
+  x.remove(2)
+  `);
 });
      
 describe("basic-set-functions", ()=>{
@@ -70,11 +76,10 @@ describe("basic-set-functions", ()=>{
   print(7 in s)
   print(1 in s)`,["False","True"]);
 
-  assertPrint("set-remove",`
+  assertFail("set-remove",`
   s:set = set()
   s = {1,2,5,7}
-  s.remove(6)
-  print(len(s))`,["3"]);
+  s.remove(6)`);
 
   assertPrint("set-clear-has",`
   x:set = set()
