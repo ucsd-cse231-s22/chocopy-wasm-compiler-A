@@ -1,7 +1,7 @@
 import { BinOp, Parameter, Type, UniOp} from "./ast";
 import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "./ir";
 
-import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkCompileValEquality } from "./optimization_utils"; 
+import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkCompileValEquality, checkStmtEquality } from "./optimization_utils"; 
 
 type Env = {
     vars: Map<string, compileVal>;
@@ -29,23 +29,23 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<an
             throw new Error("Compiler Error");
         
         switch(op){
-            case BinOp.Plus: return { tag: "num", value: leftVal.value + rightVal.value};
+            case BinOp.Plus: return {tag: "num", value: leftVal.value + rightVal.value};
             
-            case BinOp.Minus: return { tag: "num", value: leftVal.value - rightVal.value}
+            case BinOp.Minus: return {tag: "num", value: leftVal.value - rightVal.value}
             
-            case BinOp.Mul: return { tag: "num", value: leftVal.value * rightVal.value}
+            case BinOp.Mul: return {tag: "num", value: leftVal.value * rightVal.value}
 
-            case BinOp.IDiv: return { tag: "num", value: leftVal.value / rightVal.value}
+            case BinOp.IDiv: return {tag: "num", value: leftVal.value / rightVal.value}
             
-            case BinOp.Mod: return { tag: "num", value: leftVal.value % rightVal.value}
+            case BinOp.Mod: return {tag: "num", value: leftVal.value % rightVal.value}
             
-            case BinOp.Gt: return { tag: "bool", value: leftVal.value > rightVal.value}
+            case BinOp.Gt: return {tag: "bool", value: leftVal.value > rightVal.value}
             
-            case BinOp.Lt: return { tag: "bool", value: leftVal.value < rightVal.value}
+            case BinOp.Lt: return {tag: "bool", value: leftVal.value < rightVal.value}
             
-            case BinOp.Gte: return { tag: "bool", value: leftVal.value >= rightVal.value}
+            case BinOp.Gte: return {tag: "bool", value: leftVal.value >= rightVal.value}
             
-            case BinOp.Lte: return { tag: "bool", value: leftVal.value <= rightVal.value} 
+            case BinOp.Lte: return {tag: "bool", value: leftVal.value <= rightVal.value}
         }
     }
     else if([BinOp.And, BinOp.Or].includes(op)){
@@ -53,16 +53,16 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<an
             throw new Error("Compiler Error")
         
         switch(op){
-            case BinOp.And: return { tag: "bool", value: leftVal.value && rightVal.value};
+            case BinOp.And: return {tag: "bool", value: leftVal.value && rightVal.value};
 
-            case BinOp.Or: return { tag: "bool", value: leftVal.value || rightVal.value};
+            case BinOp.Or: return {tag: "bool", value: leftVal.value || rightVal.value};
         }
     }
     else if([BinOp.Eq, BinOp.Neq].includes(op)){
         if(!isTagEqual(leftVal, rightVal) || isTagNone(leftVal) || isTagNone(rightVal) || isTagId(leftVal) || isTagId(rightVal))
             throw new Error("Compiler Error");
         switch(op){
-            case BinOp.Eq: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value === rightVal.value};
+            case BinOp.Eq: return {tag: "bool", value: leftVal.value === rightVal.value};
 
         }
     }
@@ -75,14 +75,14 @@ export function evaluateUniOp(op: UniOp, val: Value<any>): Value<any>{
             if (isTagId(val) || isTagNone(val) || isTagBoolean(val)) 
                 throw new Error("Compiler Error");
             const minus1: bigint = -1n;
-            return { tag: "num", value: minus1 as bigint * (val.value as bigint)};
+            return {tag: "num", value: minus1 as bigint * (val.value as bigint)};
 
         case UniOp.Not:
 
             if (!isTagBoolean(val)) 
                 throw new Error("Compiler Error");
             
-            return { tag: "bool", value: !(val.value)};
+                return {tag: "bool", value: !(val.value)};
     }
 }
 
@@ -96,14 +96,14 @@ export function optimizeExpression(e: Expr<Type>, env: Env): Expr<Type>{
             var right = optimizeValue(e.right, env);
             if (left.tag === "id" || right.tag === "id")
                 return {...e, left: left, right: right};
-            var val: Value<any> = evaluateBinOp(e.op, e.left, e.right);
-            return {a: val.a, tag: "value", value: val};
+            var val: Value<any> = evaluateBinOp(e.op, left, right);
+            return {tag: "value", value: val};
         case "uniop":
             var arg = optimizeValue(e.expr, env);
             if (arg.tag === "id")
                 return {...e, expr: arg};
             var val: Value<any> = evaluateUniOp(e.op, arg);
-            return {a: val.a, tag: "value", value: val};
+            return {tag: "value", value: val};
         case "builtin1":
             var arg = optimizeValue(e.arg, env);
             return {...e, arg: arg};
@@ -153,7 +153,6 @@ export function optimizeStatements(stmt: Stmt<any>, env: Env): Stmt<any>{
         case "ifjmp":
             var optimizedValue: Value<any> = optimizeValue(stmt.cond, env);
             return {...stmt, cond: optimizedValue};
-            return stmt
         case "jmp":
             return stmt;
         case "store":
@@ -168,7 +167,7 @@ export function computePredecessorSuccessor(basicBlocks: Array<BasicBlock<any>>)
     let blockMapping: Map<string, BasicBlock<any>> = new Map<string, BasicBlock<any>>();
     basicBlocks.forEach(basicBlock=>{
         blockMapping.set(basicBlock.label, basicBlock);
-        const lastStmt = basicBlock.stmts[-1];
+        const lastStmt = basicBlock.stmts[basicBlock.stmts.length-1];
         if(lastStmt.tag === "ifjmp"){
             //Assigning successors
             if (succs.has(basicBlock.label) && !succs.get(basicBlock.label).includes(lastStmt.thn))
@@ -283,24 +282,31 @@ function addParamsToEnv(params: Array<Parameter<any>>, env: Env, dummyEnv: boole
     });
 }
 
-function optimizeBlock(block: BasicBlock<any>, env: Env): BasicBlock<any>{
+function optimizeBlock(block: BasicBlock<any>, env: Env): [BasicBlock<any>, boolean]{
+    var blockOptimized: boolean = false;
     var newStmts: Stmt<any>[] = block.stmts.map(s => {
-        return optimizeStatements(s, env);
+        var optimizedstatement = optimizeStatements(s, env);
+        if (!blockOptimized && !checkStmtEquality(optimizedstatement, s)) blockOptimized = true;
+        return optimizedstatement;
     });
-    return {...block, stmts: newStmts};
+    return [{...block, stmts: newStmts}, blockOptimized];
 }
 
 export function optimizeFunction(func: FunDef<any>): FunDef<any>{
     var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctions(func);
 
+    var functionOptimized: boolean = false;
     //Write code to optimize functions here
     var newBody: Array<BasicBlock<any>> = func.body.map(b => {
         var tempBlockEnv: Env = duplicateEnv(inEnvMapping.get(b.label));
-        return optimizeBlock(b, tempBlockEnv);
+        var [optimizedBlock, blockOptimized]: [BasicBlock<any>, boolean] = optimizeBlock(b, tempBlockEnv);
+        if (!functionOptimized && blockOptimized) functionOptimized = true;
+        return optimizedBlock;
     });
 
-    return {...func, body: newBody};
+    if (functionOptimized) return optimizeFunction({...func, body: newBody})
 
+    return {...func, body: newBody};
 }
 
 export function optimizeClass(c: Class<any>): Class<any>{
@@ -367,10 +373,14 @@ export function optimizeProgram(program: Program<any>): Program<any>{
     var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentProgram(program);
 
     //Write code to optimize the program using the environment
+    var programOptimized: boolean = false;
     var newBody: Array<BasicBlock<any>> = program.body.map(b => {
         var tempBlockEnv: Env = duplicateEnv(inEnvMapping.get(b.label));
-        return optimizeBlock(b, tempBlockEnv);
+        var [optimizedBlock, blockOptimized]: [BasicBlock<any>, boolean] = optimizeBlock(b, tempBlockEnv);
+        if (!programOptimized && blockOptimized) programOptimized = true;
+        return optimizedBlock;
     });
+    if (programOptimized) program = optimizeProgram({...program, body: newBody});
 
     var newClass: Array<Class<any>> = program.classes.map(c => {
         return optimizeClass(c);
