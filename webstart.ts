@@ -1,5 +1,5 @@
 import {BasicREPL} from './repl';
-import { Type, Value } from './ast';
+import { Type, Value, Annotation } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
 import { importObjectErrors } from './errors';
@@ -62,7 +62,7 @@ function webStart() {
     };
     var repl = new BasicREPL(importObject);
 
-    function renderResult(result : Value) : void {
+    function renderResult(result : Value<Annotation>) : void {
       if(result === undefined) { console.log("skip"); return; }
       if (result.tag === "none") return;
       const elt = document.createElement("pre");
