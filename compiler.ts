@@ -197,39 +197,41 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       var x = val.value // for division
       var n = 0
       var digits : Number[] = []
-      while(x >= 1) {
+      while(x != BigInt(0)) {
+          if (x < 0) {
+            x *= BigInt(-1)
+          }
           digits.push(parseInt(String(x % BigInt(1 << 31))))
           x = x / BigInt(1 << 31) 
           n = n + 1
       }
 
-      // digits = digits.reverse();
-
       n = n + 1 // store (n+1) blocks (n: number of digits)
 
       var i = 0
       var return_val : string[] = []
-
-      // if the bignum is negative -> negative number of digits
-      if (val.value < 0) {
-        return_val.push(`(i32.const -${n})`);
-        return_val.push(`(call $alloc)`);
-        return_val.push(`(local.set $$scratch)`);
-      } else {
-        return_val.push(`(i32.const ${n})`);
-        return_val.push(`(call $alloc)`);
-        return_val.push(`(local.set $$scratch)`);
-      }
       
+      return_val.push(`(i32.const ${n})`);
+      return_val.push(`(call $alloc)`);
+      return_val.push(`(local.set $$scratch)`);
+
       // console.log(n);
       
       // store the bignum in (n+1) blocks
       for (i; i < n; i++) {
           if (i == 0) {
+            if (val.value < 0) {
+              return_val.push(`(local.get $$scratch)`);
+              return_val.push(`(i32.const ${i})`);
+              return_val.push(`((i32.sub) (i32.const 0) (i32.const ${n-1}))`);
+              return_val.push(`call $store`);
+            } else {
               return_val.push(`(local.get $$scratch)`);
               return_val.push(`(i32.const ${i})`);
               return_val.push(`(i32.const ${n-1})`);
               return_val.push(`call $store`);
+            }
+              
           } else {
               return_val.push(`(local.get $$scratch)`);
               return_val.push(`(i32.const ${i})`);
