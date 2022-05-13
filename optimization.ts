@@ -1,41 +1,29 @@
-import { BinOp, Type, UniOp} from "./ast";
-import { Stmt, Expr, Value, VarInit, BasicBlock, Program } from "./ir";
+import { BinOp, Parameter, Type, UniOp} from "./ast";
+import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "./ir";
 
-import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual } from "./optimization_utils"; 
+import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkCompileValEquality } from "./optimization_utils"; 
 
 type Env = {
-    vars: Map<string, Value<Type>>;
-}
-type compileVal = {
-    tag: "nac"|"val", value?: Value<Type>;
+    vars: Map<string, compileVal>;
 }
 
-type EnvWork = {
-    name: string,
-    val: compileVal;
+export type compileVal = {
+    tag: "nac"|"val"|"undef", value?: Value<any>;
 }
 
-type WorkList = {
-    vars: Map<string, EnvWork>;
-}
-
-export function initializeDefinitions(inits: Array<VarInit<Type>>, env: Env){
-    inits.forEach(init => {
-        env.vars.set(init.name, init.value);
-    });
-}
-
-export function optimizeValue(val: Value<Type>, env: Env): Value<Type>{
+export function optimizeValue(val: Value<any>, env: Env): Value<any>{
     if (val.tag !== "id"){
         return val;
     }
     if (env.vars.has(val.name)){
-        val = env.vars.get(val.name);
+        if (["nac", "undef"].includes(env.vars.get(val.name).tag))
+            return val;
+        val = env.vars.get(val.name).value;
     }
     return val;
 }
 
-export function evaluateBinOp(op: BinOp, leftVal: Value<Type>, rightVal: Value<Type>): Value<Type>{
+export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<any>): Value<any>{
     if([BinOp.Plus, BinOp.Minus,BinOp.IDiv,BinOp.Mul, BinOp.Gt, BinOp.Lt, BinOp.Gte, BinOp.Lte, BinOp.Mod].includes(op)){
         if(!isTagBigInt(leftVal) || !isTagBigInt(rightVal))
             throw new Error("Compiler Error");
@@ -74,13 +62,13 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<Type>, rightVal: Value<T
         if(!isTagEqual(leftVal, rightVal) || isTagNone(leftVal) || isTagNone(rightVal) || isTagId(leftVal) || isTagId(rightVal))
             throw new Error("Compiler Error");
         switch(op){
-            case BinOp.Eq: return { tag: "bool", value: leftVal.value == rightVal.value};
+            case BinOp.Eq: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value === rightVal.value};
 
         }
     }
 }
 
-export function evaluateUniOp(op: UniOp, val: Value<Type>): Value<Type>{
+export function evaluateUniOp(op: UniOp, val: Value<any>): Value<any>{
     switch(op){
         case UniOp.Neg:
 
@@ -101,86 +89,335 @@ export function evaluateUniOp(op: UniOp, val: Value<Type>): Value<Type>{
 export function optimizeExpression(e: Expr<Type>, env: Env): Expr<Type>{
     switch(e.tag) {
         case "value":
-           e.value = optimizeValue(e.value, env);
-           return e;
+           var optimizedValue: Value<any> = optimizeValue(e.value, env);
+           return {...e, value: optimizedValue};
         case "binop":
             var left = optimizeValue(e.left, env);
             var right = optimizeValue(e.right, env);
             if (left.tag === "id" || right.tag === "id")
-                return e;
-            
-            const val = evaluateBinOp(e.op, e.left, e.right);
-            return { tag: "value", value: evaluateBinOp(e.op, e.left, e.right)};
-
+                return {...e, left: left, right: right};
+            var val: Value<any> = evaluateBinOp(e.op, e.left, e.right);
+            return {a: val.a, tag: "value", value: val};
         case "uniop":
-            break;
+            var arg = optimizeValue(e.expr, env);
+            if (arg.tag === "id")
+                return {...e, expr: arg};
+            var val: Value<any> = evaluateUniOp(e.op, arg);
+            return {a: val.a, tag: "value", value: val};
+        case "builtin1":
+            var arg = optimizeValue(e.arg, env);
+            return {...e, arg: arg};
+        case "builtin2":
+            var left = optimizeValue(e.left, env);
+            var right = optimizeValue(e.right, env);
+            return {...e, left:left, right: right};
+        case "call":
+            var modifiedParams = e.arguments.map(a => {
+                return optimizeValue(a, env);
+            });
+            return {...e, arguments: modifiedParams};
+        case "alloc":
+            var amount = optimizeValue(e.amount, env);
+            return {...e, amount: amount};
+        case "load":
+            var start = optimizeValue(e.start, env);
+            var offset = optimizeValue(e.offset, env);
+            return {...e, start: start, offset: offset};
     }
 }
 
-export function optimizeStmt(stmt: Stmt<Type>, env: Env): Stmt<Type> {
-    switch(stmt.tag) {
+export function optimizeStatements(stmt: Stmt<any>, env: Env): Stmt<any>{
+    switch(stmt.tag){
         case "assign":
-            stmt.value = optimizeExpression(stmt.value, env);
+            var optimizedExpression: Expr<any> = optimizeExpression(stmt.value, env);
+            if (optimizedExpression.tag === "value"){
+                if (optimizedExpression.value.tag === "id"){
+                    env.vars.set(stmt.name, {tag: "nac"});
+                }
+                else{
+                    env.vars.set(stmt.name, {tag: "val", value: optimizedExpression.value});
+                }
+            }
+            else{
+                env.vars.set(stmt.name, {tag: "nac"});
+            }
+            return {...stmt, value: optimizedExpression};
+        case "return":
+            var optimizedValue: Value<any> = optimizeValue(stmt.value, env);
+            return {...stmt, value: optimizedValue};
+        case "expr":
+            var optimizedExpression: Expr<any> = optimizeExpression(stmt.expr, env);
+            return {...stmt, expr: optimizedExpression};
+        case "pass":
+            return stmt;
+        case "ifjmp":
+            var optimizedValue: Value<any> = optimizeValue(stmt.cond, env);
+            return {...stmt, cond: optimizedValue};
+            return stmt
+        case "jmp":
+            return stmt;
+        case "store":
             return stmt;
     }
 }
 
-export function optimizeProgram(pr: Program<Type>) : Program<Type>{
-    pr.body = pr.body.map((basicBlock) => {
-        basicBlock.stmts = basicBlock.stmts.map((stmt) => {
-            return optimizeStmt(stmt, { vars: new Map<any, any>() });
-        });
-        return { ...basicBlock };
-    });
-    return pr;
-}
-export function compPreSuc(bbs: Array<BasicBlock<Type>>): [Map<string, string[]>, Map<string, string[]>]{
+//Assuming jumps if it occurs will occur at the last statement of the block
+export function computePredecessorSuccessor(basicBlocks: Array<BasicBlock<any>>): [Map<string, string[]>, Map<string, string[]>, Map<string, BasicBlock<any>>]{
     let succs: Map<string, string[]> = new Map<string, string[]>();
     let preds: Map<string, string[]> = new Map<string, string[]>();
-    bbs.forEach(bb=>{
-        const lastStmt = bb.stmts[-1];
-        if(lastStmt.tag !== "ifjmp" && lastStmt.tag!== "jmp"){
-            throw new Error("OPT Error: last stmt should be jump in BB!");
-        }
+    let blockMapping: Map<string, BasicBlock<any>> = new Map<string, BasicBlock<any>>();
+    basicBlocks.forEach(basicBlock=>{
+        blockMapping.set(basicBlock.label, basicBlock);
+        const lastStmt = basicBlock.stmts[-1];
         if(lastStmt.tag === "ifjmp"){
-            let tmp: Array<string> = [];
-            if(!succs.has(bb.label)){
-                tmp = [lastStmt.thn, lastStmt.els];
-                succs.set(bb.label, tmp);
+            //Assigning successors
+            if (succs.has(basicBlock.label) && !succs.get(basicBlock.label).includes(lastStmt.thn))
+                succs.set(basicBlock.label, [...succs.get(basicBlock.label), lastStmt.thn]);
+            else if (!succs.has(basicBlock.label))
+                succs.set(basicBlock.label, [lastStmt.thn]);
+            
+
+            if (succs.has(basicBlock.label) && !succs.get(basicBlock.label).includes(lastStmt.els))
+                succs.set(basicBlock.label, [...succs.get(basicBlock.label), lastStmt.els]);
+            else if (!succs.has(basicBlock.label))
+                succs.set(basicBlock.label, [lastStmt.els]);
+
+            //Assigning predecessors
+            if(preds.has(lastStmt.thn) && !preds.get(lastStmt.thn).includes(basicBlock.label))
+                preds.set(lastStmt.thn, [...preds.get(lastStmt.thn), basicBlock.label]);
+            else if (!preds.has(lastStmt.thn))
+                preds.set(lastStmt.thn, [basicBlock.label]);
+
+            if(preds.has(lastStmt.els) && !preds.get(lastStmt.els).includes(basicBlock.label))
+                preds.set(lastStmt.els, [...preds.get(lastStmt.els), basicBlock.label]);
+            else if (!preds.has(lastStmt.els))
+                preds.set(lastStmt.els, [basicBlock.label]);
+        }
+        else if (lastStmt.tag === "jmp"){
+            //Assigning successors
+            if (succs.has(basicBlock.label) && !succs.get(basicBlock.label).includes(lastStmt.lbl))
+                succs.set(basicBlock.label, [...succs.get(basicBlock.label), lastStmt.lbl]);
+            else if (!succs.has(basicBlock.label))
+                succs.set(basicBlock.label, [lastStmt.lbl]);
+
+            //Assigning predecessors
+            if (preds.has(lastStmt.lbl) && !preds.get(lastStmt.lbl).includes(basicBlock.label))
+                preds.set(lastStmt.lbl, [...preds.get(lastStmt.lbl), basicBlock.label]);
+            else if (!preds.has(lastStmt.lbl))
+                preds.set(lastStmt.lbl, [basicBlock.label]);
+        }
+    });
+    return [preds, succs, blockMapping];
+
+}
+
+function computeInitEnv(varDefs: Array<VarInit<any>>, dummyEnv: boolean): Env{
+    var env: Env = {vars: new Map<string, compileVal>()};
+    varDefs.forEach(def => {
+        if (!dummyEnv)
+            env.vars.set(def.name, {tag: "val", value: def.value});
+        else
+            env.vars.set(def.name, {tag: "undef"});
+    });
+    return env;
+}
+
+function mergeEnvironment(a: Env, b: Env): Env{
+    var returnEnv: Env = {vars: new Map<string, compileVal>()};
+
+    a.vars.forEach((aValue: compileVal, key: string) => {
+        const bValue: compileVal = b.vars.get(key);
+        if (bValue.tag === "nac" || aValue.tag === "nac")
+            returnEnv.vars.set(key, {tag: "nac"});
+        else if (aValue.tag === "undef" && bValue.tag === "undef"){
+            returnEnv.vars.set(key, {tag: "undef"})
+        }
+        else if (aValue.tag === "undef"){
+            returnEnv.vars.set(key, {tag: "val", value: bValue.value})
+        }
+        else if (bValue.tag === "undef"){
+            returnEnv.vars.set(key, {tag: "val", value: aValue.value});
+        }
+        else if (checkValueEquality(aValue.value, bValue.value))
+            returnEnv.vars.set(key, {tag: "val", value: aValue.value});
+        else
+            returnEnv.vars.set(key, {tag: "nac"});
+    });
+
+    return returnEnv;
+}
+
+function updateEnvironmentByBlock(inEnv: Env, block: BasicBlock<any>): Env{
+    var outEnv: Env = {vars: new Map(inEnv.vars)};
+    block.stmts.forEach(statement => {
+        if (statement.tag === "assign"){
+            const optimizedExpression = optimizeExpression(statement.value, outEnv);
+            if (optimizedExpression.tag === "value"){
+                if (optimizedExpression.value.tag === "id"){
+                    outEnv.vars.set(statement.name, {tag: "nac"});
+                }
+                else{
+                    outEnv.vars.set(statement.name, {tag: "val", value: optimizedExpression.value});
+                }
             }
             else{
-                tmp = succs.get(bb.label);
-                tmp = tmp.concat([lastStmt.thn, lastStmt.els]);
-                succs.set(bb.label, tmp);
+                outEnv.vars.set(statement.name, {tag: "nac"});
             }
+        }
+    });
+    return outEnv;
+}
+
+function duplicateEnv(env: Env): Env{
+    return {vars: new Map(env.vars)};
+}
+
+function addParamsToEnv(params: Array<Parameter<any>>, env: Env, dummyEnv: boolean){
+    params.forEach(p => {
+        if (dummyEnv){
+            env.vars.set(p.name, {tag: "undef"});
         }
         else{
-            if(!succs.has(bb.label)){
-                succs.set(bb.label, [lastStmt.lbl]);
-            }
-            else{
-                succs.set(bb.label, succs.get(bb.label).concat([lastStmt.lbl]));
-            }
+            env.vars.set(p.name, {tag: "nac"});
         }
     });
+}
 
-    succs.forEach((value: string[], key: string) => {
-        value.forEach(v=>{
-            if(!preds.has(v)){
-                preds.set(v, [key]);
-            }
-            else{
-                preds.set(v, succs.get(v).concat([key]));
-            }
-        });
+function optimizeBlock(block: BasicBlock<any>, env: Env): BasicBlock<any>{
+    var newStmts: Stmt<any>[] = block.stmts.map(s => {
+        return optimizeStatements(s, env);
     });
-    return [preds, succs];
+    return {...block, stmts: newStmts};
+}
+
+export function optimizeFunction(func: FunDef<any>): FunDef<any>{
+    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctions(func);
+
+    //Write code to optimize functions here
+    var newBody: Array<BasicBlock<any>> = func.body.map(b => {
+        var tempBlockEnv: Env = duplicateEnv(inEnvMapping.get(b.label));
+        return optimizeBlock(b, tempBlockEnv);
+    });
+
+    return {...func, body: newBody};
 
 }
 
-export function calWorkList(inList: WorkList, outList: WorkList): [WorkList, WorkList]{
-
-    return [inList, outList];
-
+export function optimizeClass(c: Class<any>): Class<any>{
+    var optimizedMethods: Array<FunDef<any>> = c.methods.map(m => {
+        return optimizeFunction(m);
+    })
+    return {...c, methods: optimizedMethods};
 }
-// export function optimizeConstantProp()
+
+export function generateEnvironmentProgram(program: Program<any>): [Map<string, Env>, Map<string, Env>]{
+    var initialEnv = computeInitEnv(program.inits, false);
+
+    var inEnvMapping: Map<string, Env> = new Map<string, Env>();
+    var outEnvMapping: Map<string, Env> = new Map<string, Env>();
+
+    var dummyEnv = computeInitEnv(program.inits, true);
+
+    program.body.forEach(f => {
+        inEnvMapping.set(f.label, duplicateEnv(dummyEnv));
+        outEnvMapping.set(f.label, duplicateEnv(dummyEnv));
+    });
+
+    var [preds, succs, blockMapping]: [Map<string, string[]>, Map<string, string[]>, Map<string, BasicBlock<any>>] = computePredecessorSuccessor(program.body);
+
+    preds.set(program.body[0].label, ["VD"]);
+    succs.set("VD", [program.body[0].label]);
+    outEnvMapping.set("VD", initialEnv);
+
+    generateEnvironments([program.body[0].label], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
+
+    return [inEnvMapping, outEnvMapping];
+}
+
+export function generateEnvironmentFunctions(func: FunDef<any>): [Map<string, Env>, Map<string, Env>]{
+    var initialEnv  = computeInitEnv(func.inits, false);
+    addParamsToEnv(func.parameters, initialEnv, false);
+
+    var inEnvMapping: Map<string, Env> = new Map<string, Env>();
+    var outEnvMapping: Map<string, Env> = new Map<string, Env>();
+
+    var dummyEnv = computeInitEnv(func.inits, true);
+    addParamsToEnv(func.parameters, initialEnv, true);
+
+    func.body.forEach(f => {
+        inEnvMapping.set(f.label, duplicateEnv(dummyEnv));
+        outEnvMapping.set(f.label, duplicateEnv(dummyEnv));
+    });
+
+    inEnvMapping.set(func.body[0].label, initialEnv);
+
+    var [preds, succs, blockMapping]: [Map<string, string[]>, Map<string, string[]>, Map<string, BasicBlock<any>>] = computePredecessorSuccessor(func.body);
+
+    preds.set(func.body[0].label, ["VD"]);
+    succs.set("VD", [func.body[0].label]);
+    outEnvMapping.set("VD", initialEnv);
+    
+    generateEnvironments([func.body[0].label], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
+
+    return [inEnvMapping, outEnvMapping];
+}
+
+export function optimizeProgram(program: Program<any>): Program<any>{
+
+    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentProgram(program);
+
+    //Write code to optimize the program using the environment
+    var newBody: Array<BasicBlock<any>> = program.body.map(b => {
+        var tempBlockEnv: Env = duplicateEnv(inEnvMapping.get(b.label));
+        return optimizeBlock(b, tempBlockEnv);
+    });
+
+    var newClass: Array<Class<any>> = program.classes.map(c => {
+        return optimizeClass(c);
+    });
+
+    var newFunctions: Array<FunDef<any>> = program.funs.map(f => {
+        return optimizeFunction(f);
+    });
+
+    return {...program, body: newBody, classes: newClass, funs: newFunctions};
+}
+
+function mergeAllPreds(predecessorBlocks: Array<string>, outEnvMapping: Map<string, Env>): Env{
+    if (predecessorBlocks.length === 0){
+        throw new Error(`CompileError: Block with predecessors`);
+    }
+    var inEnv: Env = outEnvMapping.get(predecessorBlocks[0]);
+    
+    predecessorBlocks.slice(1).forEach(b => {
+        inEnv = mergeEnvironment(inEnv, outEnvMapping.get(b));
+    });
+    
+    return inEnv;
+}
+
+function checkEnvEquality(a: Env, b: Env): boolean{
+    a.vars.forEach((aValue: compileVal, key: string) => {
+        const bValue: compileVal = b.vars.get(key);
+        if (!checkCompileValEquality(aValue, bValue))
+            return false;
+    });
+    return true;
+}
+
+export function generateEnvironments(workList: Array<string>, inEnvMapping: Map<string, Env>, outEnvMapping: Map<string, Env>, preds: Map<string, string[]>, succs: Map<string, string[]>, blockMapping: Map<string, BasicBlock<any>>){
+    if (workList.length === 0)
+        return;
+    const currBlock: string = workList.pop();
+    const newInEnv: Env = mergeAllPreds(preds.get(currBlock), outEnvMapping);
+    if (checkEnvEquality(inEnvMapping.get(currBlock), newInEnv)){
+        generateEnvironments(workList, inEnvMapping, outEnvMapping, preds, succs, blockMapping);
+        return;
+    }
+    inEnvMapping.set(currBlock, newInEnv);
+    outEnvMapping.set(currBlock, updateEnvironmentByBlock(newInEnv, blockMapping.get(currBlock)));
+
+    generateEnvironments([...workList, ...succs.get(currBlock)], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
+
+    return;
+}
