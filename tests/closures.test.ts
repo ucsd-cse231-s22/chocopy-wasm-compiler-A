@@ -89,6 +89,18 @@ print(x is y)`,
     ["True"]
   );
 
+  assertPrint(
+    "is check",
+    `def g(y: int) -> int:
+    return y
+x : Callable[[int], int] = None
+y : Callable[[int], int] = None
+x = g
+y = mklambda(Callable[[int], int], lambda a: a+2)
+print(x is y)`,
+    ["False"]
+  );
+
 //   assertPrint(
 //     "Currying - Design doc #5",
 //     `add: Callable[[int], Callable[[int], int]] = None

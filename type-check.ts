@@ -91,8 +91,8 @@ export function equalType(t1: Type, t2: Type) {
   );
 }
 
-export function isNoneOrClass(t: Type) {
-  return t.tag === "none" || t.tag === "class";
+export function isNoneOrClassOrCallable(t: Type) {
+  return t.tag === "none" || t.tag === "class" || t.tag === "callable";
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
@@ -289,7 +289,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           if(equalType(tLeft.a, BOOL) && equalType(tRight.a, BOOL)) { return {a: BOOL, ...tBin} ; }
           else { throw new TypeCheckError("Type mismatch for boolean op" + expr.op); }
         case BinOp.Is:
-          if(!isNoneOrClass(tLeft.a) || !isNoneOrClass(tRight.a))
+          if(!isNoneOrClassOrCallable(tLeft.a) || !isNoneOrClassOrCallable(tRight.a))
             throw new TypeCheckError("is operands must be objects");
           return {a: BOOL, ...tBin};
       }
