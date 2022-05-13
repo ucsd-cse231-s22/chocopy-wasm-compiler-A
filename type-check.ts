@@ -349,7 +349,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<null
           return tConstruct;
         }
       } else if (env.functions.has(expr.name)) {
-        return tcCallOrMethod(expr.name, expr.arguments, expr.kwarguments, env, locals, null)
+        // const [argTypes, retType] = env.functions.get(expr.name);
+        // const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        // 
         // if(argTypes.length === expr.arguments.length &&
         //    tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
         //   return {...expr, a: retType, arguments: tArgs};
@@ -357,6 +359,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<null
         // else {
         //   throw new TypeError("Function call type mismatch: " + expr.name);
         // }
+        const [expectedParams, retType] = env.functions.get(expr.name);
+        const tArgs = tcCallOrMethod(expr.name, expectedParams, expr.arguments, expr.kwarguments, env, locals);
+        return { ...expr, a: retType, arguments: tArgs, kwarguments: undefined };
       } else {
         throw new TypeError("Undefined function: " + expr.name);
       }
@@ -377,29 +382,46 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<null
         throw new TypeCheckError("field lookups require an object");
       }
     case "method-call":
-      let realArgs = [expr.obj].concat(expr.arguments);
-      return tcCallOrMethod(expr.method, realArgs, expr.kwarguments, env, locals, expr.obj)
-    // if (tObj.a.tag === "class") {
-    //   if (env.classes.has(tObj.a.name)) {
-    //     const [_, methods] = env.classes.get(tObj.a.name);
-    //     if (methods.has(expr.method)) {
-    //       const [methodArgs, methodRet] = methods.get(expr.method);
-    //       const realArgs = [tObj].concat(tArgs);
-    //       if (methodArgs.length === realArgs.length &&
-    //         methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a, argTyp))) {
-    //         return { ...expr, a: methodRet, obj: tObj, arguments: tArgs };
-    //       } else {
-    //         throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}`);
-    //       }
-    //     } else {
-    //       throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a.name}`);
-    //     }
-    //   } else {
-    //     throw new TypeCheckError("method call on an unknown class");
-    //   }
-    // } else {
-    //   throw new TypeCheckError("method calls require an object");
-    // }
+      // var tObj = tcExpr(env, locals, expr.obj);
+      // var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+      // if (tObj.a.tag === "class") {
+      //   if (env.classes.has(tObj.a.name)) {
+      //     const [_, methods] = env.classes.get(tObj.a.name);
+      //     if (methods.has(expr.method)) {
+      //       const [methodArgs, methodRet] = methods.get(expr.method);
+      //       const realArgs = [tObj].concat(tArgs);
+      //       if (methodArgs.length === realArgs.length &&
+      //         methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a, argTyp))) {
+      //         return { ...expr, a: methodRet, obj: tObj, arguments: tArgs };
+      //       } else {
+      //         throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}`);
+      //       }
+      //     } else {
+      //       throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a.name}`);
+      //     }
+      //   } else {
+      //     throw new TypeCheckError("method call on an unknown class");
+      //   }
+      // } else {
+      //   throw new TypeCheckError("method calls require an object");
+      // }
+      var tObj = tcExpr(env, locals, expr.obj);
+      if (tObj.a.tag !== "class") {
+        throw new TypeCheckError("method calls require an object");
+      }
+      if (!env.classes.has(tObj.a.name)) {
+        throw new TypeCheckError("method call on an unknown class");
+      }
+      const [_, methods] = env.classes.get(tObj.a.name);
+      if (!methods.has(expr.method)) {
+        throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a.name}`);
+      }
+      const [methodArgs, methodRet] = methods.get(expr.method);
+      const realArgs = [expr.obj].concat(expr.arguments);
+      const tArgs = tcCallOrMethod(expr.method, methodArgs, realArgs, expr.kwarguments, env, locals);
+      // Remove self from arguments
+      tArgs.shift();
+      return { ...expr, a: methodRet, obj: tObj, arguments: tArgs, kwarguments: undefined };
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
 }
@@ -412,34 +434,10 @@ export function tcLiteral(literal: Literal) {
   }
 }
 
-export function tcCallOrMethod(funcName: string, realArgs: Array<Expr<null>>, realKwArgs: Map<string, Expr<null>>, env: GlobalTypeEnv, locals: LocalTypeEnv, obj?: Expr<null>): Expr<Type> {
-  let expectedParams: Array<Parameter<Type>>;
-  let expectedArgTypes: Array<Type>;
-  let expectedArgNames: Array<string>;
-  let retType: Type;
-  let tObj: Expr<Type> = null;
-  if (obj) {
-    tObj = tcExpr(env, locals, obj);
-    if (tObj.a.tag !== "class") {
-      throw new TypeCheckError("method calls require an object");
-    }
-    if (!env.classes.has(tObj.a.name)) {
-      throw new TypeCheckError("method call on an unknown class");
-    }
-    const [_, methods] = env.classes.get(tObj.a.name);
-    if (!methods.has(funcName)) {
-      throw new TypeCheckError(`could not found method ${funcName} in class ${tObj.a.name}`);
-    }
-    [expectedParams, retType] = methods.get(funcName);
-    expectedArgTypes = expectedParams.map(p => p.type);
-    expectedArgNames = expectedParams.map(p => p.name);
-  }
-  else {
-    [expectedParams, retType] = env.functions.get(funcName);
-    expectedArgTypes = expectedParams.map(p => p.type);
-    expectedArgNames = expectedParams.map(p => p.name);
-  }
-
+// export function tcCallOrMethod(funcName: string, realArgs: Array<Expr<null>>, realKwArgs: Map<string, Expr<null>>, env: GlobalTypeEnv, locals: LocalTypeEnv, obj?: Expr<null>): Expr<Type> {
+export function tcCallOrMethod(funcName: string, expectedParams:Array<Parameter<Type>>, realArgs: Array<Expr<null>>, realKwArgs: Map<string, Expr<null>>, env: GlobalTypeEnv, locals: LocalTypeEnv): Array<Expr<Type>> {
+  const expectedArgTypes = expectedParams.map(p => p.type);
+  const expectedArgNames = expectedParams.map(p => p.name);
   if (realArgs.length > expectedArgTypes.length) {
     throw new TypeCheckError(`${funcName}() takes from 1 to ${expectedArgTypes.length} positional arguments but ${realArgs.length} were given`);
   }
@@ -481,10 +479,5 @@ export function tcCallOrMethod(funcName: string, realArgs: Array<Expr<null>>, re
     let missingArgs = tAllArgs.filter(arg => arg === null);
     throw new TypeCheckError(`${funcName}() missing ${missingArgs.length} required positional argument: ${missingArgs.join(", ")}`);
   }
-  if (tObj) {
-    // Remove self from arguments
-    tAllArgs.shift();
-    return { a: retType, tag: "method-call", obj: tObj, method: funcName, arguments: tAllArgs };
-  }
-  return { a: retType, tag: "call", name: funcName, arguments: tAllArgs };
+  return tAllArgs;
 }
