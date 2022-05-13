@@ -40,6 +40,8 @@ describe("Stage1 function argument tests", ()=>{
   assertTCFail("func: unexpected keyword argument", funcdef + `f(n=3)`);
   //5
   assertParseFail("func: positional argument follows keyword argument", funcdef + `f(1, y=2, 3)`)
+  //6
+  assertTCFail("func: assign wrong type", funcdef + `f(1, 2, False)`)
 })
 
 describe("Stage1 function define tests", ()=>{
@@ -81,7 +83,7 @@ describe("Stage1 function define tests", ()=>{
   `
   var funcdef= 
   `
-  def f(c : C=C()):
+  def f(c : C):
     print(c.x)
   `
   var body = 

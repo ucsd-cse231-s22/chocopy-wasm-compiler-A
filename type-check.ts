@@ -137,9 +137,9 @@ export function tcInit(env: GlobalTypeEnv, init: VarInit<null>): VarInit<Type> {
     throw new TypeCheckError("Expected type `" + init.type + "`; got type `" + valTyp + "`");
   }
 }
-export function tcPar(env: GlobalTypeEnv, par : Parameter<null>){
+export function tcPar(env: GlobalTypeEnv, par : Parameter<null>):Parameter<Type>{
   if(par.value == undefined){
-    return
+    return {...par}
   }
   else{
     var value = tcExpr(env,emptyLocalTypeEnv(), par.value)
@@ -147,7 +147,7 @@ export function tcPar(env: GlobalTypeEnv, par : Parameter<null>){
       throw new TypeCheckError(`Expected type ${JSON.stringify(par.type)} but get value.a`);
     }
     else{
-      return par.type
+      return {...par,value}
     }
   }
 }
