@@ -215,7 +215,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       const idx = generateName("$foridx")
       var idxInit : AST.VarInit<Type> = { a: NONE, name: idx, type: NUM, value: PyLiteralInt(0) };
       var irIdx = lowerVarInit(idxInit, env);
-      if (s.iterable.tag !== "list-obj") throw new Error("Compiler is cursed, go home.")
+      // if (s.iterable.tag !== "list-obj") throw new Error("Compiler is cursed, go home.")
       var curState : AST.Expr<Type> = {  a: NUM, tag: "list-lookup", list: s.iterable, index: {  a: NUM, tag: "id", name: idx }};
       var assignStmt : AST.Stmt<Type> = {  a: NONE, tag: "assign", name: s.name, value: curState };
 
@@ -223,7 +223,8 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var stepStmt : AST.Stmt<Type> = {  a: NONE, tag: "assign", name: idx, value: stepExpr };
 
       var whileBody : Array<AST.Stmt<Type>> = [assignStmt, ...s.body, stepStmt];
-      var condExpr : AST.Expr<Type> = {  a: BOOL, tag: "binop", op: BinOp.Lt, left: {  a: NUM, tag: "id", name: idx }, right: PyLiteralExpr(PyInt(s.iterable.length))};
+      var lenExpr : AST.Expr<Type> = {  a: NUM, tag: "list-length", list: s.iterable}
+      var condExpr : AST.Expr<Type> = {  a: BOOL, tag: "binop", op: BinOp.Lt, left: {  a: NUM, tag: "id", name: idx }, right: lenExpr};
       var whileStmt : AST.Stmt<Type> = {  a: NONE, tag: "while", cond: condExpr, body: whileBody };
       return [irIdx, ...flattenStmt(whileStmt, blocks, env)]
   }
@@ -405,6 +406,15 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         [...entrystmts, { tag: "assign", name: listName, value: listalloc}, ...listassign],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: listName } }
       ]
+    case "list-length":
+      var [startinits, startstmts, startval] = flattenExprToVal(e.list, env);
+      return[
+        [...startinits],
+        [...startstmts],
+        {tag: "load",
+          start: startval,
+          offset: literalToVal(PyLiteralInt(0))}
+      ]
     case "list-lookup":
       var [startinits, startstmts, startval] = flattenExprToVal(e.list, env);
       var [idxinits, idxstmts, idxval]:any = flattenExprToVal(e.index, env);
@@ -435,7 +445,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           offset: {tag: "id", name: offset}}
         ]
       }
-      
+
   }
 }
 

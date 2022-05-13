@@ -28,7 +28,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "index-assign", list: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
-  | { a?: A; tag: "for"; name: string; iterable: Expr<A>; body: Array<Stmt<A>> }
+  | {  a?: A; tag: "for"; name: string; iterable: Expr<A>; body: Array<Stmt<A>> }
 
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal }
@@ -43,6 +43,7 @@ export type Expr<A> =
   | {  a?: A, tag: "construct", name: string }
   | {  a?: A, tag: "list-obj", length: number, entries: Array<Expr<A>>}
   | {  a?: A, tag: "list-lookup", list: Expr<A>, index: Expr<A>}
+  | {  a?: A, tag: "list-length", list: Expr<A>}
 
 export type Literal = 
     { tag: "num", value: number }
