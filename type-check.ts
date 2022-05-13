@@ -75,7 +75,7 @@ export function isNoneOrClass(t: Type) {
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
+  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" || t1.tag == "none" && t2.tag == "str"
 }
 
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
@@ -251,7 +251,26 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Eq:
         case BinOp.Neq:
           if(tLeft.a.tag === "class" || tRight.a.tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")
-          if(equalType(tLeft.a, tRight.a)) { return {a: BOOL, ...tBin} ; }
+          if(equalType(tLeft.a, tRight.a)) {
+            console.log("BOP",tBin);
+            if (tLeft.a.tag == "str" && tLeft.tag == "literal" && tRight.a.tag == "str" && tRight.tag == "literal"){
+              if (tLeft.value.tag == "str" &&tRight.value.tag == "str" && tLeft.value.value === tRight.value.value){
+                const l:Expr<Type> = {
+                  "tag": "literal",
+                  "value": {
+                      "tag": "num",
+                      "value": 1
+                  },
+                  "a": {
+                      "tag": "number"
+                  }
+              }
+              const tBinNew = {...expr, left: l, right: l};
+                return {a:BOOL, ...tBinNew};
+              }
+            }
+             return {a: BOOL, ...tBin} ; 
+            }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op)}
         case BinOp.Lte:
         case BinOp.Gte:
