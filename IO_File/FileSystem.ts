@@ -8,14 +8,15 @@ export type OpenFile = {
     filePath: string,
     currentPosition: number,   // the position of the current pointer
     mode: FileMode,            // the mode of this file  
+    fileSize: number
 }
 
 enum FileMode {
     OPEN,   // Just open the file
     R_ONLY, // read only mode
-    W_END,  // write to the end
+    W_APPEND,  // append the data to the end
     RW,     // read and write mode
-
+    W_CURR, // write to the current position. If wwe have data in the current position, we overwrite that piece of data  
 }
 
 const buildin_file_libs = `
@@ -39,11 +40,12 @@ let fs = new Map<number, OpenFile>(); // track current open files
 export function open(filePathAddr: number, mode: number): number {
 
     // treat as creating a new file for now. Later with string type, we check if the filePathAddr already existed first.
-    window.localStorage.setItem('test.txt', JSON.stringify([]));
+    window.localStorage.setItem('test.txt', JSON.stringify([])); 
     fs.set(fdCounter++, {
         filePath: 'test.txt', // a dummy address. If we have string we should read the address
         currentPosition: 0,
         mode: mode,
+        fileSize: 0, // according to the current test case we should assign 0
     });
 
     return fdCounter - 1;
@@ -56,6 +58,9 @@ export function read(fd: number): number {
         return 0;
     }
     let dataArray: Array<number> = JSON.parse(data);
+    
+    file.fileSize = dataArray.length;
+
     return dataArray[file.currentPosition];
 }
 
@@ -69,10 +74,25 @@ export function write(fd: number, c: number): number {
     }
     let data = window.localStorage.getItem(file.filePath);
     let dataArray: Array<number> = data ? JSON.parse(data) : [];
-    dataArray[file.currentPosition] = c;
+    if(file.mode === FileMode.W_APPEND) {
+        dataArray.push(c);
+        file.currentPosition = dataArray.length;
+    } else if (file.mode === FileMode.W_CURR) {
+        if(file.currentPosition === dataArray.length) { // append data to the end of the file
+            dataArray.push(c);
+            file.currentPosition = dataArray.length;
+        } else {                                        // write data to the currentPosition 
+            dataArray[file.currentPosition] = c;
+            file.currentPosition++;
+        } 
+    } else {
+        throw new Error (`RUNTIME ERROR: Unknown write mode ${file.mode}`);
+    }
+
+    file.fileSize = dataArray.length;
     window.localStorage.setItem(file.filePath, JSON.stringify(dataArray));
 
-    return - 1; // currently it should return - 1
+    return - 1;
 }
 
 /**
@@ -90,8 +110,13 @@ export function close(fd: number): number {
 }
 
 export function seek(fd: number, pos: number) {
-    const f = checkFileExistence(fd);
-    f.currentPosition = pos;
+    const file = checkFileExistence(fd);
+
+    // check the boundary of the position
+    if(pos < 0 || pos > file.fileSize) {
+        throw new Error(`RUNTIME ERROR: invalid seek position ${pos}, valid range [0, ${file.fileSize}]`);
+    }
+    file.currentPosition = pos;
 }
 
 /**
