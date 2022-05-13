@@ -1,7 +1,7 @@
 
 import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Callable } from './ast';
-import { NUM, BOOL, NONE, CLASS } from './utils';
+import { NUM, BOOL, NONE, CLASS, CALLABLE } from './utils';
 import { emptyEnv } from './compiler';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
@@ -112,7 +112,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
-  program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
+  program.funs.forEach(fun => newGlobs.set(fun.name, CALLABLE(fun.parameters.map(p => p.type), fun.ret)));
   program.classes.forEach(cls => {
     const fields = new Map();
     const methods = new Map();
