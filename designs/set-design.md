@@ -6,9 +6,9 @@ Similar to class implementation in PA3, we add three new types under the Type we
 ```
 export type Type =
     ……
-  | { tag: "set"; content_type: Type }
-  | { tag: "dict"; key: Type; value: Type }
-  | { tag: "tuple"; contentTypes: Array<Type> }
+  | { tag: "set", content_type: Type }
+  | { tag: "dict", key: Type; value: Type }
+  | { tag: "tuple", contentTypes: Array<Type> }
 ```
 It can be used in typechecker to decide the type for each inirtialized objects. And now we have made a constraint that all elements in the set or dict or tuple should be of the same type. We might allow various types in the future.
 
@@ -34,8 +34,9 @@ Set.clear()
 
 Set.update()
 
-in keyword (x in Set)
+Set.has() - “in” keyword (x in Set)
 
+Set.size() - len(Set)
 
 # Test Cases
 ### 1. Set constructor
@@ -47,11 +48,11 @@ program:
 ```
 s:set = set()
 s.add(3)
-print(s)
+print(len(s))
 ```
 expected output:
 ```
-{3}
+1
 ```
 ### 2. Set constructor 2
 Description: 
@@ -60,7 +61,8 @@ This test case creates set with {x1,x2,...} statements.
 
 program:
 ```
-s:set= {3,5,7}
+s:set = set()
+s = {3,5,7}
 print(s)
 ```
 expected output:
@@ -193,3 +195,6 @@ expected output:
 True
 False
 ```
+
+# Week7 Implementation
+All passed tests are in "set-dict-tuple.test".
