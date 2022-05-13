@@ -31,12 +31,14 @@ export type Expr<A> =
 
   | {  a?: A, tag: "alloc", amount: Value<A> }
   | {  a?: A, tag: "load", start: Value<A>, offset: Value<A> }
+  | {  a?: A, tag: "str-index", start: Value<A>, offset: Value<A> }
 
 export type Value<A> = 
     { a?: A, tag: "num", value: bigint }
   | { a?: A, tag: "wasmint", value: number }
   | { a?: A, tag: "bool", value: boolean }
   | { a?: A, tag: "id", name: string }
+  | { a?: A, tag: "str", value: string }
   | { a?: A, tag: "none" }
 
 

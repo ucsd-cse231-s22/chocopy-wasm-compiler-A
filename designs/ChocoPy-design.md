@@ -31,7 +31,7 @@ print(aString1+aString2)
 assertPrint("string-length",
 `
 print(len("Hello"))
-`, [5]))
+`, ["5"])
 ```
 
 4. 
