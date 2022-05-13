@@ -39,6 +39,7 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const definedVars : Set<string> = new Set(); //getLocals(ast);
   definedVars.add("$last");
   definedVars.add("$selector");
+  definedVars.add("$scratch"); // for memory allocation
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
@@ -190,7 +191,48 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
 function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
   switch (val.tag) {
     case "num":
-      return ["(i32.const " + val.value + ")"];
+      // return ["(i32.const " + val.value + ")"];
+
+
+      var x = Number(val.value) // for division
+      var n = 0
+      var digits : Number[] = []
+      while(x >= 1) {
+          digits.push(parseInt(String(x % 10)))
+          x = x / 10 
+          n = n + 1
+      }
+
+      // digits = digits.reverse();
+
+      n = n + 1 // store (n+1) blocks (n: number of digits)
+
+      var i = 0
+      var return_val : string[] = []
+
+      return_val.push(`(i32.const ${n})`);
+      return_val.push(`(call $alloc)`);
+      return_val.push(`(local.set $$scratch)`);
+      
+      // console.log(n);
+      
+      // store the bignum in (n+1) blocks
+      for (i; i < n; i++) {
+          if (i == 0) {
+              return_val.push(`(local.get $$scratch)`);
+              return_val.push(`(i32.const ${i})`);
+              return_val.push(`(i32.const ${n-1})`);
+              return_val.push(`call $store`);
+          } else {
+              return_val.push(`(local.get $$scratch)`);
+              return_val.push(`(i32.const ${i})`);
+              return_val.push(`(i32.const ${digits[i-1]})`);
+              return_val.push(`call $store`);
+          }
+      }
+      return_val.push(`(local.get $$scratch)`)
+      // console.log(return_val);
+      return return_val;
     case "wasmint":
       return ["(i32.const " + val.value + ")"];
     case "bool":
