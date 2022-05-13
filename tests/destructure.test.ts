@@ -6,6 +6,9 @@ import { NUM } from '../utils';
 
 describe('tc for destructure', () => {
 
-    assertTC("simple-assignment", 'a : int = 1', NUM);
+    assertTC("simple-assignment", `
+    a : int = 1
+    a = 2
+    `, NUM);
 
 });
