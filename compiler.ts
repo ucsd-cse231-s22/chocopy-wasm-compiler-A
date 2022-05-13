@@ -198,8 +198,8 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       var n = 0
       var digits : Number[] = []
       while(x >= 1) {
-          digits.push(parseInt(String(x % 10)))
-          x = x / 10 
+          digits.push(parseInt(String(x % (2**31))))
+          x = x / (2**31) 
           n = n + 1
       }
 
