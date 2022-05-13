@@ -13,9 +13,8 @@ async function debug() {
 //     else:
 //       return`
   var source = `
-class C(object):
-  def __init__(self: C, a: D):
-    pass`
+a:D = None
+a.b = 20`
 const ast = parse(source);
   
   const repl = new BasicREPL(await addLibs());

@@ -138,7 +138,7 @@ export function tcInit(env: GlobalTypeEnv, init: VarInit<Annotation>): VarInit<A
   } else {
     console.log(init.type);
     console.log(valTyp);
-    throw new TypeCheckError(`Expected type \`${JSON.stringify(init.type.tag)}\`; got type \`${JSON.stringify(valTyp.tag)}\``, init.value.a.fromLoc, init.value.a.endLoc);
+    throw new TypeCheckError(`Expected type ${JSON.stringify(init.type.tag)}; got type ${JSON.stringify(valTyp.tag)}`, init.value.a.fromLoc, init.value.a.endLoc);
   }
 }
 
@@ -179,7 +179,7 @@ export function tcBlock(env: GlobalTypeEnv, locals: LocalTypeEnv, stmts: Array<S
   return tStmts;
 }
 
-// YOU ARE HERE
+
 export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Annotation>): Stmt<Annotation> {
   switch (stmt.tag) {
     case "assign":
@@ -193,7 +193,8 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
         throw new TypeCheckError("Unbound id: " + stmt.name);
       }
       if (!isAssignable(env, tValExpr.a.type, nameTyp))
-        throw new TypeCheckError("Non-assignable types");
+        throw new TypeCheckError(`Assignment value should have assignable type to type ${JSON.stringify(nameTyp.tag)}, got ${JSON.stringify(tValExpr.a.type.tag)}`,
+        tValExpr.a.fromLoc, tValExpr.a.endLoc);
       return { a: { ...stmt.a, type: NONE }, tag: stmt.tag, name: stmt.name, value: tValExpr };
     case "expr":
       const tExpr = tcExpr(env, locals, stmt.expr);
@@ -206,12 +207,13 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       const tEls = tcBlock(env, locals, stmt.els);
       const elsTyp = locals.actualRet;
       if (tCond.a.type !== BOOL)
-        throw new TypeCheckError("Condition Expression Must be a bool");
+        throw new TypeCheckError(`Condition Expression Must be have type "bool", got ${JSON.stringify(tCond.a.type.tag)}`, tCond.a.fromLoc, tCond.a.endLoc);
       if (thnTyp !== elsTyp)
         locals.actualRet = { tag: "either", left: thnTyp, right: elsTyp }
       return { a: { ...stmt.a, type: thnTyp }, tag: stmt.tag, cond: tCond, thn: tThn, els: tEls };
     case "return":
       if (locals.topLevel)
+      // TODO
         throw new TypeCheckError("cannot return outside of functions");
       const tRet = tcExpr(env, locals, stmt.value);
       if (!isAssignable(env, tRet.a.type, locals.expectedRet))
@@ -223,7 +225,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       var tCond = tcExpr(env, locals, stmt.cond);
       const tBody = tcBlock(env, locals, stmt.body);
       if (!equalType(tCond.a.type, BOOL))
-        throw new TypeCheckError("Condition Expression Must be a bool");
+        throw new TypeCheckError(`Condition Expression Must be a bool, got ${JSON.stringify(tCond.a.type.tag)}`, tCond.a.fromLoc, tCond.a.endLoc);
       return { a: { ...stmt.a, type: NONE }, tag: stmt.tag, cond: tCond, body: tBody };
     case "pass":
       return { a: { ...stmt.a, type: NONE }, tag: stmt.tag };
@@ -231,14 +233,15 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       var tObj = tcExpr(env, locals, stmt.obj);
       const tVal = tcExpr(env, locals, stmt.value);
       if (tObj.a.type.tag !== "class")
-        throw new TypeCheckError("field assignments require an object");
+        throw new TypeCheckError(`field assignments require an object, got ${JSON.stringify(tObj.a.type.tag)}`, tObj.a.fromLoc, tObj.a.endLoc);
       if (!env.classes.has(tObj.a.type.name))
-        throw new TypeCheckError("field assignment on an unknown class");
+        throw new TypeCheckError(`field assignment on an unknown class \`${tObj.a.type.name}\``, tObj.a.fromLoc, tObj.a.endLoc);
       const [fields, _] = env.classes.get(tObj.a.type.name);
       if (!fields.has(stmt.field))
-        throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObj.a.type.name}`);
+        throw new TypeCheckError(`could not find field \`${stmt.field}\` in class \`${tObj.a.type.name}\``, stmt.a.fromLoc, stmt.a.endLoc);
       if (!isAssignable(env, tVal.a.type, fields.get(stmt.field)))
-        throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
+        throw new TypeCheckError(`field \`${stmt.field}\` expected type: ${JSON.stringify(fields.get(stmt.field).tag)}, got value of type ${JSON.stringify(tVal.a.type.tag)}`,
+          tVal.a.fromLoc, tVal.a.endLoc);
       return { ...stmt, a: { ...stmt.a, type: NONE }, obj: tObj, value: tVal };
   }
 }
