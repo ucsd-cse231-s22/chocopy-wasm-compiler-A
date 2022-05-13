@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { memGenRef, refLookup } from "../memory";
+import * as memMgmt from "../memory";
 
 enum Type { Num, Bool, None }
 
@@ -30,7 +30,7 @@ export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
   const memory = new WebAssembly.Memory({initial:10, maximum:100});
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })
-  importObject.libmemory = {...memoryModule.instance.exports, refLookup, memGenRef},
+  importObject.libmemory = {...memoryModule.instance.exports, ...memMgmt},
   importObject.memory_values = memory;
   importObject.js = {memory};
   return importObject;

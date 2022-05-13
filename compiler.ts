@@ -170,7 +170,12 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(call $${expr.name})`);
-      return valStmts;
+      // Not sure if plugging in the scope calls here is the best way to do this
+      return [
+        `(call $add_scope)`,
+        ...valStmts,
+        `(call $remove_scope)`
+      ];
 
     case "alloc":
       return [

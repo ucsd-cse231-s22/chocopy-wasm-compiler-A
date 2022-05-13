@@ -115,6 +115,9 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     (func $mem_gen_ref (import "libmemory" "memGenRef") (param i32) (result i32))
     (func $ref_lookup (import "libmemory" "refLookup") (param i32) (result i32))
+    (func $add_scope (import "libmemory" "addScope"))
+    (func $remove_scope (import "libmemory" "removeScope"))
+    (func $traverse_update (import "libmemory" "traverseUpdate") (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}

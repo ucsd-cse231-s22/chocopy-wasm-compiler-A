@@ -27,12 +27,14 @@ const dataOffset = 4;
 let refMap: Map<ref, memAddr>;
 let refNum = 0; 
 let memHeap: Uint32Array;
+let activeStack: Set<ref>[];
 
 
 export function memInit(memory: Uint32Array) {
     refMap = new Map();
     refNum = 0;
     memHeap = memory;
+    activeStack = [new Set()];
 }
 
 export function memGenRef(addr: memAddr): ref {
@@ -40,6 +42,7 @@ export function memGenRef(addr: memAddr): ref {
     if (refNum > 2147483647) {
         throw new MemError("maximum references allocated");
     }
+    activeStack[activeStack.length - 1].add(refNum);
     refMap.set(refNum, addr);
     return refNum;
     // TODO: add a way to recliam reference numbers.
@@ -60,12 +63,10 @@ export function traverseUpdate(r: ref, update: number) {
     while (travQueue.length > 0) {
         const curr = travQueue.shift();
         const addr = refMap.get(curr);
-        const refNums = memHeap[addr + refNumOffset];
-
-        // if refNums is set to zero then it has to be the case that it became zero in the current traversal
-        // this is so because refNums with 0 references are not accessible by the Chocopy program.
-        if (refNums !== 0) { 
-            memHeap[addr + refNumOffset] += update
+        memHeap[addr + refNumOffset] += update
+        
+        if (memHeap[addr + refNumOffset] < 0) { 
+            memHeap[addr + refNumOffset] = 0;
         } 
 
         if (curr in explored) continue;
@@ -86,3 +87,13 @@ export function traverseUpdate(r: ref, update: number) {
         }
     }
 }
+
+export function addScope() {
+    activeStack.push(new Set());
+}
+
+export function removeScope() {
+    activeStack[activeStack.length - 1].forEach(r => traverseUpdate(r, -1));
+    activeStack.pop();
+}
+
