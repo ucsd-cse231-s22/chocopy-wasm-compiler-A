@@ -98,7 +98,8 @@ function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Typ
   return inits;
 }
 
-function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
+function 
+flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
   switch(s.tag) {
     case "assign":
       var [valinits, valstmts, vale] = flattenExprToExpr(s.value, env);
