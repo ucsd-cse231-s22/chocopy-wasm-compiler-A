@@ -110,6 +110,18 @@ export function tc(env: GlobalTypeEnv, program: Program<null>): [Program<Type>, 
   const tDefs = program.funs.map(fun => tcDef(newEnv, fun));
   const tClasses = program.classes.map(cls => tcClass(newEnv, cls));
 
+  const newFuns = new Map(env.functions);
+  const newClasses = new Map(env.classes);
+  tDefs.forEach(fun => newFuns.set(fun.name, [fun.parameters, fun.ret]));
+  tClasses.forEach(cls => {
+    const fields = new Map<string, Type>();
+    const methods = new Map<string, [Array<Parameter<Type>>, Type]>();
+    cls.fields.forEach(field => fields.set(field.name, field.type));
+    cls.methods.forEach(method => methods.set(method.name, [method.parameters, method.ret]));
+    newClasses.set(cls.name, [fields, methods]);
+  });
+  newEnv.classes = newClasses
+  newEnv.functions = newFuns
   // program.inits.forEach(init => env.globals.set(init.name, tcInit(init)));
   // program.funs.forEach(fun => env.functions.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
   // program.funs.forEach(fun => tcDef(env, fun));
