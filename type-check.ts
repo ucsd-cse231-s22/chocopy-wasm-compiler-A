@@ -91,7 +91,6 @@ export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
 }
 
 export function isAssignable(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  console.log(t1, t2)
   return isSubtype(env, t1, t2);
 }
 
@@ -513,6 +512,9 @@ export function tcExpr(
         }
       }
       return { ...expr, a: LIST(NONE), items: tItems };
+    case "index":
+      const tObje = tcExpr(env, locals, expr.obj);
+      const tIndex = tcExpr(env, locals, expr.index);
     default:
       throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
