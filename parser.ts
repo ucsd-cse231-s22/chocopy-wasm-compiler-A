@@ -54,7 +54,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       var cond;
       if (s.substring(c.from, c.to) !== ']'){
         if (s.substring(c.from, c.to) !== 'if')
-          throw new Error("PARSE ERROR: only if condition allowed in comprehensions");
+          throw new Error("PARSE TYPE ERROR: only if condition allowed in comprehensions");
         c.nextSibling();
         cond = traverseExpr(c, s); // cond which evaluates to a binary expr
       }

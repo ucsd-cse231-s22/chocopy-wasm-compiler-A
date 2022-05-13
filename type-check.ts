@@ -326,7 +326,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         const classData = env.classes.get(iterable.a.name);
         // check if next and hasNext methods are there
         if (!classData[1].has("next") || !classData[1].has("hasNext"))
-          throw new Error("Class of the instance must have next() and hasNext() methods");
+          throw new Error("TYPE ERROR:Class of the instance must have next() and hasNext() methods");
         // need to create a local env to store elems of iterable
         var loc = emptyLocalTypeEnv();
         if (expr.elem.tag === "id"){
@@ -336,18 +336,18 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           const cond = tcExpr(env, loc, expr.cond);
           if(cond.a.tag !== "bool")
           {
-            throw new TypeCheckError("if condition in list comprehension is not boolean");
+            throw new TypeCheckError("TYPE ERROR:if condition in list comprehension is not boolean");
           }
           
           return {...expr, left, elem, iterable, a: CLASS(iterable.a.name)};
         }
         else
-          throw new Error("elem has to be an id");
+          throw new Error("TYPE ERROR:elem has to be an id");
       }
       else if (iterable.a.tag === "class")
-        throw new Error("Only instances of Range class supported currently");
+        throw new Error("TYPE ERROR:Only instances of Range class supported currently");
       else
-        throw new Error("Iterable must be an instance of a class");
+        throw new Error("TYPE ERROR:Iterable must be an instance of a class");
     case "call":
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
