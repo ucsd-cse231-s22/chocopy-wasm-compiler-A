@@ -32,6 +32,13 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
     blocks.push(firstBlock);
     p.funs.forEach(f => env.functionNames.set(f.name, closureName(f.name, [])));
     var [closures, cinits, cstmts] = lowerFunDefs(p.funs, env);
+    [...closures, ...p.classes].forEach(cls => {
+      env.classIndices.set(cls.name, env.vtableMethods.length)
+      env.vtableMethods.push(...cls.methods
+        .filter(method => !method.name.includes("__init__"))
+        .map((method): [string, number] => [createMethodName(cls.name, method.name), method.parameters.length]));
+    });
+
     var classes = lowerClasses([...closures, ...p.classes], env);
     var [inits, generatedClasses] = flattenStmts([...cstmts, ...p.stmts], blocks, env);
     return {
@@ -85,8 +92,8 @@ function lowerFunDef(
           ...f,
           name: APPLY,
           parameters: [self, ...f.parameters],
-          inits: [...defs.map(x => x[1]), ...f.inits],
-          body: [...defs.map(x => x[2]), ...f.body]
+          inits: [varInit, ...defs.map(x => x[1]), ...f.inits],
+          body: [assignStmt, ...defs.map(x => x[2]), ...f.body]
         }
       ]
     }, ...defs.map(x => x[0]).flat()],
@@ -123,12 +130,8 @@ function lowerClasses(classes: Array<AST.Class<Type>>, env : GlobalEnv) : Array<
 }
 
 function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : Array<IR.Class<Type>> {
-    env.classIndices.set(cls.name, env.vtableMethods.length);
     // init not in vtable 
     // (we currently do no reordering, we leave that to inheritance team)
-    env.vtableMethods.push(...cls.methods
-      .filter(method => !method.name.includes("__init__"))
-      .map((method): [string, number] => [createMethodName(cls.name, method.name), method.parameters.length]));
     return [{
         ...cls,
         fields: lowerVarInits(cls.fields, env),

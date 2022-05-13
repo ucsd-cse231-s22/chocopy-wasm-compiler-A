@@ -160,6 +160,7 @@ export function tcInit(env: GlobalTypeEnv, init : VarInit<null>) : VarInit<Type>
 
 export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>, nonlocalEnv: NonlocalTypeEnv) : FunDef<Type> {
   var locals = emptyLocalTypeEnv();
+  locals.vars.set(fun.name, CALLABLE(fun.parameters.map(x => x.type), fun.ret));
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
   var nonlocals = fun.nonlocals.map(init => ({ name: init.name, a: nonlocalEnv.get(init.name) }));
@@ -169,6 +170,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>, nonlocalEnv: Nonl
   var envCopy = copyGlobals(env);
   fun.children.forEach(f => envCopy.functions.set(f.name, [f.parameters.map(x => x.type), f.ret]));
   var children = fun.children.map(f => tcDef(envCopy, f, locals.vars));
+  fun.children.forEach(child => locals.vars.set(child.name, CALLABLE(child.parameters.map(x => x.type), child.ret)));
   
   const tBody = tcBlock(envCopy, locals, fun.body);
   if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))

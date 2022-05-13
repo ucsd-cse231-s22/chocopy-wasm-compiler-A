@@ -154,5 +154,56 @@ describe("traverseType(c, s) function", () => {
       `);
       console.error(importObject.output);
     });
+
+    it("assign func", async () => {
+      const source = `
+      def a(b: int, c: bool) -> bool:
+        print(b)
+        print(c)
+        return False
+      f: Callable[[int, bool], bool] = None
+      f = a
+      f(4, True)
+      `;
+
+      const cursor = parser.parse(source).cursor();
+      const prog = traverse(cursor, source);
+      tc(emptyGlobalTypeEnv(), prog);
+      console.error(importObject.output);
+
+      expect(() => {
+        const source = `
+        def a(b: int, c: int) -> bool:
+          print(b)
+          print(c)
+          return False
+        f: Callable[[int, bool], bool] = None
+        f = a
+        f(4, True)
+        `;
+
+        const cursor = parser.parse(source).cursor();
+        const prog = traverse(cursor, source);
+        tc(emptyGlobalTypeEnv(), prog);
+        console.error(importObject.output);
+      }).throws();
+
+      expect(() => {
+        const source = `
+        def a(b: int, c: bool) -> bool:
+          print(b)
+          print(c)
+          return False
+        f: Callable[[int, bool], bool] = None
+        f = a
+        f(4, 9)
+        `;
+
+        const cursor = parser.parse(source).cursor();
+        const prog = traverse(cursor, source);
+        tc(emptyGlobalTypeEnv(), prog);
+        console.error(importObject.output);
+      }).throws();
+    });
   });
 });

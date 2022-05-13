@@ -30,7 +30,7 @@ def f(y: int) -> int:
   def fact(x: int) -> int:
     if x == 1: return 1
     else: return fact(x-1) * x
-  return fact(y-1)
-f(5)
-`,[''])
+  return fact(y)
+print(f(5))
+`,['120'])
 });
