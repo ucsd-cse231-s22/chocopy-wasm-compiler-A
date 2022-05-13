@@ -168,6 +168,7 @@ export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Arra
   return tStmts;
 }
 
+
 export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<null>) : Stmt<Type> {
   switch(stmt.tag) {
     case "assign":
@@ -185,6 +186,29 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       return {a: NONE, tag: stmt.tag, name: stmt.name, value: tValExpr};
     case "expr":
       const tExpr = tcExpr(env, locals, stmt.expr);
+      if(tExpr.tag === "list-comp")
+      {
+        if(tExpr.iterable.tag === "construct")
+        {
+          const args1 = tExpr.iterable.arguments[0];
+          const args2 = tExpr.iterable.arguments[1];
+          if(tExpr.elem.tag === "id")
+            var counter = tExpr.elem.name;
+          env.globals.set(counter,args1.a);
+          var while_cond:Expr<any> = {tag:"binop",left:tExpr.elem,right:args2,op:BinOp.Lt,};
+          while_cond = tcExpr(env,locals,while_cond);
+          var whilestmts:Stmt<any>[] = [];
+
+          var print_expr:Expr<any> = {tag:"builtin1",name:"print",arg:tExpr.elem};
+          whilestmts.push(tcStmt(env,locals,{tag:"expr",expr:print_expr}));
+          var update_counter:Expr<any> = {tag:"literal",value:{tag:"num",value:1}};
+          var update_Expr:Expr<any> = {tag:"binop",op:BinOp.Plus,left:tExpr.elem,right:update_counter};
+          whilestmts.push(tcStmt(env,locals,{tag:"assign",name:counter,value:update_Expr}));
+          var while_stmt:Stmt<any> = {tag:"while",cond:while_cond,body:whilestmts};
+          return tcStmt(env,locals,while_stmt);
+        }
+        
+      }
       return {a: tExpr.a, tag: stmt.tag, expr: tExpr};
     case "if":
       var tCond = tcExpr(env, locals, stmt.cond);
@@ -337,8 +361,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
               throw new TypeCheckError("TYPE ERROR:if condition in list comprehension is not boolean");
             }
           }
-          
-          
           return {...expr, left, elem, iterable, cond:cond, a: CLASS(iterable.a.name)};
         }
         else
