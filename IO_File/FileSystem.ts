@@ -84,13 +84,11 @@ export function close(fd: number): number {
 
     const f = checkFileExistence(fd);
 
-    // TODO: this file has been modified -> write data to the file
-    if(f.dirty) {
+    if(f.dirty) { // this file has been modified -> write data to the file
         writeFile(f);
     }
     
-    // remove this file from file descriptor
-    fs.delete(fd);
+    fs.delete(fd); // remove this file from file descriptor
 
     return 0;
 }
@@ -116,8 +114,6 @@ function checkFileExistence(fd: number): OpenFile {
  * @return true if write successfully
  */
 function writeFile(f: OpenFile): boolean {
-    return false;
+    localStorage.setItem(f.filePath, JSON.stringify(f.dataArray));
+    return true;
 }
-
-// read(file_name, mode="read string") -> string
-// read(file_name, mode="read char") -> string
