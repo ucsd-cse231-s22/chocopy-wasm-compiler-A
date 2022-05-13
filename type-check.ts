@@ -420,6 +420,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
               if (numArgs != 0){
                 throw new TypeCheckError("Set.clear only takes no parameter")
               }
+              return {...expr,a:{tag:"none"},obj:{...expr.obj,a:SET(NUM)}}
               break;
             case "update":
               for (i=1;i<numArgs;i++){

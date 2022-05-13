@@ -62,6 +62,7 @@ describe("proj-dict-test", ()=>{
   x:set = set()
   x = {1,2,3,7}
   x.add(2)
+  x.clear()
   print(x.has(7))
   `,["True"])
 });
