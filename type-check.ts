@@ -19,7 +19,7 @@ export class TypeCheckError extends Error {
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<string>]> // TODO: add super class info
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<Class<Type>>]> // fields, methods and super class types
 }
 
 export type LocalTypeEnv = {
@@ -92,6 +92,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
   const newGlobs = new Map(env.globals);
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
+  const subclassTosuperclass = new Map<string, string[]>();
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
   program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
   program.classes.forEach(cls => {
@@ -99,9 +100,35 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
     const methods = new Map();
     cls.fields.forEach(field => fields.set(field.name, field.type));
     cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
-    newClasses.set(cls.name, [fields, methods, cls.super]);
+    newClasses.set(cls.name, [fields, methods, null]);
+    subclassTosuperclass.set(cls.name, cls.super)
   });
+  augmentInheritance(subclassTosuperclass, newClasses, program)
+
   return { globals: newGlobs, functions: newFuns, classes: newClasses };
+}
+
+export function augmentInheritance(subclassTosuperclass : Map<string, string[]>, newClasses : Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<Class<Type>>]>, program : Program<null>) {
+  for (let entry of Array.from(subclassTosuperclass.entries())) {
+    let sub = entry[0];
+    let sup = entry[1];
+    const superclasses : Array<Class<Type>> = []
+    const objClass : Class<Type> = { a: {tag: "class", name: "object"}, name: "object", fields: [], methods: [], super: []}
+    superclasses.push(objClass)
+
+    const oldsub = newClasses.get(sub)
+    if (sup[0] === "object") {
+      newClasses.set(sub, [oldsub[0], oldsub[1], superclasses])
+    } else {
+      sup.forEach(supcls => {
+        // Check if superclass exists
+        if (program.classes.find(cls => cls.name === supcls) === undefined)
+           throw new TypeCheckError(`Superclass ${supcls} does not exist`);
+        superclasses.push(program.classes.find(cls => cls.name === supcls))
+      });
+      newClasses.set(sub, [oldsub[0], oldsub[1], superclasses])
+    }
+  }
 }
 
 export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type>, GlobalTypeEnv] {
@@ -153,14 +180,14 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
 }
 
 export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
-  const tFields = cls.fields.map(field => tcInit(env, field));
+  const tFields : VarInit<Type>[] = []
+  tcFields(env, cls, tFields)
+
+  // const tMethods : FunDef<Type>[] = []
+  // tcMethods(env, cls, tMethods)
   const tMethods = cls.methods.map(method => tcDef(env, method));
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
-
-
-  // TODO: check if super class exist
-  // TODO: check if any of tFields is redefined
-
+  
   if (init.parameters.length !== 1 || 
     init.parameters[0].name !== "self" ||
     !equalType(init.parameters[0].type, CLASS(cls.name)) ||
@@ -168,6 +195,83 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
     throw new TypeCheckError("Cannot override __init__ type signature");
   return {...cls, a: NONE, name: cls.name, fields: tFields, methods: tMethods};
 }
+
+export function tcFields(env: GlobalTypeEnv, cls : Class<null>, tFields : VarInit<Type>[]) {
+  const superclasses = env.classes.get(cls.name)[2]
+
+  // Check if superclass exists
+  superclasses.forEach(supercls => {
+    if (supercls.name !== "object" && !env.classes.has(supercls.name))
+      throw new TypeCheckError(`Superclass ${supercls} does not exist`);
+  })
+
+  // Push all superclass fields
+  superclasses.forEach(cls => tFields.push(...cls.fields));
+  const superclassFieldNames = tFields.map(field => field.name);
+
+  cls.fields.forEach(field => {
+    // Check if superclass fields are redefined in subclass
+    if (superclassFieldNames.includes(field.name))
+      throw new TypeCheckError(`Field ${field.name} redefined in subclass`);
+  });
+
+  // Push all subclass fields
+  const superclassfields = tFields
+  tFields.push(...cls.fields.map(field => tcInit(env, field)));
+  
+  tFields.forEach(field => env.classes.get(cls.name)[0].set(field.name, field.type))
+  // const envFields = env.classes.get(cls.name)[0].set();)
+}
+
+// export function tcMethods(env: GlobalTypeEnv, cls : Class<null>, tFields : VarInit<Type>[]) {
+//   const superclasses = env.classes.get(cls.name)[2]
+//   // Copy all superclass methodinfo to subclass
+//     for (let entry of Array.from(superClassInfo[1].entries())) {
+//       let key = entry[0];
+//       let value = entry[1];
+//       if (key === "__init__") {
+
+//       } else {
+//         // cls.methods.add(tcDef(env, key))
+//       }
+//     }
+// }
+
+// export function tcSuperclass(env: GlobalTypeEnv, supercls : Class<Type>, cls : Class<null>) : [VarInit<Type>[], FunDef<Type>[]] {
+//   const tFields : VarInit<Type>[] = []
+//   const tMethods : FunDef<Type>[] = []
+
+//   if (supercls !== "object") {
+//     const superClassInfo = env.classes.get(supercls)
+//     // Check if superclass exists
+//     if (!env.classes.has(supercls))
+//       throw new TypeCheckError(`Superclass ${supercls} does not exist`);
+    
+//     // Copy all superclass fields to subclass
+//     for (let entry of Array.from(superClassInfo[0].entries())) {
+//       let key = entry[0];
+//       let value = entry[1];
+//       // Check if any of tFields is redefined
+//       const clsFieldNames = cls.fields.map(field => field.name);
+//       if (clsFieldNames.includes(key))
+//         throw new TypeCheckError(`Field ${key} redefined in subclass`);
+//       // const field : VarInit<null> = {name: key, type:, value:}
+//       // tFields.push(tcInit(env, field))
+//     }
+
+//     // Copy all superclass methodinfo to subclass
+//     for (let entry of Array.from(superClassInfo[1].entries())) {
+//       let key = entry[0];
+//       let value = entry[1];
+//       if (key === "__init__") {
+
+//       } else {
+//         // cls.methods.add(tcDef(env, key))
+//       }
+//     }
+//   } 
+//   return [tFields, tMethods]
+// }
 
 export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Array<Stmt<null>>) : Array<Stmt<Type>> {
   var tStmts = stmts.map(stmt => tcStmt(env, locals, stmt));

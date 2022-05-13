@@ -2,7 +2,7 @@ import {Type, BinOp, UniOp, Parameter} from './ast';
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, body: Array<BasicBlock<A>> }
 
-export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, super: Array<string>}  // TODO: add super class array
+export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, super: Array<string>}
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Value<A> }
 

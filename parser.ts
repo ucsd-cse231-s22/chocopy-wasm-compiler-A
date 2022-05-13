@@ -422,19 +422,21 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
 export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   const fields : Array<VarInit<null>> = [];
   const methods : Array<FunDef<null>> = [];
+  const superClasses : Array<string> = [];
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
   c.nextSibling(); // Focus on arglist/superclass
+  
+  c.firstChild();  // Focuses on open paren
+  c.nextSibling(); // Focuses on a VariableName
+  while(c.type.name !== ")") {
+    let name = s.substring(c.from, c.to);
+    superClasses.push(name);
+    c.nextSibling(); // Focuses on a VariableName
+  }
+  c.parent();  
 
-  var superClasses : string[] = [];
-  c.firstChild(); // focus on ( arguement
-
-  while(c.nextSibling()) {
-    if (s.substring(c.from, c.to) === ")") { c.parent(); break; }
-    if (s.substring(c.from, c.to) === ",") continue;
-    superClasses.push(s.substring(c.from, c.to))
-  } 
 
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
@@ -457,7 +459,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
     name: className,
     fields,
     methods,
-    super: superClasses,
+    super: superClasses
   };
 }
 
@@ -538,5 +540,6 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
 export function parse(source : string) : Program<null> {
   const t = parser.parse(source);
   const str = stringifyTree(t.cursor(), source, 0);
+  console.log(str)
   return traverse(t.cursor(), source);
 }
