@@ -51,17 +51,50 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   prog.inits.forEach((v) => {
     newGlobals.set(v.name, true);
   });
+
+  var methodOffset = 0;
+
   prog.classes.forEach(cls => {
     const classFields = new Map();
-    cls.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
-    newClasses.set(cls.name, classFields);
+    const classMethods = new Map();
+    // TODO: update to support multiple inheritance
+    var offset : number  = 0;
+    if (cls.super[0] !== "object") { 
+      newClasses.get(cls.super[0])[0].forEach((value, key) => {
+        offset = Math.max(value[0]) + 1
+      });
+    }
+
+    cls.methods.filter(m => m.name !== "__init__").forEach((method, index) => {
+
+      var methodIndex = methodOffset + index;
+      var isOverriden = false;
+      if (cls.super[0] !== "object" ){
+        newClasses.get(cls.super[0])[1].forEach((value, key) => {
+          if (key === method.name) {
+            methodIndex = value;
+            isOverriden = true;
+          }
+        })
+      }
+
+      if (!isOverriden) { methodOffset+=1;}
+
+      classMethods.set(method.name, methodIndex)
+    })
+
+    cls.fields.forEach((field, i) => classFields.set(field.name, [offset + i, field.value]));
+    newClasses.set(cls.name, [classFields, classMethods, cls.super]);
   });
   return {
     globals: newGlobals,
     classes: newClasses,
     locals: env.locals,
     labels: env.labels,
-    offset: newOffset
+    offset: newOffset,
+    vtable: env.vtable,
+    classIndexes: env.classIndexes, // TODO: finalize structure
+    
   }
 }
 
@@ -112,6 +145,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    ${compiled.vtable}
     ${globalImports}
     ${globalDecls}
     ${config.functions}

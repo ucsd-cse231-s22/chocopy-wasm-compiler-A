@@ -12,7 +12,7 @@ export type Parameter<A> = { name: string, type: Type }
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
 
-export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>} // TODO: add super class array
+export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, super: Array<string>} // TODO: add super class array
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Literal }
 

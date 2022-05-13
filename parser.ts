@@ -420,13 +420,22 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
 }
 
 export function traverseClass(c : TreeCursor, s : string) : Class<null> {
-  // TODO: parse super classes
   const fields : Array<VarInit<null>> = [];
   const methods : Array<FunDef<null>> = [];
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
   c.nextSibling(); // Focus on arglist/superclass
+
+  var superClasses : string[] = [];
+  c.firstChild(); // focus on ( arguement
+
+  while(c.nextSibling()) {
+    if (s.substring(c.from, c.to) === ")") { c.parent(); break; }
+    if (s.substring(c.from, c.to) === ",") continue;
+    superClasses.push(s.substring(c.from, c.to))
+  } 
+
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
   while(c.nextSibling()) { // Focuses first field
@@ -447,7 +456,8 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   return {
     name: className,
     fields,
-    methods
+    methods,
+    super: superClasses,
   };
 }
 

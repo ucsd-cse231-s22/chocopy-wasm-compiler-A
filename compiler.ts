@@ -4,10 +4,12 @@ import { BOOL, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, Map<string, [number, Value<Type>]>>;  
+  classes: Map<string, [Map<string, [number, Value<Type>]>, Map<string, number>, Array<string>]>;  // field -> field offset, value, mehtod -> method offset, super
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
+  vtable: Array<string>;
+  classIndexes: Map<string, [number, number]>;
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -15,7 +17,9 @@ export const emptyEnv : GlobalEnv = {
   classes: new Map(),
   locals: new Set(),
   labels: [],
-  offset: 0 
+  offset: 0,
+  vtable: [],
+  classIndexes: new Map(),
 };
 
 type CompileResult = {
@@ -23,6 +27,7 @@ type CompileResult = {
   functions: string,
   mainSource: string,
   newEnv: GlobalEnv
+  vtable: string,
 };
 
 export function makeLocals(locals: Set<string>) : Array<string> {
@@ -32,8 +37,6 @@ export function makeLocals(locals: Set<string>) : Array<string> {
   });
   return localDefines;
 }
-
-// TODO: create vtable function
 
 export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
@@ -49,10 +52,18 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
-  // TODO: order class methods
-  // TODO: generate vtable
-  const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
-  const allFuns = funs.concat(classes).join("\n\n");
+  const classesCons : Array<string> = ast.classes.map(cls => codeGenClassCons(cls, withDefines)).flat();
+  const classesMethods : Array<string> = ast.classes.map(cls => codeGenClassMethods(cls, withDefines)).flat();
+
+  const allFuns = funs.concat(classesCons).join("\n\n");
+
+  const vtable = `
+  (table ${env.vtable.length} funcref)
+  (elem (i32.const 0) ${env.vtable.join(" ")})
+  ${classesMethods.join("\n")}
+  `
+
+
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
   withDefines.labels = ast.body.map(block => block.label);
@@ -78,7 +89,8 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
     globals: globalNames,
     functions: allFuns,
     mainSource: allCommands.join("\n"),
-    newEnv: withDefines
+    newEnv: withDefines,
+    vtable: vtable,
   };
 }
 
@@ -172,6 +184,10 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       return [...leftStmts, ...rightStmts, `(call $${expr.name})`]
 
     // TODO: add call indirect case, lookup offset based on class and method name
+    case "call_indirect":
+      var valStmts : Array<string> = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      valStmts.push(`(call_indirect (type $type${env.vtable[expr.index]}) (i32.const ${expr.index}))`)
+      return valStmts;
 
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
@@ -290,9 +306,19 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
     (return))`];
 }
 
-function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
+function codeGenClassCons(cls : Class<Type>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = `${cls.name}$${method.name}`);
-  const result = methods.map(method => codeGenDef(method, env));
+  const result = methods.filter(m => m.name===`${cls.name}$__init__`).map(method => codeGenDef(method, env));
   return result.flat();
-  }
+}
+
+function codeGenClassMethods(cls : Class<Type>, env : GlobalEnv) : Array<string> {
+  const methods = [...cls.methods];
+  const result = methods.filter(m => m.name!==`${cls.name}$__init__`).map(method => {
+    var params = method.parameters.map(p => `(param $${p.name} i32)`).join(" ");
+    return [...[`(type $type$${method.name} (func ${params} (result i32)))`], ...codeGenDef(method, env).flat()]
+  });
+  return result.flat();
+}
+
