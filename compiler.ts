@@ -1,6 +1,7 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
+import {FileClass, OpenFun} from "./IO_File/FileParser"
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -35,7 +36,7 @@ export function makeLocals(locals: Set<string>) : Array<string> {
 
 export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
-
+  
   const definedVars : Set<string> = new Set(); //getLocals(ast);
   definedVars.add("$last");
   definedVars.add("$selector");
@@ -47,6 +48,7 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
+
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
   const allFuns = funs.concat(classes).join("\n\n");
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");

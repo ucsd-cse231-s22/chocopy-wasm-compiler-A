@@ -2,6 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
+import {FileClass, OpenFun} from "./IO_File/FileParser";
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -22,6 +23,8 @@ function generateName(base : string) : string {
 // }
 
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
+    p.classes.push(FileClass);
+    p.funs.push(OpenFun);
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
