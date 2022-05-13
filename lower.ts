@@ -1,5 +1,6 @@
 import * as AST from './ast';
 import * as IR from './ir';
+import * as ERRORS from './errors';
 import { Type, Annotation } from './ast';
 import { GlobalEnv } from './compiler';
 
@@ -245,6 +246,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.type.tag);
       }
       const className = objTyp.type.name;
+      // const errorLineInfo = {tag: "value", value: literalToVal(e.value) }; // TODO
       const checkObj : IR.Stmt<Annotation> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [objval]}}
       const callMethod : IR.Expr<Annotation> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
       return [
@@ -258,7 +260,9 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       if(e.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
       const classdata = env.classes.get(e.obj.a.type.name);
       const [offset, _] = classdata.get(e.field);
-      return [oinits, ostmts, {
+      // const errorLineInfo = {tag: "value", value: literalToVal(e.value) }; // TODO
+      const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(oval);
+      return [oinits, [...ostmts, checkObj], {
         tag: "load",
         start: oval,
         offset: { tag: "wasmint", value: offset }}];
@@ -317,4 +321,8 @@ function flattenExprToVal(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<IR
 
 function pushStmtsToLastBlock(blocks: Array<IR.BasicBlock<Annotation>>, ...stmts: Array<IR.Stmt<Annotation>>) {
   blocks[blocks.length - 1].stmts.push(...stmts);
+}
+
+export function flattenWasmInt(val: number): IR.Value<Annotation>{
+  return { tag: "wasmint", value: val }
 }
