@@ -142,7 +142,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var [ninits, nstmts, nval] = flattenExprToVal(s.value, env);
       if(s.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
       const classdata = env.classes.get(s.obj.a.name);
-      const offset : IR.Value<Type> = { tag: "wasmint", value: classdata.get(s.field)[0] };
+      const offset : IR.Value<Type> = { tag: "wasmint", value: classdata.get(s.field)[0] + METADATA_AMT };
       pushStmtsToLastBlock(blocks,
         ...ostmts, ...nstmts, {
           tag: "store",
@@ -275,18 +275,18 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       return [oinits, ostmts, {
         tag: "load",
         start: oval,
-        offset: { tag: "wasmint", value: offset }}];
+        offset: { tag: "wasmint", value: (offset + METADATA_AMT) }}];
     }
     case "construct":
       const classdata = env.classes.get(e.name);
-      const fields = [...classdata.entries()];
-      const newName = generateName(e.name);
+      const fields = [...classdata.values()];
+      const newName = generateName("newObj");
       const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: (METADATA_AMT + fields.length) } };
       
       // Metadata Generation
       const fieldTypesArray : number[] = fields.map(f => {
-        const fieldType : IR.Value<Type> = f[1][1]
-        if (fieldType.a.tag === "class") {
+        const fieldType : IR.Value<Type> = f[1]
+        if (fieldType.tag  === "none") {
           return 1;
         }
         return 0;
@@ -296,7 +296,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
 
       let metadataStore : IR.Stmt<Type>[] = Array(METADATA_AMT)
       const metadataVals : IR.Value<Type>[] = [
-        { tag: "wasmint", value: nameCounters.get(e.name) },
+        { tag: "wasmint", value: 1 },
         alloc.amount,
         { tag: "wasmint", value: fieldTypesBitString },
         { tag: "wasmint", value: 1 }
@@ -312,7 +312,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       }
 
       const assigns : IR.Stmt<Type>[] = fields.map(f => {
-        const [_, [index, value]] = f;
+        const [index, value] = f;
         return {
           tag: "store",
           start: { tag: "id", name: newName },

@@ -57,35 +57,35 @@ export function refLookup(r: ref) :  ref {
 }
 
 export function traverseUpdate(r: ref, update: number): ref { // returns r so that stack state can be maintained
-    // let explored = new Set();
-    // let travQueue = [r];
+    let explored = new Set();
+    let travQueue = [r];
 
-    // while (travQueue.length > 0) {
-    //     const curr = travQueue.shift();
-    //     const addr = refMap.get(curr);
-    //     memHeap[addr + refNumOffset] += update
+    while (travQueue.length > 0) {
+        const curr = travQueue.shift();
+        const addr = refMap.get(curr);
+        memHeap[addr + refNumOffset] += update
         
-    //     if (memHeap[addr + refNumOffset] < 0) { 
-    //         memHeap[addr + refNumOffset] = 0;
-    //     } 
+        if (memHeap[addr + refNumOffset] < 0) { 
+            memHeap[addr + refNumOffset] = 0;
+        } 
 
-    //     if (curr in explored) continue;
-    //     explored.add(curr);
+        if (curr in explored) continue;
+        explored.add(curr);
 
-    //     let types = memHeap[addr + typeOffset];
-    //     let size = memHeap[addr + sizeOffset]; 
+        let types = memHeap[addr + typeOffset];
+        let size = memHeap[addr + sizeOffset]; 
         
-    //     for (let i = 32; i > 32 - size; i--) {
-    //         if ((types & (1 << i)) === 1) {
-    //             for (let a = 0; a < memHeap[addr + amountOffset]; a++) {
-    //                 let temp = memHeap[addr + dataOffset + size*a + 32 - i];
-    //                 if (temp !== 0) { // 0 is None
-    //                     travQueue.push(temp);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+        for (let i = 32; i > 32 - size; i--) {
+            if ((types & (1 << i)) === 1) {
+                for (let a = 0; a < memHeap[addr + amountOffset]; a++) {
+                    let temp = memHeap[addr + dataOffset + size*a + 32 - i];
+                    if (temp !== 0) { // 0 is None
+                        travQueue.push(temp);
+                    }
+                }
+            }
+        }
+    }
     return r
 }
 
