@@ -112,7 +112,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
         // desturcturing assignment
         switch(s.value.tag) {
           case "call":
-            var outputInits: Array<IR.VarInit<Type>> = [];
+            var outputInits: Array<IR.VarInit<Type>> = [{ a: s.a, name: "_", type: {tag: "number"}, value: { tag: "none" } }];
             var [valinits, valstmts, va] = flattenExprToVal(s.value, env);
             outputInits = outputInits.concat(valinits);
             pushStmtsToLastBlock(blocks, ...valstmts);
@@ -155,7 +155,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
               throw new Error("should not reach here");
             }
           case "array-expr":
-            var outputInits: Array<IR.VarInit<Type>> = [];
+            var outputInits: Array<IR.VarInit<Type>> = [{ a: s.a, name: "_", type: {tag: "number"}, value: { tag: "none" } }];
             var valinits : IR.VarInit<AST.Type>[] = [];
             var valstmts : IR.Stmt<AST.Type>[] = [];
             var vales : IR.Expr<AST.Type>[] = [];
