@@ -343,6 +343,12 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength } };
         var assigns_string : IR.Stmt<Type>[] = [];
         const newStrName = generateName("newStr"); 
+        assigns_string.push({
+          tag: "store",
+          start: {tag: "id", name: newStrName},
+          offset: {tag:"wasmint", value: i},
+          value: {a:NUM , tag:"wasmint", value:v.value.length}
+        });
         for (var i=0; i<strLength;i++){
           const ascii = v.value.charCodeAt(i);
           assigns_string.push({
