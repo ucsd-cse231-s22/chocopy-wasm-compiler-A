@@ -1,7 +1,7 @@
 import * as mocha from 'mocha';
 import {expect} from 'chai';
 import { parser } from 'lezer-python';
-import { assertTC, assertTCFail } from './asserts.test';
+import { assertTC, assertTCFail, assertPrint } from './asserts.test';
 import { NUM, NONE } from '../utils';
 
 const rangeDef = `
@@ -102,5 +102,56 @@ describe('tc for destructure', () => {
     b : bool = False
     a, _, b = range(1, 4)
     `);
+
+    assertTC("destructure-assignment-in-func", `
+    ${rangeDef}
+    def func(a: int, b: int)->iterator:
+        i : int = 0
+        j : int = 0
+        i, _, _, j = range(a, b)
+        return range(i, j)
+    a : int = 0
+    b : int = 0
+    a, _, b = func(1, 5)
+    `, NONE);
+
+    assertPrint("destructure-assignment-sep", `
+    a : int = 1
+    b : bool = True
+    a, b = 2, False
+    print(a)
+    print(b)
+    `, ['2', 'False']);
+
+    assertPrint("destructure-assignment-with-ignore-sep", `
+    a : int = 1
+    b : bool = True
+    a, _, b = 2, 3, False
+    print(a)
+    print(b)
+    `, ['2', 'False']);
+
+    assertPrint("destructure-assignment-with-range-sep", `
+    ${rangeDef}
+    a : int = 0
+    b : int = 0
+    a, b = range(1, 3)
+    print(a)
+    print(b)
+    `, ['1', '2']);
+
+    assertPrint("destructure-assignment-in-func-sep", `
+    ${rangeDef}
+    def func(a: int, b: int)->iterator:
+        i : int = 0
+        j : int = 0
+        i, _, j = range(a, b)
+        return range(i, j)
+    a : int = 0
+    b : int = 0
+    a, b = func(1, 4)
+    print(a)
+    print(b)
+    `, ['1', '2']);
 
 });
