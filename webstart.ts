@@ -321,34 +321,31 @@ function webStart() {
       repl = new BasicREPL(importObject)
 
       //clear editor code
-
-      // var element = document.querySelector(".CodeMirror") as any
-      // var editor = element.CodeMirror
-      // editor.setValue("")
-      // editor.clearHistory()
-      var source = document.getElementById("user-code") as HTMLTextAreaElement
-      source.value = ""
+      var element = document.querySelector(".CodeMirror") as any
+      var editor = element.CodeMirror
+      editor.setValue("")
+      editor.clearHistory()
 
     })
 
     document.getElementById("load").addEventListener("change", function (e) {
       resetRepl()
-
       repl = new BasicREPL(importObject)
 
       var input: any = e.target
       var reader = new FileReader()
-      var codeNode = document.getElementById("user-code") as HTMLTextAreaElement
-      codeNode.value = ""
 
+      var editorBox = document.querySelector(".CodeMirror") as any;
+      const codeNode = editorBox.CodeMirror;
 
+      codeNode.setValue("")
       reader.onload = function () {
 
         if (codeNode.value != "") {
-          codeNode.value = ""
-          codeNode.value = reader.result as string
+          codeNode.setValue("")
+          codeNode.setValue(reader.result)
         } else {
-          codeNode.value = reader.result as string
+          codeNode.setValue(reader.result)
         }
 
       }
