@@ -10,8 +10,8 @@ import "codemirror/addon/lint/lint";
 
 import "codemirror/addon/scroll/simplescrollbars";
 import "./style.scss";
-import { autocompleteHint, populateAutoCompleteSrc } from "./autocomplete";
 
+import { autocompleteHint, populateAutoCompleteSrc } from "./autocomplete";
 import { default_keywords, default_functions } from "./const";
 
 function stringify(typ: Type, arg: any): string {
@@ -97,7 +97,7 @@ function webStart() {
       const userCode = document.getElementById("user-code") as HTMLTextAreaElement;
       const editorBox = CodeMirror.fromTextArea(userCode, {
         mode: "python",
-        theme: "neo",
+        theme: "default",
         lineNumbers: true,
         autoCloseBrackets: true,
         lint: true,
