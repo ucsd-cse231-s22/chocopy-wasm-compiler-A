@@ -1,6 +1,6 @@
 import * as AST from './ast';
 import * as IR from './ir';
-import { Type } from './ast';
+import { Type, UniOp } from './ast';
 import { GlobalEnv } from './compiler';
 
 const nameCounters : Map<string, number> = new Map();
@@ -149,7 +149,16 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
                     throw new Error("should not reach here");
                 }
               });
-              console.log(JSON.stringify(outputInits, null, 2));
+              // check if iterator has remainning elements
+              var [inits1, stmts1, val1] = flattenIrExprToVal(hasNextMethod, env);
+              outputInits = outputInits.concat(inits1);
+              var remain : IR.Expr<Type> = { tag: "uniop", op: UniOp.Not, expr: val1 };
+              var [inits2, stmts2, val2] = flattenIrExprToVal(remain, env);
+              outputInits = outputInits.concat(inits2);
+              const runtimeCheck : IR.Expr<Type> = { tag: "call", name: `destructure_check`, arguments: [] }
+              runtimeCheck.arguments.push(val2);
+              pushStmtsToLastBlock(blocks, ...stmts1, ...stmts2, { tag: "expr", expr: runtimeCheck })
+              // console.log(JSON.stringify(outputInits, null, 2));
               return outputInits;
             } else {
               throw new Error("should not reach here");
