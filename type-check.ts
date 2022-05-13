@@ -133,7 +133,9 @@ export function tcInit(env: GlobalTypeEnv, init : VarInit<Annotation>) : VarInit
   if (isAssignable(env, valTyp, init.type)) {
     return {...init, a: {...init.a, type: NONE}};
   } else {
-    throw new TypeCheckError("Expected type `" + init.type + "`; got type `" + valTyp + "`");
+    throw new TypeCheckError("Expected type `" + init.type + 
+    "`; got type `" + valTyp + "`" + 
+    "on line " +  " at col " );
   }
 }
 
@@ -385,7 +387,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<A
   }
 }
 
-export function tcLiteral(literal : Literal) {
+export function tcLiteral(literal : Literal<Annotation>) {
     switch(literal.tag) {
         case "bool": return BOOL;
         case "num": return NUM;

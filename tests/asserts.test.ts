@@ -1,7 +1,7 @@
 import "mocha";
 import { expect } from "chai";
 import { BasicREPL } from "../repl";
-import { Value } from "../ast";
+import { Value, Annotation } from "../ast";
 import { importObject } from "./import-object.test";
 import {run, typeCheck} from "./helpers.test";
 import { fail } from 'assert'
@@ -18,7 +18,7 @@ before(function () {
   console.log = function () {};
 });
 
-export function assert(name: string, source: string, expected: Value) {
+export function assert(name: string, source: string, expected: Value<Annotation>) {
   it(name, async () => {
     const repl = new BasicREPL(importObject);
     const result = await repl.run(source);
@@ -26,7 +26,7 @@ export function assert(name: string, source: string, expected: Value) {
   });
 }
 
-export function asserts(name: string, pairs: Array<[string, Value]>) {
+export function asserts(name: string, pairs: Array<[string, Value<Annotation>]>) {
   const repl = new BasicREPL(importObject);
 
   it(name, async () => {

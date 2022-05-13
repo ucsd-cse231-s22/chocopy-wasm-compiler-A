@@ -70,7 +70,7 @@ function lowerClass(cls: AST.Class<Annotation>, env : GlobalEnv) : IR.Class<Anno
     }
 }
 
-function literalToVal(lit: AST.Literal) : IR.Value<Annotation> {
+function literalToVal(lit: AST.Literal<Annotation>) : IR.Value<Annotation> {
     switch(lit.tag) {
         case "num":
             return { ...lit, value: BigInt(lit.value) }
