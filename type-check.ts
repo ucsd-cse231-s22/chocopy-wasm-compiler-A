@@ -336,10 +336,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         if(isAssignable(env, tArg.a, expectedArgTyp)) {
           return {...expr, a: retTyp, arg: tArg};
         } else {
-          throw new TypeError("Function call type mismatch: " + expr.name);
+          throw new TypeCheckError("Function call type mismatch: " + expr.name);
         }
       } else {
-        throw new TypeError("Undefined function: " + expr.name);
+        throw new TypeCheckError("Undefined function: " + expr.name);
       }
     case "builtin2":
       if(env.functions.has(expr.name)) {
@@ -349,10 +349,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         if(isAssignable(env, leftTyp, tLeftArg.a) && isAssignable(env, rightTyp, tRightArg.a)) {
           return {...expr, a: retTyp, left: tLeftArg, right: tRightArg};
         } else {
-          throw new TypeError("Function call type mismatch: " + expr.name);
+          throw new TypeCheckError("Function call type mismatch: " + expr.name);
         }
       } else {
-        throw new TypeError("Undefined function: " + expr.name);
+        throw new TypeCheckError("Undefined function: " + expr.name);
       }
     case "call":
       if (expr.fn.tag === "id" && env.classes.has(expr.fn.name)) {
@@ -372,7 +372,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         const newFn = tcExpr(env, locals, expr.fn);
         if(newFn.a.tag !== "callable") {
-          throw new TypeError("Cannot call non-callable expression");
+          throw new TypeCheckError("Cannot call non-callable expression");
         }
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
         
@@ -380,7 +380,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           newFn.a.params.every((param, i) => param === tArgs[i].a)) {
           return {...expr, a: newFn.a.ret, arguments: expr.arguments, fn: newFn};
         } else {
-          throw new TypeError("Function call type mismatch");
+          throw new TypeCheckError("Function call type mismatch");
         }
       }
     case "lookup":

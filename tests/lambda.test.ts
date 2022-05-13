@@ -146,12 +146,12 @@ describe("traverseType(c, s) function", () => {
     });
 
     it("if lambda", async () => {
-      await run(`
-      if mklambda(Callable[[], bool], lambda: True)():
-        print(5)
-      else:
-        print(6)
-      `);
+      await run(
+`if mklambda(Callable[[], bool], lambda: True)():
+  print(5)
+else:
+  print(6)
+`);
       console.error(importObject.output);
     });
 
