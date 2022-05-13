@@ -41,7 +41,15 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       }
     case "CallExpression":
       c.firstChild();
+      // set method call len()
+      if (s.substring(c.from, c.to) === "len") {
+        c.nextSibling(); // Arglist
+        let args = traverseArguments(c, s);
+        c.parent();
+        return { tag: "method-call", obj: args[0], method: "size", arguments: []};
+      }
       const callExpr = traverseExpr(c, s);
+      // set() initialization
       if (callExpr.tag === "id" && callExpr.name === "set") {
         c.parent();
         return { tag: "set_expr", contents: []};
@@ -49,7 +57,6 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       c.nextSibling(); // go to arglist
       let args = traverseArguments(c, s);
       c.parent(); // pop CallExpression
-
 
       if (callExpr.tag === "lookup") {
         return {
@@ -132,9 +139,11 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         case "or":
           op = BinOp.Or;
           break;
-        // case "in":
-        //   op = BinOp.In;
-        //   break;
+        case "in": // set - has method
+          c.nextSibling();
+          const obj = traverseExpr(c, s);
+          c.parent();
+          return { tag: "method-call", obj: obj, method: "has", arguments: [lhsExpr] };
         default:
           throw new Error("Could not parse op at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to))
       }
