@@ -26,11 +26,11 @@ const dataOffset = 4;
 
 let refMap: Map<ref, memAddr>;
 let refNum = 0; 
-let memHeap: Uint32Array;
+let memHeap: Int32Array;
 let activeStack: Set<ref>[];
 
 
-export function memInit(memory: Uint32Array) {
+export function memInit(memory: Int32Array) {
     refMap = new Map();
     refNum = 0;
     memHeap = memory;

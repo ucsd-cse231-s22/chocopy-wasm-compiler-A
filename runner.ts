@@ -99,7 +99,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
     importObject.js = { memory: memory };
   }
-  memInit(importObject.js.memory.buffer);
+  memInit(new Int32Array(importObject.js.memory.buffer));
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
