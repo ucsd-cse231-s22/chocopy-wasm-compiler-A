@@ -219,8 +219,12 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
     case "assign":
       const [tDestruct, hasStar] = tcDestructuringAssignment(env, locals, stmt.destruct);
       const tValExpr = tcExpr(env, locals, stmt.value);
-      if(tDestruct.isSimple && !isAssignable(env, tValExpr.a, tDestruct.a)) {
-        throw new TypeCheckError(`Non-assignable types: ${tValExpr.a} to ${tDestruct.a}`);
+      if(tDestruct.isSimple) {
+        if(!isAssignable(env, tValExpr.a, tDestruct.a)) {
+          throw new TypeCheckError(`Non-assignable types: ${tValExpr.a} to ${tDestruct.a}`);
+        } else {
+          return {a: tDestruct.a, tag: stmt.tag, destruct: tDestruct, value: tValExpr};
+        }
       }
       if(!tDestruct.isSimple && tValExpr.tag === "array-expr") {
         // for plain destructure like a, b, c = 1, 2, 3
