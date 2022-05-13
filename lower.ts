@@ -2,13 +2,16 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
+import { METADATA_AMT } from './memory';
 
 const nameCounters : Map<string, number> = new Map();
-const METADATA_AMT : number = 4;
-const NUM_INT_BITS : number = 32;
+
 
 function generateBitString(binArr: number[]) : number {
-  return parseInt(binArr.join(""), 2)
+  if (binArr.length === 0) {
+    return 0;
+  }
+  return parseInt(binArr.reverse().join(""), 2)
 }
 
 function generateName(base : string) : string {
@@ -322,9 +325,9 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
       ];
     case "id":
-      return [[], [], {tag: "value", value: { ...e }} ];
+      return [[], [], {a: e.a, tag: "value", value: { ...e }} ];
     case "literal":
-      return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+      return [[], [], {a: e.a, tag: "value", value: literalToVal(e.value) } ];
   }
 }
 
