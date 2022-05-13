@@ -167,6 +167,66 @@ export function isValidType(env: GlobalTypeEnv, t: Type) : boolean {
   }, true);
 }
 
+export function specializeFieldType(env: GlobalTypeEnv, objTy: Type, fieldTy: Type) : Type {
+  if(objTy.tag !== "class") {
+    // TODO: should we throw an error here ?
+    // Don't think this should ever happen unless
+    // something is really wrong.
+    return fieldTy;
+  }
+
+  if(objTy.params.length === 0) {
+    // classes without type parameters
+    // do not need and specialization.
+    return fieldTy;
+  }
+
+  let [_fields, _methods, typeparams] = env.classes.get(objTy.name);
+
+  let map = new Map(zip(typeparams, objTy.params).filter(([_typevar, typeparam]) => typeparam.tag !== "typevar"));
+  return specializeType(map, fieldTy);
+}
+
+export function specializeMethodType(env: GlobalTypeEnv, objTy: Type, [argTypes, retType]: [Type[], Type]) : [Type[], Type] {
+  if(objTy.tag !== "class") {
+    // TODO: should we throw an error here ?
+    // Don't think this should ever happen unless
+    // something is really wrong.
+    return [argTypes, retType];
+  }
+
+  if(objTy.params.length === 0) {
+    // classes without type parameters
+    // do not need and specialization.
+    return [argTypes, retType];
+  }
+
+  let [_fields, _methods, typeparams] = env.classes.get(objTy.name);
+  let map = new Map(zip(typeparams, objTy.params).filter(([_typevar, typeparam]) => typeparam.tag !== "typevar"));
+
+  let specializedRetType = specializeType(map, retType);
+  let specializedArgTypes = argTypes.map(argType => specializeType(map, argType));
+
+  return [specializedArgTypes, specializedRetType];
+}
+
+export function specializeType(env: Map<string, Type>, t: Type) : Type {
+  if(t.tag === "either" || t.tag === "none" || t.tag === "bool" || t.tag === "number") {
+    return t;
+  } 
+
+  if(t.tag === "typevar") {
+    if(!env.has(t.name)) {
+      return t;
+    }
+    return specializeType(env, env.get(t.name));
+  }
+
+  // at this point t has to be a class type
+  let specializedParams = t.params.map(p => specializeType(env, p));
+  return CLASS(t.name, specializedParams);
+}
+
 export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : GlobalTypeEnv {
   const newGlobs = new Map(env.globals);
   const newFuns = new Map(env.functions);
@@ -495,7 +555,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       const [fields, _] = env.classes.get(tObj.a.name);
       if (!fields.has(stmt.field)) 
         throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObj.a.name}`);
-      if (!isAssignable(env, tVal.a, fields.get(stmt.field)))
+      if (!isAssignable(env, tVal.a, specializeFieldType(env, tObj.a, fields.get(stmt.field))))
         throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
       return {...stmt, a: NONE, obj: tObj, value: tVal};
   }
@@ -619,7 +679,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         if (env.classes.has(tObj.a.name)) {
           const [fields, _] = env.classes.get(tObj.a.name);
           if (fields.has(expr.field)) {
-            return {...expr, a: fields.get(expr.field), obj: tObj};
+            return {...expr, a: specializeFieldType(env, tObj.a, fields.get(expr.field)), obj: tObj};
           } else {
             throw new TypeCheckError(`could not found field ${expr.field} in class ${tObj.a.name}`);
           }
@@ -636,7 +696,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         if (env.classes.has(tObj.a.name)) {
           const [_, methods] = env.classes.get(tObj.a.name);
           if (methods.has(expr.method)) {
-            const [methodArgs, methodRet] = methods.get(expr.method);
+            const [methodArgs, methodRet] = specializeMethodType(env, tObj.a, methods.get(expr.method));
             const realArgs = [tObj].concat(tArgs);
             if(methodArgs.length === realArgs.length &&
               methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a, argTyp))) {
