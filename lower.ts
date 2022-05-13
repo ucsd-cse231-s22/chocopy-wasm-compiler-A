@@ -345,16 +345,16 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         const newStrName = generateName("newStr"); 
         for (var i=0; i<strLength;i++){
           const ascii = v.value.charCodeAt(i);
-          const newAsciiName = generateName("newAscii");
           assigns_string.push({
             tag: "store",
-            start: {tag: "id", name: newAsciiName},
+            start: {tag: "id", name: newStrName},
             offset: {tag:"wasmint", value: i},
             value: {a:NUM , tag:"wasmint", value:ascii}
           });
         }
         return [
-          [ { name: newStrName, type: e.a, value: { tag: "str", value: v.value } }],
+          //[ { name: newStrName, type: e.a, value: { tag: "str", value: v.value } }],
+          [ { name: newStrName, type: e.a, value: { tag: "none" } }],
           [ { tag: "assign", name: newStrName, value: alloc_string }, ...assigns_string,
           //  { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
           ],
