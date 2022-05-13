@@ -48,7 +48,8 @@ function wrap_locs<T extends Function>(traverser: T): T {
   };
 }
 
-export function traverseLiteral(c : TreeCursor, s : string, env: ParserEnv) : Literal {
+export const traverseLiteral = wrap_locs(traverseLiteralHelper);
+export function traverseLiteralHelper(c : TreeCursor, s : string, env: ParserEnv) : Literal<Annotation> {
   switch(c.type.name) {
     case "Number":
       return {

@@ -71,7 +71,7 @@ function lowerClass(cls: AST.Class<Annotation>, env : GlobalEnv) : IR.Class<Anno
     }
 }
 
-function literalToVal(lit: AST.Literal) : IR.Value<Annotation> {
+function literalToVal(lit: AST.Literal<Annotation>) : IR.Value<Annotation> {
     switch(lit.tag) {
         case "num":
             return { ...lit, value: BigInt(lit.value) }
@@ -208,7 +208,11 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
     case "binop":
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
-      return [[...linits, ...rinits], [...lstmts, ...rstmts], {
+      var checkDenom : Array<IR.Stmt<Annotation>> = [];
+      if (e.op == AST.BinOp.IDiv || e.op == AST.BinOp.Mod) { // check division by zero
+        checkDenom.push(ERRORS.flattenDivideByZero(rval));
+      }
+      return [[...linits, ...rinits], [...lstmts, ...rstmts, ...checkDenom], {
           ...e,
           left: lval,
           right: rval
@@ -246,8 +250,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.type.tag);
       }
       const className = objTyp.type.name;
-      // const errorLineInfo = {tag: "value", value: literalToVal(e.value) }; // TODO
-      const checkObj : IR.Stmt<Annotation> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [objval]}}
+      const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(objval);
       const callMethod : IR.Expr<Annotation> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
       return [
         [...objinits, ...arginits],
@@ -260,7 +263,6 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       if(e.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
       const classdata = env.classes.get(e.obj.a.type.name);
       const [offset, _] = classdata.get(e.field);
-      // const errorLineInfo = {tag: "value", value: literalToVal(e.value) }; // TODO
       const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(oval);
       return [oinits, [...ostmts, checkObj], {
         tag: "load",
@@ -290,9 +292,9 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
       ];
     case "id":
-      return [[], [], {tag: "value", value: { ...e }} ];
+      return [[], [], {a: e.a, tag: "value", value: { ...e }} ];
     case "literal":
-      return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+      return [[], [], {a: e.a, tag: "value", value: literalToVal(e.value) } ];
   }
 }
 

@@ -23,7 +23,7 @@ export function divide_by_zero(arg: any, row: any, col: any, pos_start: any, pos
     return arg;
 }
 
-export function flattenDivideByZero(oval:IR.Value<AST.Annotation>) {
+export function flattenDivideByZero(oval:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
     const posArgs = [oval.a.fromLoc.row, oval.a.fromLoc.col, oval.a.fromLoc.srcIdx, oval.a.endLoc.srcIdx].map(x => flattenWasmInt(x));
     return { tag: "expr", expr: { tag: "call", name: `divide_by_zero`, arguments: [oval, ...posArgs]}}
 }

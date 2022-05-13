@@ -385,7 +385,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<A
   }
 }
 
-export function tcLiteral(literal : Literal) {
+export function tcLiteral(literal : Literal<Annotation>) {
     switch(literal.tag) {
         case "bool": return BOOL;
         case "num": return NUM;
