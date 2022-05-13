@@ -313,35 +313,54 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
       ];
-    case "construct-string":
-      // const classdata = env.classes.get(e.name);
-      // const fields = [...classdata.entries()];
-      // const newName = generateName("newObj");
-      const strLength = e.value.length;
-      const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength } };
-      var assigns_string : IR.Stmt<Type>[];
-      const newStrName = generateName("newStr"); 
-      for (var i=0; i<strLength;i++){
-        const ascii = e.value.charCodeAt(i);
-        const newAsciiName = generateName("newAscii");
-        assigns_string.push({
-          tag: "store",
-          start: {tag: "id", name: newAsciiName},
-          offset: {tag:"wasmint", value: i},
-          value: {a:NUM , tag:"wasmint", value:ascii}
-        });
-      }
-      console.log("OKOK");
-      return [
-        [ { name: newStrName, type: e.a, value: { tag: "str", value:e.value } }],
-        [ { tag: "assign", name: newStrName, value: alloc_string }, ...assigns_string,
-        //  { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
-        ],
-        { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newStrName } }
-      ];
+    // case "construct-string":
+    //   const strLength = e.value.length;
+    //   const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength } };
+    //   var assigns_string : IR.Stmt<Type>[];
+    //   const newStrName = generateName("newStr"); 
+    //   for (var i=0; i<strLength;i++){
+    //     const ascii = e.value.charCodeAt(i);
+    //     assigns_string.push({
+    //       tag: "store",
+    //       start: {tag: "id", name: newStrName},
+    //       offset: {tag:"wasmint", value: i},
+    //       value: {a:NUM , tag:"wasmint", value:ascii}
+    //     });
+    //   }
+    //   return [
+    //     [ { name: newStrName, type: e.a, value: { tag: "str", value:e.value } }],
+    //     [ { tag: "assign", name: newStrName, value: alloc_string }, ...assigns_string,
+    //     //  { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
+    //     ],
+    //     { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newStrName } }
+    //   ];
     case "id":
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
+      if (e.value.tag == "str") {
+        let v = e.value;
+        const strLength = v.value.length;
+        const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength } };
+        var assigns_string : IR.Stmt<Type>[] = [];
+        const newStrName = generateName("newStr"); 
+        for (var i=0; i<strLength;i++){
+          const ascii = v.value.charCodeAt(i);
+          const newAsciiName = generateName("newAscii");
+          assigns_string.push({
+            tag: "store",
+            start: {tag: "id", name: newAsciiName},
+            offset: {tag:"wasmint", value: i},
+            value: {a:NUM , tag:"wasmint", value:ascii}
+          });
+        }
+        return [
+          [ { name: newStrName, type: e.a, value: { tag: "str", value: v.value } }],
+          [ { tag: "assign", name: newStrName, value: alloc_string }, ...assigns_string,
+          //  { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
+          ],
+          {  tag: "value", value: { a: e.a, tag: "id", name: newStrName } }
+        ];
+      }
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
   }
 }
