@@ -7,9 +7,7 @@
 export type OpenFile = {
     filePath: string,
     currentPosition: number,   // the position of the current pointer
-    dataArray: Array<number>,  // the data store in this file
     mode: FileMode,            // the mode of this file  
-    dirty: boolean,           // a boolean value to indicate that if this files has been written
 }
 
 enum FileMode {
@@ -30,7 +28,7 @@ const buildin_file_libs = `
 `;
 
 let fdCounter = 0;
-let fs = new Map<number, OpenFile>();
+let fs = new Map<number, OpenFile>(); // track current open files
 
 /*
  * TODO Later: The input to open should be some value for string
@@ -40,25 +38,25 @@ let fs = new Map<number, OpenFile>();
  */
 export function open(filePathAddr: number, mode: number): number {
 
+    // treat as creating a new file for now. Later with string type, we check if the filePathAddr already existed first.
+    window.localStorage.setItem('test.txt', JSON.stringify([]));
     fs.set(fdCounter++, {
         filePath: 'test.txt', // a dummy address. If we have string we should read the address
         currentPosition: 0,
-        dataArray: [],
         mode: mode,
-        dirty: false,
     });
 
     return fdCounter - 1;
 }
 
 export function read(fd: number): number {
-    if (fs.has(fd)) {
-        let file = fs.get(fd);
-        let dataArray: Array<number> = JSON.parse(window.localStorage.getItem(file.filePath));
-        return dataArray[file.currentPosition];
-    };
-    return -1;
-
+    let file = checkFileExistence(fd)
+    let data = window.localStorage.getItem(file.filePath);
+    if (!data) {
+        return 0;
+    }
+    let dataArray: Array<number> = JSON.parse(data);
+    return dataArray[file.currentPosition];
 }
 
 export function write(fd: number, c: number): number {
@@ -69,10 +67,10 @@ export function write(fd: number, c: number): number {
     if (file.mode === FileMode.OPEN || file.mode === FileMode.R_ONLY) {
         throw new Error(`RUNTIME ERROR: file with fd = ${fd} is not writable (mode = ${file.mode})`);
     }
-
-    let dataArray: Array<number> = JSON.parse(window.localStorage.getItem(file.filePath));
-    dataArray.push(c);
-    writeFile(file, dataArray);
+    let data = window.localStorage.getItem(file.filePath);
+    let dataArray: Array<number> = data ? JSON.parse(data) : [];
+    dataArray[file.currentPosition] = c;
+    window.localStorage.setItem(file.filePath, JSON.stringify(dataArray));
 
     return - 1; // currently it should return - 1
 }
@@ -104,14 +102,4 @@ function checkFileExistence(fd: number): OpenFile {
         throw new Error(`RUNTIME ERROR: file with id = ${fd} does not exists`);
     }
     return fs.get(fd);
-}
-
-/**
- * This function should write the dataArry to the file with filePath
- * @param f the OpenFile to write
- * @return true if write successfully
- */
-function writeFile(f: OpenFile, dataArray: Array<number>): boolean {
-    localStorage.setItem(f.filePath, JSON.stringify(dataArray));
-    return true;
 }
