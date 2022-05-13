@@ -1,21 +1,27 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp } from "./ast"
-import { BOOL, NONE, NUM } from "./utils";
+import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
   classes: Map<string, Map<string, [number, Value<Type>]>>;  
+  classIndices: Map<string, number>;
+  functionNames: Map<string, string>;
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
+  vtableMethods: Array<[string, number]>;
 }
 
 export const emptyEnv : GlobalEnv = { 
   globals: new Map(), 
   classes: new Map(),
+  classIndices: new Map(), 
+  functionNames: new Map(),
   locals: new Set(),
   labels: [],
-  offset: 0 
+  offset: 0,
+  vtableMethods: [] 
 };
 
 type CompileResult = {
@@ -172,6 +178,16 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
 
+    case "call_indirect":
+      if (expr.fn.a.tag !== "callable") {
+        throw new Error("cursed");
+      }
+      
+      var valStmts = codeGenValue(expr.fn, env);
+      var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      // +1 for self
+      return [...fnStmts, ...valStmts, `(i32.const 0)`, `call $load`, `(call_indirect (type ${makeWasmFunType(expr.fn.a.params.length + 1)}))`];
+
     case "alloc":
       return [
         ...codeGenValue(expr.amount, env),
@@ -276,7 +292,8 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
   bodyCommands += blockCommands;
   bodyCommands += ") ;; end $loop"
   env.locals.clear();
-  return [`(func $${def.name} ${params} (result i32)
+  return [`
+  (func $${def.name} ${params} (result i32)
     ${locals}
     ${inits}
     ${bodyCommands}
@@ -286,7 +303,7 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
 
 function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
-  methods.forEach(method => method.name = `${cls.name}$${method.name}`);
+  methods.forEach(method => method.name = createMethodName(cls.name, method.name));
   const result = methods.map(method => codeGenDef(method, env));
   return result.flat();
   }

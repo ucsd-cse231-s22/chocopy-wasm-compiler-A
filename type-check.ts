@@ -1,6 +1,6 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
+import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Callable } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 
@@ -28,6 +28,22 @@ export type LocalTypeEnv = {
   actualRet: Type,
   topLevel: Boolean
 }
+
+const copyLocals = (locals: LocalTypeEnv): LocalTypeEnv => {
+  return {
+    ...locals,
+    vars: new Map(locals.vars)
+  }
+}
+const copyGlobals = (env: GlobalTypeEnv): GlobalTypeEnv => {
+  return {
+    globals: new Map(env.globals),
+    functions: new Map(env.functions),
+    classes: new Map(env.classes)
+  };
+}
+
+export type NonlocalTypeEnv = LocalTypeEnv["vars"]
 
 const defaultGlobalFunctions = new Map();
 defaultGlobalFunctions.set("abs", [[NUM], NUM]);
@@ -63,10 +79,15 @@ export type TypeError = {
   message: string
 }
 
+export function equalCallable(t1: Callable, t2: Callable): boolean {
+  return t1.params.every((param, i) => equalType(param, t2.params[i])) && equalType(t1.ret, t2.ret);
+}
+
 export function equalType(t1: Type, t2: Type) {
   return (
     t1 === t2 ||
-    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
+    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
+    (t1.tag === "callable" && t2.tag === "callable" && equalCallable(t1, t2))
   );
 }
 
@@ -75,7 +96,7 @@ export function isNoneOrClass(t: Type) {
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
+  return equalType(t1, t2) || t1.tag === "none" && (t2.tag === "class" || t2.tag === "callable")
 }
 
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
@@ -106,7 +127,7 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   const locals = emptyLocalTypeEnv();
   const newEnv = augmentTEnv(env, program);
   const tInits = program.inits.map(init => tcInit(env, init));
-  const tDefs = program.funs.map(fun => tcDef(newEnv, fun));
+  const tDefs = program.funs.map(fun => tcDef(newEnv, fun, new Map()));
   const tClasses = program.classes.map(cls => tcClass(newEnv, cls));
 
   // program.inits.forEach(init => env.globals.set(init.name, tcInit(init)));
@@ -137,22 +158,27 @@ export function tcInit(env: GlobalTypeEnv, init : VarInit<null>) : VarInit<Type>
   }
 }
 
-export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
+export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>, nonlocalEnv: NonlocalTypeEnv) : FunDef<Type> {
   var locals = emptyLocalTypeEnv();
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
+  var nonlocals = fun.nonlocals.map(init => ({ name: init.name, a: nonlocalEnv.get(init.name) }));
   fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
   fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init).type));
+  nonlocals.forEach(init => locals.vars.set(init.name, init.a));
+  var envCopy = copyGlobals(env);
+  fun.children.forEach(f => envCopy.functions.set(f.name, [f.parameters.map(x => x.type), f.ret]));
+  var children = fun.children.map(f => tcDef(envCopy, f, locals.vars));
   
-  const tBody = tcBlock(env, locals, fun.body);
-  if (!isAssignable(env, locals.actualRet, locals.expectedRet))
+  const tBody = tcBlock(envCopy, locals, fun.body);
+  if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))
     throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`)
-  return {...fun, a: NONE, body: tBody};
+  return {...fun, a: NONE, body: tBody, nonlocals, children};
 }
 
 export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
   const tFields = cls.fields.map(field => tcInit(env, field));
-  const tMethods = cls.methods.map(method => tcDef(env, method));
+  const tMethods = cls.methods.map(method => tcDef(env, method, new Map()));
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
   if (init.parameters.length !== 1 || 
     init.parameters[0].name !== "self" ||
@@ -284,6 +310,19 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeCheckError("Unbound id: " + expr.name);
       }
+    case "lambda":
+      if (expr.params.length !== expr.type.params.length) {
+        throw new TypeCheckError("Mismatch in number of parameters: " + expr.type.params.length + " != " + expr.params.length);
+      }
+      const lambdaLocals = copyLocals(locals);
+      expr.params.forEach((param, i) => {
+        lambdaLocals.vars.set(param, expr.type.params[i]);
+      })
+      let ret = tcExpr(env, lambdaLocals, expr.expr);
+      if (!isAssignable(env, ret.a, expr.type.ret)) {
+        throw new TypeCheckError("Expected type " + JSON.stringify(expr.type.ret) + " in lambda, got type " + JSON.stringify(ret.a.tag));
+      }
+      return {a: expr.type, tag: "lambda", params: expr.params, type: expr.type, expr: ret}
     case "builtin1":
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg);
@@ -314,10 +353,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         throw new TypeError("Undefined function: " + expr.name);
       }
     case "call":
-      if(env.classes.has(expr.name)) {
+      if (expr.fn.tag === "id" && env.classes.has(expr.fn.name)) {
         // surprise surprise this is actually a constructor
-        const tConstruct : Expr<Type> = { a: CLASS(expr.name), tag: "construct", name: expr.name };
-        const [_, methods] = env.classes.get(expr.name);
+        const tConstruct : Expr<Type> = { a: CLASS(expr.fn.name), tag: "construct", name: expr.fn.name };
+        const [_, methods] = env.classes.get(expr.fn.name);
         if (methods.has("__init__")) {
           const [initArgs, initRet] = methods.get("__init__");
           if (expr.arguments.length !== initArgs.length - 1)
@@ -328,18 +367,19 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         } else {
           return tConstruct;
         }
-      } else if(env.functions.has(expr.name)) {
-        const [argTypes, retType] = env.functions.get(expr.name);
-        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-
-        if(argTypes.length === expr.arguments.length &&
-           tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
-             return {...expr, a: retType, arguments: expr.arguments};
-           } else {
-            throw new TypeError("Function call type mismatch: " + expr.name);
-           }
       } else {
-        throw new TypeError("Undefined function: " + expr.name);
+        const newFn = tcExpr(env, locals, expr.fn);
+        if(newFn.a.tag !== "callable") {
+          throw new TypeError("Cannot call non-callable expression");
+        }
+        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        
+        if(newFn.a.params.length === expr.arguments.length &&
+          newFn.a.params.every((param, i) => param === tArgs[i].a)) {
+          return {...expr, a: newFn.a.ret, arguments: expr.arguments, fn: newFn};
+        } else {
+          throw new TypeError("Function call type mismatch");
+        }
       }
     case "lookup":
       var tObj = tcExpr(env, locals, expr.obj);
@@ -381,6 +421,16 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeCheckError("method calls require an object");
       }
+    case "if-expr":
+      var tThn = tcExpr(env, locals, expr.thn);
+      var tCond = tcExpr(env, locals, expr.cond);
+      var tEls = tcExpr(env, locals, expr.els);
+      if(!equalType(tCond.a, BOOL)) throw new TypeCheckError("Condition Expression Must be a bool");
+      //TODO (Michael Maddy, Closures): Might not work for inheritence...
+      if(!equalType(tThn.a, tEls.a)) throw new TypeCheckError(`if-expr type mismatch: ${JSON.stringify(tThn.a)} is not the same as ${JSON.stringify(tEls.a)}`);
+      //Instead the type could be either the type of thn or els, and not error if they are not the same type.
+      // var newType = join(env, tThn.a, tEls.a)
+      return {...expr, a: tThn.a, cond: tCond, thn: tThn, els: tEls};
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
 }

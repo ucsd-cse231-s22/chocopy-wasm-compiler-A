@@ -2,6 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
+import { APPLY, CLASS, createMethodName, NONE } from './utils';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -16,6 +17,10 @@ function generateName(base : string) : string {
   }
 }
 
+export function closureName(f: string, ancestors: Array<AST.FunDef<Type>>): string {
+  return `${[f, ...ancestors.map(f => f.name)].reverse().join("_$")}_$closure$`;
+}
+
 // function lbl(a: Type, base: string) : [string, IR.Stmt<Type>] {
 //   const name = generateName(base);
 //   return [name, {tag: "label", a: a, name: name}];
@@ -25,26 +30,74 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
-    var inits = flattenStmts(p.stmts, blocks, env);
+    p.funs.forEach(f => env.functionNames.set(f.name, closureName(f.name, [])));
+    var closures = lowerFunDefs(p.funs, env);
+    var classes = lowerClasses([...closures, ...p.classes], env);
+    var [inits, generatedClasses] = flattenStmts(p.stmts, blocks, env);
     return {
         a: p.a,
-        funs: lowerFunDefs(p.funs, env),
+        funs: [],
         inits: [...inits, ...lowerVarInits(p.inits, env)],
-        classes: lowerClasses(p.classes, env),
+        classes: [...classes, ...generatedClasses],
         body: blocks
     }
 }
 
-function lowerFunDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv) : Array<IR.FunDef<Type>> {
-    return fs.map(f => lowerFunDef(f, env)).flat();
+function lowerFunDefs(
+  fs: Array<AST.FunDef<Type>>,
+  env: GlobalEnv
+): Array<AST.Class<Type>> {
+  return fs.map(f => lowerFunDef(f, env, [])).flat();
 }
 
-function lowerFunDef(f : AST.FunDef<Type>, env : GlobalEnv) : IR.FunDef<Type> {
+function lowerFunDef(
+  f: AST.FunDef<Type>,
+  env: GlobalEnv,
+  ancestors: Array<AST.FunDef<Type>>
+): Array<AST.Class<Type>> {
+  var name = closureName(f.name, ancestors);
+  var type: Type = { tag: "class", name };
+  var self: AST.Parameter<Type> = { name: "self", type };
+
+  var envCopy = { ...env, functionNames: new Map(env.functionNames) };
+  f.children.forEach(c => envCopy.functionNames.set(c.name, closureName(c.name, [f, ...ancestors])));
+
+  // TODO(pashabou): children, populate fields and methods of closure class
+  return [
+    {
+      name,
+      fields: [],
+      methods: [
+        {
+          name: "__init__",
+          parameters: [self],
+          ret: f.ret,
+          inits: [],
+          body: [],
+          nonlocals: [],
+          children: []
+        },
+        {
+          ...f,
+          name: APPLY,
+          parameters: [self, ...f.parameters],
+        }
+      ]
+    },
+    ...f.children.map(x => lowerFunDef(x, envCopy, [f, ...ancestors])).flat()
+  ];
+}
+
+function lowerMethodDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv) : Array<IR.FunDef<Type>> {
+  return fs.map(f => lowerMethodDef(f, env)).flat();
+}
+
+function lowerMethodDef(f : AST.FunDef<Type>, env : GlobalEnv) : IR.FunDef<Type> {
   var blocks : Array<IR.BasicBlock<Type>> = [];
   var firstBlock : IR.BasicBlock<Type> = {  a: f.a, label: generateName("$startFun"), stmts: [] }
   blocks.push(firstBlock);
-  var bodyinits = flattenStmts(f.body, blocks, env);
-    return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks}
+  var [bodyinits, _] = flattenStmts(f.body, blocks, env);
+  return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks}
 }
 
 function lowerVarInits(inits: Array<AST.VarInit<Type>>, env: GlobalEnv) : Array<IR.VarInit<Type>> {
@@ -63,10 +116,16 @@ function lowerClasses(classes: Array<AST.Class<Type>>, env : GlobalEnv) : Array<
 }
 
 function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : IR.Class<Type> {
+    env.classIndices.set(cls.name, env.vtableMethods.length);
+    // init not in vtable 
+    // (we currently do no reordering, we leave that to inheritance team)
+    env.vtableMethods.push(...cls.methods
+      .filter(method => !method.name.includes("__init__"))
+      .map((method): [string, number] => [createMethodName(cls.name, method.name), method.parameters.length]));
     return {
         ...cls,
         fields: lowerVarInits(cls.fields, env),
-        methods: lowerFunDefs(cls.methods, env)
+        methods: lowerMethodDefs(cls.methods, env)
     }
 }
 
@@ -81,51 +140,54 @@ function literalToVal(lit: AST.Literal) : IR.Value<Type> {
     }
 }
 
-function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
+function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Class<Type>>] {
   var inits: Array<IR.VarInit<Type>> = [];
+  var classes: Array<IR.Class<Type>> = [];
   s.forEach(stmt => {
-    inits.push(...flattenStmt(stmt, blocks, env));
+    const res = flattenStmt(stmt, blocks, env);
+    inits.push(...res[0]);
+    classes.push(...res[1]);
   });
-  return inits;
+  return [inits, classes];
 }
 
-function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
+function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Class<Type>>] {
   switch(s.tag) {
     case "assign":
-      var [valinits, valstmts, vale] = flattenExprToExpr(s.value, env);
+      var [valinits, valstmts, vale, classes] = flattenExprToExpr(s.value, blocks, env);
       blocks[blocks.length - 1].stmts.push(...valstmts, { a: s.a, tag: "assign", name: s.name, value: vale});
-      return valinits
+      return [valinits, classes];
       // return [valinits, [
       //   ...valstmts,
       //   { a: s.a, tag: "assign", name: s.name, value: vale}
       // ]];
 
     case "return":
-    var [valinits, valstmts, val] = flattenExprToVal(s.value, env);
-    blocks[blocks.length - 1].stmts.push(
-         ...valstmts,
-         {tag: "return", a: s.a, value: val}
-    );
-    return valinits;
-    // return [valinits, [
-    //     ...valstmts,
-    //     {tag: "return", a: s.a, value: val}
-    // ]];
+      var [valinits, valstmts, val, classes] = flattenExprToVal(s.value, blocks, env);
+      blocks[blocks.length - 1].stmts.push(
+          ...valstmts,
+          {tag: "return", a: s.a, value: val}
+      );
+      return [valinits, classes];
+      // return [valinits, [
+      //     ...valstmts,
+      //     {tag: "return", a: s.a, value: val}
+      // ]];
   
     case "expr":
-      var [inits, stmts, e] = flattenExprToExpr(s.expr, env);
+      var [inits, stmts, e, classes] = flattenExprToExpr(s.expr, blocks, env);
       blocks[blocks.length - 1].stmts.push(
         ...stmts, {tag: "expr", a: s.a, expr: e }
       );
-      return inits;
+      return [inits, classes];
     //  return [inits, [ ...stmts, {tag: "expr", a: s.a, expr: e } ]];
 
     case "pass":
-      return [];
+      return [[], []];
 
     case "field-assign": {
-      var [oinits, ostmts, oval] = flattenExprToVal(s.obj, env);
-      var [ninits, nstmts, nval] = flattenExprToVal(s.value, env);
+      var [oinits, ostmts, oval, oclasses] = flattenExprToVal(s.obj, blocks, env);
+      var [ninits, nstmts, nval, nclasses] = flattenExprToVal(s.value, blocks, env);
       if(s.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
       const classdata = env.classes.get(s.obj.a.name);
       const offset : IR.Value<Type> = { tag: "wasmint", value: classdata.get(s.field)[0] };
@@ -137,7 +199,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
           offset: offset,
           value: nval
         });
-      return [...oinits, ...ninits];
+      return [[...oinits, ...ninits], oclasses.concat(nclasses)];
     }
       // return [[...oinits, ...ninits], [...ostmts, ...nstmts, {
       //   tag: "field-assign",
@@ -152,17 +214,17 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var elseLbl = generateName("$else")
       var endLbl = generateName("$end")
       var endjmp : IR.Stmt<Type> = { tag: "jmp", lbl: endLbl };
-      var [cinits, cstmts, cexpr] = flattenExprToVal(s.cond, env);
+      var [cinits, cstmts, cexpr, cclasses] = flattenExprToVal(s.cond, blocks, env);
       var condjmp : IR.Stmt<Type> = { tag: "ifjmp", cond: cexpr, thn: thenLbl, els: elseLbl };
       pushStmtsToLastBlock(blocks, ...cstmts, condjmp);
       blocks.push({  a: s.a, label: thenLbl, stmts: [] })
-      var theninits = flattenStmts(s.thn, blocks, env);
+      var [theninits, thenclasses] = flattenStmts(s.thn, blocks, env);
       pushStmtsToLastBlock(blocks, endjmp);
       blocks.push({  a: s.a, label: elseLbl, stmts: [] })
-      var elseinits = flattenStmts(s.els, blocks, env);
+      var [elseinits, elseclasses] = flattenStmts(s.els, blocks, env);
       pushStmtsToLastBlock(blocks, endjmp);
       blocks.push({  a: s.a, label: endLbl, stmts: [] })
-      return [...cinits, ...theninits, ...elseinits]
+      return [[...cinits, ...theninits, ...elseinits], [...cclasses, ...thenclasses, ...elseclasses]]
 
       // return [[...cinits, ...theninits, ...elseinits], [
       //   ...cstmts, 
@@ -183,63 +245,71 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
 
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: whileStartLbl })
       blocks.push({  a: s.a, label: whileStartLbl, stmts: [] })
-      var [cinits, cstmts, cexpr] = flattenExprToVal(s.cond, env);
+      var [cinits, cstmts, cexpr, cclasses] = flattenExprToVal(s.cond, blocks, env);
       pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: whilebodyLbl, els: whileEndLbl });
 
       blocks.push({  a: s.a, label: whilebodyLbl, stmts: [] })
-      var bodyinits = flattenStmts(s.body, blocks, env);
+      var [bodyinits, bodyclasses] = flattenStmts(s.body, blocks, env);
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: whileStartLbl });
 
       blocks.push({  a: s.a, label: whileEndLbl, stmts: [] })
 
-      return [...cinits, ...bodyinits]
+      return [[...cinits, ...bodyinits], [...cclasses, ...bodyclasses]]
   }
 }
 
-function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Expr<Type>] {
+function flattenExprToExpr(e : AST.Expr<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Expr<Type>, Array<IR.Class<Type>>] {
   switch(e.tag) {
     case "uniop":
-      var [inits, stmts, val] = flattenExprToVal(e.expr, env);
+      var [inits, stmts, val, classes] = flattenExprToVal(e.expr, blocks, env);
       return [inits, stmts, {
         ...e,
         expr: val
-      }];
+      }, classes];
     case "binop":
-      var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
-      var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
+      var [linits, lstmts, lval, lclasses] = flattenExprToVal(e.left, blocks, env);
+      var [rinits, rstmts, rval, rclasses] = flattenExprToVal(e.right, blocks, env);
       return [[...linits, ...rinits], [...lstmts, ...rstmts], {
           ...e,
           left: lval,
           right: rval
-        }];
+        }, [...lclasses, ...rclasses]];
     case "builtin1":
-      var [inits, stmts, val] = flattenExprToVal(e.arg, env);
-      return [inits, stmts, {tag: "builtin1", a: e.a, name: e.name, arg: val}];
+      var [inits, stmts, val, classes] = flattenExprToVal(e.arg, blocks, env);
+      return [inits, stmts, {tag: "builtin1", a: e.a, name: e.name, arg: val}, classes];
     case "builtin2":
-      var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
-      var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
+      var [linits, lstmts, lval, lclasses] = flattenExprToVal(e.left, blocks, env);
+      var [rinits, rstmts, rval, rclasses] = flattenExprToVal(e.right, blocks, env);
       return [[...linits, ...rinits], [...lstmts, ...rstmts], {
           ...e,
           left: lval,
           right: rval
-        }];
+        }, [...lclasses, ...rclasses]];
     case "call":
-      const callpairs = e.arguments.map(a => flattenExprToVal(a, env));
+      const [finits, fstmts, fval, fclasses] = flattenExprToVal(e.fn, blocks, env);
+      const callpairs = e.arguments.map(a => flattenExprToVal(a, blocks, env));
       const callinits = callpairs.map(cp => cp[0]).flat();
       const callstmts = callpairs.map(cp => cp[1]).flat();
       const callvals = callpairs.map(cp => cp[2]).flat();
-      return [ callinits, callstmts,
+      const callclasses = callpairs.map(cp => cp[3]).flat();
+      return [
+        [...finits, ...callinits],
+        [...fstmts, ...callstmts],
         {
           ...e,
-          arguments: callvals
-        }
+          tag: "call_indirect",
+          fn: fval,
+          arguments: [fval, ...callvals]
+        },
+        [...fclasses, ...callclasses]
       ];
     case "method-call": {
-      const [objinits, objstmts, objval] = flattenExprToVal(e.obj, env);
-      const argpairs = e.arguments.map(a => flattenExprToVal(a, env));
+      const [objinits, objstmts, objval, objclasses] = flattenExprToVal(e.obj, blocks, env);
+      const argpairs = e.arguments.map(a => flattenExprToVal(a, blocks, env));
       const arginits = argpairs.map(cp => cp[0]).flat();
       const argstmts = argpairs.map(cp => cp[1]).flat();
       const argvals = argpairs.map(cp => cp[2]).flat();
+      const argclasses = argpairs.map(cp => cp[3]).flat();
       var objTyp = e.obj.a;
       if(objTyp.tag !== "class") { // I don't think this error can happen
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
@@ -250,24 +320,25 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
-        callMethod
+        callMethod,
+        [...objclasses, ...argclasses]
       ];
     }
     case "lookup": {
-      const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
+      const [oinits, ostmts, oval, oclasses] = flattenExprToVal(e.obj, blocks, env);
       if(e.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
       const classdata = env.classes.get(e.obj.a.name);
       const [offset, _] = classdata.get(e.field);
       return [oinits, ostmts, {
         tag: "load",
         start: oval,
-        offset: { tag: "wasmint", value: offset }}];
+        offset: { tag: "wasmint", value: offset }}, oclasses];
     }
     case "construct":
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
+      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1} };
       const assigns : IR.Stmt<Type>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {
@@ -280,22 +351,105 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
 
       return [
         [ { name: newName, type: e.a, value: { tag: "none" } }],
-        [ { tag: "assign", name: newName, value: alloc }, ...assigns,
+        [ { tag: "assign", name: newName, value: alloc }, { // store class offset
+            tag: "store",
+            start: { tag: "id", name: newName },
+            offset: { tag: "wasmint", value: 0 },
+            value: { tag: "wasmint", value: env.classIndices.get(e.name) }
+          }, ...assigns,
           { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
         ],
-        { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
+        { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } },
+        []
       ];
     case "id":
-      return [[], [], {tag: "value", value: { ...e }} ];
+      return [[], [], {tag: "value", value: { ...e }}, []];
     case "literal":
-      return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+      return [[], [], {tag: "value", value: literalToVal(e.value) }, [] ];
+    case "if-expr": {
+      var thenLbl = generateName("$ifExprThen");
+      var elseLbl = generateName("$ifExprElse");
+      var endLbl = generateName("$ifExprEnd");
+      var ifExprTmpVal = generateName("$ifExprTmp");
+
+      var endjmp : IR.Stmt<Type> = { tag: "jmp", lbl: endLbl };
+      let [cinits, cstmts, cexpr] = flattenExprToVal(e.cond, blocks, env);
+      var condjmp : IR.Stmt<Type> = { tag: "ifjmp", cond: cexpr, thn: thenLbl, els: elseLbl };
+
+      pushStmtsToLastBlock(blocks, ...cstmts, condjmp);
+
+      blocks.push({ a: e.a, label: thenLbl, stmts: [] });
+      var [thninits, thnstmts, thnexpr] = flattenExprToExpr(e.thn, blocks, env);
+      pushStmtsToLastBlock(blocks, ...thnstmts, { a: e.a, tag: "assign", name: ifExprTmpVal, value: thnexpr}, endjmp);
+
+      blocks.push({ a: e.a, label: elseLbl, stmts: [] });
+      var [elsinits, elsstmts, elsexpr] = flattenExprToExpr(e.els, blocks, env);
+      pushStmtsToLastBlock(blocks,...elsstmts, { a: e.a, tag: "assign", name: ifExprTmpVal, value: elsexpr}, endjmp);
+
+      blocks.push({ a: e.a, label: endLbl, stmts: [] });
+      var varDefForTmp: IR.VarInit<Type> = { a: e.a, name: ifExprTmpVal, type: e.a, value: { a: { tag: "none"}, tag: "none" } };
+
+      return [
+        [...cinits, ...elsinits, ...thninits, varDefForTmp],
+        [],
+        { a: e.a, tag:"value", value: { a: e.a, tag: "id", name: ifExprTmpVal } },
+        []
+      ];
+    }
+    case "lambda":
+      var [classDef, constrExpr] = lambdaToClass(e);
+
+      const classFields = new Map();
+      classDef.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
+      env.classes.set(classDef.name, classFields);
+      const irClass = lowerClass(classDef, env);
+      irClass.a = e.a;
+
+      const [cinits, cstmts, cval, cclasses] = flattenExprToExpr(constrExpr, blocks, env);
+
+      return [cinits, cstmts, cval, [irClass, ...cclasses]]
   }
 }
 
-function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>] {
-  var [binits, bstmts, bexpr] = flattenExprToExpr(e, env);
+function lambdaToClass(lambda: AST.Lambda<Type>) : [AST.Class<Type>, AST.Expr<Type>] {
+  var lambdaClassName = generateName("lambda");
+  var params = lambda.params.map((param, i) => ({
+    name: param, 
+    type: lambda.type.params[i]
+  }));
+  return [
+    {
+      name: lambdaClassName,
+      fields: [],
+      methods: [
+        { 
+          name: "__init__", 
+          parameters: [{ name: "self", type: CLASS(lambdaClassName) }], 
+          ret: NONE, 
+          inits: [], 
+          body: [],
+          nonlocals: [],
+          children: []
+        },
+        { 
+          name: APPLY, 
+          parameters: [{ name: "self", type: CLASS(lambdaClassName) }, ...params], 
+          ret: lambda.type.ret, 
+          inits: [], 
+          body: [{ a: lambda.type.ret, tag: "return", value: lambda.expr }],
+          nonlocals: [],
+          children: []
+        }
+      ]
+    },
+    { a: lambda.a, tag: "construct", name: lambdaClassName }
+  ];
+}
+
+function flattenExprToVal(e : AST.Expr<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>, Array<IR.Class<Type>>] {
+  var [binits, bstmts, bexpr, bclasses] = flattenExprToExpr(e, blocks, env);
   if(bexpr.tag === "value") {
-    return [binits, bstmts, bexpr.value];
+    return [binits, bstmts, bexpr.value, bclasses];
   }
   else {
     var newName = generateName("valname");
@@ -310,7 +464,8 @@ function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarIn
     return [
       [...binits, { a: e.a, name: newName, type: e.a, value: { tag: "none" } }],
       [...bstmts, setNewName],  
-      {tag: "id", name: newName, a: e.a}
+      {tag: "id", name: newName, a: e.a},
+      bclasses
     ];
   }
 }
