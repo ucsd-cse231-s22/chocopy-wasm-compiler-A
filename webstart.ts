@@ -1,12 +1,36 @@
 import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
+import { NUM, BOOL, NONE, load_bignum, builtin_bignum } from './utils';
 
-function stringify(typ: Type, arg: any) : string {
+const bigMath = {
+  // https://stackoverflow.com/a/64953280
+  abs(x: bigint) {
+    return x < BigInt(0) ? -x : x
+  },
+  sign(x: bigint) {
+    if (x === BigInt(0)) return BigInt(0)
+    return x < BigInt(0) ? BigInt(-1) : BigInt(1)
+  },
+  pow(base: bigint, exponent: bigint) {
+    return base ** exponent
+  },
+  min(value: bigint, ...values: bigint[]) {
+    for (const v of values)
+      if (v < value) value = v
+    return value
+  },
+  max(value: bigint, ...values: bigint[]) {
+    for (const v of values)
+      if (v > value) value = v
+    return value
+  },
+}
+
+function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : string {
   switch(typ.tag) {
     case "number":
-      return (arg as number).toString();
+      return load_bignum(arg, loader).toString();
     case "bool":
       return (arg as boolean)? "True" : "False";
     case "none":
@@ -16,11 +40,11 @@ function stringify(typ: Type, arg: any) : string {
   }
 }
 
-function print(typ: Type, arg : number) : any {
+function print(typ: Type, arg : number, loader: WebAssembly.ExportValue) : any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
-  elt.innerText = stringify(typ, arg);
+  elt.innerText = stringify(typ, arg, loader);
   return arg;
 }
 
@@ -45,13 +69,13 @@ function webStart() {
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
-        print_num: (arg: number) => print(NUM, arg),
-        print_bool: (arg: number) => print(BOOL, arg),
-        print_none: (arg: number) => print(NONE, arg),
-        abs: Math.abs,
-        min: Math.min,
-        max: Math.max,
-        pow: Math.pow
+        print_num: (arg: number) => print(NUM, arg, memoryModule.instance.exports.load),
+        print_bool: (arg: number) => print(BOOL, arg, null),
+        print_none: (arg: number) => print(NONE, arg, null),
+        abs:  (arg: number) => builtin_bignum([arg], bigMath.abs, memoryModule.instance.exports),
+        min: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.min, memoryModule.instance.exports),
+        max: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.max, memoryModule.instance.exports),
+        pow: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.pow, memoryModule.instance.exports)
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,
