@@ -30,23 +30,9 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
     case "Number":
     case "Boolean":
     case "None":
-      let value: Literal = traverseLiteral(c, s);
-      if (!c.nextSibling()) {
-        return {
-          tag: "literal",
-          value,
-        }   
-      } else {
-        let elements: Expr<null>[] = [{tag: "literal", value}];
-        while (c.nextSibling()) {
-          value = traverseLiteral(c, s);
-          elements.push({ tag: "literal", value });
-          c.nextSibling();
-        }
-        return {
-          tag: "array-expr",
-          elements,
-        };
+      return {
+        tag: "literal",
+        value: traverseLiteral(c, s)
       }
     case "VariableName":
       return {
@@ -251,6 +237,13 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       c.nextSibling(); // go to equals
       c.nextSibling(); // go to value
       var value = traverseExpr(c, s);
+      if (c.nextSibling()) {
+        value = {tag: "array-expr", elements: [value]};
+        while (c.nextSibling()) {
+          value.elements.push(traverseExpr(c, s));
+          c.nextSibling();
+        }
+      }
       c.parent();
       return {
         tag: "assign",
