@@ -11,7 +11,7 @@ import {
   VarInit,
   Class,
 } from "./ast";
-import { NUM, BOOL, NONE, CLASS, LIST } from "./utils";
+import { NUM, BOOL, NONE, CLASS, LIST, EMPTY } from "./utils";
 import { emptyEnv } from "./compiler";
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
@@ -87,11 +87,11 @@ export function isNoneOrClass(t: Type) {
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || (t1.tag === "none" && t2.tag === "class") || (t1.tag === "none" && t2.tag === "list");
+  return equalType(t1, t2) || (t1.tag === "none" && t2.tag === "class");
 }
 
 export function isAssignable(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  console.log(t1, t2)
+  // console.log(t1, t2)
   return isSubtype(env, t1, t2);
 }
 
@@ -466,6 +466,42 @@ export function tcExpr(
       } else {
         throw new TypeCheckError("field lookups require an object");
       }
+    case "index":
+      var tObj = tcExpr(env, locals, expr.obj);
+      if(tObj.a === EMPTY()) {
+        throw new TypeCheckError(`cannot index into type: \`<Empty>\``);
+      } else if(tObj.a.tag === "list") {
+        var tIndex = tcExpr(env, locals, expr.index);
+        if(tIndex.a !== NUM) {
+          throw new TypeCheckError(`index is of non-integer type \'${tIndex.a.tag}\'`);
+        }
+        return { ...expr, a: tObj.a.itemType};
+      } else {
+        // For other features that use index
+        throw new TypeCheckError(`unsupported index operation`);
+      }
+    case "slice":
+      var tObj = tcExpr(env, locals, expr.obj);
+      if(tObj.a.tag == "list") {
+        var tStart = undefined;
+        var tEnd = undefined;
+        if(expr.index_s !== undefined) {
+          tStart = tcExpr(env, locals, expr.index_s);
+          if(tStart.a !== NUM)
+            throw new TypeCheckError(`index is of non-integer type \'${tStart.a.tag}\'`);
+        }
+        if(expr.index_e !== undefined) {
+          tEnd = tcExpr(env, locals, expr.index_s);
+          if(tEnd.a !== NUM)
+            throw new TypeCheckError(`index is of non-integer type \'${tEnd.a.tag}\'`);
+        }
+        return { ...expr, a: tObj.a, index_s: tStart, index_e: tEnd };
+      } else if(tObj.a === EMPTY()) {
+        return { ...expr, a: EMPTY() }
+      } else {
+        // For other features that use slice syntax
+        throw new TypeCheckError(`unsupported slice operation`);
+      }
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj);
       var tArgs = expr.arguments.map((arg) => tcExpr(env, locals, arg));
@@ -512,7 +548,7 @@ export function tcExpr(
           throw new TypeCheckError("List constructor type mismatch");
         }
       }
-      return { ...expr, a: LIST(NONE), items: tItems };
+      return { ...expr, a: EMPTY(), items: tItems };
     default:
       throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
