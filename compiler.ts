@@ -50,9 +50,6 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
   const setFUns : Array<string> = classes.concat(setUtilFuns());
   const allFuns = funs.concat(setFUns).join("\n\n");
-  // const allFuns = funs.concat(classes).join("\n\n");
-  // const allFuns = allFuns.concat(setFUns).join("\n\n");
-  // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
   withDefines.labels = ast.body.map(block => block.label);
   var bodyCommands = "(local.set $$selector (i32.const 0))\n"
@@ -304,17 +301,23 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
   
     setFunStmts.push(
       ...[
+        // Clear all set entries using a for loop
+        // Set counter i to 0 and stop the loop when i equals 10 (hash size)
         "(func $set$clear (param $baseAddr i32) (result i32)",
         "(local $i i32)",
         "(loop $my_loop",
 
+        // Find the address of the ith entry
         "(local.get $baseAddr)",
         "(local.get $i)",
         "(i32.mul (i32.const 4))",
         "(i32.add)",
+
+        // Clear the entry
         "(i32.const 0)",
         "(i32.store)", 
 
+        // Update counter i and check if need to stop the loop
         "(local.get $i)",
         "(i32.const 1)",
         "(i32.add)",
@@ -325,6 +328,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         "(br_if $my_loop)",
         ")",
 
+        // Return a dump value
         "(i32.const 0)",
         "(return))",
         "",
@@ -333,26 +337,32 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
 
     setFunStmts.push(
     ...[
+      // Basic idea is to iterate through all set entries and aggregate the number of elements followed by each entry
       "(func $set$size (param $baseAddr i32) (result i32)",
       "(local $i i32)",
       "(local $size i32)",
       "(local $nodePtr i32)", 
 
+      // Use a for loop (i from 0 to 10)
       "(loop $my_loop",
 
+      // Find the address of the entry
       "(local.get $baseAddr)",
       "(local.get $i)",
       "(i32.mul (i32.const 4))",
       "(i32.add)",
 
+      // Check if there is a follwing linkedlist
       "(i32.load)",
       "(i32.const 0)",
       "(i32.eq)",
+      // If there's no follwing element, do nothing
       "(if",
       "(then", 
-      // do nothing
       ")",
+      // Else, iterate the list
       "(else", // Opening else
+        // There is an element, size++
         "(local.get $size)",
         "(i32.const 1)",
         "(i32.add)",
@@ -366,13 +376,15 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         "(i32.add)", // Next pointer
         "(local.set $nodePtr)",
         "(block",
-        "(loop", // While loop till we find a node whose next is None
+        // While loop till we find a node whose next is None
+        "(loop", 
           "(local.get $nodePtr)",
           "(i32.load)", // Traversing to head of next node
           "(i32.const 0)", //None
           "(i32.ne)", // If nodePtr not None
           "(if",
           "(then",
+            // There is an element, size++
             "(local.get $size)",
             "(i32.const 1)",
             "(i32.add)",
@@ -396,6 +408,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
       ")", // Closing else
       ")", // Closing if
 
+      // Update the counter and go to the next entry
       "(local.get $i)",
       "(i32.const 1)",
       "(i32.add)",
@@ -406,6 +419,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
       "(br_if $my_loop)",
       ")",
 
+      // Return the $size
       "(local.get $size)",
       "(return))",
       "",
@@ -417,11 +431,17 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         "(func $set$CreateEntry (param $val i32) (result i32)",
         "(local $$allocPointer i32)",
 
+        // Allocate a node at the end of the heap
+        // Need 2, 1 for value and 1 for pointer
         "(i32.const 2)   ;; size in bytes",
         "(call $alloc)",
         "(local.tee $$allocPointer)",
+
+        // Store the value
         "(local.get $val)",
         "(i32.store)", 
+
+        // Store the pointer to 0 (None) because it is the last element
         "(local.get $$allocPointer)",
         "(i32.const 4)",
         "(i32.add)",
@@ -435,6 +455,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
 
     setFunStmts.push(
       ...[
+        // Iterate through all hash entries and check if the specified element is in the set
         "(func $set$has (param $baseAddr i32) (param $val i32) (result i32)",
         "(local $nodePtr i32)", // Local variable to store the address of nodes in linkedList
         "(local $tagHitFlag i32)", // Local bool variable to indicate whether tag is hit
@@ -464,10 +485,10 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
           "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
           "(i32.add)", //Recomputed bucketAddress
           "(i32.load)", //Loading head of linkedList
-          "(i32.load)", //Loading the tag of head
+          "(i32.load)", //Loading the value of head
           "(local.get $val)",
           "(i32.eq)",
-          "(if", // if tag is same as the provided one
+          "(if", // if value is same as the provided one
           "(then",
             "(i32.const 1)",
             "(local.set $tagHitFlag)", // Set tagHitFlag to True
@@ -494,9 +515,9 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
             "(then",
               "(local.get $nodePtr)",
               "(i32.load)", //Loading head of linkedList
-              "(i32.load)", //Loading the tag of head
+              "(i32.load)", //Loading the value of head
               "(local.get $val)",
-              "(i32.eq)", // if tag is same as the provided one
+              "(i32.eq)", // if value is same as the provided one
               "(if",
               "(then",
                 "(i32.const 1)",
@@ -521,6 +542,8 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
           ")", // Closing Block
         ")", // Closing else
         ")", // Closing if
+
+        // Return tagHitFlag
         "(local.get $tagHitFlag)",
         "(return))", //
         ""
@@ -531,7 +554,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
       ...[
         "(func $set$add (param $baseAddr i32) (param $val i32) (result i32)",
         "(local $nodePtr i32)", // Local variable to store the address of nodes in linkedList
-        "(local $tagHitFlag i32)", // Local bool variable to indicate whether tag is hit
+        "(local $tagHitFlag i32)", // Local bool variable to indicate whether value is hit
         "(local $$allocPointer i32)",
 
         "(i32.const 0)",
@@ -546,7 +569,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         "(i32.const 0)", //None
         "(i32.eq)",
         "(if",
-        "(then", // if the literal in bucketAddress is None
+        "(then", // if the literal in bucketAddress is None, add value to the address
           "(local.get $val)",
           "(call $set$CreateEntry)", //create node
           "(local.set $$allocPointer)",
@@ -568,13 +591,13 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
           "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
           "(i32.add)", //Recomputed bucketAddress
           "(i32.load)", //Loading head of linkedList
-          "(i32.load)", //Loading the tag of head
+          "(i32.load)", //Loading the value of head
           "(local.get $val)",
           "(i32.eq)",
-          "(if", // if tag is same as the provided one
+          "(if", // if value is same as the provided one
           "(then",
             "(i32.const 1)",
-            "(local.set $tagHitFlag)", // Set tagHitFlag to True
+            "(local.set $tagHitFlag)", // Set tagHitFlag to True and no need to create a new entry
           ")", // closing then
           ")", // closing if
 
@@ -598,13 +621,13 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
             "(then",
               "(local.get $nodePtr)",
               "(i32.load)", //Loading head of linkedList
-              "(i32.load)", //Loading the tag of head
+              "(i32.load)", //Loading the value of head
               "(local.get $val)",
-              "(i32.eq)", // if tag is same as the provided one
+              "(i32.eq)", // if value is same as the provided one
               "(if",
               "(then",
                 "(i32.const 1)",
-                "(local.set $tagHitFlag)", // Set tagHitFlag to True
+                "(local.set $tagHitFlag)", // Set tagHitFlag to True and no need to create a new entry
               ")", // closing then
               ")", // closing if
               "(local.get $nodePtr)",
@@ -625,7 +648,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
           ")", // Closing Block
         "(local.get $tagHitFlag)",
         "(i32.const 0)",
-        "(i32.eq)", // Add a new node only if tag hit is false.
+        "(i32.eq)", // Add a new node only if value hit is false.
         "(if",
         "(then",
           "(local.get $val)",
@@ -638,6 +661,8 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         ")", // Closing if inside else
         ")", // Closing else
         ")", // Closing if
+
+        // Return a dump value
         "(i32.const 0)",
         "(return))", //
       ]
@@ -645,6 +670,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
 
     setFunStmts.push(
       ...[
+        // Remove a specified element from the set
         "(func $set$remove (param $baseAddr i32) (param $val i32) (result i32)",
         "(local $prePtr i32)",
         "(local $dump i32)",
@@ -665,7 +691,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         "(i32.eq)",
         "(if",
         "(then", 
-          // Do nothing
+          // Specified element not in the set and do nothing
         ")", // Closing then
 
         "(else", // Opening else
@@ -692,6 +718,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
             "(i32.const 1)",
             "(local.set $tagHitFlag)", // Set tagHitFlag to True
 
+            // Make the prePtr point to the next address of current pointer
             "(local.get $prePtr)",
             "(local.get $baseAddr)", // Recomputing the bucketAddress to follow the linkedList.
             "(local.get $val)",
@@ -727,22 +754,22 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
             "(then",
               "(local.get $nodePtr)",
               "(i32.load)", //Loading head of linkedList
-              "(i32.load)", //Loading the tag of head
+              "(i32.load)", //Loading the value of head
               "(local.get $val)",
-              "(i32.eq)", // if tag is same as the provided one
+              "(i32.eq)", // if value is same as the provided one
               "(if",
               "(then",
                 "(i32.const 1)",
                 "(local.set $tagHitFlag)", // Set tagHitFlag to True
 
+                // Let the nodePtr points to the next address
                 "(local.get $nodePtr)",
-                "(local.get $nodePtr)", //Multiply by 4 for memory offset
+                "(local.get $nodePtr)", 
                 "(i32.load)", 
                 "(i32.const 4)",
                 "(i32.add)",
                 "(i32.load)",
                 "(i32.store)",
-
 
               ")", // closing then
               ")", // closing if
@@ -765,6 +792,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         ")", // Closing else
         ")", // Closing if
 
+        // Check if the remove is success or not, if not, throw an error from $ele_not_found
         "(local.get $tagHitFlag)",
         "(call $ele_not_found)",
 
@@ -777,11 +805,13 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
 
     setFunStmts.push(
       ...[
+        // Given a set A and set B, add all elements in B to A
         "(func $set$update (param $baseAddr$new i32) (param $baseAddr i32) (result i32)",
         "(local $i i32)",
         "(local $nodePtr i32)", 
         "(local $dump i32)", 
   
+        // Iterate all elements in set B
         "(loop $my_loop",
   
         "(local.get $baseAddr)",
@@ -794,11 +824,11 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         "(i32.eq)",
         "(if",
         "(then", 
-        // do nothing
+        // No element under current entry, do nothing
         ")",
         "(else", // Opening else
 
-
+          // Add the element found in set B to set A
           "(local.get $baseAddr$new)", // Recomputing the bucketAddress to follow the linkedList.
           "(local.get $baseAddr)",
           "(local.get $i)",
@@ -809,6 +839,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
           "(call $set$add)",
           "(local.set $dump)",
 
+          // Move to next element
           "(local.get $baseAddr)", // Recomputing the bucketAddress to follow the linkedList.
           "(local.get $i)",
           "(i32.mul (i32.const 4))",
@@ -826,6 +857,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
             "(if",
             "(then",
 
+              // Add the found element in set B to set A
               "(local.get $baseAddr$new)", // Recomputing the bucketAddress to follow the linkedList.
               "(local.get $nodePtr)",
               "(i32.load)",
@@ -833,7 +865,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
               "(call $set$add)",
               "(local.set $dump)",
 
-
+              // Move to next node
               "(local.get $nodePtr)",
               "(i32.load)", //Loading head of linkedList
               "(i32.const 4)",
@@ -853,6 +885,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         ")", // Closing else
         ")", // Closing if
   
+        // Check if all entries are visited
         "(local.get $i)",
         "(i32.const 1)",
         "(i32.add)",
@@ -863,6 +896,7 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
         "(br_if $my_loop)",
         ")",
   
+        // Return a dump value
         "(local.get $dump)",
         "(return))",
         "",

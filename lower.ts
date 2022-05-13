@@ -310,7 +310,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           }
         });
         return [
-          // [],
           [{ a: e.a, name: name, type: e.a, value: { tag: "none" } }],
           [ { tag: "assign", name: name, value: setAlloc }, ...elealloc],
           { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: name } }
