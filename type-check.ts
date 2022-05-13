@@ -115,11 +115,6 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   // program.funs.forEach(fun => tcDef(env, fun));
   // Strategy here is to allow tcBlock to populate the locals, then copy to the
   // global env afterwards (tcBlock changes locals)
-  console.log("locals",locals);
-  console.log("newEnv",newEnv);
-  console.log("tInits",tInits);
-  console.log("tDefs",tDefs);
-  console.log("tClasses",tClasses);
   const tBody = tcBlock(newEnv, locals, program.stmts);
   var lastTyp : Type = NONE;
   if (tBody.length){
@@ -333,13 +328,18 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           loc.vars.set(expr.elem.name, NUM);
           const elem = {...expr.elem, a: NUM};
           const left = tcExpr(env, loc, expr.left); 
-          const cond = tcExpr(env, loc, expr.cond);
-          if(cond.a.tag !== "bool")
+          var cond = undefined;
+          if(expr.cond !== undefined)
           {
-            throw new TypeCheckError("TYPE ERROR:if condition in list comprehension is not boolean");
+            cond = tcExpr(env, loc, expr.cond);
+            if(cond.a.tag !== "bool")
+            {
+              throw new TypeCheckError("TYPE ERROR:if condition in list comprehension is not boolean");
+            }
           }
           
-          return {...expr, left, elem, iterable, a: CLASS(iterable.a.name)};
+          
+          return {...expr, left, elem, iterable, cond:cond, a: CLASS(iterable.a.name)};
         }
         else
           throw new Error("TYPE ERROR:elem has to be an id");
@@ -367,7 +367,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           {
             throw new TypeCheckError("__init__ didn't receive the correct number of arguments from the constructor");
           }
-          console.log(tConstruct.arguments);
           if(expr.arguments[0].tag === "literal" && expr.arguments[1].tag === "literal" && expr.arguments[0].value.tag == "num" && expr.arguments[1].value.tag == "num")
           {
             const args0 = expr.arguments[0].value.value;
