@@ -230,18 +230,18 @@ export function traverseArgumentsWithKW(c : TreeCursor, s : string) : [Array<Exp
       let value = traverseExpr(c, s);
       var keyword = "";
       if (expr.tag !== "id" ) { 
-        throw new Error("SyntaxError: keyword can't be an expression");
+        throw new SyntaxError("keyword can't be an expression");
       } else {
         keyword = expr.name;
       }
       if (kwargs.has(keyword)) {
-        throw new Error("SyntaxError: keyword argument '" + keyword + "' repeated")
+        throw new SyntaxError("keyword argument '" + keyword + "' repeated")
       }
       kwargs.set(keyword, value);
       c.nextSibling(); // Focuses on either "," or ")"
     } else {
       if (keywordArgsBegin) {
-        throw new Error("SyntaxError: positional argument follows keyword argument");
+        throw new SyntaxError("positional argument follows keyword argument");
       }
       args.push(expr);
     }
