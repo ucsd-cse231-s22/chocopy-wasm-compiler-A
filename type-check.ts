@@ -78,7 +78,8 @@ export function equalType(t1: Type, t2: Type): boolean {
     t1 === t2 ||
     (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
     (t1.tag === "list" && t2.tag === "list" && equalType(t1.itemType, t2.itemType)) ||
-    (t1.tag === "list" && t2.tag === "list" && t1.itemType.tag === "none")
+    (t1.tag === "empty" && t2.tag === "list") ||
+    (t1.tag === "list" && t2.tag === "empty")
   );
 }
 
@@ -87,7 +88,7 @@ export function isNoneOrClass(t: Type) {
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || (t1.tag === "none" && t2.tag === "class");
+  return equalType(t1, t2) || (t1.tag === "none" && t2.tag === "class") || (t1.tag === "none" && t2.tag === "list") || (t1.tag === "empty" && t2.tag === "list");
 }
 
 export function isAssignable(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
@@ -313,6 +314,21 @@ export function tcExpr(
       const tBin = { ...expr, left: tLeft, right: tRight };
       switch (expr.op) {
         case BinOp.Plus:
+          // List concatenation
+          if(tLeft.a.tag === "empty" || tLeft.a.tag === "list" || tRight.a.tag === "empty" || tRight.a.tag === "list") {
+            if(tLeft.a.tag === "empty") {
+              if(tRight.a.tag === "empty") return {...expr, a: {tag: "empty"}};
+              else return {...expr, a: tRight.a};
+            } else if(tRight.a.tag === "empty") {
+              return {...expr, a: tLeft.a};
+            } else if(equalType(tLeft.a, tRight.a)) {
+              return {...expr, a: tLeft.a};
+            } else {
+              var leftType = tLeft.a.tag === "list"? tLeft.a.tag + "[" + tLeft.a.itemType + "]": tLeft.a.tag;
+              var rightType = tRight.a.tag === "list"? tRight.a.tag + "[" + tRight.a.itemType + "]": tRight.a.tag;
+              throw new TypeCheckError(`Cannot concatenate ${rightType} to ${leftType}`);
+            }
+          }
         case BinOp.Minus:
         case BinOp.Mul:
         case BinOp.IDiv:
@@ -539,12 +555,15 @@ export function tcExpr(
       }
     case "construct-list":
       const tItems = expr.items.map((item) => tcExpr(env, locals, item));
-      if (tItems.length > 0) {
-        const [firstTyp, ...rest] = tItems;
-        if (rest.every((item) => isAssignable(env, firstTyp.a, item.a))) {
-          return { ...expr, a: LIST(firstTyp.a), items: tItems };
+      // Get first non-empty type
+      const listType = tItems.find((item) => item.a.tag !== "empty");
+      if(tItems.length > 0) {
+        if(listType === undefined) {
+          return { ...expr, a: {tag: "list", itemType: EMPTY()}, items: tItems };
+        } else if(tItems.every((item) => isAssignable(env, listType.a, item.a))) {
+          return { ...expr, a: LIST(listType.a), items: tItems };
         } else {
-          throw new TypeCheckError("List constructor type mismatch");
+          throw new TypeCheckError(`List constructor type mismatch` + JSON.stringify(listType) + JSON.stringify(tItems));
         }
       }
       return { ...expr, a: EMPTY(), items: tItems };

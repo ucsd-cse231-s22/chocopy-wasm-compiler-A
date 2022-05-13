@@ -248,10 +248,22 @@ describe('tc for lists', () => {
   assertTC("list of lists", "[[1,2,3], [2,3,4]]", {tag: "list", itemType: {tag: "list", itemType: NUM } });
   assertTCFail("construct list with different types", "[1, True]");
   assertTCFail("concatenate lists of different types", "[1] + [True]");
-  assertTC("empty-list", `
+  assertTC("empty-list in assign 1", `
   a : [int] = None
   a = []
   a`, {tag: "list", itemType: NUM });
+  assertTC("empty-list in assign 2", `
+  a : [[int]] = None
+  a = []
+  a`, {tag: "list", itemType: {tag: "list", itemType: NUM } });
+  assertTC("empty list in declaration", `
+  []`, {tag: "empty"});
+  assertTC("empty list in list 1", `
+  [[], [1]]`, {tag: "list", itemType: {tag: "list", itemType: NUM }});
+  assertTC("empty list in list 2", `
+  [[1], []]`, {tag: "list", itemType: {tag: "list", itemType: NUM }});
+  assertTC("list of empty list in declaration", `
+  [[],[],[]]`, {tag: "list", itemType: {tag: "empty"} });
   assertTC("list access 1", "[True, False][0]", BOOL);
   assertTC("list access 2", `
   a : [int] = None
@@ -284,6 +296,36 @@ describe('tc for lists', () => {
   assertTCFail("not a list", `
   a : int = 1
   a[0] = 0`);
+  assertTCFail("index into empty list", `[][3]`);
+  assertTC("list of nones", `
+  [None, None]`, {tag: "list", itemType: {tag: "none"} });
+  assertTC("list of nones access", `
+  [None, None][0]`, NONE);
+  assertTC("concatenate lists 1", `
+  [1,2,3]+[2]`, {tag: "list", itemType: NUM });
+  assertTC("concatenate lists 2", `
+  [1]+[]`, {tag: "list", itemType: NUM });
+  assertTC("concatenate lists 3", `
+  []+[False]`, {tag: "list", itemType: BOOL });
+  assertTC("concatenate lists 4", `
+  [[1,2,3],[0]]+[[4,5,6]]`, {tag: "list", itemType: {tag: "list", itemType: NUM } });
+  assertTC("concatenate lists 5", `
+  [[1],[]]+[[2,3]]`, {tag: "list", itemType: {tag: "list", itemType: NUM } });
+  assertTCFail("concatenate lists 6", `1 + [[2,3]]`);
+  assertTCFail("concatenate lists 7", `False + [[2,3]]`);
+  assertTC("concatenate lists 8", `[] + []`, {tag: "empty" });
+  assertTC("concatenate lists 9", `
+  a : [int] = None
+  a = [1]
+  a + [3]`, {tag: "list", itemType: NUM });
+  // Different from python
+  assertTCFail("concatenate lists 10", `
+  a : [[int]] = None
+  a = []
+  a + [3]`);
+  assertTC("concatenate lists 11", `[[1,2,3]]+[]`, {tag: "list", itemType: {tag: "list", itemType: NUM}});
+  assertTC("concatenate lists 12", `[]+[]`, {tag: "empty"});
+  assertTCFail("concatenate lists 13", `[[1]]+[2]`);
 });
 
 

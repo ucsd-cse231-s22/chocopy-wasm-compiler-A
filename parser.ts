@@ -431,28 +431,31 @@ export function traverseStmt(c: TreeCursor, s: string): Stmt<null> {
 export function traverseType(c: TreeCursor, s: string): Type {
   // For now, always a VariableName
   let name = s.substring(c.from, c.to);
+  if(name.startsWith("[") && name.endsWith("]")) {
+    return traverseListType(name);
+  }
   switch (name) {
     case "int":
       return NUM;
     case "bool":
       return BOOL;
-    // match to anything in matching brackets
-    case name.match(/\[+(.*?)\]+/) ? name : "":
-      // trim brackets and then return list of corresponding type
-      let type: Type = LIST(NONE);
-      if (name.indexOf("int") !== -1) {
-        type = LIST(NUM);
-      } else if (name.indexOf("bool") !== -1) {
-        type = LIST(BOOL);
-      }
-      name = name.replace("[", "");
-      while (name.indexOf("[") !== -1) {
-        name = name.replace("[", "");
-        type = LIST(type);
-      }
-      return type;
     default:
       return CLASS(name);
+  }
+}
+
+export function traverseListType(name: string): Type {
+  if(name.charAt(0) == "[" && name.charAt(name.length-1) == ']') {
+    return {tag: "list", itemType: traverseListType(name.substring(1, name.length-1).trim())};
+  } else {
+    switch (name) {
+      case "int":
+        return NUM;
+      case "bool":
+        return BOOL;
+      default:
+        return CLASS(name);
+    }
   }
 }
 
