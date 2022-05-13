@@ -307,9 +307,10 @@ function flattenExprToExpr(e : AST.Expr<Type>, blocks: Array<IR.BasicBlock<Type>
       const callstmts = callpairs.map(cp => cp[1]).flat();
       const callvals = callpairs.map(cp => cp[2]).flat();
       const callclasses = callpairs.map(cp => cp[3]).flat();
+      const checkObj: IR.Stmt<Type> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [fval] } };
       return [
         [...finits, ...callinits],
-        [...fstmts, ...callstmts],
+        [...fstmts, checkObj, ...callstmts],
         {
           ...e,
           tag: "call_indirect",
