@@ -156,13 +156,12 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
   fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
-  fun.parameters.forEach(p=>tcPar(env,p))
+  const tpar = fun.parameters.map(p=>tcPar(env,p))
   fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init).type));
-
   const tBody = tcBlock(env, locals, fun.body);
   if (!isAssignable(env, locals.actualRet, locals.expectedRet))
     throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`)
-  return { ...fun, a: NONE, body: tBody };
+  return { ...fun, parameters:tpar, a: NONE, body: tBody };
 }
 
 export function tcClass(env: GlobalTypeEnv, cls: Class<null>): Class<Type> {
