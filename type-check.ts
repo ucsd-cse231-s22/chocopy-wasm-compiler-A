@@ -1,6 +1,6 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Annotation, Location } from './ast';
+import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Annotation, Location, stringifyOp } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 
@@ -261,7 +261,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         case BinOp.IDiv:
         case BinOp.Mod:
           if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: NUM } } }
-          else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
+          else { throw new TypeCheckError(`Binary operator \`${stringifyOp(expr.op)}\` expects type "int" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
+            expr.a.fromLoc, expr.a.endLoc); }
         case BinOp.Eq:
         case BinOp.Neq:
           if (tLeft.a.type.tag === "class" || tRight.a.type.tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")

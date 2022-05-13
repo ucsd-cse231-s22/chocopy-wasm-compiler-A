@@ -64,6 +64,31 @@ export enum BinOp { Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, 
 
 export enum UniOp { Neg, Not };
 
+type Op = BinOp | UniOp;
+
+
+export function stringifyOp(op: Op): string {
+  switch (op) {
+    case BinOp.Plus: return "+";
+    case BinOp.Minus: return "-";
+    case BinOp.Mul: return "*";
+    case BinOp.IDiv: return "/";
+    case BinOp.Mod: return "%";
+    case BinOp.Eq: return "==";
+    case BinOp.Neq: return "!=";
+    case BinOp.Lte: return "<=";
+    case BinOp.Gte: return ">=";
+    case BinOp.Lt: return "<";
+    case BinOp.Gt: return ">";
+    case BinOp.Is: return "is";
+    case BinOp.And: return "and";
+    case BinOp.Or: return "or";
+    case UniOp.Neg: return "-";
+    case UniOp.Not: return "not";
+    default: throw new Error("undefined op");
+  }
+}
+
 export type Value<A> =
     Literal<A>
   | { a?: A, tag: "object", name: string, address: number}
