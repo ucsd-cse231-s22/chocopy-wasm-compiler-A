@@ -1,5 +1,6 @@
 import * as AST from './ast';
 import * as IR from './ir';
+import * as ERRORS from './errors';
 import { Type, Annotation } from './ast';
 import { GlobalEnv } from './compiler';
 
@@ -260,7 +261,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       const classdata = env.classes.get(e.obj.a.type.name);
       const [offset, _] = classdata.get(e.field);
       // const errorLineInfo = {tag: "value", value: literalToVal(e.value) }; // TODO
-      const checkObj : IR.Stmt<Annotation> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [oval]}}
+      const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(oval);
       return [oinits, [...ostmts, checkObj], {
         tag: "load",
         start: oval,
@@ -322,6 +323,6 @@ function pushStmtsToLastBlock(blocks: Array<IR.BasicBlock<Annotation>>, ...stmts
   blocks[blocks.length - 1].stmts.push(...stmts);
 }
 
-function wasmInt(val: number): IR.Value<Annotation>{
+export function flattenWasmInt(val: number): IR.Value<Annotation>{
   return { tag: "wasmint", value: val }
 }

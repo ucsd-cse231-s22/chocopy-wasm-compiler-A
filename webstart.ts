@@ -2,6 +2,8 @@ import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
+import { importObjectErrors } from './errors';
+
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -24,11 +26,11 @@ function print(typ: Type, arg : number) : any {
   return arg;
 }
 
-function assert_not_none(arg: any) : any {
-  if (arg === 0)
-    throw new Error("RUNTIME ERROR: cannot perform operation on none");
-  return arg;
-}
+// function assert_not_none(arg: any) : any {
+//   if (arg === 0)
+//     throw new Error("RUNTIME ERROR: cannot perform operation on none");
+//   return arg;
+// }
 
 function webStart() {
   document.addEventListener("DOMContentLoaded", async function() {
@@ -44,7 +46,7 @@ function webStart() {
 
     var importObject = {
       imports: {
-        assert_not_none: (arg: any) => assert_not_none(arg),
+        // assert_not_none: (arg: any) => assert_not_none(arg),
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),
@@ -53,6 +55,7 @@ function webStart() {
         max: Math.max,
         pow: Math.pow
       },
+      errors: importObjectErrors,
       libmemory: memoryModule.instance.exports,
       memory_values: memory,
       js: {memory: memory}
