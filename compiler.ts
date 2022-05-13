@@ -241,7 +241,7 @@ function codeGenBinOp(op : BinOp) : string {
 
 function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
   const value = codeGenValue(init.value, env);
-  console.log(value);
+  //console.log(value);
   if (env.locals.has(init.name)) {
     return [...value, `(local.set $${init.name})`]; 
   } else {

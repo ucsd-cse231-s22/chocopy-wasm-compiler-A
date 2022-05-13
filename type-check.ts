@@ -234,10 +234,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
   switch(expr.tag) {
     case "literal":
       //console.log(expr.value.tag);
-      if (expr.value.tag == "str"){
-        const strConstruct: Expr<Type> = {a: STRING, tag:"construct-string", value: expr.value.value};
-        return strConstruct;
-      }
+
       return {...expr, a: tcLiteral(expr.value)};
     case "binop":
       const tLeft = tcExpr(env, locals, expr.left);
@@ -245,13 +242,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       const tBin = {...expr, left: tLeft, right: tRight};
       switch(expr.op) {
         case BinOp.Plus:
-          // "abc" + 3
-          if (tLeft.a.tag == "str" || tRight.a.tag == "str") {
-            if (tLeft.a.tag == "str" && tRight.a.tag !== "str") 
-              throw new TypeCheckError("Plus rhs must be a string")
-            if (tLeft.a.tag !== "str" && tRight.a.tag == "str") 
-              throw new TypeCheckError("Plus lhs must be a string")
-          }
         case BinOp.Minus:
         case BinOp.Mul:
         case BinOp.IDiv:
@@ -259,13 +249,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
-          // "abc" == 3
-          if (tLeft.a.tag == "str" || tRight.a.tag == "str") {
-            if (tLeft.a.tag == "str" && tRight.a.tag !== "str") 
-              throw new TypeCheckError("Eq rhs must be a string")
-            if (tLeft.a.tag !== "str" && tRight.a.tag == "str") 
-              throw new TypeCheckError("Eq lhs must be a string")
-          }
         case BinOp.Neq:
           if(tLeft.a.tag === "class" || tRight.a.tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")
           if(equalType(tLeft.a, tRight.a)) { return {a: BOOL, ...tBin} ; }
