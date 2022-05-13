@@ -210,9 +210,16 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       var i = 0
       var return_val : string[] = []
 
-      return_val.push(`(i32.const ${n})`);
-      return_val.push(`(call $alloc)`);
-      return_val.push(`(local.set $$scratch)`);
+      // if the bignum is negative -> negative number of digits
+      if (val.value < 0) {
+        return_val.push(`(i32.const -${n})`);
+        return_val.push(`(call $alloc)`);
+        return_val.push(`(local.set $$scratch)`);
+      } else {
+        return_val.push(`(i32.const ${n})`);
+        return_val.push(`(call $alloc)`);
+        return_val.push(`(local.set $$scratch)`);
+      }
       
       // console.log(n);
       
