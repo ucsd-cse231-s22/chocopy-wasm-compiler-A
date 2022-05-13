@@ -51,7 +51,12 @@ function webStart() {
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
-        pow: Math.pow
+        pow: Math.pow,
+        destructure_check: (arg: boolean) => {
+          if(arg === false) {
+            throw new Error(`invalid assignment`);
+          }
+        }
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,

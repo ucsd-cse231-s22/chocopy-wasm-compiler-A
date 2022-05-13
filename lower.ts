@@ -92,29 +92,110 @@ function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Typ
 function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
   switch(s.tag) {
     case "assign":
-      var [valinits, valstmts, vale] = flattenExprToExpr(s.value, env);
-      var irVars : IR.AssignVar<AST.Type>[] = [];
-      for(var assVar of s.destruct.vars) {
-        var irExpr : IR.Expr<AST.Type>;
-        switch(assVar.target.tag) {
+      if(s.destruct.isSimple === true) {
+        var [valinits, valstmts, vale] = flattenExprToExpr(s.value, env);
+        var left = s.destruct.vars[0].target;
+        switch(left.tag) {
           case "id":
+            blocks[blocks.length - 1].stmts.push(...valstmts, { a: s.a, tag: "assign", name: left.name, value: vale});
+            return valinits
+            // return [valinits, [
+            //   ...valstmts,
+            //   { a: s.a, tag: "assign", name: s.name, value: vale}
+            // ]];
           case "lookup":
-            var [assValinits, assValstmts, assVale] = flattenExprToExpr(assVar.target, env);
-            valinits = assValinits.concat(valinits);
-            valstmts = assValstmts.concat(valstmts);
-            irExpr = assVale;
-            break;
+            throw new Error("should not reach here");
           default:
-            throw new Error(`Compiler would not accept the type`);
+            throw new Error("should not reach here");
+        }
+      } else {
+        // desturcturing assignment
+        switch(s.value.tag) {
+          case "call":
+            var outputInits: Array<IR.VarInit<Type>> = [];
+            var [valinits, valstmts, va] = flattenExprToVal(s.value, env);
+            outputInits.concat(valinits);
+            pushStmtsToLastBlock(blocks, ...valstmts);
+            if(va.tag === "id") {
+              const nextMethod : IR.Expr<Type> = { tag: "call", name: `${va.name}$next`, arguments: [] }
+              const hasNextMethod : IR.Expr<Type> = { tag: "call", name: `${va.name}$hasNext`, arguments: [] }
+              const runtimeCheck : IR.Expr<Type> = { tag: "call", name: `destructure_check`, arguments: [] }
+              s.destruct.vars.forEach(v => {
+                var [inits, stmts, val] = flattenIrExprToVal(hasNextMethod, env);
+                outputInits.concat(inits);
+                runtimeCheck.arguments.push(val);
+                pushStmtsToLastBlock(blocks, ...stmts, { tag: "expr", expr: runtimeCheck })
+                switch(v.target.tag) {
+                  case "id":
+                    pushStmtsToLastBlock(blocks, { a: s.a, tag: "assign", name: v.target.name, value: nextMethod});
+                    break;
+                  case "lookup":
+                    var [oinits, ostmts, oval] = flattenExprToVal(v.target.obj, env);
+                    var [ninits, nstmts, nval] = flattenIrExprToVal(nextMethod, env);
+                    if(v.target.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
+                    const classdata = env.classes.get(v.target.obj.a.name);
+                    const offset : IR.Value<Type> = { tag: "wasmint", value: classdata.get(v.target.field)[0] };
+                    pushStmtsToLastBlock(blocks,
+                      ...ostmts, ...nstmts, {
+                        tag: "store",
+                        a: s.a,
+                        start: oval,
+                        offset: offset,
+                        value: nval
+                      });
+                    outputInits.concat(oinits);
+                    outputInits.concat(ninits);
+                  default:
+                    throw new Error("should not reach here");
+                }
+              });
+              return outputInits;
+            } else {
+              throw new Error("should not reach here");
+            }
+          case "array-expr":
+            var outputInits: Array<IR.VarInit<Type>> = [];
+            var valinits : IR.VarInit<AST.Type>[] = [];
+            var valstmts : IR.Stmt<AST.Type>[] = [];
+            var vales : IR.Expr<AST.Type>[] = [];
+            for(var expr of s.value.elements) {
+              var [exprinits, exprstmts, vale] = flattenExprToExpr(expr, env);
+              valinits = valinits.concat(exprinits);
+              valstmts = valstmts.concat(exprstmts);
+              vales.push(vale);
+            }
+            outputInits.concat(valinits);
+            pushStmtsToLastBlock(blocks, ...valstmts);
+            s.destruct.vars.forEach((v, idx) => {
+              switch(v.target.tag) {
+                case "id":
+                  pushStmtsToLastBlock(blocks, { a: s.a, tag: "assign", name: v.target.name, value: vales[idx]});
+                  break;
+                case "lookup":
+                  var [oinits, ostmts, oval] = flattenExprToVal(v.target.obj, env);
+                  var [ninits, nstmts, nval] = flattenIrExprToVal(vales[idx], env);
+                  if(v.target.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
+                  const classdata = env.classes.get(v.target.obj.a.name);
+                  const offset : IR.Value<Type> = { tag: "wasmint", value: classdata.get(v.target.field)[0] };
+                  pushStmtsToLastBlock(blocks,
+                    ...ostmts, ...nstmts, {
+                      tag: "store",
+                      a: s.a,
+                      start: oval,
+                      offset: offset,
+                      value: nval
+                    });
+                  outputInits.concat(oinits);
+                  outputInits.concat(ninits);
+                default:
+                  throw new Error("should not reach here");
+              }
+            });
+            return outputInits;
+          default:
+            throw new Error("should not reach here");
         }
       }
-      var irDestructureAss : IR.DestructuringAssignment<AST.Type> = { ...s.destruct, vars: irVars };
-      blocks[blocks.length - 1].stmts.push(...valstmts, { a: s.a, tag: "assign", destruct: irDestructureAss, value: vale});
-      return valinits
-      // return [valinits, [
-      //   ...valstmts,
-      //   { a: s.a, tag: "assign", name: s.name, value: vale}
-      // ]];
 
     case "return":
     var [valinits, valstmts, val] = flattenExprToVal(s.value, env);
@@ -283,8 +364,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      // TODO: should it be a specific type?
-      var destructAss : IR.DestructuringAssignment<null> = { isSimple: true, vars: [{ target: {tag: "id", name: newName}, ignorable: false, star: false }] };
       const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
       const assigns : IR.Stmt<Type>[] = fields.map(f => {
         const [_, [index, value]] = f;
@@ -298,7 +377,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
 
       return [
         [ { name: newName, type: e.a, value: { tag: "none" } }],
-        [ { tag: "assign", destruct: destructAss, value: alloc }, ...assigns,
+        [ { tag: "assign", name: newName, value: alloc }, ...assigns,
           { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
@@ -307,21 +386,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
-    case "array-expr":
-      var valinits : IR.VarInit<AST.Type>[] = [];
-      var valstmts : IR.Stmt<AST.Type>[] = [];
-      var vales : IR.Expr<AST.Type>[] = [];
-      for(var expr of e.elements) {
-        var [exprinits, exprstmts, vale] = flattenExprToExpr(expr, env);
-        valinits = valinits.concat(exprinits);
-        valstmts = valstmts.concat(exprstmts);
-        vales.push(vale);
-      }
-      return [
-        valinits,
-        valstmts,
-        { ...e, elements: vales }
-      ];
   }
 }
 
@@ -332,12 +396,10 @@ function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarIn
   }
   else {
     var newName = generateName("valname");
-    // TODO: should it be a specific type?
-    var destructAss : IR.DestructuringAssignment<null> = { isSimple: true, vars: [{ target: {tag: "id", name: newName}, ignorable: false, star: false }] };
     var setNewName : IR.Stmt<Type> = {
       tag: "assign",
       a: e.a,
-      destruct: destructAss,
+      name: newName,
       value: bexpr 
     };
     // TODO: we have to add a new var init for the new variable we're creating here.
@@ -345,6 +407,28 @@ function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarIn
     return [
       [...binits, { a: e.a, name: newName, type: e.a, value: { tag: "none" } }],
       [...bstmts, setNewName],  
+      {tag: "id", name: newName, a: e.a}
+    ];
+  }
+}
+
+function flattenIrExprToVal(e : IR.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>] {
+  if(e.tag === "value") {
+    return [[], [], e.value];
+  }
+  else {
+    var newName = generateName("valname");
+    var setNewName : IR.Stmt<Type> = {
+      tag: "assign",
+      a: e.a,
+      name: newName,
+      value: e 
+    };
+    // TODO: we have to add a new var init for the new variable we're creating here.
+    // but what should the default value be?
+    return [
+      [{ a: e.a, name: newName, type: e.a, value: { tag: "none" } }],
+      [setNewName],  
       {tag: "id", name: newName, a: e.a}
     ];
   }

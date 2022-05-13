@@ -88,26 +88,13 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
         `call $store`
       ]
     case "assign":
-      // not destructuring assignment
-      if(stmt.destruct.isSimple === true) {
-        var valStmts = codeGenExpr(stmt.value, env);
-        switch(stmt.destruct.vars[0].target.tag) {
-          case "id":
-            if (env.locals.has(stmt.destruct.vars[0].target.name)) {
-              return valStmts.concat([`(local.set $${stmt.destruct.vars[0].target.name})`]); 
-            } else {
-              return valStmts.concat([`(global.set $${stmt.destruct.vars[0].target.name})`]); 
-            }
-          case "lookup":
-            return [];
-          default:
-            return [];
-        } 
+      var valStmts = codeGenExpr(stmt.value, env);
+      if (env.locals.has(stmt.name)) {
+        return valStmts.concat([`(local.set $${stmt.name})`]); 
       } else {
-        // destructuring assignment
-        // pushing elements into stack via iterator
-        return []
+        return valStmts.concat([`(global.set $${stmt.name})`]); 
       }
+
     case "return":
       var valStmts = codeGenValue(stmt.value, env);
       valStmts.push("return");
