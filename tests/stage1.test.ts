@@ -5,7 +5,7 @@ import { assertPrint, assertFail, assertTCFail, assertTC, assertParseFail} from 
 describe("Stage1 basic function tests", ()=>{
   const funcdef= 
   `
-  def f(x:int, y:int = 5, z:int = True):
+  def f(x:int, y:int = 5, z:int = 10):
     print(x)
     print(y)
     print(z)
@@ -39,7 +39,7 @@ describe("Stage1 function argument tests", ()=>{
   //4
   assertTCFail("func: unexpected keyword argument", funcdef + `f(n=3)`);
   //5
-  assertTCFail("func: positional argument follows keyword argument", funcdef + `f(1, y=2, 3)`)
+  assertParseFail("func: positional argument follows keyword argument", funcdef + `f(1, y=2, 3)`)
 })
 
 describe("Stage1 function define tests", ()=>{
@@ -76,8 +76,8 @@ describe("Stage1 function define tests", ()=>{
   //4
   var classdef=
   `
-  class C:
-    x = 100
+  class C(object):
+    x:int = 100
   `
   var funcdef= 
   `
