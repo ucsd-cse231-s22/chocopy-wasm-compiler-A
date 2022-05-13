@@ -6,7 +6,7 @@
 // What is the type for this open File
 export type OpenFile = {
     currentPosition: number,
-    dataArray: Array<number>
+    filename: string,
 }
 
 const buildin_file_libs = `
@@ -23,15 +23,16 @@ let fs = new Map<number, OpenFile>();
 export function open(addr: number): number {
     fs.set(fdCounter++, {
         currentPosition: 0,
-        dataArray: []
+        filename: 'dummy.txt',
     });
     return fdCounter - 1;
 }
 
 export function read(fd: number): number {
     if (fs.has(fd)) {
-        let currPos = fs.get(fd).currentPosition;
-        return fs.get(fd).dataArray[currPos];
+        let file = fs.get(fd);
+        let dataArray: Array<number> = JSON.parse(window.localStorage.getItem(file.filename));
+        return dataArray[file.currentPosition];
     };
     return -1;
 
