@@ -33,7 +33,7 @@ describe('tc for destructure', () => {
     assertTC("simple-assignment", `
     a : int = 1
     a = 2
-    `, NUM);
+    `, NONE);
 
     assertTCFail("simple-assignment-failure", `
     a : int = 1

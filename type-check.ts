@@ -222,11 +222,8 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       if(tDestruct.isSimple) {
         if(!isAssignable(env, tValExpr.a, tDestruct.a)) {
           throw new TypeCheckError(`Non-assignable types: ${tValExpr.a} to ${tDestruct.a}`);
-        } else {
-          return {a: tValExpr.a, tag: stmt.tag, destruct: tDestruct, value: tValExpr};
         }
-      }
-      if(!tDestruct.isSimple && tValExpr.tag === "array-expr") {
+      }else if(!tDestruct.isSimple && tValExpr.tag === "array-expr") {
         // for plain destructure like a, b, c = 1, 2, 3
         // we can perform type check
         if(!hasStar && tDestruct.vars.length != tValExpr.elements.length) {
