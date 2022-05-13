@@ -289,10 +289,10 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
 
       let metadataStore : IR.Stmt<Type>[] = Array(METADATA_AMT)
       const metadataVals : IR.Value<Type>[] = [
-        { tag: "wasmint", value: 1 },
+        { tag: "wasmint", value: 0 },
         alloc.amount,
         { tag: "wasmint", value: fieldTypesBitString },
-        { tag: "wasmint", value: 1 }
+        { tag: "wasmint", value: fields.length }
       ]
 
       for ( let i = 0; i < METADATA_AMT; i++ ) {

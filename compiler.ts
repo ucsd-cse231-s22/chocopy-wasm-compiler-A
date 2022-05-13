@@ -191,7 +191,7 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       return [
         ...codeGenValue(expr.amount, env),
         `call $alloc`,
-        `call $mem_gen_ref` // uncomment when load is defined
+        `call $mem_gen_ref`
       ];
     case "load":
       return [

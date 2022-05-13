@@ -1,7 +1,7 @@
 import { Template } from "webpack";
 
-type memAddr = number;
-type ref = number;
+export type memAddr = number;
+export type ref = number;
 
 
 // Below can be implemented as a class and has some additonal
@@ -18,11 +18,11 @@ class MemError extends Error {
     }
 }
 
-const refNumOffset = 0;
-const sizeOffset = 1
-const typeOffset =  2;
-const amountOffset = 3;
-const dataOffset = 4;
+export const refNumOffset = 0;
+export const sizeOffset = 3;
+export const typeOffset =  2;
+export const amountOffset = 1;
+export const dataOffset = 4;
 
 let refMap: Map<ref, memAddr>;
 let refNum = 0; 
@@ -59,10 +59,13 @@ export function refLookup(r: ref) :  ref {
 export function traverseUpdate(r: ref, update: number): ref { // returns r so that stack state can be maintained
     let explored = new Set();
     let travQueue = [r];
+    if (update > 0) {
+        activeStack[activeStack.length - 1].add(r);
+    }
 
     while (travQueue.length > 0) {
         const curr = travQueue.shift();
-        const addr = refMap.get(curr);
+        const addr = refMap.get(curr) / 4;
         memHeap[addr + refNumOffset] += update
         
         if (memHeap[addr + refNumOffset] < 0) { 
@@ -75,10 +78,10 @@ export function traverseUpdate(r: ref, update: number): ref { // returns r so th
         let types = memHeap[addr + typeOffset];
         let size = memHeap[addr + sizeOffset]; 
         
-        for (let i = 32; i > 32 - size; i--) {
-            if ((types & (1 << i)) === 1) {
+        for (let i = 0; i < size; i++) {
+            if ((types & (1 << i)) !== 0) {
                 for (let a = 0; a < memHeap[addr + amountOffset]; a++) {
-                    let temp = memHeap[addr + dataOffset + size*a + 32 - i];
+                    let temp = memHeap[addr + dataOffset + size*a + i];
                     if (temp !== 0) { // 0 is None
                         travQueue.push(temp);
                     }
@@ -97,4 +100,14 @@ export function removeScope() {
     activeStack[activeStack.length - 1].forEach(r => traverseUpdate(r, -1));
     activeStack.pop();
 }
+
+export function debugId(id: number, offset: number) { // id should be of type int and the first field in the object
+    for (const [_, addr] of refMap) {
+        if (memHeap[addr/4 + dataOffset] === id) {
+            return memHeap[addr/4 + offset];
+        }
+    }
+    throw new Error(`no such id: ${id}`);
+}
+
 
