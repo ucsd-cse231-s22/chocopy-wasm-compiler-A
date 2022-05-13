@@ -1,6 +1,6 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
-import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
+import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, DestructuringAssignment, AssignVar } from "./ast";
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
@@ -30,10 +30,24 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
     case "Number":
     case "Boolean":
     case "None":
-      return { 
-        tag: "literal", 
-        value: traverseLiteral(c, s)
-      }      
+      let value: Literal = traverseLiteral(c, s);
+      if (!c.nextSibling()) {
+        return {
+          tag: "literal",
+          value,
+        }   
+      } else {
+        let elements: Expr<null>[] = [{tag: "literal", value}];
+        while (c.nextSibling()) {
+          value = traverseLiteral(c, s);
+          elements.push({ tag: "literal", value });
+          c.nextSibling();
+        }
+        return {
+          tag: "array-expr",
+          elements,
+        };
+      }
     case "VariableName":
       return {
         tag: "id",
@@ -185,6 +199,21 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         tag: "id",
         name: "self"
       };
+    case "ArrayExpression":
+    case "TupleExpression":
+      let elements: Expr<null>[] = [];
+      c.firstChild();
+      c.nextSibling();
+      while (s.substring(c.from, c.to).trim() !== "]") {
+        elements.push(traverseExpr(c, s));
+        c.nextSibling();
+        c.nextSibling();
+      }
+      c.parent();
+      return {
+        tag: "array-expr",
+        elements,
+      };
     default:
       throw new Error("Could not parse expr at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to));
   }
@@ -218,28 +247,32 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       return { tag: "return", value };
     case "AssignStatement":
       c.firstChild(); // go to name
-      const target = traverseExpr(c, s);
+      const destruct = traverseDestructure(c, s);
       c.nextSibling(); // go to equals
       c.nextSibling(); // go to value
       var value = traverseExpr(c, s);
       c.parent();
-
-      if (target.tag === "lookup") {
-        return {
-          tag: "field-assign",
-          obj: target.obj,
-          field: target.field,
-          value: value
-        }
-      } else if (target.tag === "id") {
-        return {
-          tag: "assign",
-          name: target.name,
-          value: value
-        }  
-      } else {
-        throw new Error("Unknown target while parsing assignment");
+      return {
+        tag: "assign",
+        destruct,
+        value,
       }
+      // if (target.tag === "lookup") {
+      //   return {
+      //     tag: "field-assign",
+      //     obj: target.obj,
+      //     field: target.field,
+      //     value: value
+      //   }
+      // } else if (target.tag === "id") {
+      //   return {
+      //     tag: "assign",
+      //     name: target.name,
+      //     value: value
+      //   }  
+      // } else {
+      //   throw new Error("Unknown target while parsing assignment");
+      // }
     case "ExpressionStatement":
       c.firstChild();
       const expr = traverseExpr(c, s);
@@ -323,6 +356,42 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
     default:
       throw new Error("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to));
   }
+}
+
+function traverseDestructure(c: TreeCursor, s: string): DestructuringAssignment<null> {
+  const vars: AssignVar<null>[] = [];
+  vars.push(traverseAssignment(c, s));
+  let isSimple = true;
+  c.nextSibling();
+  while (c.name !== "AssignOp") {
+    isSimple = false;
+    c.nextSibling();
+    if (c.name === "AssignOp") break;
+    let variable = traverseAssignment(c, s);
+    vars.push(variable);
+    c.nextSibling();
+  }
+  c.prevSibling();
+  return {
+    isSimple,
+    vars,
+  };
+}
+
+function traverseAssignment(c: TreeCursor, s: string): AssignVar<null> {
+  let target = traverseExpr(c, s);
+  let ignorable = false;
+  if (target.tag !== "id" && target.tag !== "lookup") {
+    throw new Error("Unknown variable expression");
+  }
+  if (target.tag === "id" && target.name === "_") {
+    ignorable = true;
+  }
+  return {
+    target,
+    ignorable,
+    star: false,
+  };
 }
 
 export function traverseType(c : TreeCursor, s : string) : Type {
@@ -527,5 +596,6 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
 export function parse(source : string) : Program<null> {
   const t = parser.parse(source);
   const str = stringifyTree(t.cursor(), source, 0);
+  console.log(str)
   return traverse(t.cursor(), source);
 }
