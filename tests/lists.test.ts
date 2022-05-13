@@ -326,6 +326,11 @@ describe('tc for lists', () => {
   assertTC("concatenate lists 11", `[[1,2,3]]+[]`, {tag: "list", itemType: {tag: "list", itemType: NUM}});
   assertTC("concatenate lists 12", `[]+[]`, {tag: "empty"});
   assertTCFail("concatenate lists 13", `[[1]]+[2]`);
+  assertTC("list slicing 1", `[1,2,3][:3]`, {tag: "list", itemType: NUM});
+  assertTC("list slicing 2", `[][:3]`, {tag: "empty"});
+  assertTC("list slicing 3", `[[1,2,3], [3]][:1]`, {tag: "list", itemType: {tag: "list", itemType: NUM}});
+  assertTC("list slicing 4", `[1,2,3][:]`, {tag: "list", itemType: NUM});
+  assertTC("list slicing 5", `[1,2,3][1:]`, {tag: "list", itemType: NUM});
 });
 
 

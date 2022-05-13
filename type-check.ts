@@ -506,12 +506,12 @@ export function tcExpr(
             throw new TypeCheckError(`index is of non-integer type \'${tStart.a.tag}\'`);
         }
         if(expr.index_e !== undefined) {
-          tEnd = tcExpr(env, locals, expr.index_s);
+          tEnd = tcExpr(env, locals, expr.index_e);
           if(tEnd.a !== NUM)
             throw new TypeCheckError(`index is of non-integer type \'${tEnd.a.tag}\'`);
         }
         return { ...expr, a: tObj.a, index_s: tStart, index_e: tEnd };
-      } else if(tObj.a === EMPTY()) {
+      } else if(tObj.a.tag === "empty") {
         return { ...expr, a: EMPTY() }
       } else {
         // For other features that use slice syntax
