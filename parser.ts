@@ -1,20 +1,10 @@
 import { parser } from "lezer-python";
 import { TreeCursor } from "lezer-tree";
 import {
-  Program,
-  Expr,
-  Stmt,
-  UniOp,
-  BinOp,
-  Parameter,
-  Type,
-  FunDef,
-  VarInit,
-  Class,
-  Literal,
+  BinOp, Class, Expr, FunDef, Literal, Parameter, Program, Stmt, Type, UniOp, VarInit
 } from "./ast";
-import { NUM, BOOL, NONE, CLASS, LIST } from "./utils";
 import { stringifyTree } from "./treeprinter";
+import { BOOL, CLASS, LIST, NONE, NUM } from "./utils";
 
 export function traverseLiteral(c: TreeCursor, s: string): Literal {
   switch (c.type.name) {
@@ -200,12 +190,12 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<null> {
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s);
       c.nextSibling(); // Focus on . or [
-      if(s.substring(c.from, c.to) == "[") {
+      if (s.substring(c.from, c.to) == "[") {
         // Start with :
-        c.nextSibling();  // Focus on start index or : or index
-        if(s.substring(c.from, c.to) == ":") {
-          c.nextSibling();  // Focus on end index or ]
-          if(s.substring(c.from, c.to) == "]") {
+        c.nextSibling(); // Focus on start index or : or index
+        if (s.substring(c.from, c.to) == ":") {
+          c.nextSibling(); // Focus on end index or ]
+          if (s.substring(c.from, c.to) == "]") {
             c.parent();
             return { tag: "slice", obj: objExpr };
           }
@@ -216,21 +206,26 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<null> {
 
         // Start index or index
         var startIndex = traverseExpr(c, s);
-        c.nextSibling();  // Focus on : or ]
-        if(s.substring(c.from, c.to) == "]") {
+        c.nextSibling(); // Focus on : or ]
+        if (s.substring(c.from, c.to) == "]") {
           c.parent();
           return { tag: "index", obj: objExpr, index: startIndex };
         }
-        
+
         // Start index and :
-        c.nextSibling();  // Focus on end index or ]
-        if(s.substring(c.from, c.to) == "]") {
+        c.nextSibling(); // Focus on end index or ]
+        if (s.substring(c.from, c.to) == "]") {
           c.parent();
           return { tag: "slice", obj: objExpr, index_s: startIndex };
         }
         var endIndex = traverseExpr(c, s);
         c.parent();
-        return { tag: "slice", obj: objExpr, index_s: startIndex, index_e: endIndex };
+        return {
+          tag: "slice",
+          obj: objExpr,
+          index_s: startIndex,
+          index_e: endIndex,
+        };
       } else {
         c.nextSibling(); // Focus on property
         var propName = s.substring(c.from, c.to);
@@ -333,9 +328,11 @@ export function traverseStmt(c: TreeCursor, s: string): Stmt<null> {
           obj: target.obj,
           index: target.index,
           value: value,
-        }
+        };
       } else {
-        throw new Error("Unknown target while parsing assignment " + target.tag);
+        throw new Error(
+          "Unknown target while parsing assignment " + target.tag
+        );
       }
     case "ExpressionStatement":
       c.firstChild();
@@ -439,10 +436,21 @@ export function traverseType(c: TreeCursor, s: string): Type {
       return NUM;
     case "bool":
       return BOOL;
-    case "[" + "int" + "]":
-      return LIST(NUM);
-    case "[" + "bool" + "]":
-      return LIST(BOOL);
+    // match to anything in matching brackets
+    case name.match(/\[+(.*?)\]+/) ? name : "":
+      // trim brackets and then return list of corresponding type
+      let type: Type = LIST(NONE);
+      if (name.indexOf("int") !== -1) {
+        type = LIST(NUM);
+      } else if (name.indexOf("bool") !== -1) {
+        type = LIST(BOOL);
+      }
+      name = name.replace("[", "");
+      while (name.indexOf("[") !== -1) {
+        name = name.replace("[", "");
+        type = LIST(type);
+      }
+      return type;
     default:
       return CLASS(name);
   }

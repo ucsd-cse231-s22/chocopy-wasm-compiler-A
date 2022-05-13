@@ -8,6 +8,7 @@ export type Type =
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
   | {tag: "list", itemType: Type }
+  | {tag: "empty"}
 
 export type Parameter<A> = { name: string, type: Type }
 

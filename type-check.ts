@@ -91,7 +91,6 @@ export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
 }
 
 export function isAssignable(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  // console.log(t1, t2)
   return isSubtype(env, t1, t2);
 }
 
