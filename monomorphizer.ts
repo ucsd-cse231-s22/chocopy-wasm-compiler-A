@@ -159,7 +159,9 @@ export function processStmts(stmt: Stmt<Type>, genv: GlobalMorphEnv) : Stmt<Type
 
 export function monomorphizeClass(cname: string, canonicalName: string, classes: Array<Class<Type>>, genv: GlobalMorphEnv) : Class<Type> {
     let cClass : Class<Type> = classes[genv.classesInx.get(cname)];
-    let mClass : Class<Type> = { a: cClass.a, name: canonicalName, fields: cClass.fields, methods: cClass.methods, typeParams: [] }
+    let mClass : Class<Type> = JSON.parse(JSON.stringify(cClass))
+    mClass.name = canonicalName;
+    mClass.typeParams = [];
     mClass.fields = mClass.fields.map(field => {
         if (field.type.tag === "typevar" || (field.type.tag === "class" && field.type.params.length > 0)) {
             field.type = concretizeGenericTypes(field.type, genv);
