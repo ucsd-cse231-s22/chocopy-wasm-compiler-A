@@ -37,11 +37,17 @@ let fs = new Map<number, OpenFile>(); // track current open files
  * ct: for the mode, we might need to create a 'mode translator' to translate from Python mode to our mode
  */
 export function open(filePathAddr: number, mode: number): number {
-
+    
+    
+    const filePath = './test.txt';
+    console.log(filePath);
     // treat as creating a new file for now. Later with string type, we check if the filePathAddr already existed first.
-    window.localStorage.setItem('test.txt', JSON.stringify([])); 
+    // window.localStorage.setItem('test.txt', JSON.stringify([])); 
+    if(localStorage.getItem(filePath) === null) {
+        window.localStorage.setItem(filePath, JSON.stringify([])); 
+    }
     fs.set(fdCounter++, {
-        filePath: 'test.txt', // a dummy address. If we have string we should read the address
+        filePath: filePath, // a dummy address. If we have string we should read the address
         currentPosition: 0,
         mode: mode, // random mode
         fileSize: 0, // according to the current test case we should assign 0
@@ -53,7 +59,7 @@ export function open(filePathAddr: number, mode: number): number {
 export function read(fd: number, numByte: number): number {
 
     numByte = 1; // DUMMY VALUE
-    let file = checkFileExistence(fd)
+    let file = checkFDExistence(fd)
     let data = window.localStorage.getItem(file.filePath);
     if (!data) {
         return 0;
@@ -67,7 +73,7 @@ export function read(fd: number, numByte: number): number {
 
 export function write(fd: number, c: number): number {
 
-    const file = checkFileExistence(fd);
+    const file = checkFDExistence(fd);
 
     // check mode
     if (file.mode === FileMode.OPEN || file.mode === FileMode.R_ONLY) {
@@ -103,13 +109,13 @@ export function write(fd: number, c: number): number {
  */
 export function close(fd: number) {
 
-    const f = checkFileExistence(fd);
+    const f = checkFDExistence(fd);
 
     fs.delete(fd); // remove this file from file descriptor
 }
 
 export function seek(fd: number, pos: number){
-    const file = checkFileExistence(fd);
+    const file = checkFDExistence(fd);
 
     // check the boundary of the position
     if(pos < 0 || pos > file.fileSize) {
@@ -122,9 +128,10 @@ export function seek(fd: number, pos: number){
 /**
  * Helper functions (private functions)
  */
-function checkFileExistence(fd: number): OpenFile {
+function checkFDExistence(fd: number): OpenFile {
     if (!fs.has(fd)) {
         throw new Error(`RUNTIME ERROR: file with id = ${fd} does not exists`);
     }
     return fs.get(fd);
 }
+
