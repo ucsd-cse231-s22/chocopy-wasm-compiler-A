@@ -22,7 +22,7 @@ describe("Stage1 basic function tests", ()=>{
   assertPrint("func: specify parameter assign3", funcdef + `f(1,z=5, y=3)`, [`1`,`3`,`5`]);
 })
 
-describe("Stage1 function parameter tests", ()=>{
+describe("Stage1 function argument tests", ()=>{
   const funcdef= 
   `
   def f(x:int, y:int = 5, z:int = 10):
@@ -39,7 +39,7 @@ describe("Stage1 function parameter tests", ()=>{
   //4
   assertTCFail("func: unexpected keyword argument", funcdef + `f(n=3)`);
   //5
-  assertParseFail("func: positional argument follows keyword argument", funcdef + `f(1, y=2, 3)`)
+  assertTCFail("func: positional argument follows keyword argument", funcdef + `f(1, y=2, 3)`)
 })
 
 describe("Stage1 function define tests", ()=>{
@@ -51,9 +51,19 @@ describe("Stage1 function define tests", ()=>{
     print(y)
     print(z)
   `
-  assertParseFail("func: duplicate argument", funcdef + 'f()')
+  assertParseFail("func: duplicate argument", funcdef)
 
   //2
+  var funcdef= 
+  `
+  def f(x: int=5, y:int, z:int = 10):
+    print(x)
+    print(y)
+    print(z)
+  `
+  assertParseFail("func: non-default argument follows default argument", funcdef)
+
+  //3
   var funcdef= 
   `
   def f(x: int, y:bool = 1<3, z:int = 1 + 2):
@@ -63,7 +73,7 @@ describe("Stage1 function define tests", ()=>{
   `
   assertPrint("func: expr parameters", funcdef + `f(1)`, [`1`,`True`,`3`]);
 
-  //3
+  //4
   var classdef=
   `
   class C:
@@ -76,7 +86,7 @@ describe("Stage1 function define tests", ()=>{
   `
   assertPrint("func: class parameters", classdef + funcdef + `f()`, [`100`]);
 
-  //4
+  //5
   var funcdef1= 
   `
   def d()->int:

@@ -77,7 +77,7 @@ export function assertParseFail(name: string, source: string) {
   it(name, async () => {
     expect(function(){
       typeCheck(source);
-  }).to.throw('SyntaxError:');
+  }).to.throw('Syntax ERROR:');
   });
 }
 
