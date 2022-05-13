@@ -3,6 +3,7 @@ import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
+import exp from 'constants';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends Error {
@@ -154,7 +155,7 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
   const tFields = cls.fields.map(field => tcInit(env, field));
   const tMethods = cls.methods.map(method => tcDef(env, method));
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
-  if (init.parameters.length !== 1 || 
+  if (//init.parameters.length !== 1 || 
     init.parameters[0].name !== "self" ||
     !equalType(init.parameters[0].type, CLASS(cls.name)) ||
     init.ret !== NONE)
@@ -316,40 +317,66 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
     case "list-comp":
       // check if iterable is instance of Range class
       const iterable = tcExpr(env, locals, expr.iterable);
-      if (iterable.a.tag === "class" && iterable.a.name === "Range"){
+      if (iterable.a.tag === "class" && iterable.a.name === "range"){
         const classData = env.classes.get(iterable.a.name);
         // check if next and hasNext methods are there
         if (!classData[1].has("next") || !classData[1].has("hasNext"))
-          throw new Error("Class of the instance must have next() and hasNext() methods");
+          throw new Error("TYPE ERROR:Class of the instance must have next() and hasNext() methods");
         // need to create a local env to store elems of iterable
         var loc = emptyLocalTypeEnv();
         if (expr.elem.tag === "id"){
           loc.vars.set(expr.elem.name, NUM);
           const elem = {...expr.elem, a: NUM};
-          const left = tcExpr(env, loc, expr.left); // need to modify
-
-
-
-          // need to add cond
-          return {...expr, left, elem, iterable, a: CLASS(iterable.a.name)};
+          const left = tcExpr(env, loc, expr.left); 
+          var cond = undefined;
+          if(expr.cond !== undefined)
+          {
+            cond = tcExpr(env, loc, expr.cond);
+            if(cond.a.tag !== "bool")
+            {
+              throw new TypeCheckError("TYPE ERROR:if condition in list comprehension is not boolean");
+            }
+          }
+          
+          
+          return {...expr, left, elem, iterable, cond:cond, a: CLASS(iterable.a.name)};
         }
         else
-          throw new Error("elem has to be an id");
+          throw new Error("TYPE ERROR:elem has to be an id");
       }
       else if (iterable.a.tag === "class")
-        throw new Error("Only instances of Range class supported currently");
+        throw new Error("TYPE ERROR:Only instances of Range class supported currently");
       else
-        throw new Error("Iterable must be an instance of a class");
+        throw new Error("TYPE ERROR:Iterable must be an instance of a class");
     case "call":
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
-        const tConstruct : Expr<Type> = { a: CLASS(expr.name), tag: "construct", name: expr.name };
+        if(expr.name === "range")
+        {
+          if(expr.arguments.length === 1)
+          {
+            expr.arguments.unshift({tag:"literal",value: {tag:"num",value:0}})
+          }
+        }
+        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        const tConstruct : Expr<Type> = { a: CLASS(expr.name), tag: "construct", name: expr.name, arguments: tArgs };
         const [_, methods] = env.classes.get(expr.name);
         if (methods.has("__init__")) {
           const [initArgs, initRet] = methods.get("__init__");
           if (expr.arguments.length !== initArgs.length - 1)
+          {
             throw new TypeCheckError("__init__ didn't receive the correct number of arguments from the constructor");
-          if (initRet !== NONE) 
+          }
+          if(expr.arguments[0].tag === "literal" && expr.arguments[1].tag === "literal" && expr.arguments[0].value.tag == "num" && expr.arguments[1].value.tag == "num")
+          {
+            const args0 = expr.arguments[0].value.value;
+            const args1 = expr.arguments[1].value.value;
+            if(args0 > args1){
+              throw new TypeCheckError("Invalid range for iteration");
+            }
+          }
+          
+            if (initRet !== NONE) 
             throw new TypeCheckError("__init__  must have a void return type");
           return tConstruct;
         } else {
