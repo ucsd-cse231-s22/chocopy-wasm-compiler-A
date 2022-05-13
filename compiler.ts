@@ -769,6 +769,100 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
       ]
     );
 
+    setFunStmts.push(
+      ...[
+        "(func $set$update (param $baseAddr$new i32) (param $baseAddr i32) (result i32)",
+        "(local $i i32)",
+        "(local $nodePtr i32)", 
+        "(local $dump i32)", 
+  
+        "(loop $my_loop",
+  
+        "(local.get $baseAddr)",
+        "(local.get $i)",
+        "(i32.mul (i32.const 4))",
+        "(i32.add)",
+
+        "(i32.load)",
+        "(i32.const 0)",
+        "(i32.eq)",
+        "(if",
+        "(then", 
+        // do nothing
+        ")",
+        "(else", // Opening else
+
+
+          "(local.get $baseAddr$new)", // Recomputing the bucketAddress to follow the linkedList.
+          "(local.get $baseAddr)",
+          "(local.get $i)",
+          "(i32.mul (i32.const 4))",
+          "(i32.add)", //Recomputed bucketAddress
+          "(i32.load)",
+          "(i32.load)",
+          "(call $set$add)",
+          "(local.set $dump)",
+
+          "(local.get $baseAddr)", // Recomputing the bucketAddress to follow the linkedList.
+          "(local.get $i)",
+          "(i32.mul (i32.const 4))",
+          "(i32.add)", //Recomputed bucketAddress
+          "(i32.load)", //Loading head of linkedList
+          "(i32.const 4)",
+          "(i32.add)", // Next pointer
+          "(local.set $nodePtr)",
+          "(block",
+          "(loop", // While loop till we find a node whose next is None
+            "(local.get $nodePtr)",
+            "(i32.load)", // Traversing to head of next node
+            "(i32.const 0)", //None
+            "(i32.ne)", // If nodePtr not None
+            "(if",
+            "(then",
+
+              "(local.get $baseAddr$new)", // Recomputing the bucketAddress to follow the linkedList.
+              "(local.get $nodePtr)",
+              "(i32.load)",
+              "(i32.load)",
+              "(call $set$add)",
+              "(local.set $dump)",
+
+
+              "(local.get $nodePtr)",
+              "(i32.load)", //Loading head of linkedList
+              "(i32.const 4)",
+              "(i32.add)", // Next pointer
+              "(local.set $nodePtr)",
+            ")", // Closing then
+            ")", // Closing if
+          "(br_if 0", // Opening br_if
+            "(local.get $nodePtr)",
+            "(i32.load)", // Traversing to head of next node
+            "(i32.const 0)", //None
+            "(i32.ne)", // If nodePtr not None
+          ")", // Closing br_if
+          "(br 1)",
+          ")", // Closing loop
+          ")", // Closing Block
+        ")", // Closing else
+        ")", // Closing if
+  
+        "(local.get $i)",
+        "(i32.const 1)",
+        "(i32.add)",
+        "(local.set $i)",
+        "(local.get $i)",
+        "(i32.const 10)",
+        "(i32.lt_s)",
+        "(br_if $my_loop)",
+        ")",
+  
+        "(local.get $dump)",
+        "(return))",
+        "",
+      ]
+    );
+
     return setFunStmts;
   }
   

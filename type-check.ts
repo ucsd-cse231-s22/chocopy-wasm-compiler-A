@@ -412,7 +412,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
                   throw new TypeCheckError("The object of Set.remove does not have a name")
                 }
               }
-              return {...expr,a:BOOL,obj:{...expr.obj,a:SET(NUM)}}
+              return {...expr,a:BOOL,obj:{...expr.obj,a:SET(NUM)}};
               break;
             case "size":
               return {...expr,a:NUM,obj:{...expr.obj,a:SET(NUM)}};
@@ -421,15 +421,16 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
               if (numArgs != 0){
                 throw new TypeCheckError("Set.clear only takes no parameter")
               }
-              return {...expr,a:{tag:"none"},obj:{...expr.obj,a:SET(NUM)}}
+              return {...expr,a:{tag:"none"},obj:{...expr.obj,a:SET(NUM)}};
               break;
             case "update":
-              for (i=1;i<numArgs;i++){
-                  let ele_typ = tcExpr(env,locals,expr.arguments[i]);
-                  if (!isAssignable(env,ele_typ.a,tObj.a)){
-                    throw new TypeCheckError(`Set.update failed as ${ele_typ.a} cannot be assigned to $(tObj.a)`)
-                  }
-              }
+              // for (i=1;i<numArgs;i++){
+              //     let ele_typ = tcExpr(env,locals,expr.arguments[i]);
+              //     if (!isAssignable(env,ele_typ.a,tObj.a)){
+              //       throw new TypeCheckError(`Set.update failed as ${ele_typ.a} cannot be assigned to $(tObj.a)`)
+              //     }
+              // }
+              return {...expr,a:{tag:"none"},obj:{...expr.obj,a:SET(NUM)}};
               break;
             case "has":
               return {...expr,a:BOOL,obj:{...expr.obj,a:SET(NUM)}};
