@@ -2,6 +2,7 @@ import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
+import {open, read, write, close, seek} from './IO_File/FileSystem';
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -51,7 +52,12 @@ function webStart() {
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
-        pow: Math.pow
+        pow: Math.pow,
+        open: open,
+        read: read,
+        write: write,
+        close: close,
+        seek: seek,
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,

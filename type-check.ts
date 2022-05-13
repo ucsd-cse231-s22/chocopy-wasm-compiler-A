@@ -3,7 +3,7 @@ import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
-import { addFileBuildinFuns} from './IO_File/FileTypeCheck';
+import { addFileBuildinFuns, addFileBuildinClass} from './IO_File/FileTypeCheck';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends Error {
@@ -66,7 +66,7 @@ export type TypeError = {
 
 export function equalType(t1: Type, t2: Type) {
   return (
-    t1 === t2 ||
+    t1.tag === t2.tag ||
     (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
   );
 }
@@ -90,7 +90,7 @@ export function join(env : GlobalTypeEnv, t1 : Type, t2 : Type) : Type {
 export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : GlobalTypeEnv {
   const newGlobs = new Map(env.globals);
   var newFuns = new Map(env.functions);
-  const newClasses = new Map(env.classes);
+  var newClasses = new Map(env.classes);
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
   program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
   newFuns = addFileBuildinFuns(newFuns);
@@ -101,6 +101,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
     cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
     newClasses.set(cls.name, [fields, methods]);
   });
+  newClasses = addFileBuildinClass(newClasses);
   return { globals: newGlobs, functions: newFuns, classes: newClasses };
 }
 
@@ -127,6 +128,8 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
     newEnv.globals.set(name, locals.vars.get(name));
   }
   const aprogram = {a: lastTyp, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody};
+  console.log("passed tc");
+  console.log(JSON.stringify(aprogram, null, 2));
   return [aprogram, newEnv];
 }
 
@@ -135,7 +138,7 @@ export function tcInit(env: GlobalTypeEnv, init : VarInit<null>) : VarInit<Type>
   if (isAssignable(env, valTyp, init.type)) {
     return {...init, a: NONE};
   } else {
-    throw new TypeCheckError("Expected type `" + init.type + "`; got type `" + valTyp + "`");
+    throw new TypeCheckError("Expected type `" + init.type.tag + "`; got type `" + valTyp.tag + "`");
   }
 }
 
@@ -297,7 +300,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         if(isAssignable(env, tArg.a, expectedArgTyp)) {
           return {...expr, a: retTyp, arg: tArg};
         } else {
-          throw new TypeError("Function call type mismatch: " + expr.name);
+          throw new TypeError("Function call type mismatch: " + expr.name + "Expected " + tArg.tag + " but got "+ expectedArgTyp.tag);
         }
       } else {
         throw new TypeError("Undefined function: " + expr.name);
@@ -335,9 +338,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
 
         if(argTypes.length === expr.arguments.length &&
-           tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
-             return {...expr, a: retType, arguments: expr.arguments};
+           tArgs.every((tArg, i) => tArg.a.tag === argTypes[i].tag)) {
+             return {...expr, a: retType, arguments: tArgs};
            } else {
+             
+             
             throw new TypeError("Function call type mismatch: " + expr.name);
            }
       } else {
@@ -345,6 +350,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       }
     case "lookup":
       var tObj = tcExpr(env, locals, expr.obj);
+      console.log(tObj.a.tag);
       if (tObj.a.tag === "class") {
         if (env.classes.has(tObj.a.name)) {
           const [fields, _] = env.classes.get(tObj.a.name);
@@ -394,3 +400,4 @@ export function tcLiteral(literal : Literal) {
         case "none": return NONE;
     }
 }
+

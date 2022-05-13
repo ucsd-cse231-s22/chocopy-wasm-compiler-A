@@ -1,5 +1,5 @@
 import {Class, FunDef, VarInit, Stmt, Expr, Type} from "../ast"
-
+import {NUM, NONE,BOOL} from "../utils"
 /*
  * class FileClass:
  *     fd: int = 0
@@ -14,9 +14,9 @@ import {Class, FunDef, VarInit, Stmt, Expr, Type} from "../ast"
  *     def seek(self: FileClass, pos: int)
  *        return buildin_seek(self.fd)
  */
-export const FileClass: Class<Type> = {
+export const FileClass: Class<null> = {
     name: "File",
-    fields: [{name: "fd", type: { tag: "number"}, value:{tag:"num", value:0}}],
+    fields: [{name: "fd", type: NUM, value:{tag:"num", value:0}}],
     methods: [
         getFileInit(),
         getFileRead(),
@@ -25,24 +25,34 @@ export const FileClass: Class<Type> = {
         getFileClose()
     ]
 }
-
-function getFileInit(): FunDef<Type> {
+/** 
+function getFileInit(): FunDef<null> {
     return {
         name:"__init__",
         parameters:[{name:"self", type:{tag:"class", name:"File"}}, 
-                    {name:"fd", type:{tag:"number"}}],
-        ret: {tag:"none"},
+                    {name:"fd", type:NUM}],
+        ret: NONE,
         inits:[],
-        body:[{tag:"field-assign", obj:{tag:"id", name:"self"}, field:"fd", value:{tag:"id", name:"fd"}}],
+        body:[{tag:"field-assign", obj:{tag:"id", name:"self"}, field:"fd", value:{tag:"id", name:"fd"}}], // self.fd = fd
+    }
+}
+*/
+function getFileInit(): FunDef<null> {
+    return {
+        name:"__init__",
+        parameters:[{name:"self", type:{tag:"class", name:"File"}}],
+        ret: NONE,
+        inits:[],
+        body:[{tag:"pass"}], // self.fd = fd
     }
 }
 
-function getFileRead() :FunDef<Type> {
+function getFileRead() :FunDef<null> {
     return {
         name:"read",
         parameters:[{name:"self", type:{tag:"class", name:"File"}},
-                    {name:"byte_num", type:{tag:"number"}}],
-        ret:{tag:"number"},
+                    {name:"byte_num", type:NUM}],
+        ret:NUM,
         inits:[],
         body:[{tag:"return", value:{tag:"call", name:"buildin_read", 
                arguments:[{tag:"lookup", obj:{tag:"id", name:"self"}, field:"fd"},
@@ -50,12 +60,12 @@ function getFileRead() :FunDef<Type> {
     }
 }
 
-function getFileWrite() :FunDef<Type> {
+function getFileWrite() :FunDef<null> {
     return {
         name:"write",
         parameters:[{name:"self", type:{tag:"class", name:"File"}},
-                    {name:"c", type:{tag:"number"}}],
-        ret:{tag:"number"},
+                    {name:"c", type:NUM}],
+        ret:NUM,
         inits:[],
         body:[{tag:"return", value:{tag:"call", name:"buildin_write", 
                arguments:[{tag:"lookup", obj:{tag:"id", name:"self"}, field:"fd"},
@@ -63,12 +73,12 @@ function getFileWrite() :FunDef<Type> {
     }
 }
 
-function getFileSeek() :FunDef<Type> {
+function getFileSeek() :FunDef<null> {
     return {
         name:"seek",
         parameters:[{name:"self", type:{tag:"class", name:"File"}},
-                    {name:"pos", type:{tag:"number"}}],
-        ret:{tag:"none"},
+                    {name:"pos", type:NUM}],
+        ret:NONE,
         inits:[],
         body:[{tag:"expr", expr:{tag:"call", name:"buildin_seek", 
                arguments:[{tag:"lookup", obj:{tag:"id", name:"self"}, field:"fd"},
@@ -76,34 +86,36 @@ function getFileSeek() :FunDef<Type> {
     }
 }
 
-function getFileClose() :FunDef<Type> {
+function getFileClose() :FunDef<null> {
     return {
         name:"close",
         parameters:[{name:"self", type:{tag:"class", name:"File"}}],
-        ret:{tag:"none"},
+        ret:NONE,
         inits:[],
         body:[{tag:"expr", expr:{tag:"call", name:"buildin_close", 
                arguments:[{tag:"lookup", obj:{tag:"id", name:"self"}, field:"fd"}]}}],
     }
 }
 
-export const OpenFun: FunDef<Type> = {
+export const OpenFun: FunDef<null> = {
     name:"open",
-    parameters:[{name:"addr", type: {tag:"number"},}, {name:"mode", type: {tag:"number"},}],
+    parameters:[{name:"addr", type: NUM,}, {name:"mode", type: NUM,}],
     ret: {tag:"class", name:"File"},
     inits: getOpenInits(),
     body: getOpenBody(),
 }
-function getOpenInits(): VarInit<Type>[] {
+function getOpenInits(): VarInit<null>[] {
     return [{name:"f", type:{tag:"class", name:"File"},value: {tag:"none"}},
-    {name:"fd", type:{tag:"number"}, value:{tag:"num", value:0}}]
+    {name:"fd", type:NUM, value:{tag:"num", value:0}}]
 }
-function getOpenBody(): Stmt<Type>[] {
+function getOpenBody(): Stmt<null>[] {
     return [
      {tag:"assign", name:"fd",
                     value:{tag:"call", name:"buildin_open", arguments: [{tag:"id",name:"addr"},{tag:"id",name:"mode"}]}},
      {tag:"assign", name:"f",
-                    value:{tag:"call", name:"File", arguments: [{tag:"id", name:"fd"}]}},
+                    value:{tag:"call", name:"File", arguments: []}},
+     {tag:"field-assign", 
+                    obj:{tag:"id", name:"f"}, field:"fd", value:{tag:"id", name:"fd"}},
      {tag:"return", value:{tag:"id", name:"f"}}
     ]
 }

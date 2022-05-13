@@ -19,12 +19,12 @@ enum FileMode {
     W_CURR, // write to the current position. If wwe have data in the current position, we overwrite that piece of data  
 }
 
-const buildin_file_libs = `
-(func $buildin_open (import "libmemory" "open") (param i32) (param i32) (result i32))
-(func $buildin_read (import "libmemory" "read") (param i32) (result i32))
-(func $buildin_write (import "libmemory" "write") (param i32) (param i32) (result i32))
-(func $buildin_close (import "libmemory" "close") (param i32) (result i32))
-(func $buildin_seek (import "libmemory" "seek") (param i32) (param i32) (result i32))
+export const buildin_file_libs = `
+(func $buildin_open (import "imports" "open") (param i32) (param i32) (result i32))
+(func $buildin_read (import "imports" "read") (param i32) (result i32))
+(func $buildin_write (import "imports" "write") (param i32) (param i32) (result i32))
+(func $buildin_close (import "imports" "close") (param i32) (result i32))
+(func $buildin_seek (import "imports" "seek") (param i32) (param i32) (result i32))
 `;
 
 let fdCounter = 0;

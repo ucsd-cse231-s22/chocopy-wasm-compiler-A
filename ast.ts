@@ -1,5 +1,7 @@
 // import { TypeCheckError } from "./type-check";
 
+import { createModuleResolutionCache } from "typescript"
+
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
 export type Type =
   | {tag: "number"}
@@ -54,3 +56,5 @@ export enum UniOp { Neg, Not };
 export type Value =
     Literal
   | { tag: "object", name: string, address: number}
+
+

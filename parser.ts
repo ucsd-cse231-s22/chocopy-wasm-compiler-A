@@ -3,6 +3,7 @@ import { TreeCursor} from "lezer-tree";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
+import {FileClass, OpenFun} from "./IO_File/FileParser";
 
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   switch(c.type.name) {
@@ -518,6 +519,8 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
         hasChild = c.nextSibling();
       } 
       c.parent();
+      funs.push(OpenFun);
+      classes.push(FileClass);
       return { funs, inits, classes, stmts };
     default:
       throw new Error("Could not parse program at " + c.node.from + " " + c.node.to);
