@@ -1,5 +1,5 @@
 import { BinOp, Type, UniOp} from "./ast";
-import { Stmt, Expr, Value, VarInit, BasicBlock } from "./ir";
+import { Stmt, Expr, Value, VarInit, BasicBlock, Program } from "./ir";
 
 import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual } from "./optimization_utils"; 
 
@@ -41,23 +41,23 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<Type>, rightVal: Value<T
             throw new Error("Compiler Error");
         
         switch(op){
-            case BinOp.Plus: return {a: {tag: "number"}, tag: "num", value: leftVal.value + rightVal.value};
+            case BinOp.Plus: return { tag: "num", value: leftVal.value + rightVal.value};
             
-            case BinOp.Minus: return {a: {tag: "number"}, tag: "num", value: leftVal.value - rightVal.value}
+            case BinOp.Minus: return { tag: "num", value: leftVal.value - rightVal.value}
             
-            case BinOp.Mul: return {a: {tag: "number"}, tag: "num", value: leftVal.value * rightVal.value}
+            case BinOp.Mul: return { tag: "num", value: leftVal.value * rightVal.value}
 
-            case BinOp.IDiv: return {a: {tag: "number"}, tag: "num", value: leftVal.value / rightVal.value}
+            case BinOp.IDiv: return { tag: "num", value: leftVal.value / rightVal.value}
             
-            case BinOp.Mod: return {a: {tag: "number"}, tag: "num", value: leftVal.value % rightVal.value}
+            case BinOp.Mod: return { tag: "num", value: leftVal.value % rightVal.value}
             
-            case BinOp.Gt: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value > rightVal.value}
+            case BinOp.Gt: return { tag: "bool", value: leftVal.value > rightVal.value}
             
-            case BinOp.Lt: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value < rightVal.value}
+            case BinOp.Lt: return { tag: "bool", value: leftVal.value < rightVal.value}
             
-            case BinOp.Gte: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value >= rightVal.value}
+            case BinOp.Gte: return { tag: "bool", value: leftVal.value >= rightVal.value}
             
-            case BinOp.Lte: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value <= rightVal.value} 
+            case BinOp.Lte: return { tag: "bool", value: leftVal.value <= rightVal.value} 
         }
     }
     else if([BinOp.And, BinOp.Or].includes(op)){
@@ -65,16 +65,16 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<Type>, rightVal: Value<T
             throw new Error("Compiler Error")
         
         switch(op){
-            case BinOp.And: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value && rightVal.value};
+            case BinOp.And: return { tag: "bool", value: leftVal.value && rightVal.value};
 
-            case BinOp.Or: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value || rightVal.value};
+            case BinOp.Or: return { tag: "bool", value: leftVal.value || rightVal.value};
         }
     }
     else if([BinOp.Eq, BinOp.Neq].includes(op)){
         if(!isTagEqual(leftVal, rightVal) || isTagNone(leftVal) || isTagNone(rightVal) || isTagId(leftVal) || isTagId(rightVal))
             throw new Error("Compiler Error");
         switch(op){
-            case BinOp.Eq: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value == rightVal.value};
+            case BinOp.Eq: return { tag: "bool", value: leftVal.value == rightVal.value};
 
         }
     }
@@ -87,14 +87,14 @@ export function evaluateUniOp(op: UniOp, val: Value<Type>): Value<Type>{
             if (isTagId(val) || isTagNone(val) || isTagBoolean(val)) 
                 throw new Error("Compiler Error");
             const minus1: bigint = -1n;
-            return {a: {tag: "number"}, tag: "num", value: minus1 as bigint * (val.value as bigint)};
+            return { tag: "num", value: minus1 as bigint * (val.value as bigint)};
 
         case UniOp.Not:
 
             if (!isTagBoolean(val)) 
                 throw new Error("Compiler Error");
             
-            return {a: {tag: "bool"}, tag: "bool", value: !(val.value)};
+            return { tag: "bool", value: !(val.value)};
     }
 }
 
@@ -110,13 +110,30 @@ export function optimizeExpression(e: Expr<Type>, env: Env): Expr<Type>{
                 return e;
             
             const val = evaluateBinOp(e.op, e.left, e.right);
-            return {a: val.a, tag: "value", value: evaluateBinOp(e.op, e.left, e.right)};
+            return { tag: "value", value: evaluateBinOp(e.op, e.left, e.right)};
 
         case "uniop":
             break;
     }
 }
 
+export function optimizeStmt(stmt: Stmt<Type>, env: Env): Stmt<Type> {
+    switch(stmt.tag) {
+        case "assign":
+            stmt.value = optimizeExpression(stmt.value, env);
+            return stmt;
+    }
+}
+
+export function optimizeProgram(pr: Program<Type>) : Program<Type>{
+    pr.body = pr.body.map((basicBlock) => {
+        basicBlock.stmts = basicBlock.stmts.map((stmt) => {
+            return optimizeStmt(stmt, { vars: new Map<any, any>() });
+        });
+        return { ...basicBlock };
+    });
+    return pr;
+}
 export function compPreSuc(bbs: Array<BasicBlock<Type>>): [Map<string, string[]>, Map<string, string[]>]{
     let succs: Map<string, string[]> = new Map<string, string[]>();
     let preds: Map<string, string[]> = new Map<string, string[]>();
