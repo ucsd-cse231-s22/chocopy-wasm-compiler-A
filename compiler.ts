@@ -145,7 +145,19 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       const exprStmts = codeGenValue(expr.expr, env);
       switch(expr.op){
         case UniOp.Neg:
-          return [`(i32.const 0)`, ...exprStmts, `(i32.sub)`];
+          return [
+            ...exprStmts,
+            `(local.set $$scratch)`, // bignum addr
+            `(local.get $$scratch)`, // store addr
+            `(i32.const 0)`, // store offset
+            `(i32.const 0)`, // 0 - len
+            `(local.get $$scratch)`, // load addr
+            `(i32.const 0)`, // load offset
+            `(call $load)`, // load bignum len
+            `(i32.sub)`, // store val
+            `(call $store)`,
+            `(local.get $$scratch)`
+          ];
         case UniOp.Not:
           return [`(i32.const 0)`, ...exprStmts, `(i32.eq)`];
       }
