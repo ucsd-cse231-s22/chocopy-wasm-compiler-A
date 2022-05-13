@@ -8,14 +8,7 @@ const METADATA_AMT : number = 4;
 const NUM_INT_BITS : number = 32;
 
 function generateBitString(binArr: number[]) : number {
-  let ret : number = 0;
-  for ( let i = 0; i < NUM_INT_BITS - 1; i++) {
-    if (i < binArr.length) {
-      ret = ret + binArr[i];
-    }
-    ret = ret << 1;
-  }
-  return ret;
+  return parseInt(binArr.join(""), 2)
 }
 
 function generateName(base : string) : string {
