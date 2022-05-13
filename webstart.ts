@@ -39,6 +39,10 @@ function assert_out_of_bound(length: any, index: any): any{
   return index;
 }
 
+function len_list(arg:any, listlen: any):any{
+  return listlen;
+}
+
 function webStart() {
   document.addEventListener("DOMContentLoaded", async function() {
 
@@ -60,6 +64,7 @@ function webStart() {
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),
         len_str: (arg: number) => len(STR, arg),
+        len_list: (arg: number, listlen: number) => len_list(arg, listlen),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
@@ -91,8 +96,8 @@ function webStart() {
     }
     
     function len(typ: Type, arg: any): Number {
-      switch (typ) {
-        case STR:
+      switch (typ.tag) {
+        case "str":
           return new Uint32Array(importObject.memory_values.buffer, arg, 1)[0];
         default:
           throw new Error(`Undefined function len for type ${typ}`);

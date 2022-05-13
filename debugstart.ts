@@ -7,7 +7,10 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 async function debug() {
   var source = `
 a: str = "hello"
-print(a)
+b: [int] = None
+b = [1,2,3,4,5]
+len(a)
+len(b)
 `
 //   var source = `
 // def f() -> int:

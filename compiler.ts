@@ -154,8 +154,8 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       }
 
     case "builtin1":
-      const argTyp = expr.arg.a;
-      const argStmts = codeGenValue(expr.arg, env);
+      var argTyp = expr.arg.a;
+      var argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
       if (expr.name === "print" && argTyp === NUM) {
         callName = "print_num";
@@ -167,6 +167,9 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         callName = "print_none";
       } else if (expr.name === "len" && argTyp === STR) {
         callName = "len_str";
+      } else if (expr.name === "len" && argTyp.tag === "list") {
+        argStmts = argStmts.concat([`(i32.const ${argTyp.listsize})`])  // this is the length of list
+        callName = "len_list"
       }
       return argStmts.concat([`(call $${callName})`]);
 
