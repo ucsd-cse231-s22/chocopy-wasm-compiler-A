@@ -1,6 +1,6 @@
 (module
   (memory (import "js" "mem") 1)
-  (global $heap (mut i32) (i32.const 4))
+  (import "js" "heap" (global $heap (mut i32)))
 
   ;; Take an amount of blocks (4-byte words) to allocate, return an address
   ;; handle suitable for giving to other access methods
@@ -13,6 +13,11 @@
   ;; Given an address handle, return the value at that address
   (func (export "load") (param $addr i32) (param $offset i32) (result i32)
     (i32.load (i32.add (local.get $addr) (i32.mul (local.get $offset) (i32.const 4)))))
+
+  ;; Duplicate the stack top
+  (func (export "dup") (param $st i32) (result i32 i32)
+    (local.get $st)
+    (local.get $st))
 
   ;; Given an address handle and a new value, update the value at that adress to
   ;; that value

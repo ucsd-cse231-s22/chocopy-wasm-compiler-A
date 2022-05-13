@@ -23,11 +23,13 @@ export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, 
 
 export type Stmt<A> =
   | {  a?: A, tag: "assign", name: string, value: Expr<A> }
+  | {  a?: A, tag: "comment" }
   | {  a?: A, tag: "return", value: Expr<A> }
   | {  a?: A, tag: "expr", expr: Expr<A> }
   | {  a?: A, tag: "pass" }
   | {  a?: A, tag: "field-assign", obj: Expr<A>, field: string, value: Expr<A> }
   | {  a?: A, tag: "if", conds: Array<Expr<A>>, bodies: Array<Stmt<A>[]>, els: Array<Stmt<A>> }
+  | {  a?: A, tag: "for", itvar: Expr<A>, iterable: Expr<A>, body: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
 
 export type Expr<A> =
@@ -47,10 +49,11 @@ export type Expr<A> =
 export type Literal = 
     { tag: "num", value: number }
   | { tag: "bool", value: boolean }
+  | { tag: "str", value: string }
   | { tag: "none" }
 
 // TODO: should we split up arithmetic ops from bool ops?
-export enum BinOp { Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};
+export enum BinOp { Plus, IterPlus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};
 
 export enum UniOp { Neg, Not };
 

@@ -2,6 +2,8 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
+import { BOOL, NONE, NUM, STR } from './utils'
+import { iterable } from './type-check';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -22,6 +24,7 @@ function generateName(base : string) : string {
 // }
 
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
+    // console.log(JSON.stringify(p, null, 4));
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
@@ -76,6 +79,8 @@ function literalToVal(lit: AST.Literal) : IR.Value<Type> {
             return { ...lit, value: BigInt(lit.value) }
         case "bool":
             return lit
+        case "str":
+            return { ...lit }
         case "none":
             return lit        
     }
@@ -120,6 +125,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       return inits;
     //  return [inits, [ ...stmts, {tag: "expr", a: s.a, expr: e } ]];
 
+    case "comment":
     case "pass":
       return [];
 
@@ -186,6 +192,68 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       //   endlbl,
       // ]];
     
+    case "for":
+      var forStartLbl = generateName("$forstart");
+      var forbodyLbl = generateName("$forbody");
+      var forEndLbl = generateName("$forend");
+
+      // create a new var i for loop iteration indices
+      var newName = generateName("forloopind");
+      var setNewName : IR.Stmt<Type> = {
+        tag: "assign",
+        a: NONE,
+        name: newName,
+        value: { a: NUM, tag: "value", value: { tag: "wasmint", value: 0 } } 
+      };
+      pushStmtsToLastBlock(blocks, setNewName);
+      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl });
+
+      // for loop condition
+      blocks.push({  a: s.a, label: forStartLbl, stmts: [] });
+      var [cinits, cstmts, cexpr] =
+        flattenExprToVal({ a: BOOL, tag: "binop", op: AST.BinOp.Lt,
+          left: {  a: NUM, tag: "id", name: newName }, right: { a: NUM, tag: "builtin1", name: "len", arg: s.iterable} }, env);
+      pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: forbodyLbl, els: forEndLbl });
+
+      // for loop body preparation
+      blocks.push({  a: s.a, label: forbodyLbl, stmts: [] });
+      var [itvinits, itvstmts, itvval] = flattenExprToVal(s.itvar, env);
+      if (itvval.tag !== "id") throw new Error("For loop variable cannot be literal");
+      var [itbinits, itbstmts, itbval] = flattenExprToVal(s.iterable, env);
+      pushStmtsToLastBlock(blocks, ...itvstmts, ...itbstmts);
+      // Assign itvval to a new string with length 1
+      if (s.iterable.a.tag === "str") {
+        // Create temporary value for char
+        var tmpValue = generateName("tmpvalue");
+        var setTmpValue : IR.Stmt<Type> = {
+          tag: "assign",
+          a: NONE,
+          name: tmpValue,
+          value: { tag: "load", start: itbval, list: true, offset: { a: NUM, tag: "id", name: newName } }
+        };
+        pushStmtsToLastBlock(blocks, setTmpValue);
+        cinits.push({ a: s.a, name: tmpValue, type: s.a, value: { tag: "none" } })
+        // assign itvval to a new address where store the new str created
+        pushStmtsToLastBlock(blocks, { tag: "assign", a: NONE, name: itvval.name, value: { tag: "alloc", amount: { tag: "wasmint", value: 2 } } },
+          { tag: "store", start: { tag: "id", name: itvval.name }, offset: { tag: "wasmint", value: 0 }, value: { tag: "wasmint", value: 1 } },
+            { tag: "store", start: { tag: "id", name: itvval.name }, offset: { tag: "wasmint", value: 1 }, value: { tag: "id", name: tmpValue } });
+      } else {
+        // assign itvval to itbval[newName]
+        pushStmtsToLastBlock(blocks, { tag: "assign", a: NONE, name: itvval.name,
+          value: { tag: "load", start: itbval, list: true, offset: { a: NUM, tag: "id", name: newName } } });
+      }
+      
+      // body statement
+      var bodyinits = flattenStmts(s.body, blocks, env);
+      pushStmtsToLastBlock(blocks, { tag: "assign", a: NONE, name: newName,
+        value: {a: NUM, tag: "binop", op: AST.BinOp.Plus, left: { a: NUM, tag: "id", name: newName },
+          right: { a: NUM, tag: "wasmint", value: 1 } } }) // ind = ind + 1
+      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl });
+
+      blocks.push({  a: s.a, label: forEndLbl, stmts: [] })
+
+      return [...itbinits, ...itvinits, ...cinits, ...bodyinits, { a: s.a, name: newName, type: s.a, value: { tag: "none" } }];
+
     case "while":
       var whileStartLbl = generateName("$whilestart");
       var whilebodyLbl = generateName("$whilebody");
@@ -280,8 +348,32 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     }
     case "access": {
       const [linits, lstmts, lval] = flattenExprToVal(e.obj, env);
-      if(e.obj.a.tag !== "list") { throw new Error("Compiler's cursed, go home"); }
+      if(!iterable(e.obj.a)) { throw new Error("Compiler's cursed, go home"); }
       const [vinits, vstmts, vval] = flattenExprToVal(e.ind, env);
+      if (e.obj.a.tag === "str") {
+        // Create temporary value for char
+        var tmpValue = generateName("tmpvalue");
+        var setTmpValue : IR.Stmt<Type> = {
+          tag: "assign",
+          a: NONE,
+          name: tmpValue,
+          value: { tag: "load", start: lval, list: true, offset: vval }
+        };
+        vinits.push({ a: e.a, name: tmpValue, type: e.a, value: { tag: "none" } })
+        vstmts.push(setTmpValue);
+        // assign itvval to a new address where store the new str created
+        var itvval = generateName("tmpvalue");
+        vinits.push({ a: e.a, name: itvval, type: e.a, value: { tag: "none" } })
+        vstmts.push({ tag: "assign", a: NONE, name: itvval, value: { tag: "alloc", amount: { tag: "wasmint", value: 2 } } },
+          { tag: "store", start: { tag: "id", name: itvval }, offset: { tag: "wasmint", value: 0 }, value: { tag: "wasmint", value: 1 } },
+            { tag: "store", start: { tag: "id", name: itvval }, offset: { tag: "wasmint", value: 1 }, value: { tag: "id", name: tmpValue } });
+        return [
+          [...linits, ...vinits], [...lstmts, ...vstmts], {
+            tag: "value",
+            value: { tag: "id", name: itvval }
+          }
+        ];
+      }
       return [
         [...linits, ...vinits], [...lstmts, ...vstmts], {
           tag: "load",
@@ -314,8 +406,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           value: lval
         })
       });
-      console.log("==============");
-      console.log(linits);
       return [
         [...linits, { name: arrayName, type: e.a, value: { tag: "none" } }],
         [...lstmts, { tag: "assign", name: arrayName, value: alloc }, ...assigns],

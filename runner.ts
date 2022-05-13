@@ -102,11 +102,14 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
 
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
+    (import "js" "heap" (global $heap (mut i32)))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
     (func $assert_valid_access (import "imports" "assert_valid_access") (param i32) (param i32) (result i32))
+    (func $rte_printarg (import "imports" "rte_printarg") (param i32))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
+    (func $print_char (import "imports" "print_char") (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))
@@ -114,7 +117,11 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
-    (func $len (import "liblist" "len") (param i32) (result i32))
+    (func $dup (import "libmemory" "dup") (param i32) (result i32 i32))
+    (func $len (import "libiter" "len") (param i32) (result i32))
+    (func $print_str (import "libiter" "print_str") (param i32) (result i32))
+    (func $load_char (import "libiter" "load_char") (param i32) (param i32) (result i32))
+    (func $concat (import "libiter" "concat") (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
