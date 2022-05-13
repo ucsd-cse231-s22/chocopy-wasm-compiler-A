@@ -363,7 +363,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<null
         throw new TypeCheckError("field lookups require an object");
       }
     case "method-call":
-      return tcCallOrMethod(expr.method, expr.arguments, expr.kwarguments, env, locals, expr.obj)
+      let realArgs = [expr.obj].concat(expr.arguments);
+      return tcCallOrMethod(expr.method, realArgs, expr.kwarguments, env, locals, expr.obj)
     // if (tObj.a.tag === "class") {
     //   if (env.classes.has(tObj.a.name)) {
     //     const [_, methods] = env.classes.get(tObj.a.name);
@@ -402,8 +403,9 @@ export function tcCallOrMethod(name: string, realArgs: Array<Expr<null>>, realKw
   let expectedArgTypes: Array<Type>;
   let expectedArgNames: Array<string>;
   let retType: Type;
-  const tObj = tcExpr(env, locals, obj);
-  if (tObj) {
+  let tObj: Expr<Type> = null;
+  if (obj) {
+    tObj = tcExpr(env, locals, obj);
     if (tObj.a.tag !== "class") {
       throw new TypeCheckError("method calls require an object");
     }
@@ -430,8 +432,8 @@ export function tcCallOrMethod(name: string, realArgs: Array<Expr<null>>, realKw
   const tAllArgs = Array<Expr<Type>>(expectedArgTypes.length).fill(null);
   realArgs.map((arg, i) => {
     const tArg = tcExpr(env, locals, arg);
-    if (!isAssignable(env, expectedArgTypes[i], tArg.a)) {
-      throw new TypeError(`${name}() expected type ${JSON.stringify(expectedArgTypes[i])} for argument ${i}. Got ${JSON.stringify(tArg.a)}`);
+    if (!isAssignable(env, tArg.a, expectedArgTypes[i])) {
+      throw new TypeCheckError(`${name}() expected type ${JSON.stringify(expectedArgTypes[i])} for argument ${i}. Got ${JSON.stringify(tArg.a)}`);
     }
     tAllArgs[i] = tArg;
   });
@@ -444,8 +446,8 @@ export function tcCallOrMethod(name: string, realArgs: Array<Expr<null>>, realKw
       throw new TypeCheckError(`${name}() got multiple values for argument ${name}`);
     }
     const tKwArg = tcExpr(env, locals, value);
-    if (!isAssignable(env, expectedArgTypes[argIndex], tKwArg.a)) {
-      throw new TypeError(`${name}() expected type ${JSON.stringify(expectedArgTypes[argIndex])} for argument ${name}. Got ${JSON.stringify(tKwArg.a)}`);
+    if (!isAssignable(env, tKwArg.a, expectedArgTypes[argIndex])) {
+      throw new TypeCheckError(`${name}() expected type ${JSON.stringify(expectedArgTypes[argIndex])} for argument ${name}. Got ${JSON.stringify(tKwArg.a)}`);
     }
     tAllArgs[argIndex] = tKwArg;
   });
@@ -461,12 +463,14 @@ export function tcCallOrMethod(name: string, realArgs: Array<Expr<null>>, realKw
       tAllArgs[i] = { ...defaultValues.get(expectedArgNames[i]) };
     }
   });
-
   if (tAllArgs.findIndex(arg => arg === null) !== -1) {
     let missingArgs = tAllArgs.filter(arg => arg === null);
     throw new TypeCheckError(`${name}() missing ${missingArgs.length} required positional argument: ${missingArgs.join(", ")}`);
   }
   if (tObj) {
+    // Remove self from arguments
+    tAllArgs.shift();
+    console.log( { a: retType, tag: "method-call", obj: tObj, method: name, arguments: tAllArgs });
     return { a: retType, tag: "method-call", obj: tObj, method: name, arguments: tAllArgs };
   }
   return { a: retType, tag: "call", name, arguments: tAllArgs };
