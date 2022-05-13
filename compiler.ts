@@ -83,16 +83,26 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
     case "store":
       return [
         ...codeGenValue(stmt.start, env),
+        `call $ref_lookup`,
         ...codeGenValue(stmt.offset, env),
         ...codeGenValue(stmt.value, env),
         `call $store`
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
+      if (stmt.value.a && stmt.value.a.tag === "class") { // if the assignment is object assignment
+        valStmts.push(`(i32.const 1)`, `(call $traverse_update)`) // update the count of the object on the RHS
+      }
       if (env.locals.has(stmt.name)) {
-        return valStmts.concat([`(local.set $${stmt.name})`]); 
+        return [`(local.get $${stmt.name})`, // update the count of the object on the LHS
+        `(i32.const -1)`, 
+        `(call $traverse_update)`,
+        `(local.set $${stmt.name})`].concat(valStmts).concat([`(local.set $${stmt.name})`]); 
       } else {
-        return valStmts.concat([`(global.set $${stmt.name})`]); 
+        return [`(global.get $${stmt.name})`,
+        `(i32.const -1)`,
+        `(call $traverse_update)`,
+        `(global.set $${stmt.name})`].concat(valStmts).concat([`(global.set $${stmt.name})`]); 
       }
 
     case "return":
@@ -181,14 +191,14 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       return [
         ...codeGenValue(expr.amount, env),
         `call $alloc`,
-        //`call $mem_gen_ref` // uncomment when load is defined
+        `call $mem_gen_ref` // uncomment when load is defined
       ];
     case "load":
       return [
         ...codeGenValue(expr.start, env),
         `call $assert_not_none`,
+        `call $ref_lookup`,
         ...codeGenValue(expr.offset, env),
-        //`call $ref_lookup`, // only when data to be accessed is a reference
         `call $load`
       ]
   }
