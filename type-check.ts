@@ -398,7 +398,7 @@ export function tcLiteral(literal: Literal) {
   }
 }
 
-export function tcCallOrMethod(name: string, realArgs: Array<Expr<null>>, realKwArgs: Map<string, Expr<null>>, env: GlobalTypeEnv, locals: LocalTypeEnv, obj?: Expr<null>): Expr<Type> {
+export function tcCallOrMethod(funcName: string, realArgs: Array<Expr<null>>, realKwArgs: Map<string, Expr<null>>, env: GlobalTypeEnv, locals: LocalTypeEnv, obj?: Expr<null>): Expr<Type> {
   let expectedParams: Array<Parameter<Type>>;
   let expectedArgTypes: Array<Type>;
   let expectedArgNames: Array<string>;
@@ -413,41 +413,41 @@ export function tcCallOrMethod(name: string, realArgs: Array<Expr<null>>, realKw
       throw new TypeCheckError("method call on an unknown class");
     }
     const [_, methods] = env.classes.get(tObj.a.name);
-    if (!methods.has(name)) {
-      throw new TypeCheckError(`could not found method ${name} in class ${tObj.a.name}`);
+    if (!methods.has(funcName)) {
+      throw new TypeCheckError(`could not found method ${funcName} in class ${tObj.a.name}`);
     }
-    [expectedParams, retType] = methods.get(name);
+    [expectedParams, retType] = methods.get(funcName);
     expectedArgTypes = expectedParams.map(p => p.type);
     expectedArgNames = expectedParams.map(p => p.name);
   }
   else {
-    [expectedParams, retType] = env.functions.get(name);
+    [expectedParams, retType] = env.functions.get(funcName);
     expectedArgTypes = expectedParams.map(p => p.type);
     expectedArgNames = expectedParams.map(p => p.name);
   }
 
   if (realArgs.length > expectedArgTypes.length) {
-    throw new TypeCheckError(`${name}() takes from 1 to ${expectedArgTypes.length} positional arguments but ${realArgs.length} were given`);
+    throw new TypeCheckError(`${funcName}() takes from 1 to ${expectedArgTypes.length} positional arguments but ${realArgs.length} were given`);
   }
   const tAllArgs = Array<Expr<Type>>(expectedArgTypes.length).fill(null);
   realArgs.map((arg, i) => {
     const tArg = tcExpr(env, locals, arg);
     if (!isAssignable(env, tArg.a, expectedArgTypes[i])) {
-      throw new TypeCheckError(`${name}() expected type ${JSON.stringify(expectedArgTypes[i])} for argument ${i}. Got ${JSON.stringify(tArg.a)}`);
+      throw new TypeCheckError(`${funcName}() expected type ${JSON.stringify(expectedArgTypes[i])} for argument ${i}. Got ${JSON.stringify(tArg.a)}`);
     }
     tAllArgs[i] = tArg;
   });
   realKwArgs.forEach((value: Expr<null>, name: string) => {
     const argIndex = expectedArgNames.findIndex(argName => argName == name);
     if (argIndex == -1) {
-      throw new TypeCheckError(`${name}() got an unexpected keyword argument ${name}`);
+      throw new TypeCheckError(`${funcName}() got an unexpected keyword argument ${name}`);
     }
     if (tAllArgs[argIndex] !== null) {
-      throw new TypeCheckError(`${name}() got multiple values for argument ${name}`);
+      throw new TypeCheckError(`${funcName}() got multiple values for argument ${name}`);
     }
     const tKwArg = tcExpr(env, locals, value);
     if (!isAssignable(env, tKwArg.a, expectedArgTypes[argIndex])) {
-      throw new TypeCheckError(`${name}() expected type ${JSON.stringify(expectedArgTypes[argIndex])} for argument ${name}. Got ${JSON.stringify(tKwArg.a)}`);
+      throw new TypeCheckError(`${funcName}() expected type ${JSON.stringify(expectedArgTypes[argIndex])} for argument ${name}. Got ${JSON.stringify(tKwArg.a)}`);
     }
     tAllArgs[argIndex] = tKwArg;
   });
@@ -465,13 +465,12 @@ export function tcCallOrMethod(name: string, realArgs: Array<Expr<null>>, realKw
   });
   if (tAllArgs.findIndex(arg => arg === null) !== -1) {
     let missingArgs = tAllArgs.filter(arg => arg === null);
-    throw new TypeCheckError(`${name}() missing ${missingArgs.length} required positional argument: ${missingArgs.join(", ")}`);
+    throw new TypeCheckError(`${funcName}() missing ${missingArgs.length} required positional argument: ${missingArgs.join(", ")}`);
   }
   if (tObj) {
     // Remove self from arguments
     tAllArgs.shift();
-    console.log( { a: retType, tag: "method-call", obj: tObj, method: name, arguments: tAllArgs });
-    return { a: retType, tag: "method-call", obj: tObj, method: name, arguments: tAllArgs };
+    return { a: retType, tag: "method-call", obj: tObj, method: funcName, arguments: tAllArgs };
   }
-  return { a: retType, tag: "call", name, arguments: tAllArgs };
+  return { a: retType, tag: "call", name: funcName, arguments: tAllArgs };
 }
