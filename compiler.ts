@@ -96,12 +96,15 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
         pre = [
         ...codeGenValue(stmt.start, env),
         `call $ref_lookup`,
+        `call $assert_not_none`,
         ...codeGenValue(stmt.offset, env),
+        `(i32.mul (i32.const 4))`,
         `(i32.add)`,
         `(i32.load)`,
         `(i32.const -1) (call $traverse_update)`,
         `(i32.mul (i32.const 0))`,
         ...codeGenValue(stmt.value, env),
+        `call $assert_not_none`,
         `(i32.add)`,
         `(i32.const 1) (call $traverse_update)`,
         `(i32.mul (i32.const 0))`
