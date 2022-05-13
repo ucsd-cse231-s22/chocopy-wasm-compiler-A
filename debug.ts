@@ -3,6 +3,10 @@ import { TreeCursor } from "lezer";
 import { parse } from "./parser";
 import { tc } from './type-check';
 import * as compiler from "./compiler";
+import { BasicREPL } from "./repl";
+import { importObject } from "./tests/import-object.test";
+import {run, typeCheck} from "./tests/helpers.test";
+
 
 export function stringifyTree(t: TreeCursor, source: string, d: number){
     var str = "";
@@ -21,17 +25,28 @@ export function stringifyTree(t: TreeCursor, source: string, d: number){
     return str; 
 }
 
-var source = `s:set = set()\ns.add(3)\ns.remove(3)`;
+// var source = `s:set = set()\ns.add(3)\ns.remove(3)`;
+var source = `
+x:set = set()
+x = {3,76,5}
+print(x.has(3))`; // s:set = {3,5,7}\n3 in s
+/* DONE:
+s = {3,5,7}
+s = set()
+s:set = {3,5,7}
+s:set = set()
+s:set = None
+
+*/
 // console.log(source.length);
 // console.log(source.includes("n)"))
 var raw = parser.parse(source)
 console.log(stringifyTree(raw.cursor(), source, 0))
 
-let ast = parse(source);
-console.log(ast);
-// ast = tc(ast);
-// console.log("???\n", ast);
-// console.log("END", ast[1])
+let parsed = parse(source);
+console.log(parsed);
 
-// const out = compiler.compile(source)
-// console.log(out)
+
+const result = run(source);
+
+console.log("END");

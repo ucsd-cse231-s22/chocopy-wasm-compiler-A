@@ -70,7 +70,6 @@ export function equalType(t1: Type, t2: Type) {
   );
 }
 export function equalSet(t1: Type, t2: Type) {
-  console.debug(t1,t2);
   return (
     t1 === t2 ||
     (t1.tag === "set" && t2.tag === "set" && t1.content_type.tag === t2.content_type.tag)
@@ -82,7 +81,6 @@ export function isNoneOrClass(t: Type) {
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  console.debug("isSubtype:",t1,t2);
   return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" || equalSet(t1,t2)
   // set is assignable to none
   || t1.tag === "none" && t2.tag === "set" 
@@ -430,10 +428,14 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
                   }
               }
               break;
+            case "has":
+              return {...expr,a:BOOL,obj:{...expr.obj,a:SET(NUM)}}
           }
           
-        } 
-        throw new TypeCheckError("method calls require an object");
+        } else{
+          throw new TypeCheckError("method calls require an object");
+        }
+      break;
       }
       case "set_expr":
         //Type annotation currently only takes 1 argument,

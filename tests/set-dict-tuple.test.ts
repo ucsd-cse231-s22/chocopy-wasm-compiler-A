@@ -56,16 +56,10 @@ describe("proj-set-test", ()=>{
   // print(x)`,["{1,2}"])
 });
      
-// describe("proj-dict-test", ()=>{
+describe("proj-dict-test", ()=>{
     
-//   assertTC("tc-assign-dict-int-bool",`
-//   x:set = {1:True,2:False}`, DICT(NUM,BOOL))
-
-//   assertPrint("pr-dict-int-bool-key",`
-//   x:dict = {1:True,2:False}
-//   print(x[1])
-//   x[1] = False
-//   print(x[1])
-//   x[1] = False
-//   print(x[1])`,["True","False"])
-// });
+  assertPrint("pr-dict-int-bool-key",`
+  x:set = set()
+  x = {3,76,5}
+  `,["True"])
+});

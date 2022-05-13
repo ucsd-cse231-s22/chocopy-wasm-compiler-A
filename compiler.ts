@@ -48,7 +48,10 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
-  const allFuns = funs.concat(classes).join("\n\n");
+  const setFUns : Array<string> = classes.concat(setUtilFuns());
+  const allFuns = funs.concat(setFUns).join("\n\n");
+  // const allFuns = funs.concat(classes).join("\n\n");
+  // const allFuns = allFuns.concat(setFUns).join("\n\n");
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
   withDefines.labels = ast.body.map(block => block.label);
@@ -203,6 +206,10 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       } else {
         return [`(global.get $${val.name})`];
       }
+    case "set":
+      return [`
+      (i32.const 10)
+      (call $alloc)`];
   }
 }
 
@@ -290,3 +297,581 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
   const result = methods.map(method => codeGenDef(method, env));
   return result.flat();
   }
+
+
+  function setUtilFuns(): Array<string> {
+    let setFunStmts: Array<string> = [];
+  
+    //This function returns a memory address for the value of a key.
+    //If key is not found, throw a key not found error
+    // setFunStmts.push(
+    //   ...[
+    //     "(func $dict$get (param $baseAddr i32) (param $key i32) (param $defaultValue i32) (result i32)",
+    //     "(local $nodePtr i32)", // Local variable to store the address of nodes in linkedList
+    //     "(local $tagHitFlag i32)", // Local bool variable to indicate whether tag is hit
+    //     "(local $returnVal i32)",
+    //     "(local.get $defaultValue)",
+    //     "(local.set $returnVal)", // Initialize returnVal to defaultValue argument
+    //     "(i32.const 0)",
+    //     "(local.set $tagHitFlag)", // Initialize tagHitFlag to False
+    //     "(local.get $baseAddr)",
+    //     "(local.get $key)",
+    //     "(i32.const 10)", //hard-coding hash table size
+    //     "(i32.rem_u)", //Compute hash
+    //     "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+    //     "(i32.add)", //Reaching the proper bucket. Call this bucketAddress
+    //     "(i32.load)",
+    //     "(local.set $nodePtr)",
+    //     "(local.get $nodePtr)",
+    //     "(i32.const 0)", //None
+    //     "(i32.eq)",
+    //     "(if",
+    //     "(then", // if the literal in bucketAddress is None
+    //     "(local.get $defaultValue)",
+    //     "(local.set $returnVal)", // Initialize returnVal to -1
+    //     ")", //close then
+    //     "(else",
+    //     "(block",
+    //     "(loop", // While loop till we find a node whose next is None
+    //     "(local.get $nodePtr)",
+    //     "(i32.load)", //Loading head of linkedList
+    //     "(local.get $key)",
+    //     "(i32.eq)", // if tag is same as the provided one
+    //     "(if",
+    //     "(then",
+    //     "(local.get $nodePtr)",
+    //     "(i32.const 4)",
+    //     "(i32.add)", // Value
+    //     "(i32.load)", //HT
+    //     "(local.set $returnVal)",
+    //     "(i32.const 1)",
+    //     "(local.set $tagHitFlag)", // Set tagHitFlag to True
+    //     ")", // closing then
+    //     ")", // closing if
+    //     "(local.get $nodePtr)",
+    //     "(i32.const 8)",
+    //     "(i32.add)", // Next pointer
+    //     "(i32.load)",
+    //     "(local.set $nodePtr)",
+    //     "(br_if 0", // Opening br_if
+    //     "(local.get $nodePtr)",
+    //     "(i32.const 0)", //None
+    //     "(i32.ne)", // If nodePtr not None
+    //     "(local.get $tagHitFlag)",
+    //     "(i32.eqz)",
+    //     "(i32.and)",
+    //     ")", // Closing br_if
+    //     "(br 1)",
+    //     ")", // Closing loop
+    //     ")", // Closing Block
+    //     ")", //close else
+    //     ")", // close if
+    //     "(local.get $returnVal)",
+    //     "(return))",
+    //     "",
+    //   ]
+    // );
+    //This function clears dictionary.
+    setFunStmts.push(
+      ...[
+        "(func $set$clear (param $baseAddr i32) (result i32)",
+        "(local.get $baseAddr)",
+        "(i32.const 0)", //None
+        "(i32.store)", // Clearing Bucket-1
+  
+        "(local.get $baseAddr)",
+        "(i32.const 4)",
+        "(i32.add)",
+        "(i32.const 0)", //None
+        "(i32.store)", // Clearing Bucket-2
+  
+        "(local.get $baseAddr)",
+        "(i32.const 8)",
+        "(i32.add)",
+        "(i32.const 0)", //None
+        "(i32.store)", // Clearing Bucket-3
+  
+        "(local.get $baseAddr)",
+        "(i32.const 12)",
+        "(i32.add)",
+        "(i32.const 0)", //None
+        "(i32.store)", // Clearing Bucket-4
+  
+        "(local.get $baseAddr)",
+        "(i32.const 16)",
+        "(i32.add)",
+        "(i32.const 0)", //None
+        "(i32.store)", // Clearing Bucket-5
+  
+        "(local.get $baseAddr)",
+        "(i32.const 20)",
+        "(i32.add)",
+        "(i32.const 0)", //None
+        "(i32.store)", // Clearing Bucket-6
+  
+        "(local.get $baseAddr)",
+        "(i32.const 24)",
+        "(i32.add)",
+        "(i32.const 0)", //None
+        "(i32.store)", // Clearing Bucket-7
+  
+        "(local.get $baseAddr)",
+        "(i32.const 28)",
+        "(i32.add)",
+        "(i32.const 0)", //None
+        "(i32.store)", // Clearing Bucket-8
+  
+        "(local.get $baseAddr)",
+        "(i32.const 32)",
+        "(i32.add)",
+        "(i32.const 0)", //None
+        "(i32.store)", // Clearing Bucket-9
+  
+        "(local.get $baseAddr)",
+        "(i32.const 36)",
+        "(i32.add)",
+        "(i32.const 0)", //None
+        "(i32.store)", // Clearing Bucket-10
+  
+        "(i32.const 0)",
+        "(return))",
+        "",
+      ]
+    );
+  
+    setFunStmts.push(
+      ...[
+        "(func $set$CreateEntry (param $val i32) (result i32)",
+        "(local $$allocPointer i32)",
+        // `(i32.const ${TAG_DICT_ENTRY})    ;; heap-tag: opaque`,
+
+        "(i32.const 2)   ;; size in bytes",
+        "(call $alloc)",
+        "(local.tee $$allocPointer)",
+        "(local.get $val)",
+        "(i32.store)", // Dumping tag
+        "(local.get $$allocPointer)",
+        "(i32.const 4)",
+        "(i32.add)", // Moving to the next block
+        "(i32.const 0)", //None
+        "(i32.store)", // Dumping None in the next
+        "(local.get $$allocPointer)",
+        "(return))",
+        "",
+      ]
+    );
+  
+    //This function returns a memory address for the value of a key. It returns -1 if not found.
+    // setFunStmts.push(
+    //   ...[
+    //     "(func $ha$htable$Lookup (param $baseAddr i32) (param $key i32) (param $hashtablesize i32) (result i32)",
+    //     "(local $nodePtr i32)", // Local variable to store the address of nodes in linkedList
+    //     "(local $tagHitFlag i32)", // Local bool variable to indicate whether tag is hit
+    //     "(local $returnVal i32)",
+    //     "(i32.const -1)",
+    //     "(local.set $returnVal)", // Initialize returnVal to -1
+    //     "(i32.const 0)",
+    //     "(local.set $tagHitFlag)", // Initialize tagHitFlag to False
+    //     "(local.get $baseAddr)",
+    //     "(local.get $key)",
+    //     "(local.get $hashtablesize)",
+    //     "(i32.rem_u)", //Compute hash
+    //     "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+    //     "(i32.add)", //Reaching the proper bucket. Call this bucketAddress
+    //     "(i32.load)",
+    //     "(local.set $nodePtr)",
+    //     "(local.get $nodePtr)",
+    //     "(i32.const 0)", //None
+    //     "(i32.eq)",
+    //     "(if",
+    //     "(then", // if the literal in bucketAddress is None
+    //     "(i32.const -1)",
+    //     "(local.set $returnVal)", // Initialize returnVal to -1
+    //     ")", //close then
+    //     "(else",
+    //     "(block",
+    //     "(loop", // While loop till we find a node whose next is None
+    //     "(local.get $nodePtr)",
+    //     "(i32.load)", //Loading head of linkedList
+    //     "(local.get $key)",
+    //     "(i32.eq)", // if tag is same as the provided one
+    //     "(if",
+    //     "(then",
+    //     "(local.get $nodePtr)",
+    //     "(i32.const 4)",
+    //     "(i32.add)", // Value
+    //     "(local.set $returnVal)",
+    //     "(i32.const 1)",
+    //     "(local.set $tagHitFlag)", // Set tagHitFlag to True
+    //     ")", // closing then
+    //     ")", // closing if
+    //     "(local.get $nodePtr)",
+    //     "(i32.const 8)",
+    //     "(i32.add)", // Next pointer
+    //     "(i32.load)",
+    //     "(local.set $nodePtr)",
+    //     "(br_if 0", // Opening br_if
+    //     "(local.get $nodePtr)",
+    //     "(i32.const 0)", //None
+    //     "(i32.ne)", // If nodePtr not None
+    //     "(local.get $tagHitFlag)",
+    //     "(i32.eqz)",
+    //     "(i32.and)",
+    //     ")", // Closing br_if
+    //     "(br 1)",
+    //     ")", // Closing loop
+    //     ")", // Closing Block
+    //     ")", //close else
+    //     ")", // close if
+    //     "(local.get $returnVal)",
+    //     "(return))",
+    //     "",
+    //   ]
+    // );
+
+    setFunStmts.push(
+      ...[
+        "(func $set$has (param $baseAddr i32) (param $val i32) (result i32)",
+        "(local $nodePtr i32)", // Local variable to store the address of nodes in linkedList
+        "(local $tagHitFlag i32)", // Local bool variable to indicate whether tag is hit
+        "(local $$allocPointer i32)",
+
+        "(i32.const 0)",
+        "(local.set $tagHitFlag)", // Initialize tagHitFlag to False
+        "(local.get $baseAddr)",
+        "(local.get $val)",
+        "(i32.const 10)",
+        "(i32.rem_u)", //Compute hash
+        "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+        "(i32.add)", //Reaching the proper bucket. Call this bucketAddress
+        "(i32.load)",
+        "(i32.const 0)", //None
+        "(i32.eq)",
+        "(if",
+        "(then", // if the literal in bucketAddress is None
+          "(local.get $val)",
+          "(call $set$CreateEntry)", //create node
+          "(local.set $$allocPointer)",
+          "(local.get $baseAddr)", // Recomputing the bucketAddress to update it.
+          "(local.get $val)",
+          "(i32.const 10)",
+          "(i32.rem_u)", //Compute hash
+          "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+          "(i32.add)", //Recomputed bucketAddress
+          "(local.get $$allocPointer)",
+          "(i32.store)", //Updated the bucketAddress pointing towards first element.
+        ")", // Closing then
+
+        "(else", // Opening else
+          "(local.get $baseAddr)", // Recomputing the bucketAddress to follow the linkedList.
+          "(local.get $val)",
+          "(i32.const 10)",
+          "(i32.rem_u)", //Compute hash
+          "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+          "(i32.add)", //Recomputed bucketAddress
+          "(i32.load)", //Loading head of linkedList
+          "(i32.load)", //Loading the tag of head
+          "(local.get $val)",
+          "(i32.eq)",
+          "(if", // if tag is same as the provided one
+          "(then",
+            "(i32.const 1)",
+            "(local.set $tagHitFlag)", // Set tagHitFlag to True
+          ")", // closing then
+          ")", // closing if
+
+          "(local.get $baseAddr)", // Recomputing the bucketAddress to follow the linkedList.
+          "(local.get $val)",
+          "(i32.const 10)",
+          "(i32.rem_u)", //Compute hash
+          "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+          "(i32.add)", //Recomputed bucketAddress
+          "(i32.load)", //Loading head of linkedList
+          "(i32.const 4)",
+          "(i32.add)", // Next pointer
+          "(local.set $nodePtr)",
+          "(block",
+          "(loop", // While loop till we find a node whose next is None
+            "(local.get $nodePtr)",
+            "(i32.load)", // Traversing to head of next node
+            "(i32.const 0)", //None
+            "(i32.ne)", // If nodePtr not None
+            "(if",
+            "(then",
+              "(local.get $nodePtr)",
+              "(i32.load)", //Loading head of linkedList
+              "(i32.load)", //Loading the tag of head
+              "(local.get $val)",
+              "(i32.eq)", // if tag is same as the provided one
+              "(if",
+              "(then",
+                "(i32.const 1)",
+                "(local.set $tagHitFlag)", // Set tagHitFlag to True
+              ")", // closing then
+              ")", // closing if
+              "(local.get $nodePtr)",
+              "(i32.load)", //Loading head of linkedList
+              "(i32.const 4)",
+              "(i32.add)", // Next pointer
+              "(local.set $nodePtr)",
+            ")", // Closing then
+            ")", // Closing if
+          "(br_if 0", // Opening br_if
+            "(local.get $nodePtr)",
+            "(i32.load)", // Traversing to head of next node
+            "(i32.const 0)", //None
+            "(i32.ne)", // If nodePtr not None
+          ")", // Closing br_if
+          "(br 1)",
+          ")", // Closing loop
+          ")", // Closing Block
+        ")", // Closing else
+        ")", // Closing if
+        "(local.get $tagHitFlag)",
+        "(return))", //
+      ]
+    );
+  
+    setFunStmts.push(
+      ...[
+        "(func $set$add (param $baseAddr i32) (param $val i32)",
+        "(local $nodePtr i32)", // Local variable to store the address of nodes in linkedList
+        "(local $tagHitFlag i32)", // Local bool variable to indicate whether tag is hit
+        "(local $$allocPointer i32)",
+
+        "(i32.const 0)",
+        "(local.set $tagHitFlag)", // Initialize tagHitFlag to False
+        "(local.get $baseAddr)",
+        "(local.get $val)",
+        "(i32.const 10)",
+        "(i32.rem_u)", //Compute hash
+        "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+        "(i32.add)", //Reaching the proper bucket. Call this bucketAddress
+        "(i32.load)",
+        "(i32.const 0)", //None
+        "(i32.eq)",
+        "(if",
+        "(then", // if the literal in bucketAddress is None
+          "(local.get $val)",
+          "(call $set$CreateEntry)", //create node
+          "(local.set $$allocPointer)",
+          "(local.get $baseAddr)", // Recomputing the bucketAddress to update it.
+          "(local.get $val)",
+          "(i32.const 10)",
+          "(i32.rem_u)", //Compute hash
+          "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+          "(i32.add)", //Recomputed bucketAddress
+          "(local.get $$allocPointer)",
+          "(i32.store)", //Updated the bucketAddress pointing towards first element.
+        ")", // Closing then
+
+        "(else", // Opening else
+          "(local.get $baseAddr)", // Recomputing the bucketAddress to follow the linkedList.
+          "(local.get $val)",
+          "(i32.const 10)",
+          "(i32.rem_u)", //Compute hash
+          "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+          "(i32.add)", //Recomputed bucketAddress
+          "(i32.load)", //Loading head of linkedList
+          "(i32.load)", //Loading the tag of head
+          "(local.get $val)",
+          "(i32.eq)",
+          "(if", // if tag is same as the provided one
+          "(then",
+            "(i32.const 1)",
+            "(local.set $tagHitFlag)", // Set tagHitFlag to True
+          ")", // closing then
+          ")", // closing if
+
+          "(local.get $baseAddr)", // Recomputing the bucketAddress to follow the linkedList.
+          "(local.get $val)",
+          "(i32.const 10)",
+          "(i32.rem_u)", //Compute hash
+          "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+          "(i32.add)", //Recomputed bucketAddress
+          "(i32.load)", //Loading head of linkedList
+          "(i32.const 4)",
+          "(i32.add)", // Next pointer
+          "(local.set $nodePtr)",
+          "(block",
+          "(loop", // While loop till we find a node whose next is None
+            "(local.get $nodePtr)",
+            "(i32.load)", // Traversing to head of next node
+            "(i32.const 0)", //None
+            "(i32.ne)", // If nodePtr not None
+            "(if",
+            "(then",
+              "(local.get $nodePtr)",
+              "(i32.load)", //Loading head of linkedList
+              "(i32.load)", //Loading the tag of head
+              "(local.get $val)",
+              "(i32.eq)", // if tag is same as the provided one
+              "(if",
+              "(then",
+                "(i32.const 1)",
+                "(local.set $tagHitFlag)", // Set tagHitFlag to True
+              ")", // closing then
+              ")", // closing if
+              "(local.get $nodePtr)",
+              "(i32.load)", //Loading head of linkedList
+              "(i32.const 4)",
+              "(i32.add)", // Next pointer
+              "(local.set $nodePtr)",
+            ")", // Closing then
+            ")", // Closing if
+          "(br_if 0", // Opening br_if
+            "(local.get $nodePtr)",
+            "(i32.load)", // Traversing to head of next node
+            "(i32.const 0)", //None
+            "(i32.ne)", // If nodePtr not None
+          ")", // Closing br_if
+          "(br 1)",
+          ")", // Closing loop
+          ")", // Closing Block
+        "(local.get $tagHitFlag)",
+        "(i32.const 0)",
+        "(i32.eq)", // Add a new node only if tag hit is false.
+        "(if",
+        "(then",
+          "(local.get $val)",
+          "(call $set$CreateEntry)", //create node
+          "(local.set $$allocPointer)",
+          "(local.get $nodePtr)", // Get the address of "next" block in node, whose next is None.
+          "(local.get $$allocPointer)",
+          "(i32.store)", // Updated the next pointing towards first element of new node.
+        ")", // Closing then inside else
+        ")", // Closing if inside else
+        ")", // Closing else
+        ")", // Closing if
+        "(return))", //
+      ]
+    );
+
+    // setFunStmts.push(
+    //   ...[
+    //     "(func $set$remove (param $baseAddr i32) (param $val i32) (param $hashtablesize i32)",
+    //     "(local $prePtr i32)",
+    //     "(local $nodePtr i32)", // Local variable to store the address of nodes in linkedList
+    //     "(local $tagHitFlag i32)", // Local bool variable to indicate whether tag is hit
+    //     "(local $$allocPointer i32)",
+
+    //     "(i32.const 0)",
+    //     "(local.set $tagHitFlag)", // Initialize tagHitFlag to False
+    //     "(local.get $baseAddr)",
+    //     "(local.get $val)",
+    //     "(local.get $hashtablesize)",
+    //     "(i32.rem_u)", //Compute hash
+    //     "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+    //     "(i32.add)", //Reaching the proper bucket. Call this bucketAddress
+    //     "(i32.load)",
+    //     "(i32.const 0)", //None
+    //     "(i32.eq)",
+    //     "(if",
+    //     "(then", // if the literal in bucketAddress is None
+    //       // "(local.get $val)",
+    //       // "(call $set$CreateEntry)", //create node
+    //       // "(local.set $$allocPointer)",
+    //       // "(local.get $baseAddr)", // Recomputing the bucketAddress to update it.
+    //       // "(local.get $val)",
+    //       // "(local.get $hashtablesize)",
+    //       // "(i32.rem_u)", //Compute hash
+    //       // "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+    //       // "(i32.add)", //Recomputed bucketAddress
+    //       // "(local.get $$allocPointer)",
+    //       // "(i32.store)", //Updated the bucketAddress pointing towards first element.
+    //     ")", // Closing then
+
+    //     "(else", // Opening else
+    //       "(local.get $baseAddr)",
+    //       "(local.get $val)",
+    //       "(local.get $hashtablesize)",
+    //       "(i32.rem_u)", 
+    //       "(i32.mul (i32.const 4))", 
+    //       "(i32.add)", 
+    //       "(local.set prePtr)", // Set pre pointer
+
+    //       "(local.get $baseAddr)", // Recomputing the bucketAddress to follow the linkedList.
+    //       "(local.get $val)",
+    //       "(local.get $hashtablesize)",
+    //       "(i32.rem_u)", //Compute hash
+    //       "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+    //       "(i32.add)", //Recomputed bucketAddress
+    //       "(i32.load)", //Loading head of linkedList
+    //       "(i32.load)", //Loading the tag of head
+    //       "(local.get $val)",
+    //       "(i32.eq)",
+    //       "(if", // if tag is same as the provided one
+    //       "(then",
+    //         "(i32.const 1)",
+    //         "(local.set $tagHitFlag)", // Set tagHitFlag to True
+    //       ")", // closing then
+    //       ")", // closing if
+
+    //       "(local.get $baseAddr)", // Recomputing the bucketAddress to follow the linkedList.
+    //       "(local.get $val)",
+    //       "(local.get $hashtablesize)",
+    //       "(i32.rem_u)", //Compute hash
+    //       "(i32.mul (i32.const 4))", //Multiply by 4 for memory offset
+    //       "(i32.add)", //Recomputed bucketAddress
+    //       "(i32.load)", //Loading head of linkedList
+    //       "(i32.const 4)",
+    //       "(i32.add)", // Next pointer
+    //       "(local.set $nodePtr)",
+    //       "(block",
+    //       "(loop", // While loop till we find a node whose next is None
+    //         "(local.get $nodePtr)",
+    //         "(i32.load)", // Traversing to head of next node
+    //         "(i32.const 0)", //None
+    //         "(i32.ne)", // If nodePtr not None
+    //         "(if",
+    //         "(then",
+    //           "(local.get $nodePtr)",
+    //           "(i32.load)", //Loading head of linkedList
+    //           "(i32.load)", //Loading the tag of head
+    //           "(local.get $val)",
+    //           "(i32.eq)", // if tag is same as the provided one
+    //           "(if",
+    //           "(then",
+    //             "(i32.const 1)",
+    //             "(local.set $tagHitFlag)", // Set tagHitFlag to True
+    //           ")", // closing then
+    //           ")", // closing if
+    //           "(local.get $nodePtr)",
+    //           "(i32.load)", //Loading head of linkedList
+    //           "(i32.const 4)",
+    //           "(i32.add)", // Next pointer
+    //           "(local.set $nodePtr)",
+    //         ")", // Closing then
+    //         ")", // Closing if
+    //       "(br_if 0", // Opening br_if
+    //         "(local.get $nodePtr)",
+    //         "(i32.load)", // Traversing to head of next node
+    //         "(i32.const 0)", //None
+    //         "(i32.ne)", // If nodePtr not None
+    //       ")", // Closing br_if
+    //       "(br 1)",
+    //       ")", // Closing loop
+    //       ")", // Closing Block
+    //     "(local.get $tagHitFlag)",
+    //     "(i32.const 0)",
+    //     "(i32.eq)", // Add a new node only if tag hit is false.
+    //     "(if",
+    //     "(then",
+    //       "(local.get $val)",
+    //       "(call $set$CreateEntry)", //create node
+    //       "(local.set $$allocPointer)",
+    //       "(local.get $nodePtr)", // Get the address of "next" block in node, whose next is None.
+    //       "(local.get $$allocPointer)",
+    //       "(i32.store)", // Updated the next pointing towards first element of new node.
+    //     ")", // Closing then inside else
+    //     ")", // Closing if inside else
+    //     ")", // Closing else
+    //     ")", // Closing if
+    //     "(return))", //
+    //   ]
+    // );
+
+    return setFunStmts;
+  }
+  
+
