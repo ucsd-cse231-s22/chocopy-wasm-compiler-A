@@ -670,4 +670,71 @@ describe('Generics Type-Checker Tests', () => {
     const globals = tcGlobalEnv.globals.get('b');
     expect(globals).to.deep.equal(CLASS('Box', [NUM]));
   });
+
+  it('should typecheck generic class object field assignment with generic type constructor', () => {
+    let env = emptyGlobalTypeEnv();
+    let program: Program<null> = {
+      funs: [],
+      typeVarInits: [
+        {name: 'T', canonicalName: 'T', types: []}
+      ],
+      classes: [
+        {
+          name: 'Box',
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          methods: [
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
+            { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}}
+            ] }
+          ],
+          typeParams: ['T']
+        }
+      ],
+      inits: [
+        { name: "b", type: CLASS('Box', [CLASS('Box', [NUM])]), value: {tag: "none"} },
+      ],
+      stmts: [
+        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: []}},
+        { tag: "field-assign", obj: {tag: "id", name: "b"}, field: "x", value: {tag: "call", name: "Box", arguments: []}},
+      ]
+    }; 
+
+    let [tcProgram, tcGlobalEnv] = tc(env, program);
+    expect(tcProgram).to.deep.equal({
+      a: NONE,
+      funs: [],
+      typeVarInits: [
+        {name: 'T', canonicalName: 'T', types: [], a: NONE},
+      ],
+      classes: [
+        {
+          name: 'Box',
+          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: NONE}],
+          methods: [
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: NONE },
+            { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: CLASS('Box', [TYPEVAR('T')])}, field: "x", a: TYPEVAR('T')}, a: TYPEVAR('T')}
+            ], a: NONE }
+          ],
+          typeParams: ['T'],
+          a: NONE,
+        } 
+      ],
+      inits: [
+        { name: "b", type: CLASS('Box', [CLASS('Box', [NUM])]), value: {tag: "none"}, a: NONE},
+      ],
+      stmts: [
+        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: CLASS('Box', [CLASS('Box', [NUM])])}, a: NONE},
+        { tag: "field-assign", obj: {tag: "id", name: "b", a: CLASS('Box', [CLASS('Box', [NUM])])}, field: "x", value: {tag: "construct", name: "Box", a: CLASS('Box', [NUM])}, a: NONE},
+      ]
+    });
+
+    const [fieldsTy, methodsTy, _] = tcGlobalEnv.classes.get('Box');
+    expect(fieldsTy.get('x')).to.deep.equal(TYPEVAR('T'));
+    expect(methodsTy.get('__init__')).to.deep.equal([[CLASS('Box', [TYPEVAR('T')])], NONE]);
+    expect(methodsTy.get('get')).to.deep.equal([[CLASS('Box', [TYPEVAR('T')])], TYPEVAR('T')]);
+    const globals = tcGlobalEnv.globals.get('b');
+    expect(globals).to.deep.equal(CLASS('Box', [CLASS('Box', [NUM])]));
+  })
 });
