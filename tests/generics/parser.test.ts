@@ -235,7 +235,7 @@ describe('traverseClass(c, s) function', () => {
     // Note: we have to use deep equality when comparing objects
     expect(parsedClass).to.deep.equal({ name: "Box", fields: [{name: "a", type: {tag: "number"}, value: {tag: "num", value: 0}}], 
                                       methods: [{body: [], inits: [], name: "__init__", parameters: [{ name: "self", type: {
-                                        name: "Box", params: [], tag: "class"}}], ret: {tag: "none"}}], typeParams: ["T"] });
+                                        name: "Box", params: [{tag: "class", name: "T", params: []}], tag: "class"}}], ret: {tag: "none"}}], typeParams: ["T"] });
   })
 });
 
@@ -328,7 +328,7 @@ describe('parse(source) function', () => {
             parameters: [
               {
                 name: 'self',
-                type: { tag: 'class', name: 'Box', params: [] }
+                type: { tag: 'class', name: 'Box', params: [{tag: "class", name: "T", params: []}] }
               }
             ],
             ret: { tag: 'none' },

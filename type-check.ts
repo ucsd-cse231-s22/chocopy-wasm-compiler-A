@@ -43,7 +43,7 @@ export const defaultTypeEnv = {
   globals: new Map(),
   functions: defaultGlobalFunctions,
   classes: new Map(),
-  typevars: new Map(),
+  typevars: new Map()
 };
 
 export function emptyGlobalTypeEnv() : GlobalTypeEnv {
@@ -51,7 +51,7 @@ export function emptyGlobalTypeEnv() : GlobalTypeEnv {
     globals: new Map(),
     functions: new Map(),
     classes: new Map(),
-    typevars: new Map(),
+    typevars: new Map()
   };
 }
 

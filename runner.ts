@@ -10,6 +10,7 @@ import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
+import { monomorphizeProgram } from './monomorphizer';
 
 export type Config = {
   importObject: any;
@@ -70,9 +71,13 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
-  const globalEnv = augmentEnv(config.env, tprogram);
-  const irprogram = lowerProgram(tprogram, globalEnv);
-  const progTyp = tprogram.a;
+  const util = require('util')
+  console.log(util.inspect(tprogram, false, null, true /* enable colors */))  
+  const tmprogram = monomorphizeProgram(tprogram);
+  console.log(util.inspect(tmprogram, false, null, true /* enable colors */))  
+  const globalEnv = augmentEnv(config.env, tmprogram);
+  const irprogram = lowerProgram(tmprogram, globalEnv);
+  const progTyp = tmprogram.a;
   var returnType = "";
   var returnExpr = "";
   // const lastExpr = parsed.stmts[parsed.stmts.length - 1]
@@ -83,7 +88,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     returnExpr = "(local.get $$last)"
   } 
   let globalsBefore = config.env.globals;
-  // const compiled = compiler.compile(tprogram, config.env);
+  // const compiled = compiler.compile(tmprogram, config.env);
   const compiled = compile(irprogram, globalEnv);
 
   const globalImports = [...globalsBefore.keys()].map(name =>
