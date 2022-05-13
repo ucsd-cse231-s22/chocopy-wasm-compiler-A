@@ -139,5 +139,20 @@ describe("traverseType(c, s) function", () => {
       a()`);
       console.error(importObject.output);
     });
+
+    it("nested lambda", async () => {
+      await run("mklambda(Callable[[], Callable[[], int]], lambda: mklambda(Callable[[], int], lambda: print(5)))()()");
+      console.error(importObject.output);
+    });
+
+    it("if lambda", async () => {
+      await run(`
+      if mklambda(Callable[[], bool], lambda: True)():
+        print(5)
+      else:
+        print(6)
+      `);
+      console.error(importObject.output);
+    });
   });
 });

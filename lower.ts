@@ -119,21 +119,21 @@ function lowerVarInit(init: AST.VarInit<Type>, env: GlobalEnv) : IR.VarInit<Type
 }
 
 function lowerClasses(classes: Array<AST.Class<Type>>, env : GlobalEnv) : Array<IR.Class<Type>> {
-    return classes.map(c => lowerClass(c, env));
+    return classes.map(c => lowerClass(c, env)).flat();
 }
 
-function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : IR.Class<Type> {
+function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : Array<IR.Class<Type>> {
     env.classIndices.set(cls.name, env.vtableMethods.length);
     // init not in vtable 
     // (we currently do no reordering, we leave that to inheritance team)
     env.vtableMethods.push(...cls.methods
       .filter(method => !method.name.includes("__init__"))
       .map((method): [string, number] => [createMethodName(cls.name, method.name), method.parameters.length]));
-    return {
+    return [{
         ...cls,
         fields: lowerVarInits(cls.fields, env),
         methods: lowerMethodDefs(cls.methods, env)
-    }
+    }]
 }
 
 function literalToVal(lit: AST.Literal) : IR.Value<Type> {
@@ -410,11 +410,11 @@ function flattenExprToExpr(e : AST.Expr<Type>, blocks: Array<IR.BasicBlock<Type>
       classDef.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
       env.classes.set(classDef.name, classFields);
       const irClass = lowerClass(classDef, env);
-      irClass.a = e.a;
+      irClass[0].a = e.a;
 
       const [cinits, cstmts, cval, cclasses] = flattenExprToExpr(constrExpr, blocks, env);
 
-      return [cinits, cstmts, cval, [irClass, ...cclasses]]
+      return [cinits, cstmts, cval, [...irClass, ...cclasses]]
   }
 }
 

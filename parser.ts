@@ -346,6 +346,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       c.firstChild(); // Focus on :
       var els = [];
       while(c.nextSibling()) { // Focus on els stmts
+        // console.error(s.substring(c.from, c.to));
         els.push(traverseStmt(c, s));
       }
       c.parent();
