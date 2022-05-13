@@ -235,16 +235,29 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
           throw new TypeCheckError(`not enough values to unpack (expected at least ${tDestruct.vars.length-1}, got ${tValExpr.elements.length})`);
         }
         for(var i=0; i<tDestruct.vars.length; i++) {
+          if(tDestruct.vars[i].ignorable) {
+            continue;
+          }
           if(!isAssignable(env, tDestruct.vars[i].a, tValExpr.elements[i].a)) {
             throw new TypeCheckError(`Non-assignable types: ${tValExpr.elements[i].a} to ${tDestruct.vars[i].a}`);
           }
         }
-      } else if(!tDestruct.isSimple && (tValExpr.tag === "call" || tValExpr.tag === "method-call")) {
-        // the expr should be iterable, which means the return type should be a iterable one
+      } else if(!tDestruct.isSimple && (tValExpr.tag === "call" || tValExpr.tag === "method-call" || tValExpr.tag === "id")) {
+        // the expr should be iterable, which means the return type should be an iterator
         // but there is no such a type currently, so
         // TODO: add specific logic then
         if(tValExpr.a != CLASS('iterator')) {
           throw new TypeCheckError(`cannot unpack non-iterable ${tValExpr.a} object`)
+        } else {
+          var rightType = env.classes.get('iterator')[1].get('next')[1];
+          for(var i=0; i<tDestruct.vars.length; i++) {
+            if(tDestruct.vars[i].ignorable) {
+              continue;
+            }
+            if(!isAssignable(env, tDestruct.vars[i].a, rightType)) {
+              throw new TypeCheckError(`Non-assignable types: ${rightType} to ${tDestruct.vars[i].a}`);
+            }
+          }
         }
         // other checks should be pushed to runtime
       } else if(!tDestruct.isSimple) {
@@ -349,6 +362,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           else { throw new TypeCheckError("Type mismatch for op" + expr.op);}
       }
     case "id":
+      if(expr.name === '_') {
+        // ignorable
+        return {a: NONE, ...expr};
+      }
       if (locals.vars.has(expr.name)) {
         return {a: locals.vars.get(expr.name), ...expr};
       } else if (env.globals.has(expr.name)) {
