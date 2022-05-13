@@ -54,7 +54,8 @@ export function open(filePathAddr: number, mode: number): number {
 export function read(fd: number): number {
     if (fs.has(fd)) {
         let file = fs.get(fd);
-        return file.dataArray[file.currentPosition];
+        let dataArray: Array<number> = JSON.parse(window.localStorage.getItem(file.filePath));
+        return dataArray[file.currentPosition];
     };
     return -1;
 
@@ -62,15 +63,16 @@ export function read(fd: number): number {
 
 export function write(fd: number, c: number): number {
 
-    const f = checkFileExistence(fd);
+    const file = checkFileExistence(fd);
 
     // check mode
-    if (f.mode === FileMode.OPEN || f.mode === FileMode.R_ONLY) {
-        throw new Error(`RUNTIME ERROR: file with fd = ${fd} is not writable (mode = ${f.mode})`);
+    if (file.mode === FileMode.OPEN || file.mode === FileMode.R_ONLY) {
+        throw new Error(`RUNTIME ERROR: file with fd = ${fd} is not writable (mode = ${file.mode})`);
     }
 
-    f.dataArray[f.currentPosition] = c;
-    f.dirty = true;
+    let dataArray: Array<number> = JSON.parse(window.localStorage.getItem(file.filePath));
+    dataArray.push(c);
+    writeFile(file, dataArray);
 
     return - 1; // currently it should return - 1
 }
@@ -83,10 +85,6 @@ export function write(fd: number, c: number): number {
 export function close(fd: number): number {
 
     const f = checkFileExistence(fd);
-
-    if (f.dirty) { // this file has been modified -> write data to the file
-        writeFile(f);
-    }
 
     fs.delete(fd); // remove this file from file descriptor
 
@@ -113,7 +111,7 @@ function checkFileExistence(fd: number): OpenFile {
  * @param f the OpenFile to write
  * @return true if write successfully
  */
-function writeFile(f: OpenFile): boolean {
-    localStorage.setItem(f.filePath, JSON.stringify(f.dataArray));
+function writeFile(f: OpenFile, dataArray: Array<number>): boolean {
+    localStorage.setItem(f.filePath, JSON.stringify(dataArray));
     return true;
 }
