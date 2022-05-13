@@ -1,8 +1,9 @@
 
 import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
-import { NUM, BOOL, NONE, CLASS } from './utils';
+import {NUM, BOOL, NONE, CLASS, STR} from './utils';
 import { emptyEnv } from './compiler';
+import {equal} from "assert";
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends Error {
@@ -244,6 +245,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.IDiv:
         case BinOp.Mod:
           if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
+          else if (equalType(tLeft.a, STR) && equalType(tRight.a, STR)) { return { a: STR, ...tBin } }
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
         case BinOp.Neq:
@@ -288,7 +290,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg);
         return {...expr, a: tArg.a, arg: tArg};
-      } else if(env.functions.has(expr.name)) {
+      } else if (expr.name === "len") {
+        const tArg = tcExpr(env, locals, expr.arg);
+        return {...expr, a: NUM, arg: tArg};
+      }else if(env.functions.has(expr.name)) {
         const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
         const tArg = tcExpr(env, locals, expr.arg);
         
@@ -357,6 +362,18 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeCheckError("field lookups require an object");
       }
+    case "index":
+      var tObj = tcExpr(env, locals, expr.obj);
+      if (tObj.a === STR) {
+        var iObj = tcExpr(env, locals, expr.index);
+        if (iObj.a !== NUM) {
+          throw new TypeCheckError("index should be a number");
+        }
+        return { ...expr, a: STR, obj: tObj, index: iObj };
+      } else {
+        // TODO: support list
+        throw new TypeCheckError("indexing requires a string");
+      }
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj);
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
@@ -389,6 +406,7 @@ export function tcLiteral(literal : Literal) {
     switch(literal.tag) {
         case "bool": return BOOL;
         case "num": return NUM;
+        case "str": return STR;
         case "none": return NONE;
     }
 }

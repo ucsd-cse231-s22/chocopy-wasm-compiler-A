@@ -2,6 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
+import {BOOL, NONE, NUM, STR} from "./utils";
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -22,21 +23,21 @@ function generateName(base : string) : string {
 // }
 
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
-    var blocks : Array<IR.BasicBlock<Type>> = [];
-    var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
-    blocks.push(firstBlock);
-    var inits = flattenStmts(p.stmts, blocks, env);
-    return {
-        a: p.a,
-        funs: lowerFunDefs(p.funs, env),
-        inits: [...inits, ...lowerVarInits(p.inits, env)],
-        classes: lowerClasses(p.classes, env),
-        body: blocks
-    }
+  var blocks : Array<IR.BasicBlock<Type>> = [];
+  var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
+  blocks.push(firstBlock);
+  var inits = flattenStmts(p.stmts, blocks, env);
+  return {
+    a: p.a,
+    funs: lowerFunDefs(p.funs, env),
+    inits: [...inits, ...lowerVarInits(p.inits, env)],
+    classes: lowerClasses(p.classes, env),
+    body: blocks
+  }
 }
 
 function lowerFunDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv) : Array<IR.FunDef<Type>> {
-    return fs.map(f => lowerFunDef(f, env)).flat();
+  return fs.map(f => lowerFunDef(f, env)).flat();
 }
 
 function lowerFunDef(f : AST.FunDef<Type>, env : GlobalEnv) : IR.FunDef<Type> {
@@ -44,41 +45,43 @@ function lowerFunDef(f : AST.FunDef<Type>, env : GlobalEnv) : IR.FunDef<Type> {
   var firstBlock : IR.BasicBlock<Type> = {  a: f.a, label: generateName("$startFun"), stmts: [] }
   blocks.push(firstBlock);
   var bodyinits = flattenStmts(f.body, blocks, env);
-    return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks}
+  return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks}
 }
 
 function lowerVarInits(inits: Array<AST.VarInit<Type>>, env: GlobalEnv) : Array<IR.VarInit<Type>> {
-    return inits.map(i => lowerVarInit(i, env));
+  return inits.map(i => lowerVarInit(i, env));
 }
 
 function lowerVarInit(init: AST.VarInit<Type>, env: GlobalEnv) : IR.VarInit<Type> {
-    return {
-        ...init,
-        value: literalToVal(init.value)
-    }
+  return {
+    ...init,
+    value: literalToVal(init.value)
+  }
 }
 
 function lowerClasses(classes: Array<AST.Class<Type>>, env : GlobalEnv) : Array<IR.Class<Type>> {
-    return classes.map(c => lowerClass(c, env));
+  return classes.map(c => lowerClass(c, env));
 }
 
 function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : IR.Class<Type> {
-    return {
-        ...cls,
-        fields: lowerVarInits(cls.fields, env),
-        methods: lowerFunDefs(cls.methods, env)
-    }
+  return {
+    ...cls,
+    fields: lowerVarInits(cls.fields, env),
+    methods: lowerFunDefs(cls.methods, env)
+  }
 }
 
 function literalToVal(lit: AST.Literal) : IR.Value<Type> {
-    switch(lit.tag) {
-        case "num":
-            return { ...lit, value: BigInt(lit.value) }
-        case "bool":
-            return lit
-        case "none":
-            return lit        
-    }
+  switch(lit.tag) {
+    case "num":
+      return { ...lit, a: NUM, value: BigInt(lit.value) };
+    case "bool":
+      return { ...lit, a: BOOL };
+    case "str":
+      return { ...lit, a: STR };
+    case "none":
+      return { ...lit, a: NONE };
+  }
 }
 
 function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
@@ -262,6 +265,14 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         tag: "load",
         start: oval,
         offset: { tag: "wasmint", value: offset }}];
+    }
+    case "index": {
+      const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
+      if (e.obj.a !== STR) { throw new Error("Compiler's cursed, go home"); }
+      const [iinits, istmts, ival] = flattenExprToVal(e.index, env);
+      if (e.index.a !== NUM) { throw new Error("Compiler's cursed, go home"); }
+
+      return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "str-index", start: oval, offset: ival} ];
     }
     case "construct":
       const classdata = env.classes.get(e.name);
