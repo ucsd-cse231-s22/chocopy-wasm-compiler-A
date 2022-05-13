@@ -154,4 +154,18 @@ describe('tc for destructure', () => {
     print(b)
     `, ['1', '2']);
 
+    assertPrint("destructure-assignment-in-func-sep", `
+    ${rangeDef}
+    c: cl = None
+  
+    class cl(Object):
+        f1: int = 0
+        f2: int = 0
+    
+    c = cl()
+    c.f1, c.f2 = range(1, 3)
+    print(c.f1)
+    print(c.f2)
+    `, ['1', '2']);
+    
 });
