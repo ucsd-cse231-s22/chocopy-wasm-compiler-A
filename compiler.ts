@@ -150,7 +150,7 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       }
 
     case "builtin1":
-      const argTyp = expr.a;
+      const argTyp = expr.a.type;
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
       if (expr.name === "print" && argTyp === NUM) {

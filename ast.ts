@@ -52,6 +52,8 @@ export type Expr<A> =
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
 
+
+  // add annotation for reporting row/col in errors
 export type Literal<A> = 
     { a?: A, tag: "num", value: number }
   | { a?: A, tag: "bool", value: boolean }

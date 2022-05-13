@@ -194,7 +194,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<A
       locals.actualRet = NONE;
       const tEls = tcBlock(env, locals, stmt.els);
       const elsTyp = locals.actualRet;
-      if (tCond.a !== BOOL) 
+      if (tCond.a.type !== BOOL) 
         throw new TypeCheckError("Condition Expression Must be a bool");
       if (thnTyp !== elsTyp)
         locals.actualRet = { tag: "either", left: thnTyp, right: elsTyp }
@@ -204,7 +204,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<A
         throw new TypeCheckError("cannot return outside of functions");
       const tRet = tcExpr(env, locals, stmt.value);
       if (!isAssignable(env, tRet.a.type, locals.expectedRet)) 
-        throw new TypeCheckError("expected return type `" + (locals.expectedRet as any).tag + "`; got type `" + (tRet.a as any).tag + "`");
+        throw new TypeCheckError("expected return type `" + (locals.expectedRet as any).tag + "`; got type `" + (tRet.a.type as any).tag + "`");
       locals.actualRet = tRet.a.type;
       return {a: tRet.a, tag: stmt.tag, value:tRet};
     case "while":
@@ -250,7 +250,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<A
         case BinOp.Eq:
         case BinOp.Neq:
           if(tLeft.a.type.tag === "class" || tRight.a.type.tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")
-          if(equalType(tLeft.a.type, tRight.a.type)) { return {a: {...expr.a, type: BOOL}, ...tBin} ; }
+          if(equalType(tLeft.a.type, tRight.a.type)) { return {...tBin, a: {...expr.a, type: BOOL}} ; }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op)}
         case BinOp.Lte:
         case BinOp.Gte:
@@ -265,7 +265,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<A
         case BinOp.Is:
           if(!isNoneOrClass(tLeft.a.type) || !isNoneOrClass(tRight.a.type))
             throw new TypeCheckError("is operands must be objects");
-          return {a: {...expr.a, type: BOOL}, ...tBin};
+          return {...tBin, a: {...expr.a, type: BOOL}};
       }
     case "uniop":
       const tExpr = tcExpr(env, locals, expr.expr);
@@ -335,7 +335,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<A
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
 
         if(argTypes.length === expr.arguments.length &&
-           tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
+           tArgs.every((tArg, i) => tArg.a.type === argTypes[i])) {
              return {...expr, a: {...expr.a, type: retType}, arguments: expr.arguments};
            } else {
             throw new TypeError("Function call type mismatch: " + expr.name);
