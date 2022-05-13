@@ -102,16 +102,17 @@ function lowerFunDef(
   ];
 }
 
-function lowerMethodDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv) : Array<IR.FunDef<Type>> {
-  return fs.map(f => lowerMethodDef(f, env)).flat();
+function lowerMethodDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv) : [Array<IR.Class<Type>>, Array<IR.FunDef<Type>>] {
+  const defs = fs.map(f => lowerMethodDef(f, env));
+  return [defs.map(x => x[0]).flat(), defs.map(x => x[1])];
 }
 
-function lowerMethodDef(f : AST.FunDef<Type>, env : GlobalEnv) : IR.FunDef<Type> {
+function lowerMethodDef(f : AST.FunDef<Type>, env : GlobalEnv) : [Array<IR.Class<Type>>, IR.FunDef<Type>] {
   var blocks : Array<IR.BasicBlock<Type>> = [];
   var firstBlock : IR.BasicBlock<Type> = {  a: f.a, label: generateName("$startFun"), stmts: [] }
   blocks.push(firstBlock);
-  var [bodyinits, _] = flattenStmts(f.body, blocks, env);
-  return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks}
+  var [bodyinits, classes] = flattenStmts(f.body, blocks, env);
+  return [classes, { ...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks }];
 }
 
 function lowerVarInits(inits: Array<AST.VarInit<Type>>, env: GlobalEnv) : Array<IR.VarInit<Type>> {
@@ -130,13 +131,17 @@ function lowerClasses(classes: Array<AST.Class<Type>>, env : GlobalEnv) : Array<
 }
 
 function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : Array<IR.Class<Type>> {
-    // init not in vtable 
-    // (we currently do no reordering, we leave that to inheritance team)
-    return [{
-        ...cls,
-        fields: lowerVarInits(cls.fields, env),
-        methods: lowerMethodDefs(cls.methods, env)
-    }]
+  // init not in vtable 
+  // (we currently do no reordering, we leave that to inheritance team)
+  const [classes, methods] = lowerMethodDefs(cls.methods, env);
+  return [
+    ...classes,
+    {
+      ...cls,
+      fields: lowerVarInits(cls.fields, env),
+      methods
+    }
+  ];
 }
 
 function literalToVal(lit: AST.Literal) : IR.Value<Type> {
