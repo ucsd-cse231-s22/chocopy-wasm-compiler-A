@@ -4,6 +4,7 @@
 export type Type =
   | {tag: "number"}
   | {tag: "bool"}
+  | {tag: "str"}
   | {tag: "none"}
   | {tag: "class", name: string}
   | {tag: "list", listsize: number, elementtype: Type}
@@ -28,7 +29,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "index-assign", list: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
-  | { a?: A; tag: "for"; name: string; iterable: Expr<A>; body: Array<Stmt<A>> }
+  | {  a?: A; tag: "for"; name: string; iterable: Expr<A>; body: Array<Stmt<A>> }
 
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal }
@@ -39,14 +40,17 @@ export type Expr<A> =
   | {  a?: A, tag: "builtin2", name: string, left: Expr<A>, right: Expr<A>}
   | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>> } 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
+  | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
   | {  a?: A, tag: "list-obj", length: number, entries: Array<Expr<A>>}
   | {  a?: A, tag: "list-lookup", list: Expr<A>, index: Expr<A>}
+  | {  a?: A, tag: "list-length", list: Expr<A>}
 
 export type Literal = 
     { tag: "num", value: number }
   | { tag: "bool", value: boolean }
+  | { tag: "str", value: string }
   | { tag: "none" }
 
 // TODO: should we split up arithmetic ops from bool ops?

@@ -1,7 +1,9 @@
 import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
+import { NUM, BOOL, NONE, STR } from './utils';
+
+
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -53,9 +55,11 @@ function webStart() {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
         assert_out_of_bound: (length: any, index: any)=> assert_out_of_bound(length, index),
+        print_str: (arg: number) => print(STR, arg),
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),
+        len_str: (arg: number) => len(STR, arg),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
@@ -83,6 +87,15 @@ function webStart() {
           elt.innerHTML = `<${result.name} object at ${result.address}`
           break
         default: throw new Error(`Could not render value: ${result}`);
+      }
+    }
+    
+    function len(typ: Type, arg: any): Number {
+      switch (typ) {
+        case STR:
+          return new Uint32Array(importObject.memory_values.buffer, arg, 1)[0];
+        default:
+          throw new Error(`Undefined function len for type ${typ}`);
       }
     }
 

@@ -1,21 +1,21 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp } from "./ast"
-import { BOOL, NONE, NUM } from "./utils";
+import {BOOL, NONE, NUM, STR} from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, Map<string, [number, Value<Type>]>>;  
+  classes: Map<string, Map<string, [number, Value<Type>]>>;
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
 }
 
-export const emptyEnv : GlobalEnv = { 
-  globals: new Map(), 
+export const emptyEnv : GlobalEnv = {
+  globals: new Map(),
   classes: new Map(),
   locals: new Set(),
   labels: [],
-  offset: 0 
+  offset: 0
 };
 
 type CompileResult = {
@@ -90,9 +90,9 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
       if (env.locals.has(stmt.name)) {
-        return valStmts.concat([`(local.set $${stmt.name})`]); 
+        return valStmts.concat([`(local.set $${stmt.name})`]);
       } else {
-        return valStmts.concat([`(global.set $${stmt.name})`]); 
+        return valStmts.concat([`(global.set $${stmt.name})`]);
       }
 
     case "return":
@@ -111,7 +111,7 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
       const thnIdx = env.labels.findIndex(e => e === stmt.thn);
       const elsIdx = env.labels.findIndex(e => e === stmt.els);
 
-      return [...codeGenValue(stmt.cond, env), 
+      return [...codeGenValue(stmt.cond, env),
         `(if 
           (then
             (local.set $$selector (i32.const ${thnIdx}))
@@ -138,7 +138,11 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
-      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+      if (expr.a === STR) {
+        return codeGenBinOpStr(expr.op, lhsStmts, rhsStmts);
+      } else {
+        return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+      }
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
@@ -150,15 +154,19 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       }
 
     case "builtin1":
-      const argTyp = expr.a;
+      const argTyp = expr.arg.a;
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
       if (expr.name === "print" && argTyp === NUM) {
         callName = "print_num";
       } else if (expr.name === "print" && argTyp === BOOL) {
         callName = "print_bool";
+      } else if (expr.name === "print" && argTyp === STR) {
+        callName = "print_str";
       } else if (expr.name === "print" && argTyp === NONE) {
         callName = "print_none";
+      } else if (expr.name === "len" && argTyp === STR) {
+        callName = "len_str";
       }
       return argStmts.concat([`(call $${callName})`]);
 
@@ -198,7 +206,21 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
           `call $load`
         ]
       }
-      
+
+    case "str-index":
+      return [
+        `(call $alloc (i32.const 2))`,
+        `(local.set $$last)`,
+        `(call $store (local.get $$last) (i32.const 0) (i32.const 1))`,
+        `(local.get $$last)`,
+        `(i32.const 1)`,
+        ...codeGenValue(expr.start, env),
+        ...codeGenValue(expr.offset, env),
+        `(i32.add (i32.const 1))`,
+        `(call $load)`,
+        `(call $store)`,
+        `(local.get $$last)`
+      ];
   }
 }
 
@@ -210,6 +232,26 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       return ["(i32.const " + val.value + ")"];
     case "bool":
       return [`(i32.const ${Number(val.value)})`];
+    case "str":
+      let res = [
+        `(call $alloc (i32.const ${val.value.length + 1}))`,
+        `(local.set $$last)`,
+        `(local.get $$last)`,
+        `(i32.const 0)`,
+        `(i32.const ${val.value.length})`,
+        `(call $store)`
+      ];
+      for (let i = 1; i <= val.value.length; i++) {
+        res = [
+          ...res,
+          `(local.get $$last)`,
+          `(i32.const ${i})`,
+          `(i32.const ${val.value.charCodeAt(i - 1)})`,
+          `(call $store)`
+        ]
+      }
+      res.push(`(local.get $$last)`);
+      return res;
     case "none":
       return [`(i32.const 0)`];
     case "id":
@@ -218,6 +260,58 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       } else {
         return [`(global.get $${val.name})`];
       }
+  }
+}
+
+function GetStrLen(lhsStmts: string[]) : string[] {
+  return [
+    ...lhsStmts,
+    `(i32.const 0)`,
+    `(call $load)`
+  ];
+}
+
+function AllocConcatStr(lhsStmts: string[], rhsStmts: string[]) : string[] {
+  return [
+    ...GetStrLen(lhsStmts),
+    ...GetStrLen(rhsStmts),
+    `(i32.add)`,
+    `(i32.const 1)`,
+    `(i32.add)`,
+    `(call $alloc)`
+  ];
+}
+
+function StoreConcatStr(lhsStmts: string[], rhsStmts: string[]) : string[] {
+  return [
+    `(local.get $$last)`,
+    `(i32.const 0)`,
+    ...GetStrLen(lhsStmts),
+    ...GetStrLen(rhsStmts),
+    `(i32.add)`,
+    `(call $store)`,
+    `(i32.add (local.get $$last) (i32.const 4))`,
+    ...lhsStmts,
+    ...GetStrLen(lhsStmts),
+    `(call $copy)`,
+    ...rhsStmts,
+    ...GetStrLen(rhsStmts),
+    `(call $copy)`,
+    `(drop)`
+  ];
+}
+
+function codeGenBinOpStr(op : BinOp, lhsStmts : string[], rhsStmts : string[]) : string[] {
+  switch (op) {
+    case BinOp.Plus:
+      return [
+        ...AllocConcatStr(lhsStmts, rhsStmts),
+        `(local.set $$last)`,
+        ...StoreConcatStr(lhsStmts, rhsStmts),
+        `(local.get $$last)`
+      ];
+    default:
+      throw new Error(`Unsupported string operation: ${op}`);
   }
 }
 
@@ -257,9 +351,9 @@ function codeGenBinOp(op : BinOp) : string {
 function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
   const value = codeGenValue(init.value, env);
   if (env.locals.has(init.name)) {
-    return [...value, `(local.set $${init.name})`]; 
+    return [...value, `(local.set $${init.name})`];
   } else {
-    return [...value, `(global.set $${init.name})`]; 
+    return [...value, `(global.set $${init.name})`];
   }
 }
 

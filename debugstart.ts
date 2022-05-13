@@ -6,14 +6,20 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-a:[int] = None
-x : int = 0
-a = [1,3,5,7,9]
-
-for x in a:
-  print(x)
-  
+a: str = "hello"
+print(a)
 `
+//   var source = `
+// def f() -> int:
+//   x : int = 0
+//   for x in [1, 2, 3, 4, 5]:
+//     if x > 2:
+//       return x
+//     else:
+//       pass
+//   return x
+// print(f())
+// `
   var source2 = `
 x : int = 0
 y : int = 1
@@ -38,7 +44,7 @@ a[2] = 5
 c = a+b
 print(c[2*3+1]) `
 
-  // const ast = parse(source);
+  const ast = parse(source);
   
   const repl = new BasicREPL(await addLibs());
   const result = repl.run(source).then(result => {
