@@ -4,7 +4,9 @@ import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Cl
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
-export var lineBreakIndices : Array<number>;
+// TODO: I'm not sure if this global variable works well with repl,
+//       or when multiple programs being compiled at the same time.
+export var lineBreakIndices : Array<number>; 
 /**
  * Binary search on sorted array. 
  * Returns the index at which target should be inserted in arr.

@@ -180,7 +180,11 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
     case "load":
       return [
         ...codeGenValue(expr.start, env),
-        `call $assert_not_none`,
+        // `call $assert_not_none`, 
+        // I think moving this earlier is ok. 
+        // I can't think of a scenario where checking none right after
+        // obj is computed leads to problems. 
+        // this way I moved assert not none errors to ir
         ...codeGenValue(expr.offset, env),
         `call $load`
       ]
