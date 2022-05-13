@@ -1,6 +1,6 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp } from "./ast"
-import { BOOL, NONE, NUM } from "./utils";
+import {BOOL, NONE, NUM, STRING} from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -153,11 +153,15 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       const argTyp = expr.a;
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
+      console.log("expr")
+      console.log(expr)
       if (expr.name === "print" && argTyp === NUM) {
         callName = "print_num";
       } else if (expr.name === "print" && argTyp === BOOL) {
         callName = "print_bool";
-      } else if (expr.name === "print" && argTyp === NONE) {
+      } else if (expr.name === "print" && argTyp === STRING) {
+        callName = "print_str";
+      }else if (expr.name === "print" && argTyp === NONE) {
         callName = "print_none";
       }
       return argStmts.concat([`(call $${callName})`]);

@@ -24,7 +24,7 @@ function generateName(base : string) : string {
 
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
     var blocks : Array<IR.BasicBlock<Type>> = [];
-    var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
+    var firstBlock : IR.BasicBlock<Type> = { a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     var inits = flattenStmts(p.stmts, blocks, env);
     return {
