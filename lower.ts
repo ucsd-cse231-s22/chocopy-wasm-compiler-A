@@ -114,15 +114,15 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
           case "call":
             var outputInits: Array<IR.VarInit<Type>> = [];
             var [valinits, valstmts, va] = flattenExprToVal(s.value, env);
-            outputInits.concat(valinits);
+            outputInits = outputInits.concat(valinits);
             pushStmtsToLastBlock(blocks, ...valstmts);
             if(va.tag === "id") {
-              const nextMethod : IR.Expr<Type> = { tag: "call", name: `${va.name}$next`, arguments: [] }
-              const hasNextMethod : IR.Expr<Type> = { tag: "call", name: `${va.name}$hasNext`, arguments: [] }
-              const runtimeCheck : IR.Expr<Type> = { tag: "call", name: `destructure_check`, arguments: [] }
+              const nextMethod : IR.Expr<Type> = { tag: "call", name: `iterator$next`, arguments: [va] }
+              const hasNextMethod : IR.Expr<Type> = { tag: "call", name: `iterator$hasNext`, arguments: [va] }
               s.destruct.vars.forEach(v => {
                 var [inits, stmts, val] = flattenIrExprToVal(hasNextMethod, env);
-                outputInits.concat(inits);
+                outputInits = outputInits.concat(inits);
+                const runtimeCheck : IR.Expr<Type> = { tag: "call", name: `destructure_check`, arguments: [] }
                 runtimeCheck.arguments.push(val);
                 pushStmtsToLastBlock(blocks, ...stmts, { tag: "expr", expr: runtimeCheck })
                 switch(v.target.tag) {
@@ -143,12 +143,13 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
                         offset: offset,
                         value: nval
                       });
-                    outputInits.concat(oinits);
-                    outputInits.concat(ninits);
+                    outputInits = outputInits.concat(oinits);
+                    outputInits = outputInits.concat(ninits);
                   default:
                     throw new Error("should not reach here");
                 }
               });
+              console.log(JSON.stringify(outputInits, null, 2));
               return outputInits;
             } else {
               throw new Error("should not reach here");
@@ -164,7 +165,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
               valstmts = valstmts.concat(exprstmts);
               vales.push(vale);
             }
-            outputInits.concat(valinits);
+            outputInits = outputInits.concat(valinits);
             pushStmtsToLastBlock(blocks, ...valstmts);
             s.destruct.vars.forEach((v, idx) => {
               switch(v.target.tag) {
@@ -185,8 +186,8 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
                       offset: offset,
                       value: nval
                     });
-                  outputInits.concat(oinits);
-                  outputInits.concat(ninits);
+                  outputInits = outputInits.concat(oinits);
+                  outputInits = outputInits.concat(ninits);
                 default:
                   throw new Error("should not reach here");
               }

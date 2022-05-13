@@ -109,7 +109,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))
     (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
-    (func $destructure_check (import "imports" "destructure_check") (param i32)
+    (func $destructure_check (import "imports" "destructure_check") (param i32) (result i32))
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))

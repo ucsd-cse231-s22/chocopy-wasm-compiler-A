@@ -246,8 +246,8 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
         // the expr should be iterable, which means the return type should be an iterator
         // but there is no such a type currently, so
         // TODO: add specific logic then
-        if(tValExpr.a != CLASS('iterator')) {
-          throw new TypeCheckError(`cannot unpack non-iterable ${tValExpr.a} object`)
+        if(tValExpr.a.tag != "class" || tValExpr.a.name != "iterator") {
+          throw new TypeCheckError(`cannot unpack non-iterable ${JSON.stringify(tValExpr.a, null, 2)} object`)
         } else {
           var rightType = env.classes.get('iterator')[1].get('next')[1];
           for(var i=0; i<tDestruct.vars.length; i++) {

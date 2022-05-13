@@ -50,6 +50,12 @@ export const importObject : any = {
     min: Math.min,
     max: Math.max,
     pow: Math.pow,
+    destructure_check: (hashNext: boolean) => {
+      if(hashNext === false) {
+        throw new Error(`invalid assignment`);
+      }
+      return hashNext;
+    }
   },
 
   output: "",

@@ -52,10 +52,11 @@ function webStart() {
         min: Math.min,
         max: Math.max,
         pow: Math.pow,
-        destructure_check: (arg: boolean) => {
-          if(arg === false) {
+        destructure_check: (hashNext: boolean) => {
+          if(hashNext === false) {
             throw new Error(`invalid assignment`);
           }
+          return hashNext;
         }
       },
       libmemory: memoryModule.instance.exports,
