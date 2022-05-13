@@ -137,14 +137,17 @@ export function tcInit(env: GlobalTypeEnv, init: VarInit<null>): VarInit<Type> {
     throw new TypeCheckError("Expected type `" + init.type + "`; got type `" + valTyp + "`");
   }
 }
-export function tcPar(par : Parameter<null>){
+export function tcPar(env: GlobalTypeEnv, par : Parameter<null>):Parameter<Type>{
   if(par.value == undefined){
-    return
+    return {...par}
   }
   else{
-    var value = tcExpr(emptyGlobalTypeEnv(),emptyLocalTypeEnv(), par.value)
+    var value = tcExpr(env,emptyLocalTypeEnv(), par.value)
     if (!equalType(value.a,par.type)){
       throw new TypeCheckError(`Expected type ${JSON.stringify(par.type)} but get value.a`);
+    }
+    else{
+      return {...par,value}
     }
   }
 }
@@ -153,7 +156,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
   fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
-  fun.parameters.forEach(p=>tcPar(p))
+  fun.parameters.forEach(p=>tcPar(env,p))
   fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init).type));
 
   const tBody = tcBlock(env, locals, fun.body);
