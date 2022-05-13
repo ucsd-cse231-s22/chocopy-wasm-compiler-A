@@ -14,7 +14,7 @@ async function debug() {
 //       return`
   var source = `
 a:D = None
-a.b = 20`
+print(a)`
 const ast = parse(source);
   
   const repl = new BasicREPL(await addLibs());
