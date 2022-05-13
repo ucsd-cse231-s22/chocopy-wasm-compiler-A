@@ -223,7 +223,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
         if(!isAssignable(env, tValExpr.a, tDestruct.a)) {
           throw new TypeCheckError(`Non-assignable types: ${tValExpr.a} to ${tDestruct.a}`);
         } else {
-          return {a: tDestruct.a, tag: stmt.tag, destruct: tDestruct, value: tValExpr};
+          return {a: tValExpr.a, tag: stmt.tag, destruct: tDestruct, value: tValExpr};
         }
       }
       if(!tDestruct.isSimple && tValExpr.tag === "array-expr") {
