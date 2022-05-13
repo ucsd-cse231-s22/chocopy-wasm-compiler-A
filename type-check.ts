@@ -377,8 +377,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
         
         if(newFn.a.params.length === expr.arguments.length &&
-          newFn.a.params.every((param, i) => param === tArgs[i].a)) {
-          return {...expr, a: newFn.a.ret, arguments: expr.arguments, fn: newFn};
+          newFn.a.params.every((param, i) => isAssignable(env, tArgs[i].a, param))) {
+          return {...expr, a: newFn.a.ret, arguments: tArgs, fn: newFn};
         } else {
           throw new TypeCheckError("Function call type mismatch");
         }

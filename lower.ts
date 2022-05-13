@@ -412,12 +412,18 @@ function flattenExprToExpr(e : AST.Expr<Type>, blocks: Array<IR.BasicBlock<Type>
       const classFields = new Map();
       classDef.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
       env.classes.set(classDef.name, classFields);
+      env.classIndices.set(classDef.name, env.vtableMethods.length);
+      env.vtableMethods.push(...classDef.methods
+        .filter(method => !method.name.includes("__init__"))
+        .map((method): [string, number] => [
+          createMethodName(classDef.name, method.name), method.parameters.length
+        ])
+      );
       const irClass = lowerClass(classDef, env);
       irClass[0].a = e.a;
 
       const [cinits, cstmts, cval, cclasses] = flattenExprToExpr(constrExpr, blocks, env);
-
-      return [cinits, cstmts, cval, [...irClass, ...cclasses]]
+      return [cinits, cstmts, cval, [...irClass, ...cclasses]];
   }
 }
 
