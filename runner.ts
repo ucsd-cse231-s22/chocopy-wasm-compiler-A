@@ -106,6 +106,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
+    (func $print_str (import "imports" "print_str") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
@@ -119,11 +120,14 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     ${config.functions}
     ${compiled.functions}
     (func (export "exported_func") ${returnType}
+      (local $i i32)
+      (local $length i32)
       ${compiled.mainSource}
       ${returnExpr}
     )
   )`;
   console.log(wasmSource);
+
   const [result, instance] = await runWat(wasmSource, importObject);
 
   return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance];

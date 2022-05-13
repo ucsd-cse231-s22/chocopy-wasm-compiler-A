@@ -1,7 +1,7 @@
 import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
+import {NUM, BOOL, NONE, STRING} from './utils';
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -9,6 +9,9 @@ function stringify(typ: Type, arg: any) : string {
       return (arg as number).toString();
     case "bool":
       return (arg as boolean)? "True" : "False";
+    // convert from ASCII to Character
+    case "str":
+      return String.fromCharCode(arg as number);
     case "none":
       return "None";
     case "class":
@@ -47,6 +50,7 @@ function webStart() {
         assert_not_none: (arg: any) => assert_not_none(arg),
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),
+        print_str: (arg: number) => print(STRING, arg),
         print_none: (arg: number) => print(NONE, arg),
         abs: Math.abs,
         min: Math.min,
@@ -71,6 +75,9 @@ function webStart() {
         case "bool":
           elt.innerHTML = (result.value) ? "True" : "False";
           break;
+        case "str":
+          elt.innerText = result.value;
+          break
         case "object":
           elt.innerHTML = `<${result.name} object at ${result.address}`
           break
