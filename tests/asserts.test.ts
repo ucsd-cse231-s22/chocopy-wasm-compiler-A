@@ -6,7 +6,10 @@ import { importObject } from "./import-object.test";
 import { run, typeCheck } from "./helpers.test";
 import { fail } from 'assert'
 import { Program } from "../ir";
-
+import { parse } from "../parser";
+import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  '../type-check';
+import { augmentEnv } from "../runner";
+import { lowerProgram } from "../lower";
 
 
 // Clear the output before every test
@@ -27,10 +30,13 @@ export function assert(name: string, source: string, expected: Value) {
   });
 }
 
-export function assertOptimize(itStmt: Program<Type>, expected: Program<Type>) {
-  const repl = new BasicREPL(importObject);
-  const result = repl.optimize(itStmt);
-  expect(result).to.deep.eq(expected);
+export function assertOptimize(name: string, source: string, expected: string) {
+  it(name, async () => {
+    const repl = new BasicREPL(importObject);
+    const result = repl.optimize(source);
+    const expectedProgram = repl.optimize(expected); 
+    expect(result).to.deep.eq(expectedProgram);
+  });
 }
 
 export function asserts(name: string, pairs: Array<[string, Value]>) {

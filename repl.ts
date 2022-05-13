@@ -1,11 +1,12 @@
-import { run, Config } from "./runner";
+import { run, Config, augmentEnv } from "./runner";
 // import { GlobalEnv } from "./compiler";
 import { GlobalEnv } from "./compiler";
 import { tc, defaultTypeEnv, GlobalTypeEnv } from "./type-check";
 import { Value, Type } from "./ast";
 import { Program } from "./ir";
-import { optimizeProgram } from "./optimizations";
+import { optimizeProgram } from "./optimization";
 import { parse } from "./parser";
+import { lowerProgram } from "./lower";
 
 interface REPL {
   run(source : string) : Promise<any>;
@@ -53,9 +54,14 @@ export class BasicREPL {
     this.importObject.env = currentGlobals;
     return result;
   }
-  optimize(stmt: Program<Type>): Program<Type> {
+  optimize(source: string): Program<Type> {
     // console.log(stmt);
-    return optimizeProgram(stmt);
+    const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions};
+    const parsed = parse(source);
+    const [tprogram, tenv] = tc(config.typeEnv, parsed);
+    const globalEnv = augmentEnv(config.env, tprogram);
+    const irprogram = lowerProgram(tprogram, globalEnv);
+    return optimizeProgram(irprogram);
   }
   tc(source: string): Type {
     const config: Config = { importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions };

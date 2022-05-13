@@ -29,23 +29,23 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<an
             throw new Error("Compiler Error");
         
         switch(op){
-            case BinOp.Plus: return {a: {tag: "number"}, tag: "num", value: leftVal.value + rightVal.value};
+            case BinOp.Plus: return { tag: "num", value: leftVal.value + rightVal.value};
             
-            case BinOp.Minus: return {a: {tag: "number"}, tag: "num", value: leftVal.value - rightVal.value}
+            case BinOp.Minus: return { tag: "num", value: leftVal.value - rightVal.value}
             
-            case BinOp.Mul: return {a: {tag: "number"}, tag: "num", value: leftVal.value * rightVal.value}
+            case BinOp.Mul: return { tag: "num", value: leftVal.value * rightVal.value}
 
-            case BinOp.IDiv: return {a: {tag: "number"}, tag: "num", value: leftVal.value / rightVal.value}
+            case BinOp.IDiv: return { tag: "num", value: leftVal.value / rightVal.value}
             
-            case BinOp.Mod: return {a: {tag: "number"}, tag: "num", value: leftVal.value % rightVal.value}
+            case BinOp.Mod: return { tag: "num", value: leftVal.value % rightVal.value}
             
-            case BinOp.Gt: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value > rightVal.value}
+            case BinOp.Gt: return { tag: "bool", value: leftVal.value > rightVal.value}
             
-            case BinOp.Lt: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value < rightVal.value}
+            case BinOp.Lt: return { tag: "bool", value: leftVal.value < rightVal.value}
             
-            case BinOp.Gte: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value >= rightVal.value}
+            case BinOp.Gte: return { tag: "bool", value: leftVal.value >= rightVal.value}
             
-            case BinOp.Lte: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value <= rightVal.value} 
+            case BinOp.Lte: return { tag: "bool", value: leftVal.value <= rightVal.value} 
         }
     }
     else if([BinOp.And, BinOp.Or].includes(op)){
@@ -53,9 +53,9 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<an
             throw new Error("Compiler Error")
         
         switch(op){
-            case BinOp.And: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value && rightVal.value};
+            case BinOp.And: return { tag: "bool", value: leftVal.value && rightVal.value};
 
-            case BinOp.Or: return {a: {tag: "bool"}, tag: "bool", value: leftVal.value || rightVal.value};
+            case BinOp.Or: return { tag: "bool", value: leftVal.value || rightVal.value};
         }
     }
     else if([BinOp.Eq, BinOp.Neq].includes(op)){
@@ -75,14 +75,14 @@ export function evaluateUniOp(op: UniOp, val: Value<any>): Value<any>{
             if (isTagId(val) || isTagNone(val) || isTagBoolean(val)) 
                 throw new Error("Compiler Error");
             const minus1: bigint = -1n;
-            return {a: {tag: "number"}, tag: "num", value: minus1 as bigint * (val.value as bigint)};
+            return { tag: "num", value: minus1 as bigint * (val.value as bigint)};
 
         case UniOp.Not:
 
             if (!isTagBoolean(val)) 
                 throw new Error("Compiler Error");
             
-            return {a: {tag: "bool"}, tag: "bool", value: !(val.value)};
+            return { tag: "bool", value: !(val.value)};
     }
 }
 

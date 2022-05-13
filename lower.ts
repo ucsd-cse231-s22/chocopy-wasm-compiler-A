@@ -3,7 +3,7 @@ import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
 
-const nameCounters : Map<string, number> = new Map();
+let nameCounters : Map<string, number>;
 function generateName(base : string) : string {
   if(nameCounters.has(base)) {
     var cur = nameCounters.get(base);
@@ -23,9 +23,17 @@ function generateName(base : string) : string {
 
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
     var blocks : Array<IR.BasicBlock<Type>> = [];
+    nameCounters = new Map();
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     var inits = flattenStmts(p.stmts, blocks, env);
+    console.log({
+      a: p.a,
+      funs: lowerFunDefs(p.funs, env),
+      inits: [...inits, ...lowerVarInits(p.inits, env)],
+      classes: lowerClasses(p.classes, env),
+      body: blocks
+  });
     return {
         a: p.a,
         funs: lowerFunDefs(p.funs, env),
@@ -33,6 +41,7 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
         classes: lowerClasses(p.classes, env),
         body: blocks
     }
+    
 }
 
 function lowerFunDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv) : Array<IR.FunDef<Type>> {

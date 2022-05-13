@@ -35,12 +35,12 @@ function webStart() {
 
     // https://github.com/mdn/webassembly-examples/issues/5
 
-    const memory = new WebAssembly.Memory({initial:10, maximum:100});
-    const memoryModule = await fetch('memory.wasm').then(response => 
-      response.arrayBuffer()
-    ).then(bytes => 
-      WebAssembly.instantiate(bytes, { js: { mem: memory } })
-    );
+    // const memory = new WebAssembly.Memory({initial:10, maximum:100});
+    // const memoryModule = await fetch('memory.wasm').then(response => 
+    //   response.arrayBuffer()
+    // ).then(bytes => 
+    //   WebAssembly.instantiate(bytes, { js: { mem: memory } })
+    // );
 
     var importObject = {
       imports: {
@@ -53,9 +53,9 @@ function webStart() {
         max: Math.max,
         pow: Math.pow
       },
-      libmemory: memoryModule.instance.exports,
-      memory_values: memory,
-      js: {memory: memory}
+      // libmemory: memoryModule.instance.exports,
+      // memory_values: memory,
+      // js: {memory: memory}
     };
     var repl = new BasicREPL(importObject);
 
