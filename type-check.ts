@@ -416,6 +416,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
                 // }
               }
               break;
+            case "size":
+              return {...expr,a:NUM,obj:{...expr.obj,a:SET(NUM)}};
+              break;
             case "clear":
               if (numArgs != 0){
                 throw new TypeCheckError("Set.clear only takes no parameter")
@@ -431,7 +434,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
               }
               break;
             case "has":
-              return {...expr,a:BOOL,obj:{...expr.obj,a:SET(NUM)}}
+              return {...expr,a:BOOL,obj:{...expr.obj,a:SET(NUM)}};
           }
           
         } else{
