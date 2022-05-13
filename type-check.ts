@@ -499,7 +499,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
         throw new TypeCheckError("Unbound id: " + stmt.name);
       }
 
-      // TODO: this is a ugly temporary hack for generic constructor
+      // TODO: this is an ugly temporary hack for generic constructor
       // calls until explicit annotations are supported.
       // Until then constructors for generic classes are properly checked only
       // when directly assigned to variables and will fail in unexpected ways otherwise.
@@ -548,6 +548,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
     case "field-assign":
       var tObj = tcExpr(env, locals, stmt.obj);
       const tVal = tcExpr(env, locals, stmt.value);
+      
       if (tObj.a.tag !== "class") 
         throw new TypeCheckError("field assignments require an object");
       if (!env.classes.has(tObj.a.name)) 
@@ -555,8 +556,22 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       const [fields, _] = env.classes.get(tObj.a.name);
       if (!fields.has(stmt.field)) 
         throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObj.a.name}`);
-      if (!isAssignable(env, tVal.a, specializeFieldType(env, tObj.a, fields.get(stmt.field))))
-        throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
+
+      let fieldTy = specializeFieldType(env, tObj.a, fields.get(stmt.field));
+      // TODO: this is an ugly temporary hack for generic constructor
+      // calls until explicit annotations are supported.
+      // Until then constructors for generic classes are properly checked only
+      // when directly assigned to fields and will fail in unexpected ways otherwise.
+      if(fieldTy.tag === "class" && fieldTy.params.length !== 0 && tVal.a.tag === 'class' && tVal.a.name === fieldTy.name && tVal.tag === 'construct') {
+        // it would have been impossible for the inner type-checking
+        // code to properly infer and fill in the type parameters for
+        // the constructor call. So we copy it from the type of the field
+        // we are assigning to.
+        tVal.a.params = [...fieldTy.params]; 
+      }
+
+      if (!isAssignable(env, tVal.a, fieldTy))
+        throw new TypeCheckError(`could not assign value of type: ${JSON.stringify(tVal.a)}; field ${stmt.field} expected type: ${JSON.stringify(fieldTy)}`);
       return {...stmt, a: NONE, obj: tObj, value: tVal};
   }
 }
