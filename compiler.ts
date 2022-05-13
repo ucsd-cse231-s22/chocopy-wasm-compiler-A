@@ -81,24 +81,58 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
 function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
   switch (stmt.tag) {
     case "store":
-      return [
+      let post =  [
+        ...codeGenValue(stmt.start, env),
+        `(i32.add)`,
+        `call $ref_lookup`,
+        ...codeGenValue(stmt.offset, env),
+        //(stmt.value.a && stmt.value.a.tag === "class" ? `(i32.const -1) (call $traverse_update)`: ""),
+        ...codeGenValue(stmt.value, env),
+        //(stmt.value.a && stmt.value.a.tag === "class" ? `(i32.const 1) (call $traverse_update)`: ""),
+        `call $store`
+      ]
+      let pre = [`(i32.const 0)`]
+      if (stmt.value.a && stmt.value.a.tag === "class") {
+        pre = [
         ...codeGenValue(stmt.start, env),
         `call $ref_lookup`,
         ...codeGenValue(stmt.offset, env),
+        `(i32.add)`,
+        `(i32.load)`,
+        `(i32.const -1) (call $traverse_update)`,
+        `(i32.mul (i32.const 0))`,
         ...codeGenValue(stmt.value, env),
-        `call $store`
-      ]
+        `(i32.add)`,
+        `(i32.const 1) (call $traverse_update)`,
+        `(i32.mul (i32.const 0))`
+        ]
+      }
+      return pre.concat(post);
+      // if (stmt.a && stmt.a.tag === "class") {
+      //   return [
+      //     ...codeGenValue(stmt.start, env),
+      //     `call $ref_lookup`,
+      //     ...codeGenValue(stmt.offset, env),
+      //     `(i32.const -1)`, 
+      //     `(call $traverse_update)`,
+      //     ...codeGenValue(stmt.value, env),
+      //     `(i32.const 1)`, 
+      //     `(call $traverse_update)`
+      //   ]
+      //}
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
       if (stmt.value.a && stmt.value.a.tag === "class") { // if the assignment is object assignment
         valStmts.push(`(i32.const 1)`, `(call $traverse_update)`) // update the count of the object on the RHS
       }
       if (env.locals.has(stmt.name)) {
+        //return valStmts.concat([`(local.set $${stmt.name})`])
         return [`(local.get $${stmt.name})`, // update the count of the object on the LHS
         `(i32.const -1)`, 
         `(call $traverse_update)`,
         `(local.set $${stmt.name})`].concat(valStmts).concat([`(local.set $${stmt.name})`]); 
       } else {
+        //return valStmts.concat([`(global.set $${stmt.name})`])
         return [`(global.get $${stmt.name})`,
         `(i32.const -1)`,
         `(call $traverse_update)`,

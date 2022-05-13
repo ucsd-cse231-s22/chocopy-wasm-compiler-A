@@ -23,6 +23,7 @@ export const sizeOffset = 3;
 export const typeOffset =  2;
 export const amountOffset = 1;
 export const dataOffset = 4;
+export const METADATA_AMT : number = 4;
 
 let refMap: Map<ref, memAddr>;
 let refNum = 0; 
@@ -53,10 +54,14 @@ export function refLookup(r: ref) :  ref {
     if (refMap.has(r)) {
         return refMap.get(r);
     }
-    throw new MemError("invalid reference")
+    throw new MemError(`invalid reference: ${r}`)
 }
 
 export function traverseUpdate(r: ref, update: number): ref { // returns r so that stack state can be maintained
+    //console.log(`ref trav ${r}, update: ${update}`);
+    if (r === 0) {
+        return r
+    }
     let explored = new Set();
     let travQueue = [r];
     if (update > 0) {
@@ -65,9 +70,11 @@ export function traverseUpdate(r: ref, update: number): ref { // returns r so th
 
     while (travQueue.length > 0) {
         const curr = travQueue.shift();
-        const addr = refMap.get(curr) / 4;
-        memHeap[addr + refNumOffset] += update
-        
+        const addr = refLookup(curr) / 4;
+        console.log("addr: " + addr);
+        console.log("before: " + memHeap[addr + refNumOffset]);
+        memHeap[addr + refNumOffset] += update;
+        console.log("after:" + memHeap[addr + refNumOffset]);
         if (memHeap[addr + refNumOffset] < 0) { 
             memHeap[addr + refNumOffset] = 0;
         } 
@@ -77,13 +84,15 @@ export function traverseUpdate(r: ref, update: number): ref { // returns r so th
 
         let types = memHeap[addr + typeOffset];
         let size = memHeap[addr + sizeOffset]; 
-        
+        const amt = memHeap[addr + amountOffset];
+        //console.log(types);
         for (let i = 0; i < size; i++) {
             if ((types & (1 << i)) !== 0) {
-                for (let a = 0; a < memHeap[addr + amountOffset]; a++) {
+                for (let a = 0; a < (amt - METADATA_AMT) / size; a++) {
                     let temp = memHeap[addr + dataOffset + size*a + i];
                     if (temp !== 0) { // 0 is None
-                        travQueue.push(temp);
+                        // this looks weird, but it accounts for when multiple objects point to same object
+                        travQueue.push(temp); 
                     }
                 }
             }
@@ -102,6 +111,7 @@ export function removeScope() {
 }
 
 export function debugId(id: number, offset: number) { // id should be of type int and the first field in the object
+    //console.log(memHeap);
     for (const [_, addr] of refMap) {
         if (memHeap[addr/4 + dataOffset] === id) {
             return memHeap[addr/4 + offset];
