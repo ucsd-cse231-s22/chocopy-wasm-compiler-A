@@ -1,5 +1,9 @@
 import { parse } from "./parser";
 import { tc } from "./type-check";
+import { Program } from "./ir";
+import { Type } from "./ast";
+import { lowerProgram } from './lower';
+import { augmentEnv } from "./runner";
 import { BasicREPL } from "./repl";
 import { importObject, addLibs  } from "./tests/import-object.test";
 import { parser } from "lezer-python";
@@ -23,6 +27,11 @@ function stringifyTree(t: TreeCursor, source: string, d: number) {
       t.parent();
   }
   return str;
+}
+
+function toJson(data: Program<Type>) {
+  return JSON.parse(JSON.stringify(data, (_, v) => typeof v === 'bigint' ? `${v}n` : v)
+      .replace(/"(-?\d+)n"/g, (_, a) => a));
 }
 
 // entry point for debugging
@@ -49,7 +58,7 @@ async function debug() {
   a:Range=None
   b:Range=None
   a=Range().new(0,5)
-  b=[i for i in a]
+  b=[i for i in a if i!=2]
   `
   var ast_lz = parser.parse(source);
   // console.log(stringifyTree(ast_lz.cursor(), source, 0));
@@ -59,10 +68,15 @@ async function debug() {
   fs.writeFileSync("build/ast.json", JSON.stringify(ast, null, 2));
 
   const repl = new BasicREPL(await addLibs());
-
   const typedAst = tc(repl.currentTypeEnv, ast);
   // console.log(JSON.stringify(typedAst, null, 2));
   fs.writeFileSync("build/typedAst.json", JSON.stringify(typedAst, null, 2));
+
+  const gEnv = augmentEnv(repl.currentEnv, typedAst[0]);
+  const ir = lowerProgram(typedAst[0], gEnv);
+  // console.log(JSON.stringify(toJson(ir), null, 2));
+  fs.writeFileSync("build/ir.json", JSON.stringify(toJson(ir), null, 2));
+
 
   // const result = repl.run(source).then(result => {
   //   console.log(result);
