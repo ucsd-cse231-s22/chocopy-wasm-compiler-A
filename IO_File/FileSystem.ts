@@ -20,12 +20,17 @@ enum FileMode {
 }
 
 export const buildin_file_libs = `
-(func $buildin_open (import "imports" "open") (param i32) (param i32) (result i32))
-(func $buildin_read (import "imports" "read") (param i32) (result i32))
-(func $buildin_write (import "imports" "write") (param i32) (param i32) (result i32))
-(func $buildin_close (import "imports" "close") (param i32) (result i32))
-(func $buildin_seek (import "imports" "seek") (param i32) (param i32) (result i32))
+(func $buildin_open (import "imports" "buildin_open") (param i32) (param i32) (result i32))
+(func $buildin_read (import "imports" "buildin_read") (param i32) (param i32) (result i32))
+(func $buildin_write (import "imports" "buildin_write") (param i32) (param i32) (result i32))
+(func $buildin_close (import "imports" "buildin_close") (param i32) (result i32))
+(func $buildin_seek (import "imports" "buildin_seek") (param i32) (param i32) (result i32))
 `;
+
+
+export function exportFileBuildinFunc() {
+
+}
 
 let fdCounter = 0;
 let fs = new Map<number, OpenFile>(); // track current open files
@@ -38,9 +43,9 @@ let fs = new Map<number, OpenFile>(); // track current open files
  */
 export function open(filePathAddr: number, mode: number): number {
     
-    
+    console.log("open is called");
     const filePath = './test.txt';
-    console.log(filePath);
+    
     // treat as creating a new file for now. Later with string type, we check if the filePathAddr already existed first.
     // window.localStorage.setItem('test.txt', JSON.stringify([])); 
     if(localStorage.getItem(filePath) === null) {
@@ -57,9 +62,9 @@ export function open(filePathAddr: number, mode: number): number {
 }
 
 export function read(fd: number, numByte: number): number {
-
+    console.log(`read is called, fd: ${fd}, numByte: ${numByte}`);
     numByte = 1; // DUMMY VALUE
-    let file = checkFDExistence(fd)
+    let file = checkFDExistence(fd);
     let data = window.localStorage.getItem(file.filePath);
     if (!data) {
         return 0;
@@ -67,12 +72,12 @@ export function read(fd: number, numByte: number): number {
     let dataArray: Array<number> = JSON.parse(data);
     
     file.fileSize = dataArray.length;
-
+    console.log(`dataArray :${dataArray}, file.currentPosition: ${file.currentPosition}`);
     return dataArray[file.currentPosition];
 }
 
 export function write(fd: number, c: number): number {
-
+    console.log(`write is called, fd: ${fd}, c: ${c}`);
     const file = checkFDExistence(fd);
 
     // check mode
@@ -81,10 +86,11 @@ export function write(fd: number, c: number): number {
     }
     let data = window.localStorage.getItem(file.filePath);
     let dataArray: Array<number> = data ? JSON.parse(data) : [];
-    if(file.mode === FileMode.W_APPEND) {
+
+    if(file.mode === FileMode.W_APPEND ) {
         dataArray.push(c);
         file.currentPosition = dataArray.length;
-    } else if (file.mode === FileMode.W_CURR) {
+    } else if (file.mode === FileMode.W_CURR || file.mode === FileMode.RW) {
         if(file.currentPosition === dataArray.length) { // append data to the end of the file
             dataArray.push(c);
             file.currentPosition = dataArray.length;
@@ -98,7 +104,7 @@ export function write(fd: number, c: number): number {
 
     file.fileSize = dataArray.length;
     window.localStorage.setItem(file.filePath, JSON.stringify(dataArray));
-
+    console.log(fs);
     return - 1;
 }
 
@@ -108,13 +114,14 @@ export function write(fd: number, c: number): number {
  * @param fd 
  */
 export function close(fd: number) {
-
+    console.log("close is called");
     const f = checkFDExistence(fd);
 
     fs.delete(fd); // remove this file from file descriptor
 }
 
 export function seek(fd: number, pos: number){
+    console.log("seek is called");
     const file = checkFDExistence(fd);
 
     // check the boundary of the position

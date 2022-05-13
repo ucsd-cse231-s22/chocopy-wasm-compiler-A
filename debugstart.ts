@@ -9,7 +9,7 @@ async function debug() {
   var source = `
 print(1)`
   const ast = parse(source);
-  console.log(JSON.stringify(ast, null, 2));
+  // onsole.log(JSON.stringify(ast, null, 2));
 
   const repl = new BasicREPL(await addLibs());
   
@@ -20,3 +20,12 @@ print(1)`
 
 debug();
 
+const s = 
+`
+f:File = None
+f = open(0, 3)
+
+
+f.write(5)
+print(f.read(1))
+`

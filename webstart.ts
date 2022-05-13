@@ -53,18 +53,19 @@ function webStart() {
         min: Math.min,
         max: Math.max,
         pow: Math.pow,
-        open: open,
-        read: read,
-        write: write,
-        close: close,
-        seek: seek,
+        buildin_open:  open,
+        buildin_read:  read,
+        buildin_write: write,
+        buildin_close: close,
+        buildin_seek:  seek,
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,
       js: {memory: memory}
     };
     var repl = new BasicREPL(importObject);
-
+    console.log("importObject");
+    console.log(importObject);
     function renderResult(result : Value) : void {
       if(result === undefined) { console.log("skip"); return; }
       if (result.tag === "none") return;

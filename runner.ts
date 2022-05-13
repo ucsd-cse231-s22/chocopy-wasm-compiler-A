@@ -95,6 +95,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   ).join("\n");
 
   const importObject = config.importObject;
+  
   if(!importObject.js) {
     const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
     importObject.js = { memory: memory };
