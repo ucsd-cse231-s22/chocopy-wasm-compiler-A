@@ -43,7 +43,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       c.firstChild();
       const callExpr = traverseExpr(c, s);
       c.nextSibling(); // go to arglist
-      let args = traverseArguments(c, s);
+      let args = traverseArgumentsWithKW(c, s);
       c.parent(); // pop CallExpression
 
 
@@ -201,6 +201,43 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<null>
     c.nextSibling(); // Focuses on a VariableName
   } 
   c.parent();       // Pop to ArgList
+  return args;
+}
+
+export function traverseArgumentsWithKW(c : TreeCursor, s : string) : Array<Expr<null>> {
+  c.firstChild();  // Focuses on open paren
+  const args = [];
+  const kwargs : Map<string, Expr<null>> = new Map();
+  var keywordArgsBegin = false;
+  c.nextSibling();
+  while(c.type.name !== ")") {
+    let expr = traverseExpr(c, s);
+    c.nextSibling(); // Focuses on either "=", "," or ")"
+    if (c.type.name === "AssignOp") {
+      keywordArgsBegin = true;
+      c.nextSibling(); // value
+      let value = traverseExpr(c, s);
+      var keyword = "";
+      if (expr.tag !== "id" ) { 
+        throw new Error("SyntaxError: keyword can't be an expression");
+      } else {
+        keyword = expr.name;
+      }
+      if (kwargs.has(keyword)) {
+        throw new Error("SyntaxError: keyword argument '" + keyword + "' repeated")
+      }
+      kwargs.set(keyword, value);
+      c.nextSibling(); // Focuses on either "," or ")"
+    } else {
+      if (keywordArgsBegin) {
+        throw new Error("SyntaxError: positional argument follows keyword argument");
+      }
+      args.push(expr);
+    }
+    c.nextSibling(); // Focuses on a VariableName
+  } 
+  c.parent();       // Pop to ArgList
+  console.log(kwargs);
   return args;
 }
 
