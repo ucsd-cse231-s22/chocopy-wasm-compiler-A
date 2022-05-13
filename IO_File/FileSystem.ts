@@ -25,7 +25,6 @@ const buildin_file_libs = `
 (func $buildin_write (import "libmemory" "write") (param i32) (param i32) (result i32))
 (func $buildin_close (import "libmemory" "close") (param i32) (result i32))
 (func $buildin_seek (import "libmemory" "seek") (param i32) (param i32) (result i32))
-
 `;
 
 let fdCounter = 0;
@@ -44,14 +43,16 @@ export function open(filePathAddr: number, mode: number): number {
     fs.set(fdCounter++, {
         filePath: 'test.txt', // a dummy address. If we have string we should read the address
         currentPosition: 0,
-        mode: mode,
+        mode: mode, // random mode
         fileSize: 0, // according to the current test case we should assign 0
     });
 
     return fdCounter - 1;
 }
 
-export function read(fd: number): number {
+export function read(fd: number, numByte: number): number {
+
+    numByte = 1; // DUMMY VALUE
     let file = checkFileExistence(fd)
     let data = window.localStorage.getItem(file.filePath);
     if (!data) {
@@ -100,16 +101,14 @@ export function write(fd: number, c: number): number {
  * If it is dirty than, we should write the file to filePath
  * @param fd 
  */
-export function close(fd: number): number {
+export function close(fd: number) {
 
     const f = checkFileExistence(fd);
 
     fs.delete(fd); // remove this file from file descriptor
-
-    return 0;
 }
 
-export function seek(fd: number, pos: number) {
+export function seek(fd: number, pos: number){
     const file = checkFileExistence(fd);
 
     // check the boundary of the position
@@ -117,6 +116,7 @@ export function seek(fd: number, pos: number) {
         throw new Error(`RUNTIME ERROR: invalid seek position ${pos}, valid range [0, ${file.fileSize}]`);
     }
     file.currentPosition = pos;
+
 }
 
 /**

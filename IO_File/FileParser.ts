@@ -3,10 +3,10 @@ import {Class, FunDef, VarInit, Stmt, Expr, Type} from "../ast"
 /*
  * class FileClass:
  *     fd: int = 0
- *     def __init__(self:FileClass):
- *         pass
- *     def read(self: FileClass):
- *        return buildin_read(self.fd)
+ *     def __init__(self:FileClass, fd: int):
+ *         self.fd = fd
+ *     def read(self: FileClass)-> int:
+ *        return buildin_read(self.fdm byte)
  *     def close(self: FileClass):
  *        close(self.fd: FileClass)
  *     def write(self: FileClass, c:int):
@@ -65,12 +65,12 @@ function getFileWrite() :FunDef<Type> {
 
 function getFileSeek() :FunDef<Type> {
     return {
-        name:"read",
+        name:"seek",
         parameters:[{name:"self", type:{tag:"class", name:"File"}},
                     {name:"pos", type:{tag:"number"}}],
-        ret:{tag:"number"},
+        ret:{tag:"none"},
         inits:[],
-        body:[{tag:"return", value:{tag:"call", name:"buildin_seek", 
+        body:[{tag:"expr", expr:{tag:"call", name:"buildin_seek", 
                arguments:[{tag:"lookup", obj:{tag:"id", name:"self"}, field:"fd"},
                           {tag:"id", name:"pos"}]}}],
     }
@@ -89,20 +89,19 @@ function getFileClose() :FunDef<Type> {
 
 export const OpenFun: FunDef<Type> = {
     name:"open",
-    parameters:[{name:"addr", type: {tag:"number"}}],
+    parameters:[{name:"addr", type: {tag:"number"},}, {name:"mode", type: {tag:"number"},}],
     ret: {tag:"class", name:"File"},
     inits: getOpenInits(),
     body: getOpenBody(),
 }
-
 function getOpenInits(): VarInit<Type>[] {
     return [{name:"f", type:{tag:"class", name:"File"},value: {tag:"none"}},
     {name:"fd", type:{tag:"number"}, value:{tag:"num", value:0}}]
 }
 function getOpenBody(): Stmt<Type>[] {
     return [
-     {tag:"assign", name:"fd",  
-                    value:{tag:"call", name:"buildin_open", arguments: [{tag:"id",name:"addr"}]}},
+     {tag:"assign", name:"fd",
+                    value:{tag:"call", name:"buildin_open", arguments: [{tag:"id",name:"addr"},{tag:"id",name:"mode"}]}},
      {tag:"assign", name:"f",
                     value:{tag:"call", name:"File", arguments: [{tag:"id", name:"fd"}]}},
      {tag:"return", value:{tag:"id", name:"f"}}
