@@ -218,6 +218,26 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<null>
 
 export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
   switch(c.node.type.name) {
+    case "ImportStatement":
+      let importStatement: Stmt<null> = {tag: "import", mod: "", name: []};
+
+      c.firstChild();
+      if(s.substring(c.from, c.to).trim() === "from"){ // from x import y
+        c.nextSibling();
+        const from_name = s.substring(c.from, c.to);
+        c.nextSibling();
+        c.nextSibling();
+        const import_name = s.substring(c.from, c.to); 
+        // TODO(rongyi): did not handle multiple imports
+        importStatement.mod = from_name;
+        importStatement.name = [import_name];
+      } else { // import x
+        c.nextSibling();
+        const from_name = s.substring(c.from, c.to);
+        importStatement.mod = from_name
+      }
+      c.parent()
+      return importStatement;
     case "ReturnStatement":
       c.firstChild();  // Focus return keyword
       

@@ -29,6 +29,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
+  | {  a?: A, tag: "import", mod: string, name?: Array<string>, alias?: string }
 
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal }
