@@ -360,16 +360,6 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<null
           return tConstruct;
         }
       } else if (env.functions.has(expr.name)) {
-        // const [argTypes, retType] = env.functions.get(expr.name);
-        // const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-        // 
-        // if(argTypes.length === expr.arguments.length &&
-        //    tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
-        //   return {...expr, a: retType, arguments: tArgs};
-        // } 
-        // else {
-        //   throw new TypeError("Function call type mismatch: " + expr.name);
-        // }
         const [expectedParams, retType] = env.functions.get(expr.name);
         const tArgs = tcCallOrMethod(expr.name, expectedParams, expr.arguments, expr.kwarguments, env, locals);
         return { ...expr, a: retType, arguments: tArgs, kwarguments: undefined };
@@ -393,29 +383,6 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<null
         throw new TypeCheckError("field lookups require an object");
       }
     case "method-call":
-      // var tObj = tcExpr(env, locals, expr.obj);
-      // var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-      // if (tObj.a.tag === "class") {
-      //   if (env.classes.has(tObj.a.name)) {
-      //     const [_, methods] = env.classes.get(tObj.a.name);
-      //     if (methods.has(expr.method)) {
-      //       const [methodArgs, methodRet] = methods.get(expr.method);
-      //       const realArgs = [tObj].concat(tArgs);
-      //       if (methodArgs.length === realArgs.length &&
-      //         methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a, argTyp))) {
-      //         return { ...expr, a: methodRet, obj: tObj, arguments: tArgs };
-      //       } else {
-      //         throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}`);
-      //       }
-      //     } else {
-      //       throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a.name}`);
-      //     }
-      //   } else {
-      //     throw new TypeCheckError("method call on an unknown class");
-      //   }
-      // } else {
-      //   throw new TypeCheckError("method calls require an object");
-      // }
       var tObj = tcExpr(env, locals, expr.obj);
       if (tObj.a.tag !== "class") {
         throw new TypeCheckError("method calls require an object");
