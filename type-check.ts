@@ -232,17 +232,17 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
 
 export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<null>) : Expr<Type> {
   switch(expr.tag) {
-    case "indexing":
-      var obj = expr.obj;
-      const index = expr.index;
-      if (obj.tag == "literal" && obj.value.tag == "str"){
-        const strLength = obj.value.length;
-        if (index>= strLength || index < 0)
-          throw new Error("RUNTIME ERROR: Index out of boundary!");
-          obj.value.value = String(obj.value.value.charAt(index));
-        return {...obj,a:tcLiteral(obj.value)};
-      }
-      return {...obj,a:STRING};
+    case "index":
+      // var obj = expr.obj;
+      // const index = expr.index;
+      // if (obj.tag == "literal" && obj.value.tag == "str"){
+      //   const strLength = obj.value.length;
+      //   if (index>= strLength || index < 0)
+      //     throw new Error("RUNTIME ERROR: Index out of boundary!");
+      //     obj.value.value = String(obj.value.value.charAt(index));
+      //   return {...obj,a:tcLiteral(obj.value)};
+      // }
+      return {...expr,a:STRING};
     case "literal":
       //console.log(expr.value.tag);
 

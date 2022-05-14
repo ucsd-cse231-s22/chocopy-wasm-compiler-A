@@ -186,9 +186,9 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       //Indexing
       if (s.substring(c.from,c.to) == '['){
         c.nextSibling();
-        const number = Number(s.substring(c.from,c.to));
+        const indexExpr = traverseExpr(c,s);
         c.parent();
-        return {tag: "indexing", obj:objExpr, index:number};
+        return {tag: "index", obj:objExpr, index:indexExpr};
       }
 
 

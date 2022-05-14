@@ -326,6 +326,37 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         start: oval,
         offset: { tag: "wasmint", value: offset }}];
     }
+    case "index": {
+      var [indexoinits, indexostmts, indexoval] = flattenExprToVal(e.obj, env);
+      const [_3, _4, indexval] = flattenExprToVal(e.index, env)
+      var index_offset: number = 0;
+      if (indexval.tag == "num") 
+       index_offset = Number(indexval.value) + 1
+
+       const alloc_index_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: 2 } };
+       var assigns_index_string : IR.Stmt<Type>[] = [];
+       const newIndexStrName = generateName("newStr"); 
+       assigns_index_string.push({
+         tag: "store",
+         start: {tag: "id", name: newIndexStrName},
+         offset: {tag:"wasmint", value: 0},
+         value: {a:NUM , tag:"wasmint", value:1}
+       });
+        const ascii_index = "i".charCodeAt(0);
+        assigns_index_string.push({
+          tag: "store",
+          start: {tag: "id", name: newIndexStrName},
+          offset: {tag:"wasmint", value: 1},
+          value: {a:NUM , tag:"wasmint", value:ascii_index}
+        });
+      
+        indexoinits.push({ name: newIndexStrName, type: STRING, value: { tag: "none" } });
+      
+      return [indexoinits, 
+        [...indexostmts, { tag: "assign", name: newIndexStrName, value: alloc_index_string }, ...assigns_index_string,], 
+        {  tag: "value", value: { a: e.a, tag: "id", name: newIndexStrName } }];
+    }
+
     case "construct":
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];

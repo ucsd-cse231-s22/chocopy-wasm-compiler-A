@@ -89,18 +89,18 @@ describe("String tests", () => {
   print(c.compare("bcd"))
   `,['False'])
 
-  assertTC("String-Indexing-TC",`
+  assertTC("String-Index-TC",`
   "abcd"[1])
   `,STRING)
 
-  assertFail("String-Indexing-Out-Of-Boundary",`
+  assertFail("String-Index-Out-Of-Boundary",`
   print("abcd"[5]])
   `)
 
-  assertPrint("String-Indexing-In-Fun",`
+  assertPrint("String-Index-In-Fun",`
   def test(x:str)->str:
       return x[1]
-  print(test("abcd"))
-  `,['b'])
+  print(test("uiop"))
+  `,['i'])
 
 });
