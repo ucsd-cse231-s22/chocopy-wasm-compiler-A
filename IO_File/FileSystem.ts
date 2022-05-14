@@ -36,7 +36,7 @@ let fdCounter = 0;
 let fs = new Map<number, OpenFile>(); // track current open files
 
 
-const window = require('global/window');
+// const window = require('global/window');
 /*
 function setItem(filePath: string, data:Array<number>) {
     console.log('setItem is called');
@@ -62,15 +62,15 @@ window.localStorage = {
  * ct: for the mode, we might need to create a 'mode translator' to translate from Python mode to our mode
  */
 export function open(filePathAddr: number, mode: number): number {
-    
+
     // console.log(`open is called with mode: ${mode} and filePathAddr: ${filePathAddr}`);
 
     const filePath = './test.txt';
-    
+
     // treat as creating a new file for now. Later with string type, we check if the filePathAddr already existed first.
     // window.localStorage.setItem('test.txt', JSON.stringify([])); 
-    if(window.localStorage.getItem(filePath) === null) {
-        window.localStorage.setItem(filePath, JSON.stringify([])); 
+    if (window.localStorage.getItem(filePath) === null) {
+        window.localStorage.setItem(filePath, JSON.stringify([]));
     }
     fs.set(fdCounter++, {
         filePath: filePath, // a dummy address. If we have string we should read the address
@@ -92,9 +92,9 @@ export function read(fd: number, numByte: number): number {
         return 0;
     }
     let dataArray: Array<number> = JSON.parse(data);
-    
+
     file.fileSize = dataArray.length;
-    
+
     return dataArray[file.currentPosition];
 }
 
@@ -110,19 +110,19 @@ export function write(fd: number, c: number): number {
     let data = window.localStorage.getItem(file.filePath);
     let dataArray: Array<number> = data ? JSON.parse(data) : [];
 
-    if(file.mode === FileMode.W_APPEND ) {
+    if (file.mode === FileMode.W_APPEND) {
         dataArray.push(c);
         file.currentPosition = dataArray.length;
     } else if (file.mode === FileMode.W_CURR || file.mode === FileMode.RW) {
-        if(file.currentPosition === dataArray.length) { // append data to the end of the file
+        if (file.currentPosition === dataArray.length) { // append data to the end of the file
             dataArray.push(c);
             file.currentPosition = dataArray.length;
         } else {                                        // write data to the currentPosition 
             dataArray[file.currentPosition] = c;
             file.currentPosition++;
-        } 
+        }
     } else {
-        throw new Error (`RUNTIME ERROR: Unknown write mode ${file.mode}`);
+        throw new Error(`RUNTIME ERROR: Unknown write mode ${file.mode}`);
     }
 
     file.fileSize = dataArray.length;
@@ -143,12 +143,12 @@ export function close(fd: number) {
     fs.delete(fd); // remove this file from file descriptor
 }
 
-export function seek(fd: number, pos: number){
+export function seek(fd: number, pos: number) {
     // console.log("seek is called");
     const file = checkFDExistence(fd);
 
     // check the boundary of the position
-    if(pos < 0 || pos > file.fileSize) {
+    if (pos < 0 || pos > file.fileSize) {
         throw new Error(`RUNTIME ERROR: invalid seek position ${pos}, valid range [0, ${file.fileSize}]`);
     }
     file.currentPosition = pos;
