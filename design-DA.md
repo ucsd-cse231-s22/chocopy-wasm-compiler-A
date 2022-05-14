@@ -6,7 +6,7 @@ For type checking, we will check whether the lengths of the left and right struc
 
 
 ## CODE GEN
-For code generation, the high-level implementation is to iterate every element in the left structure and assign the correct values to them respectively from the right structure. It's worth noting that we need to handle the element marked with `*`. For this special element, we will assign the value after assigning all the values to the plain elements.
+For code generation, the high-level implementation is to iterate every element in the left structure and assign the correct values to them respectively from the right structure. For plain list of elements in the right hand side, we just simply assign each variable one by one. For an object whose values need to be determined in the runtime, we will use an iterator object that has `next()` and `hashNext()` interfaces to help with the assignment. This logic will be converted into corresponding intermediate representations, which will be further translated into WASM code. It's worth noting that we need to handle the element marked with `*`. For this special element, we will assign the value after assigning all the values to the plain elements.
 
 ## Milestone 1
 During this week, we implemented most functions in our previous design except handling list and tuple in the right part and the element marked with `*`, which depended on other teams' work. Additionally, we added support for range, which had not been metioned in our previous design. We mainly changed ast.ts, parser.ts, type-check.ts, and lower.ts. All this code is runnable and testable. We added new tests in a separated file called destructure.test.ts. You can run them by executing `npm run test-desdestructure`.
