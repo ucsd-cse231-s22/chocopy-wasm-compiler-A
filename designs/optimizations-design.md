@@ -201,7 +201,7 @@ These can be actual code diffs in the PR or written in your design.md.
             </li>
         </ul>
         </li>
-        <li>Functions (only the importnant ones are listed here) :  
+        <li>Functions (only the important ones are listed here) :  
             <ul>
                 <li>optimizeProgram() - Maps a source program IR to an optimized program IR. Optimization is done in multiple passes and ends when the IR stabilizes. Currently - Each basic block contains in-environments (Env). In-environments are used for constant propagation within the basic block and are updated accordingly. To be implemented - Dead code elimination.
                 </li>
@@ -209,7 +209,7 @@ These can be actual code diffs in the PR or written in your design.md.
                 </li>
                 <li>computeInitEnv() - Computes the in-environment to the first basic block consisting of all vardefs mapped to type "undef". 
                 </li>
-                <li>mergeAllPreds() - A helper function for the worklist algorithm that merges the Out-environments of all predecessor basic blocks.
+                <li>mergeAllPreds() - A helper function for the worklist algorithm that merges the out-environments of all predecessor basic blocks.
                 </li>
                 <li> generateEnvironments() - A recursive forward-pass worklist algorithm that computes a stable set of in-environments for all basic-blocks.
                 </li>
