@@ -13,10 +13,16 @@ function stringify(typ: Type, arg: any): string {
   }
 }
 
-function print(typ: Type, arg: any): any {
-  importObject.output += stringify(typ, arg);
-  importObject.output += "\n";
-  return arg;
+function print(typ?: Type, arg?: any): any {
+  if(typ!== undefined){
+    importObject.output += stringify(typ, arg)+" ";
+  } else{
+    if (importObject.output.length>0){
+      importObject.output = importObject.output.substring(0, importObject.output.length-1)
+    }
+    importObject.output += "\n";
+  }
+  return 0;
 }
 
 function assert_not_none(arg: any) : any {
@@ -46,6 +52,7 @@ export const importObject : any = {
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
+    print_newline: (arg: number) => print(undefined, arg),
     abs: Math.abs,
     min: Math.min,
     max: Math.max,

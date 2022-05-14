@@ -16,13 +16,40 @@ function stringify(typ: Type, arg: any) : string {
   }
 }
 
-function print(typ: Type, arg : number) : any {
-  console.log("Logging from WASM: ", arg);
-  const elt = document.createElement("pre");
-  document.getElementById("output").appendChild(elt);
-  elt.innerText = stringify(typ, arg);
-  return arg;
-}
+// function print(typ: Type, arg : number) : any {
+//   console.log("Logging from WASM: ", arg);
+//   const elt = document.createElement("pre");
+//   document.getElementById("output").appendChild(elt);
+//   elt.innerText = stringify(typ, arg);
+//   return arg;
+// }
+
+
+var print = (function(){
+  var res = ""
+
+  return function(typ?: Type, arg? : number){
+    if(typ!==undefined){
+      console.log("Logging from WASM: ", arg);
+      res += stringify(typ, arg) + " ";
+      console.log(typ)
+    } else{
+      console.log("New Line")
+      const elt = document.createElement("pre");
+      document.getElementById("output").appendChild(elt);
+      if (res.length>0){
+        res = res.substring(0, res.length-1)
+      }
+      elt.innerText = res+"\n";
+      res = ""
+    }
+    return 0
+    
+  }
+
+  }());
+
+
 
 function assert_not_none(arg: any) : any {
   if (arg === 0)
@@ -48,6 +75,7 @@ function webStart() {
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),
+        print_newline: (arg: number) => print(undefined, arg),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,

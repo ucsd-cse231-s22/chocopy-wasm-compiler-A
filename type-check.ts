@@ -285,10 +285,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         throw new TypeCheckError("Unbound id: " + expr.name);
       }
     case "builtin1":
-      if (expr.name === "print") {
-        const tArg = tcExpr(env, locals, expr.arg);
-        return {...expr, a: tArg.a, arg: tArg};
-      } else if(env.functions.has(expr.name)) {
+      // if (expr.name === "print") {
+      //   const tArg = tcExpr(env, locals, expr.arg);
+      //   return {...expr, a: tArg.a, arg: tArg};
+      // } else 
+      if(env.functions.has(expr.name)) {
         const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
         const tArg = tcExpr(env, locals, expr.arg);
         
@@ -310,6 +311,17 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         } else {
           throw new TypeError("Function call type mismatch: " + expr.name);
         }
+      } else {
+        throw new TypeError("Undefined function: " + expr.name);
+      }
+    case "builtinarb":
+      if (expr.name === "print") {
+        var tArgs:Expr<Type>[] = []
+        expr.args.forEach(arg => {
+          tArgs.push(tcExpr(env, locals, arg));
+        });
+        
+        return { ...expr, a: {tag:"none"}, args: tArgs };
       } else {
         throw new TypeError("Undefined function: " + expr.name);
       }

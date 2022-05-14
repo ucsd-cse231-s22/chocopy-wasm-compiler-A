@@ -1,6 +1,8 @@
 import { parse } from "./parser";
 import { BasicREPL } from "./repl";
 import { importObject, addLibs  } from "./tests/import-object.test";
+import { stringifyTree } from "./treeprinter";
+import {parser} from 'lezer-python';
 
 
 // entry point for debugging
@@ -12,6 +14,10 @@ class C(object):
       return 0
     else:
       return`
+  source = `
+  print(print)
+`;
+  console.log(stringifyTree(parser.parse(source).cursor(),source, 0));
   const ast = parse(source);
   
   const repl = new BasicREPL(await addLibs());
@@ -21,4 +27,4 @@ class C(object):
 }
 
 debug();
-
+var na = 1

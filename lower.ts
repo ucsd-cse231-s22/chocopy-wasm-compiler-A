@@ -223,6 +223,15 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           left: lval,
           right: rval
         }];
+    case "builtinarb":
+      
+      // var [inits, stmts, args] = flattenExprToVal(e.args, env);
+      const argpairs = e.args.map(a => flattenExprToVal(a, env));
+      const arginits = argpairs.map(cp => cp[0]).flat();
+      const argstmts = argpairs.map(cp => cp[1]).flat();
+      const argvals = argpairs.map(cp => cp[2]).flat();
+
+      return [arginits, argstmts, { tag: "builtinarb", a: e.a, name: e.name, args: argvals }];
     case "call":
       const callpairs = e.arguments.map(a => flattenExprToVal(a, env));
       const callinits = callpairs.map(cp => cp[0]).flat();
@@ -288,7 +297,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "id":
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
-      return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+      return [[], [], {tag: "value", value: {a:e.a, ...literalToVal(e.value)} }];
   }
 }
 

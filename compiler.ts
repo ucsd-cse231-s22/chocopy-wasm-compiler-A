@@ -150,22 +150,61 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       }
 
     case "builtin1":
-      const argTyp = expr.a;
+      var argTyp = expr.a;
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
-      if (expr.name === "print" && argTyp === NUM) {
-        callName = "print_num";
-      } else if (expr.name === "print" && argTyp === BOOL) {
-        callName = "print_bool";
-      } else if (expr.name === "print" && argTyp === NONE) {
-        callName = "print_none";
-      }
+      // if (expr.name === "print" && argTyp === NUM) {
+      //   callName = "print_num";
+      // } else if (expr.name === "print" && argTyp === BOOL) {
+      //   callName = "print_bool";
+      // } else if (expr.name === "print" && argTyp === NONE) {
+      //   callName = "print_none";
+      // }
       return argStmts.concat([`(call $${callName})`]);
 
     case "builtin2":
       const leftStmts = codeGenValue(expr.left, env);
       const rightStmts = codeGenValue(expr.right, env);
       return [...leftStmts, ...rightStmts, `(call $${expr.name})`]
+
+    case "builtinarb":
+      var argTyp = expr.a;
+      var argsStmts:Array<string> = [";;call builtin function\n"]
+      var callName = expr.name;
+      
+      
+      if (expr.name=== "print"){
+        argsStmts = argsStmts.concat([`(i32.const 0)`]);
+        expr.args.forEach(arg => {
+          argsStmts = argsStmts.concat(codeGenValue(arg, env));
+          switch (arg.a) {
+            case NUM:
+              argsStmts = argsStmts.concat([`(i32.add)`]);
+              argsStmts = argsStmts.concat([`(call $print_num)`]);
+              break;
+            case BOOL:
+              argsStmts = argsStmts.concat([`(call $print_bool)`]);
+              argsStmts = argsStmts.concat([`(i32.add)`]);
+              break;
+            case NONE:
+              argsStmts = argsStmts.concat([`(call $print_none)`]);
+              argsStmts = argsStmts.concat([`(i32.add)`]);
+
+              break;
+          
+            default:
+              break;
+          }
+        });
+        argsStmts = argsStmts.concat([`(i32.const 0)`]);
+        argsStmts = argsStmts.concat([`(i32.add)`]);
+        callName = "print_newline"
+        // argsStmts = argsStmts.concat([`(call $${callName})`]);
+      }
+      // return argsStmts
+
+      return argsStmts.concat([`(call $${callName})`]);
+
 
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
