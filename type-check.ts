@@ -175,7 +175,13 @@ export function tcAssignable(env : GlobalTypeEnv, locals : LocalTypeEnv, assigna
       var typedAss : Assignable<Type> = { ...typedExpr };
       return typedAss;
     case "lookup":
-    // TODO: if we need to support more types, add them here
+      if (typedExpr.obj.a.tag !== "class") 
+        throw new TypeCheckError("field assignments require an object");
+      if (!env.classes.has(typedExpr.obj.a.name)) 
+        throw new TypeCheckError("field assignment on an unknown class");
+      const [fields, _] = env.classes.get(typedExpr.obj.a.name);
+      if (!fields.has(typedExpr.field)) 
+        throw new TypeCheckError(`could not find field ${typedExpr.field} in class ${typedExpr.obj.a.name}`);
       var typedAss : Assignable<Type> = { ...typedExpr };
       return typedAss;
     default:

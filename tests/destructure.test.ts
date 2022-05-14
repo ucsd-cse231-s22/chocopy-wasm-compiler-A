@@ -193,6 +193,21 @@ describe('tc for destructure', () => {
     c.f1, c.f2 = range(1, 3)
     `);
 
+    assertTCFail("destructure-assignment-in-none-obj-failure", `
+    c: cl = None
+  
+    class cl(Object):
+        f1: bool = 0
+        f2: bool = 0
+    
+    c.f1, c.f2 = range(1, 3)
+    `);
+
+    assertTCFail("destructure-assignment-in-not-class-failure", `
+    c : int = 0
+    c.f1, c.f2 = range(1, 3)
+    `);
+
     assertPrint("destructure-assignment-in-mix-sep", `
     ${rangeDef}
     c: cl = None
