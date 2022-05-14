@@ -26,8 +26,6 @@ const bigMath = {
     return value
   },
   add(value1: bigint, value2: bigint) {
-    console.log("value1:", value1);
-    console.log("value2:", value2);
     return value1 + value2
   },
   sub(value1: bigint, value2: bigint) {

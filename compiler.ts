@@ -262,7 +262,6 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
 function codeGenBinOp(op : BinOp) : string {
   switch(op) {
     case BinOp.Plus:
-      // return "(i32.add)"
       return "add"
     case BinOp.Minus:
       return "sub"
