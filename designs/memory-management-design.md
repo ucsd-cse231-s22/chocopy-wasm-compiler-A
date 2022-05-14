@@ -286,7 +286,7 @@ We had to make some changes in `compiler.ts` to support some of the memory manag
 
 We abstracted out the functionality for memory management in `memory.ts`.
 
-We were a bit unclear at the start of Week 1 as to how we would differentiate between references and values, this part is taken care of in `ir.ts` in the Week 2 implementation. 
+We were a bit unclear at the start of Week 1 as to how we would differentiate between references and values, this part is implemented in `lower.ts`.
 
 We also added another field to denote the total amount of data allocated in bytes, since without this we would not have been able to know how many objects we stored in a contiguous fashion at a given memory location. This allows the array list group to request any amount of data. Note that the `Data` field in the memory metadata diagram denotes the maximum memory which can be allocated by one object. We can however allocate any amount of such objects in a contiguous manner.
 
