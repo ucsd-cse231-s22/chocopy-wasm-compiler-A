@@ -77,9 +77,10 @@ Output: ```Error```
 Output: ```Error```
 
 Test cases that does not work yet is the following:
-```print([[j for j in range(3)] for i in range(3)])```
+
+1. ```print([[j for j in range(3)] for i in range(3)])```
 ```
-a : List = None
+2. a : List = None
 a = [i for i in range(5,10)]
 print(a)
 ```
