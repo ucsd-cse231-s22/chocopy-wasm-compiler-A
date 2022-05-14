@@ -113,11 +113,10 @@ export function augmentInheritance(subclassTosuperclass : Map<string, string[]>,
     let sub = entry[0];
     let sup = entry[1];
     const superclasses : Array<string> = []
-    // const objClass : Class<Type> = { a: {tag: "class", name: "object"}, name: "object", fields: [], methods: [], super: []}
-    superclasses.push("object")
-
+    
     const oldsub = newClasses.get(sub)
     if (sup[0] === "object") {
+      superclasses.push("object")
       newClasses.set(sub, [oldsub[0], oldsub[1], superclasses])
     } else {
       sup.forEach(supcls => {
@@ -197,34 +196,51 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
 export function tcFields(env: GlobalTypeEnv, cls : Class<null>, tFields : VarInit<Type>[]) {
   const superclasses = env.classes.get(cls.name)[2]
 
-  // Push all superclass fields
-  // superclasses.forEach(cls => tFields.push(...cls.fields));
-  const superclassFieldNames = tFields.map(field => field.name);
+  // Check if superclass fields are redefined in subclass
+  const superclassFields = new Map()
+  getSuperclassFields(env, cls.name, superclassFields)
 
   cls.fields.forEach(field => {
-    // Check if superclass fields are redefined in subclass
-    if (superclassFieldNames.includes(field.name))
+    if (superclassFields.has(field.name))
       throw new TypeCheckError(`Field ${field.name} redefined in subclass`);
   });
 
-  // Push all subclass fields
-  const superclassfields = tFields
+  // Push all fields of current class
   tFields.push(...cls.fields.map(field => tcInit(env, field)));
-  
-  superclassfields.forEach(field => env.classes.get(cls.name)[0].set(field.name, field.type))
 }
 
-export function getSuperclassFields(env: GlobalTypeEnv, subclass: string) {
-  const fields1 : string[] = []
-  const fields : Map<string, Type> = new Map()
-  const superclasses = env.classes.get(subclass)[2]
-  superclasses.forEach(cls => {
-    if (cls !== "object") {
-      const clsfields = env.classes.get(cls)[0]
-      clsfields.forEach((value, key) => fields.set(key, value));
-    }
-  })
-  return fields
+export function getSuperclassFields(env: GlobalTypeEnv, subclass: string, fields: Map<string, Type>) {
+  if (subclass === "object")
+    return
+  else {
+    const superclasses = env.classes.get(subclass)[2]
+    superclasses.forEach(cls => {
+      if (cls !== "object") {
+        const clsfields = env.classes.get(cls)[0]
+        clsfields.forEach((value, key) => fields.set(key, value));
+      }
+    })
+    superclasses.forEach(cls => {
+      getSuperclassFields(env, cls, fields)
+    })
+  }
+}
+
+export function getSuperclassMethods(env: GlobalTypeEnv, subclass: string, methods: Map<string, [Array<Type>, Type]>) {
+  if (subclass === "object")
+    return
+  else {
+    const superclasses = env.classes.get(subclass)[2]
+    superclasses.forEach(cls => {
+      if (cls !== "object") {
+        const clsmethods = env.classes.get(cls)[1]
+        clsmethods.forEach((value, key) => methods.set(key, value));
+      }
+    })
+    superclasses.forEach(cls => {
+      getSuperclassMethods(env, cls, methods)
+    })
+  }
 }
 
 export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Array<Stmt<null>>) : Array<Stmt<Type>> {
@@ -286,7 +302,9 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       if (!env.classes.has(tObj.a.name)) 
         throw new TypeCheckError("field assignment on an unknown class");
       const [fields, _] = env.classes.get(tObj.a.name);
-      if (!fields.has(stmt.field)) 
+      const superclassfields = new Map()
+      getSuperclassFields(env, tObj.a.name, superclassfields)
+      if (!fields.has(stmt.field) && !superclassfields.has(stmt.field)) 
         throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObj.a.name}`);
       if (!isAssignable(env, tVal.a, fields.get(stmt.field)))
         throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
@@ -410,8 +428,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       var tObj = tcExpr(env, locals, expr.obj);
       if (tObj.a.tag === "class") {
         if (env.classes.has(tObj.a.name)) {
-          const [fields, _, superclass] = env.classes.get(tObj.a.name); // TODO: also check super class fields
-          const superclassfields = getSuperclassFields(env, tObj.a.name)
+          const [fields, _, superclass] = env.classes.get(tObj.a.name);
+          const superclassfields = new Map()
+          getSuperclassFields(env, tObj.a.name, superclassfields)
           if (fields.has(expr.field)) {
             return {...expr, a: fields.get(expr.field), obj: tObj};
           } else if (superclassfields.has(expr.field)) {
@@ -430,12 +449,23 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
       if (tObj.a.tag === "class") {
         if (env.classes.has(tObj.a.name)) {
-          const [_, methods] = env.classes.get(tObj.a.name); // TODO: also check super class methods
+          const [_, methods] = env.classes.get(tObj.a.name);
+          const superclassmethods = new Map()
+          getSuperclassMethods(env, tObj.a.name, superclassmethods)
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = methods.get(expr.method);
-            const realArgs = [tObj].concat(tArgs);
+            const realArgs = [tObj]
             if(methodArgs.length === realArgs.length &&
               methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a, argTyp))) {
+                return {...expr, a: methodRet, obj: tObj, arguments: tArgs};
+              } else {
+               throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}` );
+              }
+          } else if (superclassmethods.has(expr.method)) {
+            const [methodArgs, methodRet] = superclassmethods.get(expr.method);
+            const realArgs = [tObj]
+            if(methodArgs.length === realArgs.length &&
+              methodArgs.every((argTyp: Type, i: number) => isAssignable(env, realArgs[i].a, argTyp))) {
                 return {...expr, a: methodRet, obj: tObj, arguments: tArgs};
               } else {
                throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}` );
