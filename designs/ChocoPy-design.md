@@ -125,12 +125,12 @@ print(f())`, ["4"]
 
 In `ast.ts`, we need to add string type to `Type`.
 ```typescript
-{tag: "str", name: string}
+{tag: "str"}
 ```
 
 In `ir.ts`, we need to add string type to `Value<A>`.
 ```typescript
-{ a?: A, tag: "str", name: string }
+{ a?: A, tag: "str", value: string }
 ```
 
 
@@ -180,10 +180,10 @@ The final structure should be like this:
 
 ### String
 
-+ In `type-check.ts`, add case `str` in `tcString` to annotate a string. 
++ In `type-check.ts`, add case `str` in `tcLiteral` to annotate a string. 
 + In `type-check.ts`, modify `tcExpr`  to make `BinOp.Plus` with 2 strings legal. 
-+ In `compiler.ts`, need a function `CodeGenString` to generate wasm code.
-+ In `compiler.ts`, need to modify case `binop` in `codeGenExpr` to handle string concatence situation.
++ In `compiler.ts`, add case `str` in `codeGenValue` to generate wasm code.
++ In `compiler.ts`, add function `codeGenBinOpStr` to handle string concatenation.
 
 ### Lists
 
@@ -201,7 +201,7 @@ The final structure should be like this:
 
 ### String
 
-String are placed consecutively on heap memory. Concatenation of two strings returns a new string whose first char is placed on the next available heap address at the time of concatenation.
+In the heap memory, a string is represented as a sequence of 32-bit integers. The first integer is the string's length, and the following integers are ASCII codes of the string characters. Indexing into a string returns a new string of length 1. Concatenation returns a new string with length equal to the sum of the lengths of its operands.
 
 ### Lists
 
