@@ -9,6 +9,7 @@ export function fullSrcLine(SRC: string, fromLoc: Location, endLoc: Location) {
   const lineStart = fromLoc.srcIdx - fromLoc.col;
   return SRC.slice(lineStart, endLoc.srcIdx);
 }
+// TODO: add eolLoc to constructor of TypeCheckError
 export class TypeCheckError extends Error {
   __proto__: Error
   constructor(SRC?: string, message?: string, fromLoc?: Location, endLoc?: Location) {

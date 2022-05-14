@@ -10,13 +10,13 @@ export type ParserEnv = {
 
 /**
  * Binary search on sorted array. 
- * Returns the index at which target should be inserted in arr.
+ * Returns the index at which target should be inserted in arr and the value at that index of arr.
  * 
  * @param arr sorted array
  * @param target target to insert
- * @returns idx to insert target in arr
+ * @returns idx to insert target in arr and the value at that index of arr
  */
-export function binarySearch(arr: Array<number>, target: number): number {
+export function binarySearch(arr: Array<number>, target: number): number{
   var left = 0;
   var right = arr.length;
   var ans = 0;
@@ -30,13 +30,20 @@ export function binarySearch(arr: Array<number>, target: number): number {
     }
   }
   // console.log(arr, target, ans)
-  return ans
+  return ans;
 }
 
 export function indToLoc(srcIdx: number, env: ParserEnv): Location {
   const row = binarySearch(env.lineBreakIndices, srcIdx) + 1;
   const col = srcIdx - env.lineBreakIndices[row - 1];
-  return { row, col, srcIdx }
+  return { row: row, col: col, srcIdx: srcIdx }
+}
+
+export function nextLineBreakLoc(loc: Location, env: ParserEnv): Location {
+  const row = loc.row;
+  const colLastEOL = row === 1 ? 0 : env.lineBreakIndices[row - 2];
+  const col = env.lineBreakIndices[row - 1] - colLastEOL;
+  return { row: row, col: col, srcIdx: env.lineBreakIndices[row - 1] }
 }
 
 
@@ -45,9 +52,10 @@ function wrap_locs<T extends Function>(traverser: T, storeSrc: boolean = false):
     const fromLoc = indToLoc(c.from, env);
     const node = traverser(c, s, env, ...args);
     const endLoc = indToLoc(c.to, env);
-    if (storeSrc)
-      return { ...node, a: { ...node.a, fromLoc, endLoc, src: s } }
-    else return { ...node, a: { ...node.a, fromLoc, endLoc } }
+    const eolLoc = nextLineBreakLoc(endLoc, env);
+    if (storeSrc) // only store full src in the Program node
+      return { ...node, a: { ...node.a, fromLoc: fromLoc, endLoc: endLoc, eolLoc: eolLoc, src: s } }
+    else return { ...node, a: { ...node.a, fromLoc: fromLoc, endLoc: endLoc, eolLoc: eolLoc } }
   };
 }
 

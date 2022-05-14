@@ -4,6 +4,7 @@ export type Annotation = {
   type?: Type,
   fromLoc?: Location, // include
   endLoc?: Location, // exclude
+  eolLoc: Location, // loc of the next line break
   src?: string
 }
 export type Location = {
