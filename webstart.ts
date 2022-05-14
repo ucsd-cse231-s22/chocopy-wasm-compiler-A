@@ -23,6 +23,46 @@ function stringify(typ: Type, arg: any): string {
   }
 }
 
+export function print_class(memory:WebAssembly.Memory, repl: BasicREPL, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number): Array<string> {
+
+  var fields_offset_ = repl.currentEnv.classes.get(classname);
+  var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
+  var mem = new Uint32Array(memory.buffer);
+  var display: Array<string> = [];
+  // A[1][0] refers to the offset value of field A, sorted by the offset value to ensure the iteration has a consistent order. 
+  var fields_offset = Array.from(fields_offset_.entries());
+  fields_offset.sort((a, b) => {
+    return a[1][0] - b[1][0];
+  });
+  // the reason why pointer beacuse mem is u32 array(4 byte addressing) and the pointer value returned by the run method is in raw address(byte adress)
+  // surprisingly(since there is also i64 in wasm), the offset stored int the currentenv is in 4 byte addressing.
+  const space = " ";
+  if (met_object.has(pointer)) {
+    display.push(`${space.repeat(level)}displayed ${met_object.get(pointer)}:${classname} object at addr ${pointer}: ...`);
+    return display;
+  }
+  display.push(
+    `${space.repeat(level)}${object_number}:${classname} object at addr ${pointer}: {`);
+  met_object.set(pointer, object_number)
+  fields_offset.forEach(thisfield => {
+    var thisfield_type = fields_type.get(thisfield[0]);
+    if (thisfield_type.tag === "class") {
+      if (mem[pointer / 4 + thisfield[1][0]] === 0) {
+        display.push(`${space.repeat(level + 2)}${thisfield[0]} : none `);
+      } else {
+        display.push(`${space.repeat(level + 2)}${thisfield[0]}:{`)
+        display.push(...print_class(memory, repl, mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5, met_object, object_number + 1));
+        display.push(`${space.repeat(level + 2)}}`)
+      }
+    } else {
+      display.push(`${space.repeat(level + 2)}${thisfield[0]} : ${stringify(thisfield_type, mem[pointer / 4 + thisfield[1][0]])} `);
+    }
+  }
+  )
+  display.push(
+    `${space.repeat(level + 1)}}`);
+  return display;
+}
 function print(typ: Type, arg: number): any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
@@ -109,46 +149,7 @@ function webStart() {
     }
     const editorBox = initCodeMirror();
 
-    function console_log_class(repl: BasicREPL, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number): Array<string> {
-
-      var fields_offset_ = repl.currentEnv.classes.get(classname);
-      var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
-      var mem = new Uint32Array(memory.buffer);
-      var display: Array<string> = [];
-      // A[1][0] refers to the offset value of field A, sorted by the offset value to ensure the iteration has a consistent order. 
-      var fields_offset = Array.from(fields_offset_.entries());
-      fields_offset.sort((a, b) => {
-        return a[1][0] - b[1][0];
-      });
-      // the reason why pointer beacuse mem is u32 array(4 byte addressing) and the pointer value returned by the run method is in raw address(byte adress)
-      // surprisingly(since there is also i64 in wasm), the offset stored int the currentenv is in 4 byte addressing.
-      const space = " ";
-      if (met_object.has(pointer)) {
-        display.push(`${space.repeat(level)}displayed ${met_object.get(pointer)}:${classname} object at addr ${pointer}: ...`);
-        return display;
-      }
-      display.push(
-        `${space.repeat(level)}${object_number}:${classname} object at addr ${pointer}: {`);
-      met_object.set(pointer, object_number)
-      fields_offset.forEach(thisfield => {
-        var thisfield_type = fields_type.get(thisfield[0]);
-        if (thisfield_type.tag === "class") {
-          if (mem[pointer / 4 + thisfield[1][0]] === 0) {
-            display.push(`${space.repeat(level + 2)}${thisfield[0]} : none `);
-          } else {
-            display.push(`${space.repeat(level + 2)}${thisfield[0]}:{`)
-            display.push(...console_log_class(repl, mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5, met_object, object_number + 1));
-            display.push(`${space.repeat(level + 2)}}`)
-          }
-        } else {
-          display.push(`${space.repeat(level + 2)}${thisfield[0]} : ${stringify(thisfield_type, mem[pointer / 4 + thisfield[1][0]])} `);
-        }
-      }
-      )
-      display.push(
-        `${space.repeat(level + 1)}}`);
-      return display;
-    }
+   
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
@@ -180,7 +181,7 @@ function webStart() {
           break;
         case "object":
           // elt.innerHTML = `${result.name} object at ${result.address}`
-          elt.innerHTML = console_log_class(repl, result.address, result.name, 0, new Map(), 1).join("\n");
+          elt.innerHTML = print_class(memory, repl, result.address, result.name, 0, new Map(), 1).join("\n");
           break
         default: throw new Error(`Could not render value: ${result}`);
       }

@@ -16,7 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "chai-as-promised": "^7.1.1",
-    "codemirror": "^5.59.4",
+    "codemirror": "^5.65.3",
     "file-saver": "^2.0.5",
     "lezer": "^0.13.5",
     "lezer-python": "^0.13.7",
