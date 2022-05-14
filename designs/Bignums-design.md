@@ -1,22 +1,23 @@
 # Compiler A: Bignums - design
 
 ## AST, IR, and Built-in Libraries
-- We will change `print` in the `built-in library` to print bignums from the heap.
-- We plan to modify the `built-in library` to have Javascript functions support all the unary and binary operations of bignums. This way we can first support the behavior of Python, and then improve the efficiency by writing the functions in WASM.
+- All integer numbers are bignums.
+- We use `load`, `alloc` and `store` from `memory.wat` to interact with the memory.
+- We change `print` in the `built-in library` to print bignums from the heap.
+- We modify the `built-in library` to have JavaScript functions support all the unary and binary operations of bignums. This way we can first support the behavior of Python, and then improve the efficiency by writing the functions in WASM.
 
 ## New Functions, Datatypes, and/or Files
-- We will change `codeGenValue` to allocate bignums in the memory. This will store the bignum in memory and leave the address on the stack.
-- We will modify `codeGenUniOp` and `codeGenBinOp` to support operations.
-- We will add `codeGenMemoryIndex` to let strings or lists access memory with bignums as indices. This function will take the base address and the bignum index, and return the memory address you want to access.
+- We change `codeGenValue` to allocate bignums in the memory. This will store the bignum in memory and leave the address on the stack.
+- We modify `codeGenUniOp` and `codeGenBinOp` to support operations.
+- We could either write a WASM or JavaScript function to assist the memory management group to access a list or string lookup with bignums as indices, or leave it to them to calculate the offset themselves.
 
 ## Value Representation and Memory Layout
 
-- A bignum stores the underlying number in digits of 2^30-based.
+- A bignum stores the underlying number in digits of 2^31-based.
 - In memory, it will have the first block containing the number of digits, following chuncks in little-endian order.
     | n digits | digit(0) | digit(1) | ... | digit(n-1) |
     | -------- | -------- | -------- | -------- | -------- |
-- The sign of the bignum is determined by the sign of the number of digits. With negative number of digits mean the bignum is negative.
-
+- The sign of the bignum is determined by the sign of the number of digits. With negative number of digits means the bignum is negative.
 
 
 
