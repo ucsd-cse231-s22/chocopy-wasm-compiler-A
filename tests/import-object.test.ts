@@ -22,6 +22,10 @@ function print(typ: Type, arg: any): any {
   return arg;
 }
 
+function len_list(arg:any, listlen: any):any{
+  return listlen;
+}
+
 function len(typ: Type, arg: any): Number {
   switch (typ) {
     case Type.Str:
@@ -68,7 +72,7 @@ export const importObject : any = {
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_str: (arg: number) => print(Type.Str, arg),
     print_none: (arg: number) => print(Type.None, arg),
-    len: (arg: any) => len(Type.Str, arg),
+    len_list: (arg: number, listlen:number) => len_list(arg, listlen),
     len_str: (arg: number) => len(Type.Str, arg),
     abs: Math.abs,
     min: Math.min,

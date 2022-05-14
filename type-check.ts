@@ -277,6 +277,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
             var a = {tag:"list", length: tLeft.a.listsize+tRight.a.listsize, elementtype: tLeft.a.elementtype};
             return {a: a as Type, ...tBin}
           }
+          else if (equalType(tLeft.a, STR) && equalType(tRight.a, STR)) { return { a: STR, ...tBin } }
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Minus:
         case BinOp.Mul:
@@ -454,15 +455,20 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         throw new TypeCheckError("not support different types in one list");;
       }
     case "list-lookup":
-      var typedlist = tcExpr(env, locals, expr.list);
+      var typedobj = tcExpr(env, locals, expr.list);
       var typedindex = tcExpr(env, locals, expr.index);
-      if(typedlist.a.tag !== "list"){
+      if(typedobj.a.tag !== "list" && typedobj.a.tag !== "str"){
         throw new TypeCheckError(`cannot index into this variable`);
       }
       if(typedindex.a.tag !== "number"){
         throw new TypeCheckError(`index is not a number`);
       }
-      return {...expr, list: typedlist, index: typedindex, a: typedlist.a.elementtype};
+      if(typedobj.a.tag == "list"){
+        return {...expr, list: typedobj, index: typedindex, a: typedobj.a.elementtype};
+      }
+      else if(typedobj.a.tag == "str"){
+        return { ...expr, a: STR, list: typedobj, index: typedindex };
+      }
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
 }

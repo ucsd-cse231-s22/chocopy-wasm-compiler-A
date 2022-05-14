@@ -350,14 +350,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         start: oval,
         offset: { tag: "wasmint", value: offset }}];
     }
-    case "index": {
-      const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
-      if (e.obj.a !== STR) { throw new Error("Compiler's cursed, go home"); }
-      const [iinits, istmts, ival] = flattenExprToVal(e.index, env);
-      if (e.index.a !== NUM) { throw new Error("Compiler's cursed, go home"); }
-
-      return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "str-index", start: oval, offset: ival} ];
-    }
     case "construct":
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
@@ -426,36 +418,42 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           offset: literalToVal(PyLiteralInt(0))}
       ]
     case "list-lookup":
-      var [startinits, startstmts, startval] = flattenExprToVal(e.list, env);
-      var [idxinits, idxstmts, idxval]:any = flattenExprToVal(e.index, env);
-      if(idxval.tag=="num"){
-        idxval.value +=BigInt('1');
-        return[
-          [...startinits, ...idxinits],
-          [...startstmts, ...idxstmts],
-          {tag: "load",
-          start: startval,
-          offset: idxval}
-        ]
+      if(e.a.tag=="str"){
+        const [oinits, ostmts, oval] = flattenExprToVal(e.list, env);
+        const [iinits, istmts, ival] = flattenExprToVal(e.index, env);
+        return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "str-index", start: oval, offset: ival} ];
       }
-      else if(idxval.tag == "id"){
-        var offset = generateName("offset");
-        idxinits.push({name: offset, type: {tag: "number"}, value: {tag:"num", value: 0}})
-        idxstmts.push({
-          a:{tag: "number"},
-          tag: "assign",
-          name: offset,
-          value: {a: {tag: "number"}, tag: "binop", left: idxval, op: 0, right: {tag: "num", value: 1}}
-        })
-        return[
-          [...startinits, ...idxinits],
-          [...startstmts, ...idxstmts],
-          {tag: "load",
-          start: startval,
-          offset: {tag: "id", name: offset}}
-        ]
+      else{
+        var [startinits, startstmts, startval] = flattenExprToVal(e.list, env);
+        var [idxinits, idxstmts, idxval]:any = flattenExprToVal(e.index, env);
+        if(idxval.tag=="num"){
+          idxval.value +=BigInt('1');
+          return[
+            [...startinits, ...idxinits],
+            [...startstmts, ...idxstmts],
+            {tag: "load",
+            start: startval,
+            offset: idxval}
+          ]
+        }
+        else if(idxval.tag == "id"){
+          var offset = generateName("offset");
+          idxinits.push({name: offset, type: {tag: "number"}, value: {tag:"num", value: 0}})
+          idxstmts.push({
+            a:{tag: "number"},
+            tag: "assign",
+            name: offset,
+            value: {a: {tag: "number"}, tag: "binop", left: idxval, op: 0, right: {tag: "num", value: 1}}
+          })
+          return[
+            [...startinits, ...idxinits],
+            [...startstmts, ...idxstmts],
+            {tag: "load",
+            start: startval,
+            offset: {tag: "id", name: offset}}
+          ]
+        }
       }
-
   }
 }
 
