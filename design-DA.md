@@ -7,3 +7,6 @@ For type checking, we will check whether the lengths of the left and right struc
 
 ## CODE GEN
 For code generation, the high-level implementation is to iterate every element in the left structure and assign the correct values to them respectively from the right structure. It's worth noting that we need to handle the element marked with `*`. For this special element, we will assign the value after assigning all the values to the plain elements.
+
+## Milestone 1
+During this week, we implemented most functions in our previous design except handling list and tuple in the right part and the element marked with `*`, which depended on other teams' work. Additionally, we added support for range, which had not been metioned in our previous design. We mainly changed ast.ts, parser.ts, type-check.ts, and lower.ts. All this code is runnable and testable. We added new tests in a separated file called destructure.test.ts. You can run them by executing `npm run test-desdestructure`.
