@@ -34,3 +34,7 @@ export const NUM : Type = {tag: "number"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
 export function CLASS(name : string) : Type {return {tag: "class", name}};
+// Week6: Project Milestone Tests
+export function TUPLE(content_type : Array<Type>) : Type{ return {tag: "tuple", contentTypes: content_type} }
+export function SET(ct_type : Type) : Type{ return {tag: "set", content_type: ct_type} }
+export function DICT(kType:Type,vType:Type) : Type{ return {tag: "dict", key: kType, value: vType} }

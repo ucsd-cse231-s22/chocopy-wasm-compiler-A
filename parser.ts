@@ -41,7 +41,19 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       }
     case "CallExpression":
       c.firstChild();
+      // For set method call: len()
+      if (s.substring(c.from, c.to) === "len") {
+        c.nextSibling(); // Arglist
+        let args = traverseArguments(c, s);
+        c.parent();
+        return { tag: "method-call", obj: args[0], method: "size", arguments: []};
+      }
       const callExpr = traverseExpr(c, s);
+      // For set() initialization
+      if (callExpr.tag === "id" && callExpr.name === "set") {
+        c.parent();
+        return { tag: "set_expr", contents: []};
+      }
       c.nextSibling(); // go to arglist
       let args = traverseArguments(c, s);
       c.parent(); // pop CallExpression
@@ -128,6 +140,11 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         case "or":
           op = BinOp.Or;
           break;
+        case "in": // For set method: in
+          c.nextSibling();
+          const obj = traverseExpr(c, s);
+          c.parent();
+          return { tag: "method-call", obj: obj, method: "has", arguments: [lhsExpr] };
         default:
           throw new Error("Could not parse op at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to))
       }
@@ -185,6 +202,49 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         tag: "id",
         name: "self"
       };
+    
+    case "SetExpression":
+      let elements: Array<Expr<any>> = [];
+      c.firstChild(); // Focus on "{"
+      while (c.nextSibling()) {
+        let key = traverseExpr(c, s);
+        elements.push(key);
+        c.nextSibling(); // Focus on } or ,
+      }
+      c.parent(); // Pop to SetExpression
+      return { tag: "set_expr", contents: elements };
+    
+    case "DictionaryExpression":
+      // entries: Array<[Expr<A>, Expr<A>]>
+      let keyValuePairs: Array<[Expr<any>, Expr<any>]> = [];
+      c.firstChild(); // Focus on "{"
+      while (c.nextSibling()) {
+        if (s.substring(c.from, c.to) === "}") {
+          // check for empty dict
+          break;
+        }
+        let key = traverseExpr(c, s);
+        c.nextSibling(); // Focus on :
+        c.nextSibling(); // Focus on Value
+        let value = traverseExpr(c, s);
+        keyValuePairs.push([key, value]);
+        c.nextSibling(); // Focus on } or ,
+      }
+      c.parent(); // Pop to DictionaryExpression
+      return { tag: "dict_expr", entries: keyValuePairs };
+    
+    case "TupleExpression":
+      let tupleExpr: Expr<any>[] = [];
+      c.firstChild(); // Open parenthesis "("
+      c.nextSibling();
+      while (c.name !== ")") {
+        tupleExpr.push(traverseExpr(c, s));
+        c.nextSibling(); // comma ","
+        c.nextSibling(); // next expression or closing parenthesis ")"
+      }
+      c.parent();
+      return { tag: "tuple_expr", contents: tupleExpr };
+
     default:
       throw new Error("Could not parse expr at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to));
   }
@@ -367,6 +427,11 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
   }
   c.firstChild(); // go to :
   c.nextSibling(); // go to type
+  if (s.substring(c.from, c.to) === "set") { // set initialization
+    c.parent();
+    c.parent();
+    return { name, type: { tag: "set", content_type: {tag: "number"} }, value: { tag: "set"}};
+  }
   const type = traverseType(c, s);
   c.parent();
   

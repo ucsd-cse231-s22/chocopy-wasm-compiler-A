@@ -1,6 +1,7 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
+import { setUtilFuns } from "./set-utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -48,8 +49,8 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
-  const allFuns = funs.concat(classes).join("\n\n");
-  // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
+  const setFUns : Array<string> = classes.concat(setUtilFuns());
+  const allFuns = funs.concat(setFUns).join("\n\n");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
   withDefines.labels = ast.body.map(block => block.label);
   var bodyCommands = "(local.set $$selector (i32.const 0))\n"
@@ -203,6 +204,10 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       } else {
         return [`(global.get $${val.name})`];
       }
+    case "set":
+      return [`
+      (i32.const 10)
+      (call $alloc)`];
   }
 }
 
