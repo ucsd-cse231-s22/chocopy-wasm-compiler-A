@@ -119,7 +119,7 @@ class B(A):
 
     y:int = 10
     
-a : B = None
+a : A = None
 a = B()
 print(a.increment(1))
 `, [`2`]);
@@ -175,6 +175,8 @@ class B(A):
 	
 	def __init__(self: B):
 		self.b = 4
+	def get_a(self: A) -> int:
+		return self.a
 	def get_b(self: B) -> int: 
 		return self.b
 		
@@ -183,31 +185,6 @@ l = B()
 print(l.get_a())
 print(l.get_b())
 `, [`1`,`4`]);
-assertPrint("method-overriding", `
-class List(object):
-	def sum(self: List) -> int: 
-		return 0
-
-class Empty(List):
-	def sum(self: Empty) -> int: 
-		return 0
-
-class Link(List):
-	val : int = 0
-	next : List = None
-
-	def sum(self: Link) -> int: 
-		return self.next.sum() + self.val
-	
-	def new(self : Link, val : int, next : List) -> Link:
-		self.val = val
-		self.next = next
-		return self
-
-l : List = None 
-l = Link().new(5, Link().new(13, Empty()))
-print(l.sum())
-`, [`18`]);
 assertPrint("method-doesnt-exist-in-superclass", `
 class A(object):
 	a : int = 1
