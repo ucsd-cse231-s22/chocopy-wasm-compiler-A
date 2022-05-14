@@ -63,10 +63,9 @@ f.close()
 #5
 ```
 f = open(0, 2)
-// “test” is set to default
-// mode is set to 2, but the file does not exist, tc will report an IO error.
 f.write()
 f.close()
+// the mode is read only, cannot write.
 ```
 
 #6
