@@ -36,10 +36,8 @@ let fdCounter = 0;
 let fs = new Map<number, OpenFile>(); // track current open files
 
 
-
-
-const global = require("global")
-const window = require("global/window")
+const window = require('global/window');
+/*
 function setItem(filePath: string, data:Array<number>) {
     console.log('setItem is called');
 }
@@ -54,6 +52,8 @@ window.localStorage = {
   setItem:setItem,
   getItem: getItem
 }
+*/
+
 
 /*
  * TODO Later: The input to open should be some value for string
