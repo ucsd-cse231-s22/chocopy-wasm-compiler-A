@@ -36,24 +36,6 @@ let fdCounter = 0;
 let fs = new Map<number, OpenFile>(); // track current open files
 
 /*
-function setItem(filePath: string, data:Array<number>) {
-    console.log('setItem is called');
-}
-function getItem(filePath: string): string {
-  console.log('getItem is called');
-  return "";
-}
-  
-global.window = {}
-window.localStorage = {
-  m: new Map<string, Array<number>>(),
-  setItem:setItem,
-  getItem: getItem
-}
-*/
-
-
-/*
  * TODO Later: The input to open should be some value for string
  * right now pretend that we are creating a file without a fname string
  * 
@@ -66,7 +48,6 @@ export function open(filePathAddr: number, mode: number): number {
     const filePath = './test.txt';
     
     // treat as creating a new file for now. Later with string type, we check if the filePathAddr already existed first.
-    // window.localStorage.setItem('test.txt', JSON.stringify([])); 
     if(window.localStorage.getItem(filePath) === null) {
         window.localStorage.setItem(filePath, JSON.stringify([])); 
     }
@@ -88,10 +69,7 @@ export function read(fd: number, numByte: number): number {
     let data = window.localStorage.getItem(file.filePath);
 
     if (!data) {
-        console.log("no data");
-
-        throw new Error("RUNTIME ERROR: not enough byte to read");
-        return 0;
+        throw new Error("RUNTIME ERROR: EOF");
     }
     
     let dataArray: Array<number> = JSON.parse(data);
@@ -101,7 +79,7 @@ export function read(fd: number, numByte: number): number {
     console.log(`file.fileSize: ${file.fileSize}, ${file.currentPosition}, ${dataArray}`)
     
     if(file.currentPosition >= file.fileSize) {
-        throw new Error("RUNTIME ERROR: not enough byte to read");
+        throw new Error("RUNTIME ERROR: EOF");
     }
 
     return dataArray[file.currentPosition];
