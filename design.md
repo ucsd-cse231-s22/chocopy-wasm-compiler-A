@@ -1,414 +1,153 @@
-<!-- Markdown Template Credits: https://github.com/othneildrew/Best-README-Template/blob/master/README.md -->
+# **Project: Milestone Code 1 (Chocopy)**
+### Naga Siva Subramanyam Makam, Laxminarasimha Saketh Khandavalli
+---
+## 1) Features proposed this week
+- Lists
+- Strings
+- For loops
 
-<h1 align="center">
-  <strong>ChocoPy Design Document</strong>
-</h1>
-<p align="center">
-  by Saketh Khandavalli and Naga Makam
-</p>
-
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-## Table of Contents
-
-- [Introduction](#introduction)
-- [Expected Features](#expected-features)
-- [Proposed Changes to ast.ts](#proposed-changes-to-ast)
-- [Proposed Changes to ir.ts](#proposed-changes-to-ir)
-- [Test Cases](#test-cases)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-***
-<br/>
-
-## **Introduction**
-
-This document outlines the changes and test cases that we intend to build as part of the compiler, during the course of the project for CSE231 - Advanced Compiler Design (Spring 22).
-
-## **Plan for Next Week**
-
-We are planning to implement following features this week:
-
-1. Lists
-1. Strings
-1. For loop
-
-<br/>
-
-***
-
-<br/>
-
-## **Expected features**
-  
-- [ ] Lists
-  - [ ] Declarations
-  - [ ] Look up and assign elements by index
-  - [ ] Concatenation and Printing Size of List
-
-- [ ] Strings
-  - [ ] Declarations
-  - [ ] Look up by index
-  - [ ] Concatenation
-
-- [ ] For loop
-  - [ ] Iterator for list/string
-  - [ ] Body
-
-<br/>
-
-***
-
-<br/>
-
-## **Proposed Changes to AST**
-
+## 2) Changes to AST
 ```
 export type Type =
-  ....
-  | { tag: 'list',   type: Type }
-  | { tag: 'str' }
-  ....
-
-export type Parameter<A> = 
-{ .... }
-
-export type Program<A> = 
-  ....
-
-export type FunDef<A> =
+  | {tag: "str"}
+  | { tag: 'list', type: Type }
+  ...
+export type Stmt<A> =
+  | {  a?: A, tag: "for", iterator: string, iterable: Expr<A>, body: Array<Stmt<A>> }
+  | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
+  ...
+export type Expr<A> =
+  | {  a?: A, tag: "index", object: Expr<A>, index: Expr<A> }
+  ...
+export type Literal = 
+  | { tag: "str", value: string }
+  | { tag: "list", value: Array<Expr<null>>|Array<Expr<Type>>, type?: Type}
   ...
 
-export type ClassDef<A> = 
-  ....
-
-export type VarInit<A> =
-  ....
-
+```
+## 3) Changes to IR
+```
 export type Stmt<A> =
-  ....
-  | { a?: A, tag: "list-assign", lhs: Expr<A>, index: Expr<A>, value: Expr<A>, typ: Type }
-  | { a?: A, tag: "str-assign", lhs: Expr<A>, value: Expr<A>, typ: Type }
-  | { tag: "for", iterator: string, iterable: Expr<A>, body: Array<Stmt<A>> }
-  ....
-
+  | { a?: A, tag: "for", iterator: string, iterable: Value<A>, body: Array<Stmt<A>> }
+  | { a?: A, tag: "list-store", start: Value<A>, offset: Value<A>, value: Value<A> } // start should be an id
+  ...
 export type Expr<A> =
-  ....
-  | { a?: A, tag: 'subscript', object: Expr<A>, index: Expr<A> }  
-  | { a?: A, tag: 'listexpr', elements: Array<Expr<A>> }
-  | { a?: A, tag: 'strexpr', elements: Array<Expr<A>> }
-  ....
-
-export type Value =
-  ....
-
-export type Literal<A> =
-  | { tag: "string", value: string }
-  | { tag: "empty" }
-  ....
-
+  | {  a?: A, tag: "list-load", start: Value<A>, offset: Value<A> }
+  ...
 ```
 
-<br/>
+## 4) Feature implementation details
+- For each of the features that we implemented, we added test cases in milestone1.test.ts These can be automatically run using the command `npm test`.
+- By using the command `npm run build-web` the working REPL and IDE can be used in the browser.
+- For each of the features we described our progress and provided some interesting test cases.
 
-***
-
-<br/>
-
-## **Proposed Changes to IR**
-
-```
-export type Program<A> = 
-{ .... }
-
-export type Class<A> = 
-{ .... }
-
-export type VarInit<A> = 
-{ .... }
-
-export type FunDef<A> = 
-{ .... }
-
-export type BasicBlock<A> = 
-  ....
-
-export type Stmt<A> =
-  | { a?: A, tag: "list-assign", lhs: Expr<A>, index: Expr<A>, value: Expr<A>, typ: Type }
-  | { a?: A, tag: "str-assign", lhs: Expr<A>, value: Expr<A>, typ: Type }
-  | { tag: "for", iterator: string, iterable: Expr<A>, body: Array<Stmt<A>> }
-  ....
-
-export type Expr<A> =
-  | { a?: A, tag: 'subscript', object: Expr<A>, index: Expr<A> }  
-  | { a?: A, tag: 'listexpr', elements: Array<Expr<A>> }
-  | { a?: A, tag: 'strexpr', elements: Array<Expr<A>> }
-  ----
-
-export type Value<A> = 
-  { a?: A, tag: "list", value: Value<A>[] }
-  { a?: A, tag: "string", value: Value<A>[] }
-  { a?: A, tag: "char", value: string }
-  { a?: A, tag: "empty" }
-  ....
+### a) Lists:
+We were able implement the support for lists completely.
+Some interesting testcases:
+##### Test case 1
 
 ```
+a : [int] = None
+a = [1,2,3,4,5]
+print(a[len(a)-1]
+```
+Expected output: `5`
 
+##### Test case 2
+```
+a:[int] = None
+a = [1, 2, 3] + [True, False, True]
+print(a[3])
+```
+Expected output: `TYPE ERROR` (lists with different types cannot be concatenated)
+##### Test case 3
+```
+class Cat(object):
+    x:int = 0
 
-<br/>
+c:[Cat] = None
+c = [None, None] + [Cat(), Cat()]
+print(c[2].x)
+```
+Expected output: `0`
 
-***
+### b) Strings:
+We were able implement the support for strings completely.
+Some interesting testcases:
+##### Test case 1
 
-<br/>
+```
+myStr: str = "abc"
+print(myStr)
+print(myStr[1])
+```
+Expected output: 
+`abc`
+`b`
 
-## **Test Cases**
-<details>
-  <summary> List </summary>
+##### Test case 2
+```
+a: str = ""
+a = "abc" + "edf"
+print(a)
+```
+Expected output: `abcedf`
+##### Test case 3
+```
+a: str = ""
+b: [int] = None
+b = [10, 20, 30]
+print(a+b)
+```
+Expected output: `TYPE ERROR`
 
-  <br/>
+### c) For loops:
+We were able implement the basic support for for-loops. But there are still some interesting cases we were able to identify where our implementation does not work currently. (Explained below with testcases)
+Some interesting testcases:
+##### Test case 1 (works)
 
-  - **List Declaration and Assignment** - of primitive Data Type
-  ```
-  myList : [int] = None
-  myList = [1,2,3,4]
-
-  print(myList[3])
-  ```
-  > The above program must print `4`
-
-  <br/>
-
-  - **List Declaration and Assignment** - of unknown Data Type
-  ```
-  myList : [cls] = None
-  myList = [1,2,3,4]
-
-  print(myList[3])
-  ```
-  > The above program must throw a `TYPE ERROR` because `cls` is not a defined class
-
-  <br/>
-
-  - **List Declaration and Assignment** - of incompatible Data Type
-  ```
-  myList : [int] = None
-  myList = [True, False, True, 1]
-
-  print(myList[0])
-  ```
-  > The above program must throw a `TYPE ERROR` because `True` is not a valid element for integer list
-
-  <br/>
-
-  - **List Subscripting** - valid index
-  ```
-  myList : [int] = None
-  myList = [99, 88, 77, 66, 55]
-
-  myList[2] = 11
-  print(myList[2])
-  ```
-  > The above program must print `11`
-
-  <br/>
-
-  - **List Subscripting** - index out of bounds
-  ```
-  myList : [int] = None
-  myList = [1,2,3,4,5]
-
-  print(myList[6])
-  ```
-  > The above program must return a `RUNTIME ERROR`
-
-  <br/>
-
-  - **List Length** - printing size of list
-  ```
-  myList : [int] = None
-  myList = [1,2,3,4,5]
-
-  print(len(myList))
-  ```
-  > The above program must print `5`
-
-  <br/>
-  
-  - **List Length** - using size of list as operand
-  ```
-  myList : [int] = None
-  myList = [1,2,3,4,5]
-
-  print(myList[len(myList)-1])
-  ```
-  > The above program must print `5`
-
-  <br/>
-
-  - **List Concatenation** - compatible list types
-  ```
-  myList1 : [int] = None
-  myList2 : [int] = None
-  myList3 : [int] = None
-
-  myList1 = [1, 2, 3]
-  myList2 = [4, 5, 6]
-  myList3 = myList1 + myList2
-
-  print(myList3[3])
-  ```
-  > The above program must compile successfully, and print `4`
-
-  <br/>
-
-  - **List Concatenation** - incompatible list types
-  ```
-  myList1 : [int] = None
-  myList2 : [bool] = None
-  myList3 : [int] = None
-
-  myList1 = [1, 2, 3]
-  myList2 = [True, False, True]
-  myList3 = myList1 + myList2
-
-  print(myList3[3])
-  ```
-  > The above program must throw a `TYPE ERROR` because an list of integers cannot be concatenated with a list of booleans
-
-  <br/>
-
-</details>
-
-<details>
-  <summary> String </summary>
-
-  <br/>
-
-  - **String Declaration and Assignment**
-  ```
-  myStr: str = "abc"
-  print(myStr)
-  ```
-  > The above program must print `abc`
-
-  <br/>
-  
-  - **List Subscripting** - valid index
-  ```
-  myStr: str = "abc"
-  print(myStr[2])
-  ```
-  > The above program must print `c`
-
-  <br/>
-
-  - **List Subscripting** - index out of bounds
-  ```
-  myStr: str = "abc"
-  print(myStr[6])
-  ```
-  > The above program must return a `RUNTIME ERROR`
-
-  <br/>
-
-  - **String Length** - printing size of string
-  ```
-  myStr: str = "abc"
-  print(len(myStr))
-  ```
-  > The above program must print `3`
-
-  <br/>
-  
-  - **String Length** - using size of string as operand
-  ```
-  myStr: str = "abc"
-  print(myStr[len(myStr)-1])
-  ```
-  > The above program must print `c`
-
-  <br/>
-
-  - **String Concatenation**
-  ```
-  myStr1: str = "abc"
-  myStr2: str = "edf"
-  myStr3: str = ""
-  
-  myStr3 = myStr1 + myStr2
-  print(myStr3)
-  ```
-  > The above program must compile successfully, and print `abcedf`
-
-  <br/>
-  
-</details>
-
-<details>
-  <summary> For Loop </summary>
-  <br/>
-
-  - **Iteration over array**
-  ```
-  a: [int] = None
-  x: int = 0
-  a = [1,2,3]
-  
-  for x in a:
+```
+a: [int] = None
+x: int = 0
+a = [1,2,3]
+for x in a:
     print(x)
-  ```
-  > The above program must print `1\n2\n3`
+```
+Expected output: 
+`1`
+`2`
+`3`
 
-  <br/>
-  
-  - **Iteration over string**
-  ```
-  a: str = "abc"
-  x: str = ""
-  
-  for x in a:
+##### Test case 2 (works)
+```
+a: str = "abc"
+x: int = 0
+for x in a:
     print(x)
-  ```
-  > The above program must print `a\nb\nc`
-
-  <br/>
-
-  
-  - **Iterator not defined**
-  ```
-  a: str = "abc"
-  for x in a:
+```
+Expected output: `TYPE ERROR` (Iterator `x` must be of the type `str`)
+##### Test case 3 (does not work)
+```
+a: str = "abc"
+x: str = ""
+for x in a:
+  print(x)
+```
+Expected output:
+`a`
+`b`
+`c`
+Explanation: In general for lists, the iterator is of the same type of the list contents, (eg: iterator should be `int` for `[1,2,3]` list). But in the case of strings the iterator is also of type `str`, this needs to be handled carefully and we aim to finish it during next week.
+##### Test case 4 (does not work)
+```
+x : int = 0
+for x in [1, 2, 3, 4, 5]:
+  if x > 3:
     print(x)
-  ```
-  > The above program must throw a `TYPE ERROR` because an iterator `x` is not defined
-
-  <br/>
-  
-  - **Iterator defined with non-compatible type**
-  ```
-  a: str = "abc"
-  x: int = 0
-  for x in a:
-    print(x)
-  ```
-  > The above program must throw a `TYPE ERROR` because an iterator `x` is not of the type `str`
-
-  <br/>
-  
-   - **Returning from for loop**
-   ```
-   def f() -> int:
-      x : int = 0
-      for x in [1, 2, 3, 4, 5]:
-        if x > 3:
-          return x
-      return x
-   print(f())
-  ```
-  > The above program must print `4`
-
-  <br/>
-</details>
-
-<br/>
-
-***
+```
+Expected output:
+`4`
+`5`
+Explanation: This test case requires good understanding of the control flow graph for implementation because there is an `if` condition inside the for-loop. This week we gained a proper understanding of how different blocks are arranged in the graph. So we aim to solve these kind of testcases during next week.
+## 5) Plan for next week
+We aim to finish the shortcomings described above and also aim to work on `Inheritence` and `Conditional Expression`. We also need to add features removed in PA3 such as `functions`, `elif`, `pass` etc 
