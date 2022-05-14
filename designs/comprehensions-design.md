@@ -79,14 +79,14 @@ Output: ```Error```
 Test cases that does not work yet is the following:
 
 1. ```print([[j for j in range(3)] for i in range(3)])```
-```
-2. a : List = None
+2. ```
+ a : List = None
 a = [i for i in range(5,10)]
 print(a)
 ```
 In case of the second test case, we skipped it because as suggested by proffesor, we plan on using the implementation by the lists team. For this week, we only worked on iterables using the range class.
 
-## Limitation so far (plan on fixing in week 7)
+## Limitation so far (plan on fixing in week 8)
 
 1. We made an assumption that the list comprehension expressions will only be used globally, and not locally inside any function.
 2. The explicit range class inside each of our test cases has a class member as curr. If we have an expression as [a for a in range(10)], then we assign a to range.curr (curr refers to the current element in the iteration). However, we are assigning a as a global variable, instead of giving it a local scope(ie, scope of variable a should only be within the comprehension). Because of this, every time we want to use a different comprehension expression, we are using a new counter variable.
@@ -96,12 +96,12 @@ In case of the second test case, we skipped it because as suggested by proffesor
 
 Since, we have not yet collaborated with the lists group, we are only printing the elements of the list (constructed by the comprehension expression). We plan to collaborate with the lists team in the upcoming week, and display the lists in the proper format. For example:
 
-print([1 for a in range(1,5)]) gives the following output instead of [1,1,1,1,1]::
+```print([1 for a in range(1,5)])``` gives the following output instead of ```[1,1,1,1,1]```::
+```1
 1
 1
 1
-1
-1
+1```
 
 We have added two new fields to the ast structure for list-comp: iterable_cond? and body. iterable condition checks if range.hasNext() returns true or not. body stores the following statements:: 1. print the current element, 2. call the next method. In the lower.ts file, we have converted the ast structure into an array of basic blocks. Also, as of this week, we are explicitly adding a range class in our test cases, but we would remove this as part of our next milestones. 
 
