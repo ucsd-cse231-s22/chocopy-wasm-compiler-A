@@ -20,5 +20,12 @@ describe("builtin tests", () => {
         `x : float = 3.2
         x` , 
         FLOAT);
+
+    // import / math
+    assertPrint("gcd", `print(gcd(12, 18))`, [`6`]);
+    assertPrint("lcm", `print(lcm(12, 18))`, [`36`]);
+    assertPrint("factorial", `print(factorial(5))`, [`120`]);
+    assertTC("import-x-from-y", `from y import x`, NONE);
+    assertTC("import-x", `import x`, NONE);
   });
   

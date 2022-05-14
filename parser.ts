@@ -69,13 +69,13 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
         var expr : Expr<null>;
-        if (callName === "print" || callName === "abs" || callName === "int" || callName === "bool") {
+        if (callName === "print" || callName === "abs" || callName === "int" || callName === "bool" || callName === "factorial") {
           expr = {
             tag: "builtin1",
             name: callName,
             arg: args[0]
           };
-        } else if (callName === "max" || callName === "min" || callName === "pow") {
+        } else if (callName === "max" || callName === "min" || callName === "pow" || callName === "gcd" || callName === "lcm") {
           expr = {
             tag: "builtin2",
             name: callName,

@@ -34,6 +34,9 @@ defaultGlobalFunctions.set("abs", [[NUM], NUM]);
 defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
+defaultGlobalFunctions.set("gcd", [[NUM, NUM], NUM]);
+defaultGlobalFunctions.set("lcm", [[NUM, NUM], NUM]);
+defaultGlobalFunctions.set("factorial", [[NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
 
 export const defaultTypeEnv = {
