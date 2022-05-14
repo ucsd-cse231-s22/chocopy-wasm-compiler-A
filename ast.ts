@@ -44,7 +44,6 @@ export type Expr<A> =
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
   | {  a?: A, tag: "list-obj", length: number, entries: Array<Expr<A>>}
-  | {  a?: A, tag: "list-lookup", list: Expr<A>, index: Expr<A>}
   | {  a?: A, tag: "list-length", list: Expr<A>}
 
 export type Literal = 

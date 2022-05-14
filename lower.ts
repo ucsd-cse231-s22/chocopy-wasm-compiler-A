@@ -218,7 +218,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var idxInit : AST.VarInit<Type> = { a: NONE, name: idx, type: NUM, value: PyLiteralInt(0) };
       var irIdx = lowerVarInit(idxInit, env);
       // if (s.iterable.tag !== "list-obj") throw new Error("Compiler is cursed, go home.")
-      var curState : AST.Expr<Type> = {  a: NUM, tag: "list-lookup", list: s.iterable, index: {  a: NUM, tag: "id", name: idx }};
+      var curState : AST.Expr<Type> = {  a: NUM, tag: "index", obj: s.iterable, index: {  a: NUM, tag: "id", name: idx }};
       var assignStmt : AST.Stmt<Type> = {  a: NONE, tag: "assign", name: s.name, value: curState };
 
       var stepExpr : AST.Expr<Type> = {  a: NUM, tag: "binop", op: BinOp.Plus, left: {  a: NUM, tag: "id", name: idx }, right: PyLiteralExpr(PyInt(1))};
@@ -417,14 +417,14 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           start: startval,
           offset: literalToVal(PyLiteralInt(0))}
       ]
-    case "list-lookup":
+    case "index":
       if(e.a.tag=="str"){
-        const [oinits, ostmts, oval] = flattenExprToVal(e.list, env);
+        const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
         const [iinits, istmts, ival] = flattenExprToVal(e.index, env);
         return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "str-index", start: oval, offset: ival} ];
       }
       else{
-        var [startinits, startstmts, startval] = flattenExprToVal(e.list, env);
+        var [startinits, startstmts, startval] = flattenExprToVal(e.obj, env);
         var [idxinits, idxstmts, idxval]:any = flattenExprToVal(e.index, env);
         if(idxval.tag=="num"){
           idxval.value +=BigInt('1');

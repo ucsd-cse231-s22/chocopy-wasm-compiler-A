@@ -401,18 +401,18 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeCheckError("field lookups require an object");
       }
-    case "index":
-      var tObj = tcExpr(env, locals, expr.obj);
-      if (tObj.a === STR) {
-        var iObj = tcExpr(env, locals, expr.index);
-        if (iObj.a !== NUM) {
-          throw new TypeCheckError("index should be a number");
-        }
-        return { ...expr, a: STR, obj: tObj, index: iObj };
-      } else {
-        // TODO: support list
-        throw new TypeCheckError("indexing requires a string");
-      }
+    // case "index":
+    //   var tObj = tcExpr(env, locals, expr.obj);
+    //   if (tObj.a === STR) {
+    //     var iObj = tcExpr(env, locals, expr.index);
+    //     if (iObj.a !== NUM) {
+    //       throw new TypeCheckError("index should be a number");
+    //     }
+    //     return { ...expr, a: STR, obj: tObj, index: iObj };
+    //   } else {
+    //     // TODO: support list
+    //     throw new TypeCheckError("indexing requires a string");
+    //   }
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj);
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
@@ -454,8 +454,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       else{  //
         throw new TypeCheckError("not support different types in one list");;
       }
-    case "list-lookup":
-      var typedobj = tcExpr(env, locals, expr.list);
+    case "index":
+      var typedobj = tcExpr(env, locals, expr.obj);
       var typedindex = tcExpr(env, locals, expr.index);
       if(typedobj.a.tag !== "list" && typedobj.a.tag !== "str"){
         throw new TypeCheckError(`cannot index into this variable`);
@@ -464,10 +464,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         throw new TypeCheckError(`index is not a number`);
       }
       if(typedobj.a.tag == "list"){
-        return {...expr, list: typedobj, index: typedindex, a: typedobj.a.elementtype};
+        return {...expr, obj: typedobj, index: typedindex, a: typedobj.a.elementtype};
       }
       else if(typedobj.a.tag == "str"){
-        return { ...expr, a: STR, list: typedobj, index: typedindex };
+        return { ...expr, a: STR, obj: typedobj, index: typedindex };
       }
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
