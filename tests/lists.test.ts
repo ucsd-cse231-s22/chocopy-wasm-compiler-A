@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { parser } from "lezer-python";
 import { traverseExpr, traverseStmt, traverse, parse } from "../parser";
 import { BinOp } from "../ast";
-import { assertPrint, assertTC, assertTCFail } from "./asserts.test";
+import { assertFail, assertPrint, assertTC, assertTCFail } from "./asserts.test";
 import { NUM, BOOL, NONE } from "../utils";
 
 // // We write tests for each function in parser.ts here. Each function gets its
@@ -250,6 +250,43 @@ describe("traverseExpr(c, s) for lists", () => {
   });
 });
 
+describe("traverseStmt(c, s) for lists", () => {
+  it("parses list assign", () => {
+    const source = "a[1] = 2";
+    const cursor = parser.parse(source).cursor();
+
+    // go to statement
+    cursor.firstChild();
+
+    const parsedStmt = traverseStmt(cursor, source);
+
+    // Note: we have to use deep equality when comparing objects
+    expect(parsedStmt).to.deep.equal({
+      tag: "index-assign",
+      obj: {tag: "id", name: "a"},
+      index: {tag: "literal", value: {tag: "num", value: 1}},
+      value: {tag: "literal", value: {tag: "num", value: 2}}
+    });
+  });
+  it("parses list of list assign", () => {
+    const source = "a[1][2] = 3";
+    const cursor = parser.parse(source).cursor();
+
+    // go to statement
+    cursor.firstChild();
+
+    const parsedStmt = traverseStmt(cursor, source);
+
+    // Note: we have to use deep equality when comparing objects
+    expect(parsedStmt).to.deep.equal({
+      tag: "index-assign",
+      obj: {tag: "index", obj: {tag: "id", name: "a"}, index: {tag: "literal", value: {tag: "num", "value": 1}}},
+      index: {tag: "literal", value: {tag: "num", value: 2}},
+      value: {tag: "literal", value: {tag: "num", value: 3}}
+    });
+  });
+});
+
 describe("tc for lists", () => {
   assertTC("list of ints", "[1,2,3]", { tag: "list", itemType: NUM });
   assertTC("list of bools", "[True, False]", { tag: "list", itemType: BOOL });
@@ -298,6 +335,17 @@ describe("tc for lists", () => {
     `
   [[],[],[]]`,
     { tag: "list", itemType: { tag: "empty" } }
+  );
+  assertTC(
+    "empty list index 1",
+    `
+  [][0]`,
+  {tag: "empty"}
+  );
+  assertTC(
+    "empty list index 2",
+    `
+  [[], [1,2]][0][1]`, NUM
   );
   assertTC("list access 1", "[True, False][0]", BOOL);
   assertTC(
@@ -356,7 +404,6 @@ describe("tc for lists", () => {
   a : int = 1
   a[0] = 0`
   );
-  assertTCFail("index into empty list", `[][3]`);
   assertTC(
     "list of nones",
     `
@@ -435,15 +482,47 @@ describe("tc for lists", () => {
 });
 
 describe("runner for lists", () => {
-  assertPrint(
-    `list print`,
-    `
+  assertPrint(`list access 1`, `
+  print([1,2,3][0])
+  `, [`1`]);
+  assertPrint(`list access 2`, `
+  print([False, False, True][2])
+  `, [`True`]);
+  assertFail(`list access 3`, `[False, False, True][-1]`);
+  assertFail(`list access 4`, `[False, False, True][3]`);
+  assertFail(`list access 5`, `[][3])`);
+  assertFail(`list access 6`, `[][0]`);
+  assertFail(`list access 7`, `[1,2][2]`);
+  assertFail(`list access 8`, `[[], [1,2,3]][0][0]`);
+  assertFail(`list access 9`, `[[], []][0][0]`);
+  assertPrint(`list access 10`, `print([[1,2], [2,3]][0][1])`, [`2`]);
+  assertPrint(`list assign 1`, `
   a : [int] = None
-  a = [1,2,3]
-  print(a)
-  `,
-    ["[1,2,3]"]
-  );
+  a = [1]
+  a[0] = 2
+  print(a[0])
+  `, [`2`]);
+  assertPrint(`list assign 2`, `
+  a : [[int]] = None
+  a = [[1]]
+  a[0][0] = 2
+  print(a[0][0])
+  `, [`2`]);
+  assertPrint(`list assign 3`, `
+  a : [[int]] = None
+  a = [[1], []]
+  a[1] = [2,3,4]
+  print(a[1][2])
+  `, [`4`]);
+  // assertPrint(
+  //   `list print`,
+  //   `
+  // a : [int] = None
+  // a = [1,2,3]
+  // print(a)
+  // `,
+  //   ["[1,2,3]"]
+  // );
 });
 
 // describe('traverseStmt(c, s) function', () => {

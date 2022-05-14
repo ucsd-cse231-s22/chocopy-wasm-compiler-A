@@ -483,8 +483,8 @@ export function tcExpr(
       }
     case "index":
       var tObj = tcExpr(env, locals, expr.obj);
-      if(tObj.a === EMPTY()) {
-        throw new TypeCheckError(`cannot index into type: \`<Empty>\``);
+      if(tObj.a.tag === "empty") {
+        return { ...expr, a: tObj.a};
       } else if(tObj.a.tag === "list") {
         var tIndex = tcExpr(env, locals, expr.index);
         if(tIndex.a !== NUM) {

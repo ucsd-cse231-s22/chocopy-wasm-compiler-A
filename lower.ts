@@ -195,9 +195,9 @@ function flattenStmt(
         ...ostmts, ...istmts, ...nstmts, {
           tag: "store",
           a: s.a,
-          start: oval,
+          start: { a: oval.a, tag: "listaddr", addr: oval },
           //@ts-ignore
-          offset: {...ival, value: ival.value + BigInt(1)},
+          offset: ival,
           value: nval
         });
       return [...oinits, ...iinits, ...ninits];
@@ -413,7 +413,7 @@ function flattenExprToExpr(
       const newListName = generateName("newList");
       const listAlloc: IR.Expr<Type> = {
         tag: "alloc",
-        amount: { tag: "wasmint", value: e.items.length },
+        amount: { tag: "wasmint", value: e.items.length+1 },
       };
       var inits: Array<IR.VarInit<Type>> = [];
       var stmts: Array<IR.Stmt<Type>> = [];
@@ -435,7 +435,7 @@ function flattenExprToExpr(
         };
       });
       return [
-        [{ name: newListName, type: e.a, value: { tag: "none" } }, ...inits],
+        [{ name: newListName, type: e.a, value: { a: e.a, tag: "listaddr", addr: { tag: "none" }}}, ...inits],
         [
           { tag: "assign", name: newListName, value: listAlloc },
           ...stmts,
@@ -445,10 +445,22 @@ function flattenExprToExpr(
         {
           a: e.a,
           tag: "value",
-          value: { a: e.a, tag: "id", name: newListName },
+          value: { a: e.a, tag: "listaddr", addr: {a: e.a, tag: "id", name: newListName} },
         },
       ];
-
+    case "index":
+      var [objInit, objStmts, objExpr] = flattenExprToVal(e.obj, env);
+      var [idxInit, idxStmts, idxExpr] = flattenExprToVal(e.index, env);
+      return [
+        [...objInit, ...idxInit],
+        [...objStmts, ...idxStmts],
+        {
+          a: e.a,
+          tag: "load",
+          start: {a: {tag: "number"}, tag: "listaddr", addr: objExpr},
+          offset: idxExpr,
+        },
+      ];
     case "id":
       return [[], [], { tag: "value", value: { ...e } }];
     case "literal":
