@@ -34,6 +34,9 @@ defaultGlobalFunctions.set("abs", [[NUM], NUM]);
 defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
+defaultGlobalFunctions.set("gcd", [[NUM, NUM], NUM]);
+defaultGlobalFunctions.set("lcm", [[NUM, NUM], NUM]);
+defaultGlobalFunctions.set("factorial", [[NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
 
 export const defaultTypeEnv = {
@@ -169,6 +172,9 @@ export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Arra
 
 export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<null>) : Stmt<Type> {
   switch(stmt.tag) {
+    case "import":
+      // TODO: bypass typechecking for now
+      return {a: NONE, tag: stmt.tag, mod: stmt.mod, name: stmt.name, alias: stmt.alias};
     case "assign":
       const tValExpr = tcExpr(env, locals, stmt.value);
       var nameTyp;

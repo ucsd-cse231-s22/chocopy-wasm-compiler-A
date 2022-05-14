@@ -88,7 +88,7 @@ More to come!
 	local.get $a
     local.get $b
     i32.mul
-    call $$abs
+    call $abs
     local.get $a
     local.get $b
     call $importedFrom$math$gcd

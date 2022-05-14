@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { gcd, lcm, factorial } from "../stdlib/math";
 
 enum Type { Num, Bool, None, Ellipsis }
 
@@ -44,7 +45,6 @@ export const importObject : any = {
     //  We can then examine output to see what would have been printed in the
     //  console.
     assert_not_none: (arg: any) => assert_not_none(arg),
-    print: (arg: any) => print(Type.Num, arg),
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
@@ -55,6 +55,9 @@ export const importObject : any = {
     min: Math.min,
     max: Math.max,
     pow: Math.pow,
+    gcd: gcd,
+    lcm: lcm,
+    factorial: factorial,
   },
 
   output: "",

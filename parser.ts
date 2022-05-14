@@ -69,13 +69,13 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
         var expr : Expr<null>;
-        if (callName === "print" || callName === "abs" || callName === "int" || callName === "bool") {
+        if (callName === "print" || callName === "abs" || callName === "int" || callName === "bool" || callName === "factorial") {
           expr = {
             tag: "builtin1",
             name: callName,
             arg: args[0]
           };
-        } else if (callName === "max" || callName === "min" || callName === "pow") {
+        } else if (callName === "max" || callName === "min" || callName === "pow" || callName === "gcd" || callName === "lcm") {
           expr = {
             tag: "builtin2",
             name: callName,
@@ -218,6 +218,26 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<null>
 
 export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
   switch(c.node.type.name) {
+    case "ImportStatement":
+      let importStatement: Stmt<null> = {tag: "import", mod: "", name: []};
+
+      c.firstChild();
+      if(s.substring(c.from, c.to).trim() === "from"){ // from x import y
+        c.nextSibling();
+        const from_name = s.substring(c.from, c.to);
+        c.nextSibling();
+        c.nextSibling();
+        const import_name = s.substring(c.from, c.to); 
+        // TODO(rongyi): did not handle multiple imports
+        importStatement.mod = from_name;
+        importStatement.name = [import_name];
+      } else { // import x
+        c.nextSibling();
+        const from_name = s.substring(c.from, c.to);
+        importStatement.mod = from_name
+      }
+      c.parent()
+      return importStatement;
     case "ReturnStatement":
       c.firstChild();  // Focus return keyword
       

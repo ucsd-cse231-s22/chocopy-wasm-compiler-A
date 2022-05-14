@@ -95,6 +95,9 @@ function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Typ
 
 function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
   switch(s.tag) {
+    case "import":
+      // TODO(rongyi): bypass import lowering
+      return [];
     case "assign":
       var [valinits, valstmts, vale] = flattenExprToExpr(s.value, env);
       blocks[blocks.length - 1].stmts.push(...valstmts, { a: s.a, tag: "assign", name: s.name, value: vale});

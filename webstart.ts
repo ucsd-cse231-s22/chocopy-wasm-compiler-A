@@ -2,6 +2,7 @@ import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, FLOAT, BOOL, NONE, ELLIPSIS } from './utils';
+import { gcd, lcm, factorial } from './stdlib/math';
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -58,7 +59,15 @@ function webStart() {
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
-        pow: Math.pow
+        pow: Math.pow,
+        // NOTE: keep these files in sync with this
+        // - runner.ts WASM
+        // - type-check.ts
+        // - parser.ts
+        // - import-object.test.ts
+        gcd: gcd,
+        lcm: lcm,
+        factorial: factorial,
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,
