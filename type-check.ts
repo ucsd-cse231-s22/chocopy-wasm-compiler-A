@@ -106,7 +106,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
 export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type>, GlobalTypeEnv] {
   const locals = emptyLocalTypeEnv();
   const newEnv = augmentTEnv(env, program);
-  const tInits = program.inits.map(init => tcInit(env, locals, init));
+  const tInits = program.inits.map(init => tcInit(newEnv, locals, init));
   const tDefs = program.funs.map(fun => tcDef(newEnv, fun));
   const tClasses = program.classes.map(cls => tcClass(newEnv, locals, cls));
 
