@@ -166,8 +166,8 @@ export function tcClass(env: GlobalTypeEnv, cls: Class<Annotation>): Class<Annot
     init.ret !== NONE) {
     const reason = (init.parameters.length !== 1) ? `${init.parameters.length} parameters` :
       (init.parameters[0].name !== "self") ? `parameter name ${init.parameters[0].name}` :
-        (!equalType(init.parameters[0].type, CLASS(cls.name))) ? `parameter type ${JSON.stringify(init.parameters[0].type)}` :
-          (init.ret !== NONE) ? `return type ${JSON.stringify(init.ret)}` : "unknown reason";
+        (!equalType(init.parameters[0].type, CLASS(cls.name))) ? `parameter type ${JSON.stringify(init.parameters[0].type.tag)}` :
+          (init.ret !== NONE) ? `return type ${JSON.stringify(init.ret.tag)}` : "unknown reason";
 
     throw new TypeCheckError(`__init__ takes 1 parameter \`self\` of the same type of the class \`${cls.name}\` with return type of \`None\`, got ${reason}`, init.a.fromLoc, init.a.endLoc);
   }
@@ -261,26 +261,30 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         case BinOp.IDiv:
         case BinOp.Mod:
           if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: NUM } } }
-          else { throw new TypeCheckError(`Binary operator \`${stringifyOp(expr.op)}\` expects type "int" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
+          else { throw new TypeCheckError(`Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
             expr.a.fromLoc, expr.a.endLoc); }
         case BinOp.Eq:
         case BinOp.Neq:
           if (tLeft.a.type.tag === "class" || tRight.a.type.tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")
           if (equalType(tLeft.a.type, tRight.a.type)) { return { ...tBin, a: { ...expr.a, type: BOOL } }; }
-          else { throw new TypeCheckError("Type mismatch for op" + expr.op) }
+          else { throw new TypeCheckError(`Binary operator \`${stringifyOp(expr.op)}\` expects the same type on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
+            expr.a.fromLoc, expr.a.endLoc); }
         case BinOp.Lte:
         case BinOp.Gte:
         case BinOp.Lt:
         case BinOp.Gt:
           if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: BOOL } }; }
-          else { throw new TypeCheckError("Type mismatch for op" + expr.op) }
+          else { throw new TypeCheckError(`Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
+          expr.a.fromLoc, expr.a.endLoc); }
         case BinOp.And:
         case BinOp.Or:
           if (equalType(tLeft.a.type, BOOL) && equalType(tRight.a.type, BOOL)) { return { ...tBin, a: { ...expr.a, type: BOOL } }; }
-          else { throw new TypeCheckError("Type mismatch for boolean op" + expr.op); }
+          else { throw new TypeCheckError(`Binary operator \`${stringifyOp(expr.op)}\` expects type "bool" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
+          expr.a.fromLoc, expr.a.endLoc); }
         case BinOp.Is:
           if (!isNoneOrClass(tLeft.a.type) || !isNoneOrClass(tRight.a.type))
-            throw new TypeCheckError("is operands must be objects");
+            throw new TypeCheckError(`Binary operator \`${stringifyOp(expr.op)}\` expects type "class" or "none" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
+            expr.a.fromLoc, expr.a.endLoc);
           return { ...tBin, a: { ...expr.a, type: BOOL } };
       }
     case "uniop":
@@ -289,10 +293,12 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       switch (expr.op) {
         case UniOp.Neg:
           if (equalType(tExpr.a.type, NUM)) { return tUni }
-          else { throw new TypeCheckError("Type mismatch for op" + expr.op); }
+          else { throw new TypeCheckError(`Unary operator \`${stringifyOp(expr.op)}\` expects type "number", got ${JSON.stringify(tExpr.a.type.tag)}`,
+          expr.a.fromLoc, expr.a.endLoc); }
         case UniOp.Not:
           if (equalType(tExpr.a.type, BOOL)) { return tUni }
-          else { throw new TypeCheckError("Type mismatch for op" + expr.op); }
+          else { throw new TypeCheckError(`Unary operator \`${stringifyOp(expr.op)}\` expects type "bool", got ${JSON.stringify(tExpr.a.type.tag)}`,
+          expr.a.fromLoc, expr.a.endLoc); }
       }
     case "id":
       if (locals.vars.has(expr.name)) {
@@ -300,7 +306,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       } else if (env.globals.has(expr.name)) {
         return { ...expr, a: { ...expr.a, type: env.globals.get(expr.name) } };
       } else {
-        throw new TypeCheckError("Unbound id: " + expr.name);
+        throw new TypeCheckError("Unbound id: " + expr.name, expr.a.fromLoc, expr.a.endLoc);
       }
     case "builtin1":
       // TODO: type check `len` after lists are implemented
@@ -319,10 +325,11 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         if (isAssignable(env, tArg.a.type, expectedArgTyp)) {
           return { ...expr, a: { ...expr.a, type: retTyp }, arg: tArg };
         } else {
-          throw new TypeError("Function call type mismatch: " + expr.name);
+          throw new TypeCheckError(`Function call expects an argument of type ${JSON.stringify(expectedArgTyp.tag)}, got ${JSON.stringify(tArg.a.type.tag)}`,
+            expr.a.fromLoc, expr.a.endLoc);
         }
       } else {
-        throw new TypeError("Undefined function: " + expr.name);
+        throw new TypeCheckError("Undefined function: " + expr.name, expr.a.fromLoc, expr.a.endLoc);
       }
     case "builtin2":
       if (env.functions.has(expr.name)) {
@@ -332,10 +339,11 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         if (isAssignable(env, leftTyp, tLeftArg.a.type) && isAssignable(env, rightTyp, tRightArg.a.type)) {
           return { ...expr, a: { ...expr.a, type: retTyp }, left: tLeftArg, right: tRightArg };
         } else {
-          throw new TypeError("Function call type mismatch: " + expr.name);
+          throw new TypeCheckError(`Function call expects arguments of types ${JSON.stringify(leftTyp.tag)} and ${JSON.stringify(rightTyp.tag)}, got ${JSON.stringify(tLeftArg.a.type.tag)} and ${JSON.stringify(tRightArg.a.type.tag)}`,
+            expr.a.fromLoc, expr.a.endLoc);
         }
       } else {
-        throw new TypeError("Undefined function: " + expr.name);
+        throw new TypeCheckError("Undefined function: " + expr.name, expr.a.fromLoc, expr.a.endLoc);
       }
     case "call":
       if (env.classes.has(expr.name)) {
@@ -345,9 +353,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         if (methods.has("__init__")) {
           const [initArgs, initRet] = methods.get("__init__");
           if (expr.arguments.length !== initArgs.length - 1)
-            throw new TypeCheckError("__init__ didn't receive the correct number of arguments from the constructor");
+            throw new TypeCheckError(`__init__ takes 1 parameter \`self\` of the same type of the class \`${expr.name}\` with return type of \`None\`, got ${expr.arguments.length} parameters`, expr.a.fromLoc, expr.a.endLoc);
           if (initRet !== NONE)
-            throw new TypeCheckError("__init__  must have a void return type");
+            throw new TypeCheckError(`__init__ takes 1 parameter \`self\` of the same type of the class \`${expr.name}\` with return type of \`None\`, gotreturn type ${JSON.stringify(initRet.tag)}`, expr.a.fromLoc, expr.a.endLoc);
           return tConstruct;
         } else {
           return tConstruct;
@@ -360,10 +368,13 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
           tArgs.every((tArg, i) => tArg.a.type === argTypes[i])) {
           return { ...expr, a: { ...expr.a, type: retType }, arguments: expr.arguments };
         } else {
-          throw new TypeError("Function call type mismatch: " + expr.name);
+          const tArgsStr = tArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
+          const argTypesStr = argTypes.map(argType => JSON.stringify(argType.tag)).join(", ");
+          throw new TypeCheckError(`Function call expects arguments of types [${argTypesStr}], got [${tArgsStr}]`,
+          expr.a.fromLoc, expr.a.endLoc);
         }
       } else {
-        throw new TypeError("Undefined function: " + expr.name);
+        throw new TypeCheckError("Undefined function: " + expr.name, expr.a.fromLoc, expr.a.endLoc);
       }
     case "lookup":
       var tObj = tcExpr(env, locals, expr.obj);
@@ -373,13 +384,13 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
           if (fields.has(expr.field)) {
             return { ...expr, a: { ...expr.a, type: fields.get(expr.field) }, obj: tObj };
           } else {
-            throw new TypeCheckError(`could not find field ${expr.field} in class ${tObj.a.type.name}`);
+            throw new TypeCheckError(`could not find field ${expr.field} in class ${tObj.a.type.name}`, expr.a.fromLoc, expr.a.endLoc);
           }
         } else {
-          throw new TypeCheckError("field lookup on an unknown class");
+          throw new TypeCheckError(`field lookup on an unknown class ${tObj.a.type.name}`, expr.a.fromLoc, expr.a.endLoc);
         }
       } else {
-        throw new TypeCheckError("field lookups require an object");
+        throw new TypeCheckError(`field lookups require an object of type "class", got ${JSON.stringify(tObj.a.type.tag)}`, expr.a.fromLoc, expr.a.endLoc);
       }
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj);
@@ -394,18 +405,22 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
               methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a.type, argTyp))) {
               return { ...expr, a: { ...expr.a, type: methodRet }, obj: tObj, arguments: tArgs };
             } else {
-              throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}`);
+              const argTypesStr = methodArgs.map(argType => JSON.stringify(argType.tag)).join(", ");
+              const tArgsStr = realArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
+              throw new TypeCheckError(`Method call ${expr.method} expects arguments of types [${argTypesStr}], got [${tArgsStr}]`,
+              expr.a.fromLoc, expr.a.endLoc);
             }
           } else {
-            throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a.type.name}`);
+            throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a.type.name}`,
+            expr.a.fromLoc, expr.a.endLoc);
           }
         } else {
-          throw new TypeCheckError("method call on an unknown class");
+          throw new TypeCheckError(`method call on an unknown class ${tObj.a.type.name}`, expr.a.fromLoc, expr.a.endLoc);
         }
       } else {
-        throw new TypeCheckError("method calls require an object");
+        throw new TypeCheckError(`method calls require an object of type "class", got ${JSON.stringify(tObj.a.type.tag)}`, expr.a.fromLoc, expr.a.endLoc);
       }
-    default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
+    default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`, expr.a.fromLoc, expr.a.endLoc);
   }
 }
 

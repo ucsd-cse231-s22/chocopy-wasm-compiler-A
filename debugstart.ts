@@ -13,7 +13,8 @@ async function debug() {
 //     else:
 //       return`
   var source = `
-True + 2`
+  1 // 0
+  `
 const ast = parse(source);
   
   const repl = new BasicREPL(await addLibs());

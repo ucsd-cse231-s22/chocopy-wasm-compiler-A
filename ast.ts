@@ -72,7 +72,7 @@ export function stringifyOp(op: Op): string {
     case BinOp.Plus: return "+";
     case BinOp.Minus: return "-";
     case BinOp.Mul: return "*";
-    case BinOp.IDiv: return "/";
+    case BinOp.IDiv: return "//";
     case BinOp.Mod: return "%";
     case BinOp.Eq: return "==";
     case BinOp.Neq: return "!=";
