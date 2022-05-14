@@ -2,7 +2,17 @@ import { BasicREPL } from './repl';
 import { Type, Value, Class } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
+import CodeMirror from 'codemirror';
+import "codemirror/addon/edit/closebrackets";
+import "codemirror/mode/python/python";
+import "codemirror/addon/hint/show-hint";
+import "codemirror/addon/lint/lint";
 
+import "codemirror/addon/scroll/simplescrollbars";
+import "./style.scss";
+
+import { autocompleteHint, populateAutoCompleteSrc } from "./autocomplete";
+import { default_keywords, default_functions } from "./const";
 
 
 function stringify(typ: Type, arg: any): string {
@@ -18,7 +28,7 @@ function stringify(typ: Type, arg: any): string {
   }
 }
 
-export function print_class(memory:WebAssembly.Memory, repl: BasicREPL, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number): Array<string> {
+export function print_class(memory: WebAssembly.Memory, repl: BasicREPL, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number): Array<string> {
 
   var fields_offset_ = repl.currentEnv.classes.get(classname);
   var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
@@ -58,17 +68,7 @@ export function print_class(memory:WebAssembly.Memory, repl: BasicREPL, pointer:
     `${space.repeat(level + 1)}}`);
   return display;
 }
-import CodeMirror from 'codemirror';
-import "codemirror/addon/edit/closebrackets";
-import "codemirror/mode/python/python";
-import "codemirror/addon/hint/show-hint";
-import "codemirror/addon/lint/lint";
 
-import "codemirror/addon/scroll/simplescrollbars";
-import "./style.scss";
-
-import { autocompleteHint, populateAutoCompleteSrc } from "./autocomplete";
-import { default_keywords, default_functions } from "./const";
 function print(typ: Type, arg: number): any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
@@ -102,7 +102,7 @@ function get_code_example(name: string): string {
       "        return 1\n" +
       "c : C = None\n" +
       "c = C()"
-  }else if (name === "cyclic linkedlist class") { 
+  } else if (name === "cyclic linkedlist class") {
     return `class C(object):
   next:C = None
 c1:C = None
@@ -115,7 +115,7 @@ c1.next = c2
 c2.next = c3
 c3.next = c1
     `
-  }else if(name === "linkedlist class"){
+  } else if (name === "linkedlist class") {
     return `class C(object):
   next:C = None
 c1:C = None
@@ -126,9 +126,9 @@ c2 = C()
 c3 = C()
 c1.next = c2
 c2.next = c3
-    `    
+    `
   }
-  
+
   else if (name === "uninitialized member variable") {
     return "class E(object):\n" +
       "    a : int = 1\n" +
@@ -245,7 +245,7 @@ function webStart() {
     }
     const editorBox = initCodeMirror();
 
-   
+
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
