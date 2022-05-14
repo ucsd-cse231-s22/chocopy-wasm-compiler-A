@@ -35,6 +35,26 @@ export function exportFileBuildinFunc() {
 let fdCounter = 0;
 let fs = new Map<number, OpenFile>(); // track current open files
 
+
+
+
+const global = require("global")
+const window = require("global/window")
+function setItem(filePath: string, data:Array<number>) {
+    console.log('setItem is called');
+}
+function getItem(filePath: string): string {
+  console.log('getItem is called');
+  return "";
+}
+  
+global.window = {}
+window.localStorage = {
+  m: new Map<string, Array<number>>(),
+  setItem:setItem,
+  getItem: getItem
+}
+
 /*
  * TODO Later: The input to open should be some value for string
  * right now pretend that we are creating a file without a fname string
@@ -43,12 +63,13 @@ let fs = new Map<number, OpenFile>(); // track current open files
  */
 export function open(filePathAddr: number, mode: number): number {
     
-    console.log("open is called");
+    // console.log(`open is called with mode: ${mode} and filePathAddr: ${filePathAddr}`);
+
     const filePath = './test.txt';
     
     // treat as creating a new file for now. Later with string type, we check if the filePathAddr already existed first.
     // window.localStorage.setItem('test.txt', JSON.stringify([])); 
-    if(localStorage.getItem(filePath) === null) {
+    if(window.localStorage.getItem(filePath) === null) {
         window.localStorage.setItem(filePath, JSON.stringify([])); 
     }
     fs.set(fdCounter++, {
@@ -62,8 +83,9 @@ export function open(filePathAddr: number, mode: number): number {
 }
 
 export function read(fd: number, numByte: number): number {
-    console.log(`read is called, fd: ${fd}, numByte: ${numByte}`);
+    // console.log(`read is called, fd: ${fd}, numByte: ${numByte}`);
     numByte = 1; // DUMMY VALUE
+
     let file = checkFDExistence(fd);
     let data = window.localStorage.getItem(file.filePath);
     if (!data) {
@@ -72,18 +94,19 @@ export function read(fd: number, numByte: number): number {
     let dataArray: Array<number> = JSON.parse(data);
     
     file.fileSize = dataArray.length;
-    console.log(`dataArray :${dataArray}, file.currentPosition: ${file.currentPosition}`);
+    
     return dataArray[file.currentPosition];
 }
 
 export function write(fd: number, c: number): number {
-    console.log(`write is called, fd: ${fd}, c: ${c}`);
+    // console.log(`write is called, fd: ${fd}, c: ${c}`);
     const file = checkFDExistence(fd);
 
     // check mode
     if (file.mode === FileMode.OPEN || file.mode === FileMode.R_ONLY) {
         throw new Error(`RUNTIME ERROR: file with fd = ${fd} is not writable (mode = ${file.mode})`);
     }
+    console.log(window.localStorage);
     let data = window.localStorage.getItem(file.filePath);
     let dataArray: Array<number> = data ? JSON.parse(data) : [];
 
@@ -114,14 +137,14 @@ export function write(fd: number, c: number): number {
  * @param fd 
  */
 export function close(fd: number) {
-    console.log("close is called");
+    // console.log("close is called");
     const f = checkFDExistence(fd);
 
     fs.delete(fd); // remove this file from file descriptor
 }
 
 export function seek(fd: number, pos: number){
-    console.log("seek is called");
+    // console.log("seek is called");
     const file = checkFDExistence(fd);
 
     // check the boundary of the position

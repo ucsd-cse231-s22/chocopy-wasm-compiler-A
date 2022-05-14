@@ -1,5 +1,5 @@
-npx tsc
-node debugstart.js
+# ./node_modules/.bin/tsc
+# node debugstart.js
 # remove the create .js file
 rm IO_File/*.js
 rm ast.js
