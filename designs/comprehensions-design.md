@@ -98,12 +98,13 @@ In case of the second test case, we skipped it because as suggested by proffesor
 Since, we have not yet collaborated with the lists group, we are only printing the elements of the list (constructed by the comprehension expression). We plan to collaborate with the lists team in the upcoming week, and display the lists in the proper format. For example:
 
 ```print([1 for a in range(1,5)])``` gives the following output instead of ```[1,1,1,1,1]```::
-```1
+```
 1
 1
 1
-1```
-
+1
+1
+```
 We have added two new fields to the ast structure for list-comp: iterable_cond? and body. iterable condition checks if range.hasNext() returns true or not. body stores the following statements:: 1. print the current element, 2. call the next method. In the lower.ts file, we have converted the ast structure into an array of basic blocks. Also, as of this week, we are explicitly adding a range class in our test cases, but we would remove this as part of our next milestones. 
 
 
