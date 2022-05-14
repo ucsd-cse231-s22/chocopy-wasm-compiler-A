@@ -1,5 +1,25 @@
 # Closures Design Document
 
+## What we implemented
+
+We implemented what we committed to with the exception of free and nonlocal variables. We 
+mostly stuck to our original plan.
+
+If expressions are fully implemented, however once inheritance is implemented
+more work may need to be done.
+
+First class functions are implemented except for methods.
+
+Lambdas are implemented via the mklambda function.
+
+Nested functions are implemented.
+
+There is a new Callable type which lambdas and functions both are.
+
+The main IDE and REPL fully works with the new features.
+
+Look to our new tests to see what interesting things should be run.
+
 ## Callable Type
 
 **Parsing requires <ins>"@lezer/python": "^0.16.0"</ins> (or elbow grease)**
@@ -179,6 +199,7 @@ Global variables can't be assigned to via `nonlocal` within a function, but can 
 ## Test Cases
 
 ### 1. Nonlocal
+(not yet implemented)
 
 ```python
 def f(x: int):
@@ -233,6 +254,7 @@ isEven = mklambda(
 Should yield type error on assignment.
 
 ### 5. Currying
+(not yet implemented) (because it uses free variables)
 
 ```python
 add: Callable[[int], Callable[[int], int]] = None
@@ -307,6 +329,7 @@ noop()
 Should pass.
 
 ### 10. Global reference
+(not yet implemented)
 
 ```python
 a: int = 4
@@ -320,7 +343,8 @@ f()()
 
 Should print `4\n5`
 
-### 11. Z-Combinator
+### 11. Fixed-point Combinator
+(not yet implemented) (Uses free variables)
 
 ```python
 def fix(f: Callable[[Callable[[int], int]], Callable[[int], int]]) -> Callable[[int], int]:
