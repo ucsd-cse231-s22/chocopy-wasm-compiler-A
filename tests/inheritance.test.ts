@@ -183,29 +183,6 @@ l = B()
 print(l.get_a())
 print(l.get_b())
 `, [`1`,`4`]);
-assertPrint("simple-method-overriding", `
-class Single(object):
-	a : int = 1
-
-	def sum1(self: Single) -> int: 
-		return self.a
-
-class Two(Single):
-	b : int = 2
-
-	def sum2(self: Two) -> int: 
-		return self.a + self.b
-
-class Three(Two):
-	c : int = 3
-
-	def sum3(self: Three) -> int: 
-		return self.a + self.b + self.c
-
-l : Three = None 
-l = Three()
-print(l.sum3())
-`, [`6`]);
 assertPrint("method-overriding", `
 class List(object):
 	def sum(self: List) -> int: 
@@ -231,4 +208,105 @@ l : List = None
 l = Link().new(5, Link().new(13, Empty()))
 print(l.sum())
 `, [`18`]);
+assertPrint("method-doesnt-exist-in-superclass", `
+class A(object):
+	a : int = 1
+
+	def get_a(self: A) -> int: 
+		return self.a
+
+class B(A):
+	b : int = 2
+
+	def sum_a_b(self: B) -> int: 
+		return self.a + self.b
+
+l : B = None 
+l = B()
+print(l.sum_a_b())
+`, [`3`]);
+assertTCFail("method-doesnt-exist-in-any-class", `
+class A(object):
+	a : int = 1
+
+	def __init__(self: A): pass
+		
+	def get_a(self: A) -> int:
+		return self.a
+
+class B(A):
+	b : int = 3
+	
+	def __init__(self: B): pass
+		
+	def get_b(self: B) -> int: 
+		return self.b
+		
+l : B = None
+l = B()
+print(l.get_c())
+`);
+assertTCFail("redefined-field-in-subclass", `
+class A(object):
+	a : int = 1
+
+	def __init__(self: A): pass
+		
+	def get_a(self: A) -> int:
+		return self.a
+
+class B(A):
+	a : int = 3
+	
+	def __init__(self: B): pass
+		
+	def get_b(self: B) -> int: 
+		return self.b
+		
+l : B = None
+l = B()
+print(l.get_b())
+`);
+assertTCFail("superclass-doesnt-exist", `
+class A(object):
+	a : int = 1
+
+	def __init__(self: A): pass
+		
+	def get_a(self: A) -> int:
+		return self.a
+
+class B(C):
+	b : int = 3
+	
+	def __init__(self: B): pass
+		
+	def get_b(self: B) -> int: 
+		return self.b
+		
+l : B = None
+l = B()
+print(l.get_c())
+`);
+assertTCFail("subclass-type-initializing-superclass-object", `
+class A(object):
+	a : int = 1
+
+	def __init__(self: A): pass
+		
+	def get_a(self: A) -> int:
+		return self.a
+
+class B(A):
+	b : int = 3
+	
+	def __init__(self: B): pass
+		
+	def get_b(self: B) -> int: 
+		return self.b
+		
+l : B = None
+l = A()
+print(l.get_c())
+`);
 });
