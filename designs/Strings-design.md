@@ -47,13 +47,13 @@
     4
     ```
 
-    **Update**:
+    **Update Week 7**:
 
     Our solution is that when storing a string, we firstly store its length on top of its memory block (The string type should be immutable, so the length will not change). By doing so, when we want to load the string, we can know where to stop when generating the wasm loop block.
 
-    Besides, regrading the builtin print and len, we would like to define two functions in wasm: print_str and len_str to handle the string case. For print_str, we first get the length of the string, and then generate a wasm loop to load the ASCIIs of the strings and convert them back to string. For len_str, simpler, we can get the length and call print_num.
+    Besides, regrading the builtin print and len, we would like to define two functions in wasm: print_str and len_str to handle the string case. For print_str, we first get the length of the string, and then generate a wasm loop to load the ASCIIs of the strings and convert them back to string. For len_str, simpler, we can get the length and call print_num (haven't implemented).
 
-    For now, we implement the print_str and len_str in complier.ts by adding new variables to get the length of the string and handle the loop block in wasm. In the following weeks, we should implement them in lower.ts using
+    For now, we implement the print_str in complier.ts by adding new variables to get the length of the string and handle the loop block in wasm. In the following weeks, we should implement them in lower.ts using
     the for loop designed by the fop loop group.
 
     ```Python
@@ -77,11 +77,15 @@
     abcd
     ```
 
-    **Update**:
+    **Update Week 7**:
 
-    The design of string concatenation is that: for the string variable in wasm, we have the information of its address. Then we just need to load its value using its address and then peform the operations on them.
+    One main issue of the operations (concat, comparsion, indexing) on string is that we only have the information of the string starting address. If we want to realize these operations without touching the complier.ts, I think we need more information of string.
 
+    We have some solutions as followed:
+    1. Modify some structures in AST of IR by adding the string value information, but it seems problematic because it will change some basic behaviors of our complier.
+    2. Adding Map\<string, string>() in the envirnment in type-check.ts and lower.ts. When we encounter a string variable, we not only set its varaible map to true, but also set its value map to its value. Because we need the value information rather than the starting address to do the operations above.
 
+    We are not very clear about how to do this. For now, when indexing a string, we just simply place a placeholder for the output because if we want to do the operations of string, in lower.ts, we cannot get the value of string.
 
 4. Comparison with two strings
     ```Python
@@ -105,8 +109,6 @@
     False
     ```    
 
-    **Update**:
-    The comparison of strings is similar to test case 3, we need to load the string value of each variable and then compare each character of the strings.
 
 5. Indexing of a string
     ```Python
@@ -129,7 +131,7 @@
     World
     ```
 
-    **Update**:
+    **Update Week 7**:
 
     We will look into the escape sequences next week.
 
@@ -144,6 +146,10 @@
     Error: Index out of bounds
     ```
 
+    **Update Week 7**:
+
+    We will look into this one after we solve the environment issue (in 3).
+
 8. Throw Error on single quotes
     ```Python
     s1:str = 'ab'
@@ -153,6 +159,11 @@
     ```Python
     Parse Error: Unrecognized token
     ```
+
+    **Update Week 7**:
+
+    Actually, we think that we should accept the single quotes. Because in Python, there is no difference between single quotes and doulbe quotes. We are not sure why ChocoPy does not support double quotes.
+
 
 9.  Throw Type Error on string plus int
     ```Python
@@ -164,7 +175,7 @@
     Type Error: Cannot apply + on str and int
     ```
 
-    **Update**:
+    **Update Week 7**:
 
     s1:str = 'ab'
     print(s1 + 3)
@@ -184,7 +195,7 @@
     Parse Error: Bad escape sequences
     ```
 
-    **Update**:
+    **Update Week 7**:
 
     We will look into the escape sequences next week.
 
@@ -211,29 +222,40 @@ There will be no completely "new" and "independent" functions that will be added
     - New case "String" on the traverseLiteral
     - New case "len" on the traverseExpr for CallExpression
     - New condition for MemberExpression on traverseExpr when we are traversing the indexing
+    - **Update Week 7**: New special case in traverseExpr -> "MemberExpression": add the index case.
 
 - Type Checker
     - New case "string" on typeCheckLiteral. Specifically, we need to check whether the escape sequences are valid.
     - New case "indexing" on typeCheckExpr. Specifically, we need to check whether the expression that we perform indexing on is type "string".
     - New case for typeCheckExpr - case "binexpr". For example, "abc" + 3 should throw a TYPE ERROR.
-    - **Update**:
+    - **Update Week 7**: New temporal modification on function isSubtype(): Add an OR case "t1.tag == "none".
+    - **Update Week 7**: New temporal case tcExpr -> "index": add annotation to index expression.
 
-- **Update**: Lower
-    - 
-    - 
+- **Update Week 7**: Lower
+    - New special case in flattenExprToExpr -> "Literal": Add operations on string (allocation and store)
+    - New temporal case flattenExprToExpr -> "Index": Handle the string indexing.
 
 - Compiler 
     - New case "string" for codeGenLiteral, according to the length of the string we need to use the $heap pointer to allocate some space for the string
     - New case "len" on the codeGenExpr for the builtin functions
     - New case "Indexing" on the codeGenExpr for the indexing operations
     - Modifications on the codeGenExpr when we applying concatenation of strings
+    - **Update Week 7**:
+
+- **Update Week 7**: string.test
+        We write several tests to make sure our implementation of String features is correct. You can refer to /tests/string.test.ts for details. Generally, they include
+    - Type-checking for string, string concatenation, string indexing
+    - Print tests for string, string concatenation, string indexing, string comparison. They are tested in body statement, in functions or as a argument of a function, and in class.
+
+
     
 ## A description of the value representation and memory layout for any new runtime
 
 We would like to store the value of the string by (Extended)ASCII. Since ASCII is from 0 to 256, we would like to store a i32 to represent each character of a string into a continuous memory space and the start address of the string will be returned. Also, we will store the length of the string in the start address. In this way, when we reading a variable of string type, we can know where to stop (maybe useful for indexing).
 
 
+## **Update Week 7**: Conclusion
 
-**Update**: Conclusion
+The most changllenging part of string is that string lies in the level of AST.Literal and IR.Value but it behaves in the level of AST.Expr and IR.Expr because we need the allocate the memory block and store its ASCIIs.
 
-The most critical part of string is how to store and load the value from the memory heap. Any other features like len(), string concatenation, string indexing and string comparison is just a combination of them. As for the store part, we managed to store a string into the memory heap. But we add some restrictions on it (Assigning None to a string first). The hard part is that we cannot make modification on the CodeGen, and the expressions and statements that IR offered are limited which will make it significantly complicated to generate the right WASM code by compiler.ts.
+For now, we cannot do operations on string if we don't refractor some sturtures. Any other features like len(), string concatenation, string indexing and string comparison is just a combination of them. As for the store part, we managed to store a string into the memory heap. But we add some restrictions on it (Assigning None to a string first). The hard part is that we cannot make modification on the CodeGen, and the expressions and statements that IR offered are limited which will make it significantly complicated to generate the right WASM code by compiler.ts.
