@@ -112,6 +112,17 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $add (import "imports" "add") (param i32) (param i32) (result i32))
+    (func $sub (import "imports" "sub") (param i32) (param i32) (result i32))
+    (func $mul (import "imports" "mul") (param i32) (param i32) (result i32))
+    (func $div (import "imports" "div") (param i32) (param i32) (result i32))
+    (func $mod (import "imports" "mod") (param i32) (param i32) (result i32))
+    (func $eq (import "imports" "eq") (param i32) (param i32) (result i32))
+    (func $neq (import "imports" "neq") (param i32) (param i32) (result i32))
+    (func $lte (import "imports" "lte") (param i32) (param i32) (result i32))
+    (func $gte (import "imports" "gte") (param i32) (param i32) (result i32))
+    (func $lt (import "imports" "lt") (param i32) (param i32) (result i32))
+    (func $gt (import "imports" "gt") (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}

@@ -1,7 +1,7 @@
 import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE, load_bignum, builtin_bignum } from './utils';
+import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum } from './utils';
 
 const bigMath = {
   // https://stackoverflow.com/a/64953280
@@ -24,6 +24,41 @@ const bigMath = {
     for (const v of values)
       if (v > value) value = v
     return value
+  },
+  add(value1: bigint, value2: bigint) {
+    console.log("value1:", value1);
+    console.log("value2:", value2);
+    return value1 + value2
+  },
+  sub(value1: bigint, value2: bigint) {
+    return value1 - value2
+  },
+  mul(value1: bigint, value2: bigint) {
+    return value1 * value2
+  },
+  div(value1: bigint, value2: bigint) {
+    return value1 / value2
+  },
+  mod(value1: bigint, value2: bigint) {
+    return value1 % value2
+  },
+  eq(value1: bigint, value2: bigint) {
+    return value1 === value2
+  },
+  neq(value1: bigint, value2: bigint) {
+    return value1 !== value2
+  },
+  lte(value1: bigint, value2: bigint) {
+    return value1 <= value2
+  },
+  gte(value1: bigint, value2: bigint) {
+    return value1 >= value2
+  },
+  lt(value1: bigint, value2: bigint) {
+    return value1 < value2
+  },
+  gt(value1: bigint, value2: bigint) {
+    return value1 > value2
   },
 }
 
@@ -75,7 +110,18 @@ function webStart() {
         abs:  (arg: number) => builtin_bignum([arg], bigMath.abs, memoryModule.instance.exports),
         min: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.min, memoryModule.instance.exports),
         max: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.max, memoryModule.instance.exports),
-        pow: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.pow, memoryModule.instance.exports)
+        pow: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.pow, memoryModule.instance.exports),
+        add: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.add, memoryModule.instance.exports),
+        sub: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.sub, memoryModule.instance.exports),
+        mul: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.mul, memoryModule.instance.exports),
+        div: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.div, memoryModule.instance.exports),
+        mod: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.mod, memoryModule.instance.exports),
+        eq: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.eq, memoryModule.instance.exports),
+        neq: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.neq, memoryModule.instance.exports),
+        lte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lte, memoryModule.instance.exports),
+        gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, memoryModule.instance.exports),
+        lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
+        gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,
