@@ -57,20 +57,13 @@ export function refLookup(r: ref) :  ref {
     throw new MemError(`invalid reference: ${r}`)
 }
 
-export function traverseUpdate(r: ref, offset: number, update: number): ref { // returns r so that stack state can be maintained
+export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { // returns r so that stack state can be maintained
     //console.log(`ref trav ${r}, update: ${update}`);
     if (r === 0) {
         return r
     }
     let explored = new Set();
-    if (offset !== -1) {
-        explored.add(r);
-        r = memHeap[refLookup(r)/4 + offset];
-        if (r === 0) {
-            return r
-        }
-    }
-    
+    explored.add(assignRef);
     let travQueue = [r];
     if (update > 0) {
         activeStack[activeStack.length - 1].add(r);
