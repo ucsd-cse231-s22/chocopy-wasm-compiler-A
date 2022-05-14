@@ -154,6 +154,8 @@ no value representation or memory layout would be add.
 2. click Clear, Choose file and save button to see some interactions.
 3. try the editor for auto compeletion and syntax highlight.(this is a interesting feature
 
+Note: the testing framework mocha, which is provided from the starter code, do not provide a web browser envionment. Therefore, we could not run our test cases unless we use mocha-phantomjs as our framework, but it would change the structure of the project.  
+
 ## Progress and design idea
 ### yiming:
 We have successfully implemented the functionality of adding code example. Currently we hardcode the code examples in the `webstart.ts`, which can be improved by separating them to another file to make the code more elegant. What code examples are most useful and should be put on the webpage is also a good topic to investigate, and may need the opinions and suggestions from other classmates.
