@@ -11,6 +11,10 @@ export type ref = number;
 // Below is a similar approach but does not require mapping to objects
 // if this looks a bit hacky, take a look at the issue above
 
+
+
+// temporary class for mem mgmt errors
+// will be deprecated when error reporting is integrated
 class MemError extends Error {
     constructor(msg: string) {
         super(msg);
@@ -25,12 +29,15 @@ export const amountOffset = 1;
 export const dataOffset = 4;
 export const METADATA_AMT : number = 4;
 
-let refMap: Map<ref, memAddr>;
-let refNum = 0; 
+// mapping for reference number to actual address
+// this allows the memory management module to move memory blocks around
+let refMap: Map<ref, memAddr>; 
+
+let refNum = 0; // immutable reference number for objects
 let memHeap: Int32Array;
-let activeStack: Set<ref>[];
+let activeStack: Set<ref>[]; // maintains objects created in the local scope
 
-
+// clean slate for each run
 export function memInit(memory: Int32Array) {
     refMap = new Map();
     refNum = 0;
@@ -38,6 +45,7 @@ export function memInit(memory: Int32Array) {
     activeStack = [new Set()];
 }
 
+// generate a reference number for the memory address
 export function memGenRef(addr: memAddr): ref {
     refNum++;
     if (refNum > 2147483647) {
@@ -50,6 +58,7 @@ export function memGenRef(addr: memAddr): ref {
     
 }
 
+// get memory address from reference number
 export function refLookup(r: ref) :  ref {
     if (refMap.has(r)) {
         return refMap.get(r);
@@ -57,13 +66,13 @@ export function refLookup(r: ref) :  ref {
     throw new MemError(`invalid reference: ${r}`)
 }
 
+// traverse nodes in a BFS manner amking updates to reference counts
 export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { // returns r so that stack state can be maintained
-    //console.log(`ref trav ${r}, update: ${update}`);
     if (r === 0) {
         return r
     }
     let explored = new Set();
-    explored.add(assignRef);
+    explored.add(assignRef); // assignRef fixes issues for cycles in the ref chain
     let travQueue = [r];
     if (update > 0) {
         activeStack[activeStack.length - 1].add(r);
@@ -72,10 +81,8 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { //
     while (travQueue.length > 0) {
         const curr = travQueue.shift();
         const addr = refLookup(curr) / 4;
-        console.log("addr: " + addr);
-        console.log("before: " + memHeap[addr + refNumOffset]);
+
         memHeap[addr + refNumOffset] += update;
-        console.log("after:" + memHeap[addr + refNumOffset]);
         if (memHeap[addr + refNumOffset] < 0) { 
             memHeap[addr + refNumOffset] = 0;
         } 
@@ -84,7 +91,7 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { //
         let types = memHeap[addr + typeOffset];
         let size = memHeap[addr + sizeOffset]; 
         const amt = memHeap[addr + amountOffset];
-        //console.log(types);
+
         for (let i = 0; i < size; i++) {
             if ((types & (1 << i)) !== 0) {
                 for (let a = 0; a < (amt - METADATA_AMT) / size; a++) {
@@ -102,17 +109,14 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { //
 
 export function addScope() {
     activeStack.push(new Set());
-    console.log("in function");
 }
 
 export function removeScope() {
-    console.log("outside function, deleting refs");
     activeStack[activeStack.length - 1].forEach(r => traverseUpdate(r, -1, -1));
     activeStack.pop();
-    console.log("outside function, deleted refs");
-    
 }
 
+//debug function for tests
 export function debugId(id: number, offset: number) { // id should be of type int and the first field in the object
     for (const [_, addr] of refMap) {
         if (memHeap[addr/4 + dataOffset] === id) {

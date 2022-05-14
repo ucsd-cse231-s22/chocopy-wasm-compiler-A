@@ -97,46 +97,33 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
           `call $ref_lookup`,
           `call $assert_not_none`,
           ...codeGenValue(stmt.offset, env),
-          `(i32.mul (i32.const 4))`,
+          `(i32.mul (i32.const 4))`, // offset is in 4 byte units
           `(i32.add)`,
-          `(i32.load)`,
+          `(i32.load)`, // load the ref number referred to by argument ref no. and the offset
           `(i32.const 0)`,
           `(i32.const -1) (call $traverse_update)`,
-          `(i32.mul (i32.const 0))`,
+          `(i32.mul (i32.const 0))`, // hack to take top value of stack
           ...codeGenValue(stmt.value, env),
-          `(i32.add)`,
+          `(i32.add)`, // hack to take top value of stack
           ...codeGenValue(stmt.start, env),
           `(i32.const 1) (call $traverse_update)`,
           `(i32.mul (i32.const 0))`
         ]
       }
       return pre.concat(post);
-      // if (stmt.a && stmt.a.tag === "class") {
-      //   return [
-      //     ...codeGenValue(stmt.start, env),
-      //     `call $ref_lookup`,
-      //     ...codeGenValue(stmt.offset, env),
-      //     `(i32.const -1)`, 
-      //     `(call $traverse_update)`,
-      //     ...codeGenValue(stmt.value, env),
-      //     `(i32.const 1)`, 
-      //     `(call $traverse_update)`
-      //   ]
-      //}
+
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
       if (stmt.value.a && stmt.value.a.tag === "class") { // if the assignment is object assignment
         valStmts.push(`(i32.const 0)`, `(i32.const 1)`, `(call $traverse_update)`) // update the count of the object on the RHS
       }
       if (env.locals.has(stmt.name)) {
-        //return valStmts.concat([`(local.set $${stmt.name})`])
         return [`(local.get $${stmt.name})`, // update the count of the object on the LHS
         `(i32.const 0)`,
         `(i32.const -1)`, 
         `(call $traverse_update)`,
         `(local.set $${stmt.name})`].concat(valStmts).concat([`(local.set $${stmt.name})`]); 
       } else {
-        //return valStmts.concat([`(global.set $${stmt.name})`])
         return [`(global.get $${stmt.name})`,
         `(i32.const 0)`,
         `(i32.const -1)`,

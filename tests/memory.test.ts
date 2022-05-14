@@ -200,8 +200,8 @@ assertMemState("simple-cycle-deletion", `
     x = None
     `, [
     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 1], // 0 references in the program where object id is 123
-    [456, refNumOffset, 1], // 0 references in the program where object id is 456
+    [123, refNumOffset, 1], // 1 references in the program where object id is 123
+    [456, refNumOffset, 1], // 1 references in the program where object id is 456
     ]); // all types are values or non-references
 
 });

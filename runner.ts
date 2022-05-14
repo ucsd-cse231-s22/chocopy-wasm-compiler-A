@@ -100,6 +100,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     importObject.js = { memory: memory };
   }
   memInit(new Int32Array(importObject.js.memory.buffer));
+  // memory functions are explicitly declared rn, they can be added to config.functions when implemented in WASM
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
