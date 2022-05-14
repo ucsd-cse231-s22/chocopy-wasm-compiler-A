@@ -76,6 +76,7 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   // const commandGroups = ast.stmts.map((stmt) => codeGenStmt(stmt, withDefines));
   const allCommands = [...localDefines, ...inits, bodyCommands];
   withDefines.locals.clear();
+  ast.inits.forEach(x => withDefines.globals.set(x.name, true));
   return {
     globals: globalNames,
     functions: allFuns,
