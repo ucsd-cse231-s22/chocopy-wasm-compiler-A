@@ -1,7 +1,6 @@
-import * as mocha from 'mocha';
 import {expect} from 'chai';
 import { parser } from 'lezer-python';
-import { traverseExpr, traverseStmt, traverse, parse, traverseLiteral, traverseType, traverseTypeVarInit, traverseGenericParams, traverseClass } from '../../parser';
+import { parse, traverseLiteral, traverseType, traverseTypeVarInit, traverseGenericParams, traverseClass } from '../../parser';
 import { Type, VarInit } from '../../ast';
 
 // We write tests for each function in parser.ts here. Each function gets its 
