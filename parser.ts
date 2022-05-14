@@ -1,15 +1,22 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
-import { NUM, BOOL, NONE, CLASS } from "./utils";
+import { NUM, FLOAT, BOOL, NONE, ELLIPSIS, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   switch(c.type.name) {
     case "Number":
+      const tonum = Number(s.substring(c.from, c.to));
+      if (tonum !== Math.floor(tonum)){
+        return {
+        tag: "float",
+        value: tonum
+        } 
+      }
       return {
         tag: "num",
-        value: Number(s.substring(c.from, c.to))
+        value: tonum
       }
     case "Boolean":
       return {
@@ -19,6 +26,10 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
     case "None":
       return {
         tag: "none"
+      }
+    case "Ellipsis":
+      return {
+        tag: "..."
       }
     default:
       throw new Error("Not literal")
@@ -30,6 +41,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
     case "Number":
     case "Boolean":
     case "None":
+    case "Ellipsis":
       return { 
         tag: "literal", 
         value: traverseLiteral(c, s)
@@ -57,7 +69,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
         var expr : Expr<null>;
-        if (callName === "print" || callName === "abs") {
+        if (callName === "print" || callName === "abs" || callName === "int" || callName === "bool") {
           expr = {
             tag: "builtin1",
             name: callName,
@@ -330,7 +342,9 @@ export function traverseType(c : TreeCursor, s : string) : Type {
   let name = s.substring(c.from, c.to);
   switch(name) {
     case "int": return NUM;
+    case "float": return FLOAT;
     case "bool": return BOOL;
+    case "Ellipsis": return ELLIPSIS;
     default: return CLASS(name);
   }
 }

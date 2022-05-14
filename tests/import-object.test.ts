@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 
-enum Type { Num, Bool, None }
+enum Type { Num, Bool, None, Ellipsis }
 
 function stringify(typ: Type, arg: any): string {
   switch (typ) {
@@ -10,6 +10,8 @@ function stringify(typ: Type, arg: any): string {
       return (arg as boolean) ? "True" : "False";
     case Type.None:
       return "None";
+    case Type.Ellipsis:
+      return "Ellipsis";
   }
 }
 
@@ -46,6 +48,9 @@ export const importObject : any = {
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
+    print_ellipsis: (arg: number) => print(Type.Ellipsis, arg),
+    int: (arg: any) => arg,
+    bool: (arg: any) => arg !== 0,
     abs: Math.abs,
     min: Math.min,
     max: Math.max,

@@ -1,7 +1,7 @@
 
 import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
-import { NUM, BOOL, NONE, CLASS } from './utils';
+import { NUM, FLOAT, BOOL, NONE, ELLIPSIS, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
@@ -288,6 +288,15 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg);
         return {...expr, a: tArg.a, arg: tArg};
+      } else if (expr.name === "int" || expr.name === "bool") {
+        const tArg = tcExpr(env, locals, expr.arg);
+        if (tArg.a !== NUM && tArg.a !== BOOL){
+          throw new TypeError("Function call type mismatch: " + expr.name);
+        }
+        if (expr.name === "bool"){
+          return {...expr, a: BOOL, arg: tArg};
+        }
+        return {...expr, a: NUM, arg: tArg};
       } else if(env.functions.has(expr.name)) {
         const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
         const tArg = tcExpr(env, locals, expr.arg);
@@ -389,6 +398,8 @@ export function tcLiteral(literal : Literal) {
     switch(literal.tag) {
         case "bool": return BOOL;
         case "num": return NUM;
+        case "float": return FLOAT;
         case "none": return NONE;
+        case "...": return ELLIPSIS;
     }
 }
