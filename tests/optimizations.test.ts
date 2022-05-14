@@ -3,63 +3,75 @@ import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("Optimizations tests", () => {
     assertOptimize(
-        "simple-constant-folding", 
+        "sanity-simple-constant-folding", 
         `
         a: int = 0
+        print(a)
         a = 5 + 7
+        print(a)
         `,
-        `
-        a: int = 0
-        a = 12
-        `
+        { print: ["0","12"], isIrDifferent: true }
     );
 
     assertOptimize(
-        "complex-constant-folding", 
+        "sanity-complex-constant-folding", 
         `
         a:int=1
         a=1*2-1+4
+        print(a)
         `,
-        `
-        a: int = 1
-        a = 5
-        `
+        { print: ["5"], isIrDifferent: true }
     );
 
     assertOptimize(
-        "while-constant-folding", 
+        "sanity-while-constant-folding-neg", 
         `
-        a:int=1
+        a:int=10
         b:int = 5
         while a<10:
             a = 1
         b = a
+        print(b)
         `,
-        `
-        a:int=1
-        b:int = 5
-        while 1<10:
-            a = 1
-        b = 1
-        `
+        { print: ["10"], isIrDifferent: false }
     );
 
     assertOptimize(
-        "while-constant-folding-neg", 
+        "sanity-if-constant-prop", 
         `
-        a:int=1
-        b:int = 5
-        while a<10:
-            a = 11
-        b = a
+        a:int = 3
+        if 0<3:
+            a = 4
+            print(a)
         `,
+        { print: ["4"], isIrDifferent: true }
+    );
+
+    assertOptimize(
+        "sanity-if-constant-prop-neg", 
+        `
+        a:int = 3
+if False:
+   a = 4
+else:
+   a = 5
+print(a)
+        `,
+        { print: ["5"], isIrDifferent: false }
+    );
+
+    assertOptimize(
+        "sanity-while-constant-prop-folding", 
         `
         a:int=1
         b:int = 5
-        while a<10:
-            a = 11
-        b = a
-        `
+        while a<3:
+            b = 2 + 3
+            a = a + 1
+            print(a)
+        print(b)
+        `,
+        { print: ["2", "3", "5"], isIrDifferent: true }
     );
 
 });

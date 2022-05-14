@@ -1,15 +1,10 @@
 import "mocha";
 import { expect } from "chai";
 import { BasicREPL } from "../repl";
-import { Type, Value } from "../ast";
+import { Value } from "../ast";
 import { importObject } from "./import-object.test";
 import { run, typeCheck } from "./helpers.test";
 import { fail } from 'assert'
-import { Program } from "../ir";
-import { parse } from "../parser";
-import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  '../type-check';
-import { augmentEnv } from "../runner";
-import { lowerProgram } from "../lower";
 
 
 // Clear the output before every test
@@ -30,12 +25,17 @@ export function assert(name: string, source: string, expected: Value) {
   });
 }
 
-export function assertOptimize(name: string, source: string, expected: string) {
+export async function assertOptimize(name: string, source: string, expected: { print: Array<string>, isIrDifferent: boolean }) {
   it(name, async () => {
     const repl = new BasicREPL(importObject);
-    const result = repl.optimize(source);
-    const expectedProgram = repl.optimize(expected); 
-    expect(result).to.deep.eq(expectedProgram);
+    const [ preOptimizedIr, optimizedIr ] = repl.optimize(source);
+
+    if (!expected.isIrDifferent)
+      expect(preOptimizedIr).to.deep.eq(optimizedIr);
+    else
+      expect(preOptimizedIr).to.not.deep.eq(optimizedIr);
+    await repl.run(source);
+    expect(importObject.output.trim().split('\n')).to.deep.eq(expected.print);
   });
 }
 
