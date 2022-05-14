@@ -389,17 +389,17 @@ function flattenExprToExpr(e : AST.Expr<Type>, blocks: Array<IR.BasicBlock<Type>
       var ifExprTmpVal = generateName("$ifExprTmp");
 
       var endjmp : IR.Stmt<Type> = { tag: "jmp", lbl: endLbl };
-      let [cinits, cstmts, cexpr] = flattenExprToVal(e.cond, blocks, env);
+      let [cinits, cstmts, cexpr, cclasses] = flattenExprToVal(e.cond, blocks, env);
       var condjmp : IR.Stmt<Type> = { tag: "ifjmp", cond: cexpr, thn: thenLbl, els: elseLbl };
 
       pushStmtsToLastBlock(blocks, ...cstmts, condjmp);
 
       blocks.push({ a: e.a, label: thenLbl, stmts: [] });
-      var [thninits, thnstmts, thnexpr] = flattenExprToExpr(e.thn, blocks, env);
+      var [thninits, thnstmts, thnexpr, thnclasses] = flattenExprToExpr(e.thn, blocks, env);
       pushStmtsToLastBlock(blocks, ...thnstmts, { a: e.a, tag: "assign", name: ifExprTmpVal, value: thnexpr}, endjmp);
 
       blocks.push({ a: e.a, label: elseLbl, stmts: [] });
-      var [elsinits, elsstmts, elsexpr] = flattenExprToExpr(e.els, blocks, env);
+      var [elsinits, elsstmts, elsexpr, elseclasses] = flattenExprToExpr(e.els, blocks, env);
       pushStmtsToLastBlock(blocks,...elsstmts, { a: e.a, tag: "assign", name: ifExprTmpVal, value: elsexpr}, endjmp);
 
       blocks.push({ a: e.a, label: endLbl, stmts: [] });
@@ -409,7 +409,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, blocks: Array<IR.BasicBlock<Type>
         [...cinits, ...elsinits, ...thninits, varDefForTmp],
         [],
         { a: e.a, tag:"value", value: { a: e.a, tag: "id", name: ifExprTmpVal } },
-        []
+        [...cclasses, ...thnclasses, ...elseclasses]
       ];
     }
     case "lambda":
