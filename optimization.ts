@@ -168,7 +168,7 @@ export function computePredecessorSuccessor(basicBlocks: Array<BasicBlock<any>>)
     basicBlocks.forEach(basicBlock=>{
         blockMapping.set(basicBlock.label, basicBlock);
         const lastStmt = basicBlock.stmts[basicBlock.stmts.length-1];
-        if(lastStmt.tag === "ifjmp"){
+        if(lastStmt !== undefined && lastStmt.tag === "ifjmp"){
             //Assigning successors
             if (succs.has(basicBlock.label) && !succs.get(basicBlock.label).includes(lastStmt.thn))
                 succs.set(basicBlock.label, [...succs.get(basicBlock.label), lastStmt.thn]);
@@ -192,7 +192,7 @@ export function computePredecessorSuccessor(basicBlocks: Array<BasicBlock<any>>)
             else if (!preds.has(lastStmt.els))
                 preds.set(lastStmt.els, [basicBlock.label]);
         }
-        else if (lastStmt.tag === "jmp"){
+        else if (lastStmt !== undefined && lastStmt.tag === "jmp"){
             //Assigning successors
             if (succs.has(basicBlock.label) && !succs.get(basicBlock.label).includes(lastStmt.lbl))
                 succs.set(basicBlock.label, [...succs.get(basicBlock.label), lastStmt.lbl]);
