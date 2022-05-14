@@ -21,7 +21,39 @@ function generateName(base : string) : string {
 //   return [name, {tag: "label", a: a, name: name}];
 // }
 
+export function generateVtable(p : AST.Program<Type>, env : GlobalEnv) {
+  var vtable : Array<string> = [];
+  var classIndexes = new Map(); // stores the start and end index of the class in vtable
+  var methodIndex = 0;
+  p.classes.forEach(cls => {
+    if (cls.super[0]!=="object") {
+      const superClassIndexes = classIndexes.get(cls.super[0])
+      var superClassVtable = vtable.slice(superClassIndexes[0], superClassIndexes[1])
+      cls.methods.filter(m => m.name !== "__init__").forEach(m => {
+        const methodOffset = env.classes.get(cls.name)[1].get(m.name)
+        if (methodOffset > superClassVtable.length) {
+          superClassVtable.push(`$${cls.name}$${m.name}`)
+        } else {
+          superClassVtable[methodOffset] = `$${cls.name}$${m.name}`;
+        }
+      })
+      classIndexes.set(cls.name, [vtable.length, vtable.length +superClassVtable.length])
+      vtable = [...vtable , ...superClassVtable]
+    } else {
+      // add methods directly and increment methodIndex
+      classIndexes.set(cls.name, [vtable.length, vtable.length + cls.methods.length - 1])
+      cls.methods.filter(m => m.name !== "__init__").forEach(m => {
+        vtable.push(`$${cls.name}$${m.name}`)
+      })
+    }
+  })
+  // add classIndexes & vtable in env
+  env.vtable = vtable;
+  env.classIndexes = classIndexes;
+}
+
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
+    generateVtable(p, env);
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
@@ -127,8 +159,8 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var [oinits, ostmts, oval] = flattenExprToVal(s.obj, env);
       var [ninits, nstmts, nval] = flattenExprToVal(s.value, env);
       if(s.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
-      const classdata = env.classes.get(s.obj.a.name);
-      const offset : IR.Value<Type> = { tag: "wasmint", value: classdata.get(s.field)[0] };
+      const classdata = env.classes.get(s.obj.a.name); // TODO: add super class fields
+      const offset : IR.Value<Type> = { tag: "wasmint", value: getClassFieldOffet(s.obj.a.name, s.field, env) };
       pushStmtsToLastBlock(blocks,
         ...ostmts, ...nstmts, {
           tag: "store",
@@ -235,6 +267,8 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         }
       ];
     case "method-call": {
+      // TODO: call indirect instead of call
+      // {tag: "indirect_call", name: , class: , args: }
       const [objinits, objstmts, objval] = flattenExprToVal(e.obj, env);
       const argpairs = e.arguments.map(a => flattenExprToVal(a, env));
       const arginits = argpairs.map(cp => cp[0]).flat();
@@ -246,7 +280,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       }
       const className = objTyp.name;
       const checkObj : IR.Stmt<Type> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [objval]}}
-      const callMethod : IR.Expr<Type> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
+      const callMethod : IR.Expr<Type> = { tag: "call_indirect", index: env.vtable.indexOf(`$${className}$${e.method}`), arguments: [objval, ...argvals] }
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
@@ -256,8 +290,9 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "lookup": {
       const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
       if(e.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
-      const classdata = env.classes.get(e.obj.a.name);
-      const [offset, _] = classdata.get(e.field);
+      // TODO: add super class field support
+      var className = e.obj.a.name;
+      var offset = getClassFieldOffet(className, e.field, env);
       return [oinits, ostmts, {
         tag: "load",
         start: oval,
@@ -265,22 +300,35 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     }
     case "construct":
       const classdata = env.classes.get(e.name);
-      const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
+      var fields = [...classdata[0].entries()];
+      var superClass = classdata[2];
+
+      // TODO: add super class fields
+      while(superClass[0] !== "object") {
+        const superClassFields = [...env.classes.get(superClass[0])[0].entries()]
+        superClass = [...env.classes.get(superClass[0])[2]]
+        fields = [...superClassFields, ...fields]
+      }
+      // TOOD: add class method offset of vtable
+      
       const assigns : IR.Stmt<Type>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {
           tag: "store",
           start: { tag: "id", name: newName },
-          offset: { tag: "wasmint", value: index },
+          offset: { tag: "wasmint", value: index + 1 },
           value: value
         }
       });
 
+      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1 } }; // + 1 to store class method index in vtable
+
       return [
         [ { name: newName, type: e.a, value: { tag: "none" } }],
-        [ { tag: "assign", name: newName, value: alloc }, ...assigns,
+        [ { tag: "assign", name: newName, value: alloc }, 
+          {tag: "store",  start: { tag: "id", name: newName }, offset: { tag: "wasmint", value: 0 }, value: {tag: "num", value: BigInt(env.classIndexes.get(e.name)[0])}}, // store class method offset from vtable
+          ...assigns,
           { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
@@ -289,6 +337,16 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+  }
+}
+
+function getClassFieldOffet(className: string, fieldName: string, env: GlobalEnv) : number {
+  while (className !== "object") {
+    const classdata = env.classes.get(className);
+    if (classdata[0].has(fieldName)) {
+      return classdata[0].get(fieldName)[0] + 1;  // + 1 to store class method index in vtable
+    }
+    className = classdata[2][0];
   }
 }
 

@@ -3,6 +3,7 @@ build
 dist
 debugger
 cli
+.vscode
 *.sw*
 mochawesome-report
 *lock*
