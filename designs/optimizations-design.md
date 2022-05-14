@@ -192,8 +192,13 @@ These can be actual code diffs in the PR or written in your design.md.
 <ol>
     <li>optimization.ts - Contains all the optimization functionalities. Currently implemented - constant propagation within the same scope, constant folding.
     </li>
-    <li>Datatypes : Env - An environment type that contains a map from variables to their compile time value (compileVal).
-            compileVal - A compile time value type that extends type 'Value' from ir.ts to include types "nac" (Not a Constant) and "undef" (Undefined). These add-ons are used to resolve merge conflicts during constant propagation.
+    <li>Datatypes : 
+    <ul>
+        <li>Env - An environment type that contains a map from variables to their compile time value (compileVal).
+        </li>
+        <li> compileVal - A compile time value type that extends type 'Value' from ir.ts to include types "nac" (Not a Constant) and "undef" (Undefined). These add-ons are used to resolve merge conflicts during constant propagation.
+        </li>
+    </ul>
     </li>
     <li>Functions (only the importnant ones are listed here) :  
         <ul>
