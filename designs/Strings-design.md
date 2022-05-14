@@ -240,7 +240,7 @@ There will be no completely "new" and "independent" functions that will be added
     - New case "len" on the codeGenExpr for the builtin functions
     - New case "Indexing" on the codeGenExpr for the indexing operations
     - Modifications on the codeGenExpr when we applying concatenation of strings
-    - **Update Week 7**: New case "print_str" on the codeGenExpr case "builtin1". To print the whole string, we fetch the length of the string from the first place of the address. Then, we use loop to get the ASCII in turn and call the print_str function.
+    - **Update Week 7**: New case "print_str" on the codeGenExpr case "builtin1". To print the whole string, we fetch the length of the string from the first place of the address. Then, we use loop to get the ASCII in turn and call the print_str function
 
 - **Update Week 7**: webstart.ts
     - Modification on the print function. If coming across str type, we use <nobr> instead of <pre> to avoid the character getting into a new line.
