@@ -208,14 +208,14 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
 function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
   switch (val.tag) {
     case "num":
-      var x = val.value // for division
+      var x = BigInt(val.value) // for division
       var n = 0
       var digits : Number[] = []
       while(x != BigInt(0)) {
           if (x < 0) {
             x *= BigInt(-1)
           }
-          digits.push(parseInt(String(x % BigInt(1 << 31))))
+          digits.push(Number(x & BigInt(0x7fffffff)))
           x = x / BigInt(1 << 31) 
           n = n + 1
       }
