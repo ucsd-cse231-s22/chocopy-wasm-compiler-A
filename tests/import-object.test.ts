@@ -23,8 +23,12 @@ function print(typ: Type, arg: any): any {
 
 function print_str(typ: Type, arg: any): any {
   importObject.output += stringify(typ, arg);
-  importObject.output += "\n";
   return arg;
+}
+
+function printEnter(arg: any): any {
+  importObject.output += "\n";
+  return arg
 }
 
 function assert_not_none(arg: any) : any {
@@ -54,7 +58,8 @@ export const importObject : any = {
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
-    print_str: (arg: number) => print(Type.String, arg),
+    print_enter: (arg: number) => printEnter(arg),
+    print_str: (arg: number) => print_str(Type.String, arg),
     abs: Math.abs,
     min: Math.min,
     max: Math.max,
