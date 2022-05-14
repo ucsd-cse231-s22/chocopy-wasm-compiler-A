@@ -71,10 +71,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
-  const util = require('util')
-  console.log(util.inspect(tprogram, false, null, true /* enable colors */))  
   const tmprogram = monomorphizeProgram(tprogram);
-  console.log(util.inspect(tmprogram, false, null, true /* enable colors */))  
   const globalEnv = augmentEnv(config.env, tmprogram);
   const irprogram = lowerProgram(tmprogram, globalEnv);
   const progTyp = tmprogram.a;
