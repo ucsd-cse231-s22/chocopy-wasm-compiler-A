@@ -232,23 +232,23 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
 
 export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<null>) : Expr<Type> {
   switch(expr.tag) {
-    // case "index":
-    //   var obj = expr.obj;
-    //   const index = expr.index;
-    //   if (obj.tag == "literal" && obj.value.tag == "str"){
-    //     const strLength = obj.value.length;
-    //     // if (index>= strLength || index < 0)
-    //     //   throw new Error("RUNTIME ERROR: Index out of boundary!");
-    //     //   obj.value.value = String(obj.value.value.charAt(index));
-    //     // return {...obj,a:tcLiteral(obj.value)};
-    //   }
-    //   return {...obj,a:STRING};
+    case "indexing":
+      var obj = expr.obj;
+      const index = expr.index;
+      if (obj.tag == "literal" && obj.value.tag == "str"){
+        const strLength = obj.value.length;
+        if (index>= strLength || index < 0)
+          throw new Error("RUNTIME ERROR: Index out of boundary!");
+          obj.value.value = String(obj.value.value.charAt(index));
+        return {...obj,a:tcLiteral(obj.value)};
+      }
+      return {...obj,a:STRING};
     case "literal":
       //console.log(expr.value.tag);
 
       return {...expr, a: tcLiteral(expr.value)};
     case "binop":
-      const tLeft = tcExpr(env, locals, expr.left);
+      var tLeft = tcExpr(env, locals, expr.left);
       const tRight = tcExpr(env, locals, expr.right);
       const tBin = {...expr, left: tLeft, right: tRight};
       switch(expr.op) {
@@ -257,6 +257,13 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Mul:
         case BinOp.IDiv:
         case BinOp.Mod:
+          if(equalType(tLeft.a, STRING) && equalType(tRight.a, STRING)){
+            if (tLeft.tag == "literal" && tLeft.value.tag == "str" && tRight.tag == "literal" && tRight.value.tag == "str"){
+              console.log("+ with STR");
+              tLeft.value.value = String(tLeft.value.value + tRight.value.value);
+              return{...tLeft, a:tcLiteral(tLeft.value)};
+            }
+          }
           if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
