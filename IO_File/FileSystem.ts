@@ -35,8 +35,6 @@ export function exportFileBuildinFunc() {
 let fdCounter = 0;
 let fs = new Map<number, OpenFile>(); // track current open files
 
-
-const window = require('global/window');
 /*
 function setItem(filePath: string, data:Array<number>) {
     console.log('setItem is called');
@@ -83,18 +81,29 @@ export function open(filePathAddr: number, mode: number): number {
 }
 
 export function read(fd: number, numByte: number): number {
-    // console.log(`read is called, fd: ${fd}, numByte: ${numByte}`);
+    console.log(`read is called, fd: ${fd}, numByte: ${numByte}`);
     numByte = 1; // DUMMY VALUE
-
+    
     let file = checkFDExistence(fd);
     let data = window.localStorage.getItem(file.filePath);
+
     if (!data) {
+        console.log("no data");
+
+        throw new Error("RUNTIME ERROR: not enough byte to read");
         return 0;
     }
+    
     let dataArray: Array<number> = JSON.parse(data);
     
     file.fileSize = dataArray.length;
+
+    console.log(`file.fileSize: ${file.fileSize}, ${file.currentPosition}, ${dataArray}`)
     
+    if(file.currentPosition >= file.fileSize) {
+        throw new Error("RUNTIME ERROR: not enough byte to read");
+    }
+
     return dataArray[file.currentPosition];
 }
 

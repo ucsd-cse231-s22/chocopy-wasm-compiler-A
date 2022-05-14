@@ -6,18 +6,16 @@ import {run} from './tests/helpers.test';
 // entry point for debugging
 async function debug() {
   var source = `
-print(5)`
-  await run(source);
-  const output = importObject.output
-  console.log(importObject.output.trim().split("\n"));
-  // const ast = parse(source);
-  // onsole.log(JSON.stringify(ast, null, 2));
-
-  // const repl = new BasicREPL(await addLibs());
+f:File = None
+f = open(0)
+f.read()
+f.close()`
   
-  // const result = repl.run(source).then(result => {
-  //   console.log(result);    
-  // })  
+  const repl = new BasicREPL(await addLibs());
+  
+  const result = repl.run(source).then(result => {
+    console.log(result);    
+  })  
 }
 
 /*
@@ -40,7 +38,7 @@ window.localStorage = {
 }
 global.localStorage
 */
-/*
+
 global.localStorage = {
   data: {},
   getItem(key) {
@@ -60,6 +58,6 @@ global.localStorage = {
       return ""
   }
 };
-*/
+
 debug();
 
