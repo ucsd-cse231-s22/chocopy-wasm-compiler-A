@@ -39,7 +39,7 @@ Set.has() - “in” keyword (x in Set)
 Set.size() - len(Set)
 
 # Test Cases
-### 1. Set constructor
+### 1. Set constructor 1
 Description:
 
 This test case uses the set() function to create a set object. It adds element 3 into the set, and prints the whole set.
@@ -79,11 +79,11 @@ program:
 s:set = set()
 s.add(3)
 s.add(3)
-print(s)
+print(len(s))
 ```
 expected output:
 ```
-{3}
+1
 ```
 ### 4. Remove element success
 Description:
@@ -94,11 +94,11 @@ program:
 ```
 s:set = {3,5,7}
 s.remove(7)
-print(s)
+print(len(s))
 ```
 expected output:
 ```
-{3,5}
+2
 ```
 ### 5. Remove element fail 1
 Description:
@@ -138,14 +138,14 @@ This test case deletes all elements inside the set and turns it into an empty se
 program:
 ```
 s:set = {3,5,7}
-print(s)
+print(len(s))
 s.clear()
-print(s)
+print(len(s))
 ```
 expected output:
 ```
-{3,5,7}
-set()
+3
+0
 ```
 ### 8. Set.update()
 Description:
@@ -157,11 +157,11 @@ program:
 x:set = {1,2,3}
 y:set = {3,5,7}
 x.update(y)
-print(x)
+print(len(x))
 ```
 expected output:
 ```
-{1, 2, 3, 5, 7}
+5
 ```
 ### 9. Set.update() fail
 Description:
@@ -187,8 +187,8 @@ This test case uses 'in' keywords to judge whether an element is in the set.
 program:
 ```
 x:set = {1,2,3}
-1 in x
-7 in x
+print(1 in x)
+print(7 in x)
 ```
 expected output:
 ```
