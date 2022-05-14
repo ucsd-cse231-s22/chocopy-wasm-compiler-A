@@ -4,6 +4,7 @@ export type Annotation = {
   type?: Type,
   fromLoc?: Location, // include
   endLoc?: Location, // exclude
+  src?: string
 }
 export type Location = {
   row: number,

@@ -1,11 +1,11 @@
-import {parser} from "lezer-python";
-import { TreeCursor} from "lezer-tree";
+import { parser } from "lezer-python";
+import { TreeCursor } from "lezer-tree";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, Annotation, Location } from "./ast";
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
 export type ParserEnv = {
-  lineBreakIndices : Array<number>; // For calculating row/col
+  lineBreakIndices: Array<number>; // For calculating row/col
 }
 
 /**
@@ -34,23 +34,26 @@ export function binarySearch(arr: Array<number>, target: number): number {
 }
 
 export function indToLoc(srcIdx: number, env: ParserEnv): Location {
-    const row = binarySearch(env.lineBreakIndices, srcIdx) + 1;
-    const col = srcIdx - env.lineBreakIndices[row-1];
-    return {row, col, srcIdx}
+  const row = binarySearch(env.lineBreakIndices, srcIdx) + 1;
+  const col = srcIdx - env.lineBreakIndices[row - 1];
+  return { row, col, srcIdx }
 }
 
-function wrap_locs<T extends Function>(traverser: T): T {
-  return <any>function(c: TreeCursor, s: string, env: ParserEnv, ...args: any) {
-      const fromLoc = indToLoc(c.from, env);
-      const node = traverser(c, s, env, ...args);
-      const endLoc = indToLoc(c.to, env);
-      return {...node, a:{...node.a, fromLoc, endLoc}}
+
+function wrap_locs<T extends Function>(traverser: T, storeSrc: boolean = false): T {
+  return <any>function (c: TreeCursor, s: string, env: ParserEnv, ...args: any) {
+    const fromLoc = indToLoc(c.from, env);
+    const node = traverser(c, s, env, ...args);
+    const endLoc = indToLoc(c.to, env);
+    if (storeSrc)
+      return { ...node, a: { ...node.a, fromLoc, endLoc, src: s } }
+    else return { ...node, a: { ...node.a, fromLoc, endLoc } }
   };
 }
 
 export const traverseLiteral = wrap_locs(traverseLiteralHelper);
-export function traverseLiteralHelper(c : TreeCursor, s : string, env: ParserEnv) : Literal<Annotation> {
-  switch(c.type.name) {
+export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv): Literal<Annotation> {
+  switch (c.type.name) {
     case "Number":
       return {
         tag: "num",
@@ -71,15 +74,15 @@ export function traverseLiteralHelper(c : TreeCursor, s : string, env: ParserEnv
 }
 
 export const traverseExpr = wrap_locs(traverseExprHelper);
-export function traverseExprHelper(c : TreeCursor, s : string, env: ParserEnv) : Expr<Annotation> {
-  switch(c.type.name) {
+export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Expr<Annotation> {
+  switch (c.type.name) {
     case "Number":
     case "Boolean":
     case "None":
-      return { 
-        tag: "literal", 
+      return {
+        tag: "literal",
         value: traverseLiteral(c, s, env)
-      }      
+      }
     case "VariableName":
       return {
         tag: "id",
@@ -102,7 +105,7 @@ export function traverseExprHelper(c : TreeCursor, s : string, env: ParserEnv) :
         }
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
-        var expr : Expr<Annotation>;
+        var expr: Expr<Annotation>;
         if (callName === "print" || callName === "abs") {
           expr = {
             tag: "builtin1",
@@ -118,9 +121,9 @@ export function traverseExprHelper(c : TreeCursor, s : string, env: ParserEnv) :
           }
         }
         else {
-          expr = { tag: "call", name: callName, arguments: args};
+          expr = { tag: "call", name: callName, arguments: args };
         }
-        return expr;  
+        return expr;
       } else {
         throw new Error("Unknown target while parsing assignment");
       }
@@ -131,7 +134,7 @@ export function traverseExprHelper(c : TreeCursor, s : string, env: ParserEnv) :
       c.nextSibling(); // go to op
       var opStr = s.substring(c.from, c.to);
       var op;
-      switch(opStr) {
+      switch (opStr) {
         case "+":
           op = BinOp.Plus;
           break;
@@ -167,7 +170,7 @@ export function traverseExprHelper(c : TreeCursor, s : string, env: ParserEnv) :
           break;
         case "is":
           op = BinOp.Is;
-          break; 
+          break;
         case "and":
           op = BinOp.And;
           break;
@@ -196,7 +199,7 @@ export function traverseExprHelper(c : TreeCursor, s : string, env: ParserEnv) :
       c.firstChild(); // Focus on op
       var opStr = s.substring(c.from, c.to);
       var op;
-      switch(opStr) {
+      switch (opStr) {
         case "-":
           op = UniOp.Neg;
           break;
@@ -236,27 +239,27 @@ export function traverseExprHelper(c : TreeCursor, s : string, env: ParserEnv) :
   }
 }
 
-export function traverseArguments(c : TreeCursor, s : string, env: ParserEnv) : Array<Expr<Annotation>> {
+export function traverseArguments(c: TreeCursor, s: string, env: ParserEnv): Array<Expr<Annotation>> {
   c.firstChild();  // Focuses on open paren
   const args = [];
   c.nextSibling();
-  while(c.type.name !== ")") {
+  while (c.type.name !== ")") {
     let expr = traverseExpr(c, s, env);
     args.push(expr);
     c.nextSibling(); // Focuses on either "," or ")"
     c.nextSibling(); // Focuses on a VariableName
-  } 
+  }
   c.parent();       // Pop to ArgList
   return args;
 }
 
 export const traverseStmt = wrap_locs(traverseStmtHelper);
-export function traverseStmtHelper(c : TreeCursor, s : string, env: ParserEnv) : Stmt<Annotation> {
-  switch(c.node.type.name) {
+export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): Stmt<Annotation> {
+  switch (c.node.type.name) {
     case "ReturnStatement":
       c.firstChild();  // Focus return keyword
-      
-      var value : Expr<Annotation>;
+
+      var value: Expr<Annotation>;
       if (c.nextSibling()) // Focus expression
         value = traverseExpr(c, s, env);
       else
@@ -283,7 +286,7 @@ export function traverseStmtHelper(c : TreeCursor, s : string, env: ParserEnv) :
           tag: "assign",
           name: target.name,
           value: value
-        }  
+        }
       } else {
         throw new Error("Unknown target while parsing assignment");
       }
@@ -310,9 +313,9 @@ export function traverseStmtHelper(c : TreeCursor, s : string, env: ParserEnv) :
     //   while(c.nextSibling()) {
     //     body.push(traverseStmt(c, s));
     //   }
-      // console.log("Before pop to body: ", c.type.name);
+    // console.log("Before pop to body: ", c.type.name);
     //   c.parent();      // Pop to Body
-      // console.log("Before pop to def: ", c.type.name);
+    // console.log("Before pop to def: ", c.type.name);
     //   c.parent();      // Pop to FunctionDefinition
     //   return {
     //     tag: "fun",
@@ -326,17 +329,17 @@ export function traverseStmtHelper(c : TreeCursor, s : string, env: ParserEnv) :
       c.nextSibling(); // Focus on : thn
       c.firstChild(); // Focus on :
       var thn = [];
-      while(c.nextSibling()) {  // Focus on thn stmts
+      while (c.nextSibling()) {  // Focus on thn stmts
         thn.push(traverseStmt(c, s, env));
       }
       // console.log("Thn:", thn);
       c.parent();
-      
+
       c.nextSibling(); // Focus on else
       c.nextSibling(); // Focus on : els
       c.firstChild(); // Focus on :
       var els = [];
-      while(c.nextSibling()) { // Focus on els stmts
+      while (c.nextSibling()) { // Focus on els stmts
         els.push(traverseStmt(c, s, env));
       }
       c.parent();
@@ -355,10 +358,10 @@ export function traverseStmtHelper(c : TreeCursor, s : string, env: ParserEnv) :
 
       var body = [];
       c.firstChild(); // Focus on :
-      while(c.nextSibling()) {
+      while (c.nextSibling()) {
         body.push(traverseStmt(c, s, env));
       }
-      c.parent(); 
+      c.parent();
       c.parent();
       return {
         tag: "while",
@@ -372,10 +375,10 @@ export function traverseStmtHelper(c : TreeCursor, s : string, env: ParserEnv) :
   }
 }
 
-export function traverseType(c : TreeCursor, s : string, env: ParserEnv) : Type {
+export function traverseType(c: TreeCursor, s: string, env: ParserEnv): Type {
   // For now, always a VariableName
   let name = s.substring(c.from, c.to);
-  switch(name) {
+  switch (name) {
     case "int": return NUM;
     case "bool": return BOOL;
     default: return CLASS(name);
@@ -383,24 +386,24 @@ export function traverseType(c : TreeCursor, s : string, env: ParserEnv) : Type 
 }
 
 export const traverseParameter = wrap_locs(traverseParameterHelper);
-export function traverseParameterHelper(c : TreeCursor, s : string, env: ParserEnv) : Parameter<Annotation> {
+export function traverseParameterHelper(c: TreeCursor, s: string, env: ParserEnv): Parameter<Annotation> {
   let name = s.substring(c.from, c.to);
   c.nextSibling(); // Focuses on "TypeDef", hopefully, or "," if mistake
   let nextTagName = c.type.name; // NOTE(joe): a bit of a hack so the next line doesn't if-split
-  if(nextTagName !== "TypeDef") { throw new Error("Missed type annotation for parameter " + name)};
+  if (nextTagName !== "TypeDef") { throw new Error("Missed type annotation for parameter " + name) };
   c.firstChild();  // Enter TypeDef
   c.nextSibling(); // Focuses on type itself
   let typ = traverseType(c, s, env);
   c.parent();
-  return {name, type: typ};
+  return { name, type: typ };
 }
 
 
-export function traverseParameters(c : TreeCursor, s : string, env: ParserEnv) : Array<Parameter<Annotation>> {
+export function traverseParameters(c: TreeCursor, s: string, env: ParserEnv): Array<Parameter<Annotation>> {
   c.firstChild();  // Focuses on open paren
   const parameters = [];
   c.nextSibling(); // Focuses on a VariableName
-  while(c.type.name !== ")") {
+  while (c.type.name !== ")") {
     parameters.push(traverseParameter(c, s, env));
     c.nextSibling(); // Move on to comma or ")"
     c.nextSibling(); // Focuses on a VariableName or 
@@ -410,12 +413,12 @@ export function traverseParameters(c : TreeCursor, s : string, env: ParserEnv) :
 }
 
 export const traverseVarInit = wrap_locs(traverseVarInitHelper);
-export function traverseVarInitHelper(c : TreeCursor, s : string, env: ParserEnv) : VarInit<Annotation> {
+export function traverseVarInitHelper(c: TreeCursor, s: string, env: ParserEnv): VarInit<Annotation> {
   c.firstChild(); // go to name
   var name = s.substring(c.from, c.to);
   c.nextSibling(); // go to : type
 
-  if(c.type.name !== "TypeDef") {
+  if (c.type.name !== "TypeDef") {
     c.parent();
     throw Error("invalid variable init");
   }
@@ -423,7 +426,7 @@ export function traverseVarInitHelper(c : TreeCursor, s : string, env: ParserEnv
   c.nextSibling(); // go to type
   const type = traverseType(c, s, env);
   c.parent();
-  
+
   c.nextSibling(); // go to =
   c.nextSibling(); // go to value
   var value = traverseLiteral(c, s, env);
@@ -433,15 +436,15 @@ export function traverseVarInitHelper(c : TreeCursor, s : string, env: ParserEnv
 }
 
 export const traverseFunDef = wrap_locs(traverseFunDefHelper);
-export function traverseFunDefHelper(c : TreeCursor, s : string, env: ParserEnv) : FunDef<Annotation> {
+export function traverseFunDefHelper(c: TreeCursor, s: string, env: ParserEnv): FunDef<Annotation> {
   c.firstChild();  // Focus on def
   c.nextSibling(); // Focus on name of function
   var name = s.substring(c.from, c.to);
   c.nextSibling(); // Focus on ParamList
   var parameters = traverseParameters(c, s, env)
   c.nextSibling(); // Focus on Body or TypeDef
-  let ret : Type = NONE;
-  if(c.type.name === "TypeDef") {
+  let ret: Type = NONE;
+  if (c.type.name === "TypeDef") {
     c.firstChild();
     ret = traverseType(c, s, env);
     c.parent();
@@ -450,10 +453,10 @@ export function traverseFunDefHelper(c : TreeCursor, s : string, env: ParserEnv)
   c.firstChild();  // Focus on :
   var inits = [];
   var body = [];
-  
+
   var hasChild = c.nextSibling();
 
-  while(hasChild) {
+  while (hasChild) {
     if (isVarInit(c, s, env)) {
       inits.push(traverseVarInit(c, s, env));
     } else {
@@ -462,11 +465,11 @@ export function traverseFunDefHelper(c : TreeCursor, s : string, env: ParserEnv)
     hasChild = c.nextSibling();
   }
 
-  while(hasChild) {
+  while (hasChild) {
     body.push(traverseStmt(c, s, env));
     hasChild = c.nextSibling();
-  } 
-  
+  }
+
   // console.log("Before pop to body: ", c.type.name);
   c.parent();      // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
@@ -475,24 +478,24 @@ export function traverseFunDefHelper(c : TreeCursor, s : string, env: ParserEnv)
 }
 
 export const traverseClass = wrap_locs(traverseClassHelper);
-export function traverseClassHelper(c : TreeCursor, s : string, env: ParserEnv) : Class<Annotation> {
-  const fields : Array<VarInit<Annotation>> = [];
-  const methods : Array<FunDef<Annotation>> = [];
+export function traverseClassHelper(c: TreeCursor, s: string, env: ParserEnv): Class<Annotation> {
+  const fields: Array<VarInit<Annotation>> = [];
+  const methods: Array<FunDef<Annotation>> = [];
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
   c.nextSibling(); // Focus on arglist/superclass
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
-  while(c.nextSibling()) { // Focuses first field
+  while (c.nextSibling()) { // Focuses first field
     if (isVarInit(c, s, env)) {
       fields.push(traverseVarInit(c, s, env));
     } else if (isFunDef(c, s, env)) {
       methods.push(traverseFunDef(c, s, env));
     } else {
-      throw new Error(`Could not parse the body of class: ${className}` );
+      throw new Error(`Could not parse the body of class: ${className}`);
     }
-  } 
+  }
   c.parent();
   c.parent();
 
@@ -506,12 +509,12 @@ export function traverseClassHelper(c : TreeCursor, s : string, env: ParserEnv) 
   };
 }
 
-export function traverseDefs(c : TreeCursor, s : string, env: ParserEnv) : [Array<VarInit<Annotation>>, Array<FunDef<Annotation>>, Array<Class<Annotation>>] {
-  const inits : Array<VarInit<Annotation>> = [];
-  const funs : Array<FunDef<Annotation>> = [];
-  const classes : Array<Class<Annotation>> = [];
+export function traverseDefs(c: TreeCursor, s: string, env: ParserEnv): [Array<VarInit<Annotation>>, Array<FunDef<Annotation>>, Array<Class<Annotation>>] {
+  const inits: Array<VarInit<Annotation>> = [];
+  const funs: Array<FunDef<Annotation>> = [];
+  const classes: Array<Class<Annotation>> = [];
 
-  while(true) {
+  while (true) {
     if (isVarInit(c, s, env)) {
       inits.push(traverseVarInit(c, s, env));
     } else if (isFunDef(c, s, env)) {
@@ -526,38 +529,38 @@ export function traverseDefs(c : TreeCursor, s : string, env: ParserEnv) : [Arra
 
 }
 
-export function isVarInit(c : TreeCursor, s : string, env: ParserEnv) : Boolean {
+export function isVarInit(c: TreeCursor, s: string, env: ParserEnv): Boolean {
   if (c.type.name === "AssignStatement") {
     c.firstChild(); // Focus on lhs
     c.nextSibling(); // go to : type
 
     const isVar = c.type.name as any === "TypeDef";
     c.parent();
-    return isVar;  
+    return isVar;
   } else {
     return false;
   }
 }
 
-export function isFunDef(c : TreeCursor, s : string, env: ParserEnv) : Boolean {
+export function isFunDef(c: TreeCursor, s: string, env: ParserEnv): Boolean {
   return c.type.name === "FunctionDefinition";
 }
 
-export function isClassDef(c : TreeCursor, s : string, env: ParserEnv) : Boolean {
+export function isClassDef(c: TreeCursor, s: string, env: ParserEnv): Boolean {
   return c.type.name === "ClassDefinition";
 }
 
-export const traverse = wrap_locs(traverseHelper);
-export function traverseHelper(c : TreeCursor, s : string, env: ParserEnv) : Program<Annotation> {
-  switch(c.node.type.name) {
+export const traverse = wrap_locs(traverseHelper, true);
+export function traverseHelper(c: TreeCursor, s: string, env: ParserEnv): Program<Annotation> {
+  switch (c.node.type.name) {
     case "Script":
-      const inits : Array<VarInit<Annotation>> = [];
-      const funs : Array<FunDef<Annotation>> = [];
-      const classes : Array<Class<Annotation>> = [];
-      const stmts : Array<Stmt<Annotation>> = [];
+      const inits: Array<VarInit<Annotation>> = [];
+      const funs: Array<FunDef<Annotation>> = [];
+      const classes: Array<Class<Annotation>> = [];
+      const stmts: Array<Stmt<Annotation>> = [];
       var hasChild = c.firstChild();
 
-      while(hasChild) {
+      while (hasChild) {
         if (isVarInit(c, s, env)) {
           inits.push(traverseVarInit(c, s, env));
         } else if (isFunDef(c, s, env)) {
@@ -570,10 +573,10 @@ export function traverseHelper(c : TreeCursor, s : string, env: ParserEnv) : Pro
         hasChild = c.nextSibling();
       }
 
-      while(hasChild) {
+      while (hasChild) {
         stmts.push(traverseStmt(c, s, env));
         hasChild = c.nextSibling();
-      } 
+      }
       c.parent();
       return { funs, inits, classes, stmts };
     default:
@@ -581,13 +584,13 @@ export function traverseHelper(c : TreeCursor, s : string, env: ParserEnv) : Pro
   }
 }
 
-export function parse(source : string) : Program<Annotation> {
-  const env : ParserEnv = {
+export function parse(source: string): Program<Annotation> {
+  const env: ParserEnv = {
     lineBreakIndices: [],
-  } 
+  }
   source += "\n";
   env.lineBreakIndices = [-1];
-  for (var i=0; i < source.length; i++) {
+  for (var i = 0; i < source.length; i++) {
     if (source[i] == '\n') {
       env.lineBreakIndices.push(i);
     }
