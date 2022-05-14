@@ -74,10 +74,18 @@ export function isNoneOrClass(t: Type) {
   return t.tag === "none" || t.tag === "class";
 }
 
-// TODO: add defination for isSubClass
+export function isSubClass(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
+  if (t1.tag === "class" && t2.tag === "class") {
+    const superclasses : string[] = []
+    getSuperclasses(env, t1.name, superclasses)
+    return superclasses.includes(t2.name)
+  } else {
+    return t1.tag === "none" && t2.tag === "class"
+  }
+}
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class"  // add call to isSubClass(t1, t2)
+  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class"  || isSubClass(env, t1, t2)
 }
 
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
@@ -209,6 +217,20 @@ export function tcFields(env: GlobalTypeEnv, cls : Class<null>, tFields : VarIni
   tFields.push(...cls.fields.map(field => tcInit(env, field)));
 }
 
+export function getSuperclasses(env: GlobalTypeEnv, subclass: string, classes: Array<string>) {
+  if (subclass === "object")
+    return
+
+  env.classes.get(subclass)[2].forEach(cls => {
+    if (cls !== "object") {
+      classes.push(cls)
+    }
+  })
+  env.classes.get(subclass)[2].forEach(cls => {
+    getSuperclasses(env, cls, classes)
+  })
+}
+
 export function getSuperclassFields(env: GlobalTypeEnv, subclass: string, fields: Map<string, Type>) {
   if (subclass === "object")
     return
@@ -306,8 +328,8 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       getSuperclassFields(env, tObj.a.name, superclassfields)
       if (!fields.has(stmt.field) && !superclassfields.has(stmt.field)) 
         throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObj.a.name}`);
-      if (!isAssignable(env, tVal.a, fields.get(stmt.field)))
-        throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
+      if (!isAssignable(env, tVal.a, fields.get(stmt.field)) && !isAssignable(env, tVal.a, superclassfields.get(stmt.field)))
+        throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${superclassfields.get(stmt.field)}`);
       return {...stmt, a: NONE, obj: tObj, value: tVal};
   }
 }
@@ -454,7 +476,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           getSuperclassMethods(env, tObj.a.name, superclassmethods)
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = methods.get(expr.method);
-            const realArgs = [tObj]
+            const realArgs = [tObj].concat(tArgs)
             if(methodArgs.length === realArgs.length &&
               methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a, argTyp))) {
                 return {...expr, a: methodRet, obj: tObj, arguments: tArgs};
@@ -463,7 +485,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
               }
           } else if (superclassmethods.has(expr.method)) {
             const [methodArgs, methodRet] = superclassmethods.get(expr.method);
-            const realArgs = [tObj]
+            const realArgs = [tObj].concat(tArgs)
             if(methodArgs.length === realArgs.length &&
               methodArgs.every((argTyp: Type, i: number) => isAssignable(env, realArgs[i].a, argTyp))) {
                 return {...expr, a: methodRet, obj: tObj, arguments: tArgs};
