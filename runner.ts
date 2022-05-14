@@ -10,6 +10,7 @@ import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
+import { optimizeProgram } from './optimization';
 
 export type Config = {
   importObject: any;
@@ -72,6 +73,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
+  const optIr = optimizeProgram(irprogram);
   const progTyp = tprogram.a;
   var returnType = "";
   var returnExpr = "";
@@ -84,7 +86,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   } 
   let globalsBefore = config.env.globals;
   // const compiled = compiler.compile(tprogram, config.env);
-  const compiled = compile(irprogram, globalEnv);
+  const compiled = compile(optIr, globalEnv);
 
   const globalImports = [...globalsBefore.keys()].map(name =>
     `(import "env" "${name}" (global $${name} (mut i32)))`
@@ -94,12 +96,13 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   ).join("\n");
 
   const importObject = config.importObject;
-  // if(!importObject.js) {
-  //   const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
-  //   importObject.js = { memory: memory };
-  // }
+  if(!importObject.js) {
+    const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
+    importObject.js = { memory: memory };
+  }
 
   const wasmSource = `(module
+    (import "js" "memory" (memory 1))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
@@ -108,6 +111,9 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))
     (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
+    (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
+    (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
+    (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
