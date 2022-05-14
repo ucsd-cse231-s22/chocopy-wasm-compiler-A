@@ -173,7 +173,7 @@ there should be mainly three parts in this structure: a variable x, an iterator 
 x here should be a predefined variable, otherwise chocopy compiler should report the error that the variable is undefined, so x here is a name with the string type; the iterator should be a list in chocopy’s scope, and we can use an expression to represent it.
 The final structure should be like this:
 ```typescript
-{ tag: "for", name: name, iterable: iter, body: body}
+{ a?: A, tag: "for", name: string, iterable: Expr<A>, body: Array<Stmt<A>>}
 ```
 
 
@@ -213,8 +213,10 @@ List elements are placed consecutively on heap memory. The first element stored 
 
 ### For-loop
 
-The implementation of the for loop can use a helper class with three different fields: initial_state, step, stop_condition; we can utilize this helper class to generate code for the loop
-
+As chocopy does not contain complex iterators like dictionary, so we choose a simple design to transfer the for loop to equal while statement.
+I initialize a virtual index for each for loop with value 0. For each body of the for statement, I insert an assignment statement at the beginning to assign
+current list[index] to the variable id, and a step statement at the end of the body to update the index. To avoid conflict of different for loop, I use
+the generateName method to differentiate index for different "for loop".
 
 ## How to run/test our code
 ```
