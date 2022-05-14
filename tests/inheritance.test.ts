@@ -202,6 +202,23 @@ l : B = None
 l = B()
 print(l.sum_a_b())
 `, [`3`]);
+assertPrint("simple-method-overriding", `
+class Single(object):
+	a : int = 1
+	def sum1(self: Single) -> int: 
+		return self.a
+class Two(Single):
+	b : int = 2
+	def sum2(self: Two) -> int: 
+		return self.a + self.b
+class Three(Two):
+	c : int = 3
+	def sum3(self: Three) -> int: 
+		return self.a + self.b + self.c
+l : Three = None 
+l = Three()
+print(l.sum3())
+`, [`6`]);
 assertTCFail("method-doesnt-exist-in-any-class", `
 class A(object):
 	a : int = 1
