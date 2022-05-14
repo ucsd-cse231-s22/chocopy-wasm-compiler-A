@@ -190,6 +190,20 @@ Our work will be to just update IR statements values and (or) annotations and al
 A description of any new functions, datatypes, and/or files added to the codebase. 
 These can be actual code diffs in the PR or written in your design.md.
 
+1) optimization.ts - Contains all the optimization functionalities. Currently implemented - constant propagation within the same scope, constant folding.
+a) Datatypes : Env - An environment type that contains a map from variables to their compile time value (compileVal).
+           compileVal - A compile time value type that extends type 'Value' from ir.ts to include types "nac" (Not a Constant) and "undef" (Undefined). These add-ons are used to resolve merge conflicts during constant propagation.
+b) Functions (only the importnant ones are listed here) :  
+    optimizeProgram() - Maps a source program IR to an optimized program IR. Optimization is done in multiple passes and ends when the IR stabilizes. Currently - Each basic block contains in-environments (Env). In-environments are used for constant propagation within the basic block and are updated accordingly. To be implemented - Dead code elimination.
+    optimizeFunction() - Maps a function's IR to an optimized function's IR. Operates identically to optimizeProgram().
+    computeInitEnv() - Computes the in-environment to the first basic block consisting of all vardefs mapped to type "undef". 
+    mergeAllPreds() - A helper function for the worklist algorithm that merges the Out-environments of all predecessor basic blocks.
+    generateEnvironments() - A recursive forward-pass worklist algorithm that computes a stable set of in-environments for all basic-blocks.
+
+2) optimization_utils.ts - Contains utility functions required for optimization; mainly includes type equality checks and deep equality checks on IRs to decide the termination of our multiple-pass optimization algorithm.
+3) optimizations.test.ts - Contains optimization test cases. Current tests are sanity checks which compare the IRs and outputs of the source and optimized programs.
+4) Function assertOptimize() in asserts.test.ts - Function for testing.
+
 ## Description of memory layout or value representation
 
 A description of the value representation and memory layout for any new runtime 
