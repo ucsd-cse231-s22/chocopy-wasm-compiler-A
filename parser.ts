@@ -1,15 +1,22 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
-import { NUM, BOOL, NONE, CLASS } from "./utils";
+import { NUM, FLOAT, BOOL, NONE, ELLIPSIS, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   switch(c.type.name) {
     case "Number":
+      const tonum = Number(s.substring(c.from, c.to));
+      if (tonum !== Math.floor(tonum)){
+        return {
+        tag: "float",
+        value: tonum
+        } 
+      }
       return {
         tag: "num",
-        value: Number(s.substring(c.from, c.to))
+        value: tonum
       }
     case "Boolean":
       return {
@@ -19,6 +26,10 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
     case "None":
       return {
         tag: "none"
+      }
+    case "Ellipsis":
+      return {
+        tag: "..."
       }
     default:
       throw new Error("Not literal")
@@ -30,6 +41,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
     case "Number":
     case "Boolean":
     case "None":
+    case "Ellipsis":
       return { 
         tag: "literal", 
         value: traverseLiteral(c, s)
@@ -63,13 +75,13 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
             name: callName,
             args: args
           };
-        } else if (callName === "abs") {
+        } else if (callName === "abs"  || callName === "int" || callName === "bool" || callName === "factorial") {
             expr = {
             tag: "builtin1",
             name: callName,
             arg: args[0]
           };
-        } else if (callName === "max" || callName === "min" || callName === "pow") {
+        } else if (callName === "max" || callName === "min" || callName === "pow" || callName === "gcd" || callName === "lcm") {
           expr = {
             tag: "builtin2",
             name: callName,
@@ -212,6 +224,26 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<null>
 
 export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
   switch(c.node.type.name) {
+    case "ImportStatement":
+      let importStatement: Stmt<null> = {tag: "import", mod: "", name: []};
+
+      c.firstChild();
+      if(s.substring(c.from, c.to).trim() === "from"){ // from x import y
+        c.nextSibling();
+        const from_name = s.substring(c.from, c.to);
+        c.nextSibling();
+        c.nextSibling();
+        const import_name = s.substring(c.from, c.to); 
+        // TODO(rongyi): did not handle multiple imports
+        importStatement.mod = from_name;
+        importStatement.name = [import_name];
+      } else { // import x
+        c.nextSibling();
+        const from_name = s.substring(c.from, c.to);
+        importStatement.mod = from_name
+      }
+      c.parent()
+      return importStatement;
     case "ReturnStatement":
       c.firstChild();  // Focus return keyword
       
@@ -336,7 +368,9 @@ export function traverseType(c : TreeCursor, s : string) : Type {
   let name = s.substring(c.from, c.to);
   switch(name) {
     case "int": return NUM;
+    case "float": return FLOAT;
     case "bool": return BOOL;
+    case "Ellipsis": return ELLIPSIS;
     default: return CLASS(name);
   }
 }

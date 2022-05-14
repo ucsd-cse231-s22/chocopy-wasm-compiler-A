@@ -15,7 +15,7 @@ class C(object):
     else:
       return`
   source = `
-  print(print)
+  print(12)
 `;
   console.log(stringifyTree(parser.parse(source).cursor(),source, 0));
   const ast = parse(source);

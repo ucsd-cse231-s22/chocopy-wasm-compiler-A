@@ -20,7 +20,6 @@ import {parse} from "./parser";
 // `);
 
 var result = parse(`
-while True:
-  pass`)
+from x import y`)
 
 console.log(JSON.stringify(result, null, 4));

@@ -8,7 +8,7 @@ import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
-import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
+import { PyValue, NONE, BOOL, NUM, FLOAT, CLASS } from "./utils";
 import { lowerProgram } from './lower';
 
 export type Config = {
@@ -45,11 +45,15 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 
 export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
+  const newGlobalfloats = new Map(env.globalfloats);
   const newClasses = new Map(env.classes);
 
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
-    newGlobals.set(v.name, true);
+    if(v.type.tag === "float"){
+      newGlobalfloats.set(v.name, true);
+    }
+    else {newGlobals.set(v.name, true);}
   });
   prog.classes.forEach(cls => {
     const classFields = new Map();
@@ -58,8 +62,10 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   });
   return {
     globals: newGlobals,
+    globalfloats: newGlobalfloats,
     classes: newClasses,
     locals: env.locals,
+    localfloats: env.localfloats,
     labels: env.labels,
     offset: newOffset
   }
@@ -79,18 +85,31 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   // const lastExprTyp = lastExpr.a;
   // console.log("LASTEXPR", lastExpr);
   if(progTyp !== NONE) {
-    returnType = "(result i32)";
-    returnExpr = "(local.get $$last)"
+    if (progTyp === FLOAT){
+      returnType = "(result f32)";
+      returnExpr = "(local.get $$flast)";
+    }
+    else{
+      returnType = "(result i32)";
+      returnExpr = "(local.get $$last)";
+    }
   } 
   let globalsBefore = config.env.globals;
+  let globalfloatsBefore = config.env.globalfloats;
   // const compiled = compiler.compile(tprogram, config.env);
   const compiled = compile(irprogram, globalEnv);
 
   const globalImports = [...globalsBefore.keys()].map(name =>
     `(import "env" "${name}" (global $${name} (mut i32)))`
   ).join("\n");
+  const globalfloatImports = [...globalfloatsBefore.keys()].map(name =>
+    `(import "env" "${name}" (global $${name} (mut f32)))`
+  ).join("\n");
   const globalDecls = compiled.globals.map(name =>
     `(global $${name} (export "${name}") (mut i32) (i32.const 0))`
+  ).join("\n");
+  const globalfloatDecls = compiled.globalfloats.map(name =>
+    `(global $${name} (export "${name}") (mut f32) (f32.const 0.0))`
   ).join("\n");
 
   const importObject = config.importObject;
@@ -106,15 +125,23 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
     (func $print_newline (import "imports" "print_newline") (param i32) (result i32))
+    (func $print_ellipsis (import "imports" "print_ellipsis") (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
+    (func $int (import "imports" "abs") (param i32) (result i32))
+    (func $bool (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))
     (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
+    (func $gcd (import "imports" "gcd") (param i32) (param i32) (result i32))
+    (func $lcm (import "imports" "lcm") (param i32) (param i32) (result i32))
+    (func $factorial (import "imports" "factorial") (param i32) (result i32))
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     ${globalImports}
+    ${globalfloatImports}
     ${globalDecls}
+    ${globalfloatDecls}
     ${config.functions}
     ${compiled.functions}
     (func (export "exported_func") ${returnType}
@@ -123,6 +150,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     )
   )`;
   console.log(wasmSource);
+  // throw new Error(`${wasmSource}`);
   const [result, instance] = await runWat(wasmSource, importObject);
 
   return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance];

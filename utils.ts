@@ -3,7 +3,9 @@ import { Value, Type } from "./ast";
 export function PyValue(typ: Type, result: number): Value {
   switch (typ.tag) {
     case "number":
-      return PyInt(result);
+      return PyNum(result);
+    case "float":
+      return PyNum(result);
     case "bool":
       return PyBool(Boolean(result));
     case "class":
@@ -13,7 +15,7 @@ export function PyValue(typ: Type, result: number): Value {
   }
 }
 
-export function PyInt(n: number): Value {
+export function PyNum(n: number): Value {
   return { tag: "num", value: n };
 }
 
@@ -31,6 +33,8 @@ export function PyNone(): Value {
 }
 
 export const NUM : Type = {tag: "number"};
+export const FLOAT : Type = {tag: "float"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
+export const ELLIPSIS : Type = {tag: "..."};
 export function CLASS(name : string) : Type {return {tag: "class", name}};

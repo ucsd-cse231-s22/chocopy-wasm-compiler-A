@@ -1,16 +1,21 @@
 import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
+import { NUM, FLOAT, BOOL, NONE, ELLIPSIS } from './utils';
+import { gcd, lcm, factorial } from './stdlib/math';
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
     case "number":
       return (arg as number).toString();
+    case "float":
+      return (arg as number).toString();
     case "bool":
       return (arg as boolean)? "True" : "False";
     case "none":
       return "None";
+    case "...":
+      return "Ellipsis";
     case "class":
       return typ.name;
   }
@@ -76,10 +81,21 @@ function webStart() {
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),
         print_newline: (arg: number) => print(undefined, arg),
+        print_ellipsis: (arg: number) => print(ELLIPSIS, arg),
+        int: (arg: any) => arg,
+        bool: (arg: any) => arg !== 0,
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
-        pow: Math.pow
+        pow: Math.pow,
+        // NOTE: keep these files in sync with this
+        // - runner.ts WASM
+        // - type-check.ts
+        // - parser.ts
+        // - import-object.test.ts
+        gcd: gcd,
+        lcm: lcm,
+        factorial: factorial,
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,
@@ -94,6 +110,9 @@ function webStart() {
       document.getElementById("output").appendChild(elt);
       switch (result.tag) {
         case "num":
+          elt.innerText = String(result.value);
+          break;
+        case "float":
           elt.innerText = String(result.value);
           break;
         case "bool":

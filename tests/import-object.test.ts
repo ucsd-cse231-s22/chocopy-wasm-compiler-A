@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
+import { gcd, lcm, factorial } from "../stdlib/math";
 
-enum Type { Num, Bool, None }
+enum Type { Num, Bool, None, Ellipsis }
 
 function stringify(typ: Type, arg: any): string {
   switch (typ) {
@@ -10,6 +11,8 @@ function stringify(typ: Type, arg: any): string {
       return (arg as boolean) ? "True" : "False";
     case Type.None:
       return "None";
+    case Type.Ellipsis:
+      return "Ellipsis";
   }
 }
 
@@ -48,15 +51,20 @@ export const importObject : any = {
     //  We can then examine output to see what would have been printed in the
     //  console.
     assert_not_none: (arg: any) => assert_not_none(arg),
-    print: (arg: any) => print(Type.Num, arg),
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
     print_newline: (arg: number) => print(undefined, arg),
+    print_ellipsis: (arg: number) => print(Type.Ellipsis, arg),
+    int: (arg: any) => arg,
+    bool: (arg: any) => arg !== 0,
     abs: Math.abs,
     min: Math.min,
     max: Math.max,
     pow: Math.pow,
+    gcd: gcd,
+    lcm: lcm,
+    factorial: factorial,
   },
 
   output: "",

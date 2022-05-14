@@ -1,7 +1,7 @@
 
 import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
-import { NUM, BOOL, NONE, CLASS } from './utils';
+import { NUM, FLOAT, BOOL, NONE, ELLIPSIS, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
@@ -34,6 +34,9 @@ defaultGlobalFunctions.set("abs", [[NUM], NUM]);
 defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
+defaultGlobalFunctions.set("gcd", [[NUM, NUM], NUM]);
+defaultGlobalFunctions.set("lcm", [[NUM, NUM], NUM]);
+defaultGlobalFunctions.set("factorial", [[NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
 
 export const defaultTypeEnv = {
@@ -169,6 +172,9 @@ export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Arra
 
 export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<null>) : Stmt<Type> {
   switch(stmt.tag) {
+    case "import":
+      // TODO: bypass typechecking for now
+      return {a: NONE, tag: stmt.tag, mod: stmt.mod, name: stmt.name, alias: stmt.alias};
     case "assign":
       const tValExpr = tcExpr(env, locals, stmt.value);
       var nameTyp;
@@ -285,11 +291,16 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         throw new TypeCheckError("Unbound id: " + expr.name);
       }
     case "builtin1":
-      // if (expr.name === "print") {
-      //   const tArg = tcExpr(env, locals, expr.arg);
-      //   return {...expr, a: tArg.a, arg: tArg};
-      // } else 
-      if(env.functions.has(expr.name)) {
+      if (expr.name === "int" || expr.name === "bool") {
+        const tArg = tcExpr(env, locals, expr.arg);
+        if (tArg.a !== NUM && tArg.a !== BOOL){
+          throw new TypeError("Function call type mismatch: " + expr.name);
+        }
+        if (expr.name === "bool"){
+          return {...expr, a: BOOL, arg: tArg};
+        }
+        return {...expr, a: NUM, arg: tArg};
+      } else if(env.functions.has(expr.name)) {
         const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
         const tArg = tcExpr(env, locals, expr.arg);
         
@@ -401,6 +412,8 @@ export function tcLiteral(literal : Literal) {
     switch(literal.tag) {
         case "bool": return BOOL;
         case "num": return NUM;
+        case "float": return FLOAT;
         case "none": return NONE;
+        case "...": return ELLIPSIS;
     }
 }
