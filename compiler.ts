@@ -306,6 +306,7 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
   def.inits.forEach(v => definedVars.add(v.name));
   definedVars.add("$last");
   definedVars.add("$selector");
+  definedVars.add("$scratch");
   // def.parameters.forEach(p => definedVars.delete(p.name));
   definedVars.forEach(env.locals.add, env.locals);
   def.parameters.forEach(p => env.locals.add(p.name));
