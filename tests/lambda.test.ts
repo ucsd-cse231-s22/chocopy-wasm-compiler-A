@@ -128,7 +128,7 @@ describe("traverseType(c, s) function", () => {
   describe("lower", () => {
     it("run lambda", async () => {
       await run("mklambda(Callable[[], int], lambda: print(5))()");
-      console.error(importObject.output);
+      // console.error(importObject.output);
     });
 
     it("run lambda reassign", async () => {
@@ -137,12 +137,12 @@ describe("traverseType(c, s) function", () => {
       a()
       a = mklambda(Callable[[], int], lambda: print(7))
       a()`);
-      console.error(importObject.output);
+      // console.error(importObject.output);
     });
 
     it("nested lambda", async () => {
       await run("mklambda(Callable[[], Callable[[], int]], lambda: mklambda(Callable[[], int], lambda: print(5)))()()");
-      console.error(importObject.output);
+      // console.error(importObject.output);
     });
 
     it("if lambda", async () => {
@@ -152,7 +152,7 @@ describe("traverseType(c, s) function", () => {
 else:
   print(6)
 `);
-      console.error(importObject.output);
+      // console.error(importObject.output);
     });
 
     it("assign func", async () => {
@@ -169,7 +169,7 @@ else:
       const cursor = parser.parse(source).cursor();
       const prog = traverse(cursor, source);
       tc(emptyGlobalTypeEnv(), prog);
-      console.error(importObject.output);
+      // console.error(importObject.output);
 
       expect(() => {
         const source = `
@@ -185,7 +185,7 @@ else:
         const cursor = parser.parse(source).cursor();
         const prog = traverse(cursor, source);
         tc(emptyGlobalTypeEnv(), prog);
-        console.error(importObject.output);
+        // console.error(importObject.output);
       }).throws();
 
       expect(() => {
@@ -202,7 +202,7 @@ else:
         const cursor = parser.parse(source).cursor();
         const prog = traverse(cursor, source);
         tc(emptyGlobalTypeEnv(), prog);
-        console.error(importObject.output);
+        // console.error(importObject.output);
       }).throws();
     });
   });

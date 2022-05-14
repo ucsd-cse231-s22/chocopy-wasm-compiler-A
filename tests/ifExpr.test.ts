@@ -1,7 +1,7 @@
 import { assertPrint, assertFail, assertTCFail, assertTC } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
-describe("if-exper tests", () => {
+describe("if-expr tests", () => {
   //Super Simple tests
   assertPrint("Simple True", `print(True if True else False)`, [`True`]);
   assertPrint("Simple False", `print(True if False else False)`, [`False`]);
@@ -39,7 +39,7 @@ print(foobar.x)
 foobar.x = 2 if False else 1
 print(foobar.x)`,["0","2","1"])
 //Test it works in arguments
-assertPrint("Functions",
+assertPrint("Functions in if-expr",
 `def f(x: int) -> int:
   1+1
   1+1
@@ -76,8 +76,8 @@ while True if i<11 else False:
    printRetNone(i) if i % 2 == 0 else None
    i=i+1
 `,["0","2","4","6","8","10"])
-//If exper in IF!!!!
-assertPrint("If exper in if cond",`
+//If expr in IF!!!!
+assertPrint("If expr in if cond",`
 x: int = 0
 if False if x>10 else True:
     print(True)
@@ -91,7 +91,7 @@ else:
     print(10)
 `,["True"])
 //Test lookup
-assertPrint("if expr in if body",`
+assertPrint("if expr with id",`
 a: int = 10
 b: int = 20
 c: bool = True
