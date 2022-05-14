@@ -1,25 +1,51 @@
-import * as mocha from 'mocha';
 import { expect } from 'chai';
-import { parser } from 'lezer-python';
-import { traverseExpr, traverseStmt, traverse, parse } from '../parser';
 import { BasicREPL } from '../repl'
 import { Type, Value, Class } from '../ast';
-import { defaultTypeEnv } from '../type-check';
 import { NUM, BOOL, NONE } from '../utils';
-import CodeMirror from 'codemirror';
-import { print_class } from '../webstart'
-import "codemirror/addon/edit/closebrackets";
-import "codemirror/mode/python/python";
-import "codemirror/addon/hint/show-hint";
-import "codemirror/addon/lint/lint";
+// import { print_class } from '../webstart'
 
-import "codemirror/addon/scroll/simplescrollbars";
-import "./style.scss";
-// We write tests for each function in parser.ts here. Each function gets its 
-// own describe statement. Each it statement represents a single test. You
-// should write enough unit tests for each function until you are confident
-// the parser works as expected. 
 
+
+export function print_class(memory:WebAssembly.Memory, repl: BasicREPL, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number): Array<string> {
+
+    var fields_offset_ = repl.currentEnv.classes.get(classname);
+    var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
+    var mem = new Uint32Array(memory.buffer);
+    var display: Array<string> = [];
+    // A[1][0] refers to the offset value of field A, sorted by the offset value to ensure the iteration has a consistent order. 
+    var fields_offset = Array.from(fields_offset_.entries());
+    fields_offset.sort((a, b) => {
+      return a[1][0] - b[1][0];
+    });
+    // the reason why pointer beacuse mem is u32 array(4 byte addressing) and the pointer value returned by the run method is in raw address(byte adress)
+    // surprisingly(since there is also i64 in wasm), the offset stored int the currentenv is in 4 byte addressing.
+    const space = " ";
+    if (met_object.has(pointer)) {
+      display.push(`${space.repeat(level)}displayed ${met_object.get(pointer)}:${classname} object at addr ${pointer}: ...`);
+      return display;
+    }
+    display.push(
+      `${space.repeat(level)}${object_number}:${classname} object at addr ${pointer}: {`);
+    met_object.set(pointer, object_number)
+    fields_offset.forEach(thisfield => {
+      var thisfield_type = fields_type.get(thisfield[0]);
+      if (thisfield_type.tag === "class") {
+        if (mem[pointer / 4 + thisfield[1][0]] === 0) {
+          display.push(`${space.repeat(level + 2)}${thisfield[0]} : none `);
+        } else {
+          display.push(`${space.repeat(level + 2)}${thisfield[0]}:{`)
+          display.push(...print_class(memory, repl, mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5, met_object, object_number + 1));
+          display.push(`${space.repeat(level + 2)}}`)
+        }
+      } else {
+        display.push(`${space.repeat(level + 2)}${thisfield[0]} : ${stringify(thisfield_type, mem[pointer / 4 + thisfield[1][0]])} `);
+      }
+    }
+    )
+    display.push(
+      `${space.repeat(level + 1)}}`);
+    return display;
+  }
 function print(typ: Type, arg: number): any {
     console.log("Logging from WASM: ", arg);
     const elt = document.createElement("pre");
@@ -94,7 +120,6 @@ c = C()`
         })
     })
 
-    // TODO: add additional tests here to ensure traverseExpr works as expected
 });
 
 
