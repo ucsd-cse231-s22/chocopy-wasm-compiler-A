@@ -238,11 +238,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       if (obj.tag == "literal" && obj.value.tag == "str"){
         const strLength = obj.value.length;
         if (index>= strLength || index < 0)
-          throw new Error("Parse Error: Index out of boundary!");
+          throw new Error("RUNTIME ERROR: Index out of boundary!");
           obj.value.value = String(obj.value.value.charAt(index));
         return {...obj,a:tcLiteral(obj.value)};
       }
-      return;
+      return {...obj,a:STRING};
     case "literal":
       //console.log(expr.value.tag);
 

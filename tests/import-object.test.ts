@@ -10,6 +10,8 @@ function stringify(typ: Type, arg: any): string {
       return (arg as boolean) ? "True" : "False";
     case Type.None:
       return "None";
+    case Type.String:
+        return String.fromCharCode(arg as number);
   }
 }
 
