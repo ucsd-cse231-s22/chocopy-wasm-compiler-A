@@ -10,6 +10,10 @@ import "codemirror/addon/lint/lint";
 
 import "codemirror/addon/scroll/simplescrollbars";
 import "./style.scss";
+
+import { autocompleteHint, populateAutoCompleteSrc } from "./autocomplete";
+import { default_keywords, default_functions } from "./const";
+
 function stringify(typ: Type, arg: any): string {
   switch (typ.tag) {
     case "number":
@@ -125,10 +129,15 @@ function webStart() {
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
     function initCodeMirror() {
+
+      let isClassMethod = false;
+      let classMethodList: string[] = [];
+      let defList: string[] = [];
+
       const userCode = document.getElementById("user-code") as HTMLTextAreaElement;
       const editorBox = CodeMirror.fromTextArea(userCode, {
         mode: "python",
-        theme: "neo",
+        theme: "default",
         lineNumbers: true,
         autoCloseBrackets: true,
         lint: true,
@@ -145,6 +154,64 @@ function webStart() {
       editorBox.on("change", () => {
         userCode.value = editorBox.getValue();
       });
+      editorBox.on("inputRead", function onChange(editor, input) {
+        if (input.text[0] === ";" || input.text[0] === " " || input.text[0] === ":") {
+          isClassMethod = false;
+          return;
+        } else if (input.text[0] === "." || isClassMethod) {
+          //autocomplete class methods
+          isClassMethod = true;
+          editor.showHint({
+            hint: () =>
+              autocompleteHint(editor, classMethodList, function (e: any, cur: any) {
+                return e.getTokenAt(cur);
+              }),
+          });
+        } else {
+          //autocomplete variables, names, top-level functions
+          editor.showHint({
+            hint: () =>
+              autocompleteHint(
+                editor,
+                default_keywords.concat(default_functions).concat(defList),
+                function (e: any, cur: any) {
+                  return e.getTokenAt(cur);
+                }
+              ),
+          });
+        }
+      });
+
+      editorBox.on("keydown", (cm, event) => {
+        switch (event.code) {
+          //reset isClassMethod variable based on enter or space or backspace
+          case "Enter":
+            isClassMethod = false;
+            //compile code in background to get populate environment for autocomplete
+            var importObject = {
+              imports: {
+                print: print,
+                abs: Math.abs,
+                min: Math.min,
+                max: Math.max,
+                pow: Math.pow,
+              },
+            };
+            const repl = new BasicREPL(importObject);
+            const source = document.getElementById("user-code") as HTMLTextAreaElement;
+            repl.run(source.value).then((r) => {
+              [defList, classMethodList] = populateAutoCompleteSrc(repl);
+            });
+            return;
+          case "Space":
+            isClassMethod = false;
+            return;
+          case "Backspace":
+            isClassMethod = false;
+            return;
+        }
+      });
+
       return editorBox;
     }
     const editorBox = initCodeMirror();
@@ -238,6 +305,7 @@ function webStart() {
 
     function setupCodeExample() {
       const sel = document.querySelector("#exampleSelect") as HTMLSelectElement;
+      console.log('editorBox: ', editorBox);
       sel.addEventListener("change", (e) => {
         const code = get_code_example(sel.value);
         if (code !== "") {
@@ -254,34 +322,31 @@ function webStart() {
       repl = new BasicREPL(importObject)
 
       //clear editor code
-
-      // var element = document.querySelector(".CodeMirror") as any
-      // var editor = element.CodeMirror
-      // editor.setValue("")
-      // editor.clearHistory()
-      var source = document.getElementById("user-code") as HTMLTextAreaElement
-      source.value = ""
+      var element = document.querySelector(".CodeMirror") as any
+      var editor = element.CodeMirror
+      editor.setValue("")
+      editor.clearHistory()
 
     })
 
     document.getElementById("load").addEventListener("change", function (e) {
       resetRepl()
-
       repl = new BasicREPL(importObject)
 
       var input: any = e.target
       var reader = new FileReader()
-      var codeNode = document.getElementById("user-code") as HTMLTextAreaElement
-      codeNode.value = ""
 
+      var editorBox = document.querySelector(".CodeMirror") as any;
+      const codeNode = editorBox.CodeMirror;
 
+      codeNode.setValue("")
       reader.onload = function () {
 
         if (codeNode.value != "") {
-          codeNode.value = ""
-          codeNode.value = reader.result as string
+          codeNode.setValue("")
+          codeNode.setValue(reader.result)
         } else {
-          codeNode.value = reader.result as string
+          codeNode.setValue(reader.result)
         }
 
       }
