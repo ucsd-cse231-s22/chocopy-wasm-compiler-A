@@ -9,7 +9,7 @@ export function typeCheck(source: string) : Type {
 }
 
 export async function run(source: string) {
-  const repl = new BasicREPL(importObject);
+  const repl = new BasicREPL(await addLibs());
   const v = await repl.run(source);
 }
 

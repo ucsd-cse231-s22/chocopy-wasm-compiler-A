@@ -27,13 +27,6 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     var inits = flattenStmts(p.stmts, blocks, env);
-    console.log({
-      a: p.a,
-      funs: lowerFunDefs(p.funs, env),
-      inits: [...inits, ...lowerVarInits(p.inits, env)],
-      classes: lowerClasses(p.classes, env),
-      body: blocks
-  });
     return {
         a: p.a,
         funs: lowerFunDefs(p.funs, env),
@@ -98,8 +91,7 @@ function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Typ
   return inits;
 }
 
-function 
-flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
+function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
   switch(s.tag) {
     case "assign":
       var [valinits, valstmts, vale] = flattenExprToExpr(s.value, env);
