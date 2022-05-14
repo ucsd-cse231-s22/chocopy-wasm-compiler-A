@@ -154,5 +154,7 @@ We also expect to have changes to the globals so we can support a function to pr
 
 ## Design Decisions
 
+We decided to store the number of elements in the list at the first 4 bytes so it will be easy to use later for other functions such as print or len. We plan to incorporate the other functions and especially slicing functionality in the upcoming milestones. 
+
 ## Error Handling
 Our compiler is able to handle the index of bounds exception among the type check errors (see lists.test.ts).
