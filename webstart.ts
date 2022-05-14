@@ -21,10 +21,25 @@ function stringify(typ: Type, arg: any) : string {
 
 function print(typ: Type, arg : number) : any {
   console.log("Logging from WASM: ", arg);
-  const elt = document.createElement("pre");
+  if (typ.tag == "str") {
+    const elt = document.createElement("nobr");
+    document.getElementById("output").appendChild(elt);
+    elt.innerText = stringify(typ, arg);
+    return arg;
+  }
+  else {
+    const elt = document.createElement("pre");
+    document.getElementById("output").appendChild(elt);
+    elt.innerText = stringify(typ, arg);
+    return arg;
+  }
+}
+
+function printEnter(arg: any) {
+  console.log("nextLine");
+  const elt = document.createElement("br");
   document.getElementById("output").appendChild(elt);
-  elt.innerText = stringify(typ, arg);
-  return arg;
+  return arg
 }
 
 function assert_not_none(arg: any) : any {
@@ -51,6 +66,7 @@ function webStart() {
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),
         print_str: (arg: number) => print(STRING, arg),
+        print_enter: (arg: number) => printEnter(arg),
         print_none: (arg: number) => print(NONE, arg),
         abs: Math.abs,
         min: Math.min,
