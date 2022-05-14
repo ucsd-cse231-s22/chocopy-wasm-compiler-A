@@ -1,8 +1,17 @@
 import { assertPrint, assertFail, assertTCFail, assertTC } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
-describe("string test", () => {
+describe("list test", () => {
   // 1
+  assertPrint("list-basic", 
+  `
+  a : [int] = None
+  a = [1, 2, 3, 4, 5]
+  print(a[0])
+  print(a[1])
+  print(a[2])
+  print(a[3])
+  print(a[4])`, [`1`, `2`, `3`, `4`, `5`]);
   assertPrint("list-len",
   `
   a : [int] = None
