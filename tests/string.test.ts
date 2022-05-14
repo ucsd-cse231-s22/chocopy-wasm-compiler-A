@@ -4,7 +4,27 @@ import { assertPrint, assertFail, assertTCFail, assertTC } from "./asserts.test"
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("String tests", () => {
-  assertTC("String-TC",`"abcd"`,STRING);
+
+  assertPrint("Print-String",`
+  print("abcd")`,['abcd'])
+
+  assertPrint("Print-String-Fun",`
+  class C(object):
+    x:str = None
+    def new(self:C)->C:
+        self.x = "abc"
+        return self
+  c: C = None
+  c = C().new()
+  print(c.x)
+  `,['abc'])
+
+  assertPrint("Print-String-Class",`
+  x:str = None
+  def test(x:str)->str:
+      return x
+  x = "abcd"
+  print(test(x))`,['abcd'])  
 
   assertTC("String-In-Fun",`
   def test(x:str)->str:
@@ -14,7 +34,15 @@ describe("String tests", () => {
   test(x)
   `,STRING)
 
-  assertTC("String-In-Class",`
+  assertTC("String-TC",`"abcd"`,STRING);
+
+  assertTC("String-In-Fun",`
+  def test(x:str)->str:
+      return x
+  test("abcd")
+  `,STRING)
+
+  assertTC("String-In-Class-TC",`
   class C(object):
     x:str = None
     def new(self:C)->C:
@@ -93,14 +121,14 @@ describe("String tests", () => {
   "abcd"[1])
   `,STRING)
 
-  assertFail("String-Index-Out-Of-Boundary",`
-  print("abcd"[5]])
-  `)
-
   assertPrint("String-Index-In-Fun",`
   def test(x:str)->str:
       return x[1]
   print(test("uiop"))
   `,['i'])
+
+  assertPrint("String-Concatenate",`
+  print("abcd" + "bcde")
+  `,['abcdbcde'])
 
 });
