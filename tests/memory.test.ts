@@ -183,24 +183,26 @@ assertMemState("simple-cycle", `
     [456, refNumOffset, 2], // 2 references in the program where object id is 456
     ]); // all types are values or non-references
 
-// assertMemState("simple-cycle-deletion", `
-//     class Link(object):
-//         val: int = 0
-//         next: Link = None
+assertMemState("simple-cycle-deletion", `
+    class Link(object):
+        id: int = 0
+        next: Link = None
 
-//     x: Link = None
-//     y: Link = None
-//     x = Link()
-//     y = Link()
-//     x.next = y
-//     y.next = x
+    x: Link = None
+    y: Link = None
+    x = Link()
+    x.id = 123
+    y = Link()
+    y.id = 456
+    x.next = y
+    y.next = x
 
-//     x = None
-//     `, [
-//     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-//     [123, refNumOffset, 1], // 0 references in the program where object id is 123
-//     [456, refNumOffset, 1], // 0 references in the program where object id is 456
-//     ]); // all types are values or non-references
+    x = None
+    `, [
+    // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
+    [123, refNumOffset, 1], // 0 references in the program where object id is 123
+    [456, refNumOffset, 2], // 0 references in the program where object id is 456
+    ]); // all types are values or non-references
 
 });
 

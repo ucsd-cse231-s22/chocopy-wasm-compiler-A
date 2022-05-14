@@ -57,12 +57,20 @@ export function refLookup(r: ref) :  ref {
     throw new MemError(`invalid reference: ${r}`)
 }
 
-export function traverseUpdate(r: ref, update: number): ref { // returns r so that stack state can be maintained
+export function traverseUpdate(r: ref, offset: number, update: number): ref { // returns r so that stack state can be maintained
     //console.log(`ref trav ${r}, update: ${update}`);
     if (r === 0) {
         return r
     }
     let explored = new Set();
+    if (offset !== -1) {
+        explored.add(r);
+        r = memHeap[refLookup(r)/4 + offset];
+        if (r === 0) {
+            return r
+        }
+    }
+    
     let travQueue = [r];
     if (update > 0) {
         activeStack[activeStack.length - 1].add(r);
@@ -78,8 +86,6 @@ export function traverseUpdate(r: ref, update: number): ref { // returns r so th
         if (memHeap[addr + refNumOffset] < 0) { 
             memHeap[addr + refNumOffset] = 0;
         } 
-
-        if (curr in explored) continue;
         explored.add(curr);
 
         let types = memHeap[addr + typeOffset];
@@ -90,8 +96,7 @@ export function traverseUpdate(r: ref, update: number): ref { // returns r so th
             if ((types & (1 << i)) !== 0) {
                 for (let a = 0; a < (amt - METADATA_AMT) / size; a++) {
                     let temp = memHeap[addr + dataOffset + size*a + i];
-                    if (temp !== 0) { // 0 is None
-                        // this looks weird, but it accounts for when multiple objects point to same object
+                    if (temp !== 0 && !explored.has(temp)) { // 0 is None
                         travQueue.push(temp); 
                     }
                 }
@@ -101,17 +106,21 @@ export function traverseUpdate(r: ref, update: number): ref { // returns r so th
     return r
 }
 
+
 export function addScope() {
     activeStack.push(new Set());
+    console.log("in function");
 }
 
 export function removeScope() {
-    activeStack[activeStack.length - 1].forEach(r => traverseUpdate(r, -1));
+    console.log("outside function, deleting refs");
+    activeStack[activeStack.length - 1].forEach(r => traverseUpdate(r, -1, -1));
     activeStack.pop();
+    console.log("outside function, deleted refs");
+    
 }
 
 export function debugId(id: number, offset: number) { // id should be of type int and the first field in the object
-    //console.log(memHeap);
     for (const [_, addr] of refMap) {
         if (memHeap[addr/4 + dataOffset] === id) {
             return memHeap[addr/4 + offset];
