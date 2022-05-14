@@ -1,5 +1,61 @@
 import { Value, Type } from "./ast";
 
+export const bigMath = {
+  // https://stackoverflow.com/a/64953280
+  abs(x: bigint) {
+    return x < BigInt(0) ? -x : x
+  },
+  sign(x: bigint) {
+    if (x === BigInt(0)) return BigInt(0)
+    return x < BigInt(0) ? BigInt(-1) : BigInt(1)
+  },
+  pow(base: bigint, exponent: bigint) {
+    return base ** exponent
+  },
+  min(value: bigint, ...values: bigint[]) {
+    for (const v of values)
+      if (v < value) value = v
+    return value
+  },
+  max(value: bigint, ...values: bigint[]) {
+    for (const v of values)
+      if (v > value) value = v
+    return value
+  },
+  add(value1: bigint, value2: bigint) {
+    return value1 + value2
+  },
+  sub(value1: bigint, value2: bigint) {
+    return value1 - value2
+  },
+  mul(value1: bigint, value2: bigint) {
+    return value1 * value2
+  },
+  div(value1: bigint, value2: bigint) {
+    return value1 / value2
+  },
+  mod(value1: bigint, value2: bigint) {
+    return value1 % value2
+  },
+  eq(value1: bigint, value2: bigint) {
+    return value1 === value2
+  },
+  neq(value1: bigint, value2: bigint) {
+    return value1 !== value2
+  },
+  lte(value1: bigint, value2: bigint) {
+    return value1 <= value2
+  },
+  gte(value1: bigint, value2: bigint) {
+    return value1 >= value2
+  },
+  lt(value1: bigint, value2: bigint) {
+    return value1 < value2
+  },
+  gt(value1: bigint, value2: bigint) {
+    return value1 > value2
+  },
+}
 
 export function binop_bignum(args: number[], builtin: Function, libmem: WebAssembly.Exports): number {
   var rslt : bigint = BigInt(0);
