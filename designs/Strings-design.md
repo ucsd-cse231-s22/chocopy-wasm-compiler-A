@@ -243,7 +243,7 @@ There will be no completely "new" and "independent" functions that will be added
     - **Update Week 7**: New case "print_str" on the codeGenExpr case "builtin1". To print the whole string, we fetch the length of the string from the first place of the address. Then, we use loop to get the ASCII in turn and call the print_str function
 
 - **Update Week 7**: webstart.ts
-    - Modification on the print function. If coming across str type, we use <nobr> instead of <pre> to avoid the character getting into a new line.
+    - Modification on the print function. If coming across str type, we use tag:nobr instead of tag:pre to avoid the character getting into a new line.
     - Also, at the beginning of reading a string, we call print_enter function to switch to the next line and then print the character in order.
 
 - **Update Week 7**: string.test
