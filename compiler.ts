@@ -163,10 +163,10 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         callName = "print_str";
         const original = argStmts
         let printStrStmts: Array<string> = []
-        printStrStmts = [`${original}`, "(i32.const 0)", "call $load", "(i32.const 1)", "i32.add", "(local.set $length)",
+        printStrStmts = [`${original}`, "(i32.const 0)", "call $load", "(i32.const 1)", "i32.add","(local.set $length)",
           "(i32.const 1)", "(local.set $i)", "(loop $my_loop", `${original}`, "(local.get $i)", "call $load", "(call $print_str)", "(local.set $$last)",
           "(local.get $i)", "(i32.const 1)", "(i32.add)", "(local.set $i)", "(local.get $i)", "(local.get $length)", "(i32.lt_s)",
-          "br_if $my_loop", ")", "(i32.const 0)"]
+          "br_if $my_loop", ")",  "(i32.const 0)", "(call $print_enter)"]
         return printStrStmts
 
       }else if (expr.name === "print" && argTyp === NONE) {
