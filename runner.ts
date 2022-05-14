@@ -125,7 +125,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
       ${returnExpr}
     )
   )`;
-  // console.log(wasmSource);
+  console.log(wasmSource);
   const [result, instance] = await runWat(wasmSource, importObject);
 
   return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance];

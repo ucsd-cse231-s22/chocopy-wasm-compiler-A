@@ -113,6 +113,26 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
     // ]];
   
     case "expr":
+      if(s.tag == "expr" && s.expr.tag == "list-comp")
+      {
+        console.log("list comp in ir :: ",s.expr);
+        var compStartLbl = generateName("$compstart");
+        var compbodyLbl = generateName("$compbody");
+        var compEndLbl = generateName("$compend");
+
+        pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: compStartLbl })
+        blocks.push({  a: s.a, label: compStartLbl, stmts: [] })
+        var [cinits, cstmts, cexpr] = flattenExprToVal(s.expr.iterable_cond, env);
+        pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: compbodyLbl, els: compEndLbl });
+
+        blocks.push({  a: s.a, label: compbodyLbl, stmts: [] })
+        var bodyinits = flattenStmts(s.expr.body, blocks, env);
+        pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: compStartLbl });
+
+        blocks.push({  a: s.a, label: compEndLbl, stmts: [] })
+
+        return [...cinits, ...bodyinits]
+      }
       var [inits, stmts, e] = flattenExprToExpr(s.expr, env);
       blocks[blocks.length - 1].stmts.push(
         ...stmts, {tag: "expr", a: s.a, expr: e }
@@ -277,11 +297,13 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           value: value
         }
       });
-
+      const argpairs = e.arguments.map(a => flattenExprToVal(a, env));
+      const argvals = argpairs.map(cp => cp[2]).flat();
+      console.log("constructor :: ",e);
       return [
         [ { name: newName, type: e.a, value: { tag: "none" } }],
         [ { tag: "assign", name: newName, value: alloc }, ...assigns,
-          { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
+          { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName },...argvals] } }
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
       ];
@@ -289,9 +311,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
-    case "list-comp": {
-
-    }
+    
   }
 }
 

@@ -42,7 +42,7 @@ export type Expr<A> =
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string, arguments: Array<Expr<A>> }
   // | {  a?: A, tag: "list-construct", items: Array<Expr<A>> } // implemented by the list team. 
-  | {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Expr<A> }
+  | {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Expr<A>, iterable_cond?: Expr<A>, body?: Array<Stmt<A>> }
 
   // Possible Typechecks here ::
   // 1. iterable.a.tag = list

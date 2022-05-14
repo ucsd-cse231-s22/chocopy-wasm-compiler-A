@@ -37,6 +37,19 @@ defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
 
+const nameCounters : Map<string, number> = new Map();
+function generateName(base : string) : string {
+  if(nameCounters.has(base)) {
+    var cur = nameCounters.get(base);
+    nameCounters.set(base, cur + 1);
+    return base + (cur + 1);
+  }
+  else {
+    nameCounters.set(base, 1);
+    return base + 1;
+  }
+}
+
 export const defaultTypeEnv = {
   globals: new Map(),
   functions: defaultGlobalFunctions,
@@ -102,11 +115,13 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
   });
   return { globals: newGlobs, functions: newFuns, classes: newClasses };
 }
+var additional_inits : any[] = [];
+var additional_assigns : any[] = [];
 
 export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type>, GlobalTypeEnv] {
   const locals = emptyLocalTypeEnv();
   const newEnv = augmentTEnv(env, program);
-  const tInits = program.inits.map(init => tcInit(env, init));
+  var tInits = program.inits.map(init => tcInit(env, init));
   const tDefs = program.funs.map(fun => tcDef(newEnv, fun));
   const tClasses = program.classes.map(cls => tcClass(newEnv, cls));
 
@@ -115,7 +130,7 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   // program.funs.forEach(fun => tcDef(env, fun));
   // Strategy here is to allow tcBlock to populate the locals, then copy to the
   // global env afterwards (tcBlock changes locals)
-  const tBody = tcBlock(newEnv, locals, program.stmts);
+  var tBody = tcBlock(newEnv, locals, program.stmts);
   var lastTyp : Type = NONE;
   if (tBody.length){
     lastTyp = tBody[tBody.length - 1].a;
@@ -125,6 +140,8 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   for (let name of locals.vars.keys()) {
     newEnv.globals.set(name, locals.vars.get(name));
   }
+  tInits = tInits.concat(additional_inits);
+  tBody = additional_assigns.concat(tBody);
   const aprogram = {a: lastTyp, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody};
   return [aprogram, newEnv];
 }
@@ -168,6 +185,55 @@ export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Arra
   return tStmts;
 }
 
+export function tcListComp(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<null>, tExpr: Expr<any>) : Stmt<Type>{
+  if(tExpr.tag === "list-comp")
+  {
+    if(tExpr.iterable.tag === "construct")
+    {
+      if(tExpr.elem.tag === "id")
+        var counter = tExpr.elem.name;
+      var range_object_name = generateName("range_obj");
+      var range_object = tExpr.elem;
+      if(range_object.tag === "id")
+        range_object.name = range_object_name;
+        range_object.a = {tag:"class",name:"range"};
+      env.globals.set(range_object_name,tExpr.elem.a);
+      env.globals.set(counter,{tag:"number"});
+      var iterable_cond:Expr<any> = {tag:"method-call",method:"hasNext",arguments:[],obj:range_object};
+      iterable_cond = tcExpr(env,locals,iterable_cond);
+      tExpr.iterable_cond = iterable_cond;
+      var body:Stmt<any>[] = [];
+      var print_expr:Expr<any> = {tag:"builtin1",name:"print",arg:tExpr.left};
+
+      // initializing loop counter as range.curr
+      var counter_assign_stmt : Stmt<Type> = {a: {tag: 'none'},tag:"assign",name:counter, 
+                      value:{a: {tag: 'number'},tag:"lookup",field:"curr", obj: range_object}};
+      body.push(counter_assign_stmt);
+      if(tExpr.cond === undefined)
+      {
+        body.push(tcStmt(env,locals,{tag:"expr",expr:print_expr}));
+      }
+      else
+      {
+        var ifbody:Stmt<any>[] = [];
+        ifbody.push(tcStmt(env,locals,{tag:"expr",expr:print_expr}));
+        var if_cond : Expr<any> = tExpr.cond;
+        body.push(tcStmt(env,locals,{tag:"if",els:[],cond:if_cond,thn:ifbody}));
+      }
+      var update_Expr:Expr<any> = {tag:"method-call",method:"next",arguments:[],obj:range_object};
+      body.push(tcStmt(env,locals,{tag:"expr",expr:update_Expr}));
+      tExpr.body = body;
+      var init_exp = {name:range_object_name,type:{tag:"class",name:"range"},value:{tag:"none"},a:tExpr.elem.a};
+      var loop_counter_init = {name:counter,type:{tag:"number"},value:{tag:'num',value:0},a:{tag:"number"}};
+      additional_inits.push(init_exp);
+      additional_inits.push(loop_counter_init);
+      var count_assign :Stmt<any> = {a:{tag:'class',name:"range"},tag:"assign",name:range_object_name,value:{a: {tag:"class",name:"range"}, tag:"construct",name:"range",arguments: tExpr.iterable.arguments}};
+      additional_assigns.push(count_assign);
+      return {a: tExpr.a, tag: "expr", expr: tExpr};
+    }
+  }
+  return stmt;
+}
 
 export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<null>) : Stmt<Type> {
   switch(stmt.tag) {
@@ -186,28 +252,15 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       return {a: NONE, tag: stmt.tag, name: stmt.name, value: tValExpr};
     case "expr":
       const tExpr = tcExpr(env, locals, stmt.expr);
+        
+      // code to generate IR
       if(tExpr.tag === "list-comp")
       {
-        if(tExpr.iterable.tag === "construct")
-        {
-          const args1 = tExpr.iterable.arguments[0];
-          const args2 = tExpr.iterable.arguments[1];
-          if(tExpr.elem.tag === "id")
-            var counter = tExpr.elem.name;
-          env.globals.set(counter,args1.a);
-          var while_cond:Expr<any> = {tag:"binop",left:tExpr.elem,right:args2,op:BinOp.Lt,};
-          while_cond = tcExpr(env,locals,while_cond);
-          var whilestmts:Stmt<any>[] = [];
-
-          var print_expr:Expr<any> = {tag:"builtin1",name:"print",arg:tExpr.elem};
-          whilestmts.push(tcStmt(env,locals,{tag:"expr",expr:print_expr}));
-          var update_counter:Expr<any> = {tag:"literal",value:{tag:"num",value:1}};
-          var update_Expr:Expr<any> = {tag:"binop",op:BinOp.Plus,left:tExpr.elem,right:update_counter};
-          whilestmts.push(tcStmt(env,locals,{tag:"assign",name:counter,value:update_Expr}));
-          var while_stmt:Stmt<any> = {tag:"while",cond:while_cond,body:whilestmts};
-          return tcStmt(env,locals,while_stmt);
-        }
-        
+        return tcListComp(env,locals,stmt,tExpr);
+      }
+      if(tExpr.tag === "builtin1" && tExpr.arg.tag === "list-comp")
+      {
+        return tcListComp(env,locals,stmt,tExpr.arg);
       }
       return {a: tExpr.a, tag: stmt.tag, expr: tExpr};
     case "if":
@@ -457,7 +510,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeCheckError("method calls require an object");
       }
-    default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
+    default: 
+      throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
 }
 
