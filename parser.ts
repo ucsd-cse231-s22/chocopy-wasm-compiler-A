@@ -235,9 +235,8 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       c.firstChild(); // go to name
       if (c.type.name === "MemberExpression") {
         c.nextSibling();
-        c.nextSibling();
-        if (c.type.name !== "MemberExpression") {
-          c.prevSibling();
+        // @ts-ignore
+        if (c.type.name === "AssignOp") {
           c.prevSibling();
           let target = traverseExpr(c, s);
           c.nextSibling(); // go to equals
@@ -255,7 +254,6 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
             throw new Error("Unknown target while parsing assignment");
           }
         }
-        c.prevSibling();
         c.prevSibling();
       }
       const destruct = traverseDestructure(c, s);
