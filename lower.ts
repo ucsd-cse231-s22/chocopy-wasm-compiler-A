@@ -73,7 +73,7 @@ function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : IR.Class<Type> {
 function literalToVal(lit: AST.Literal) : IR.Value<Type> {
     switch(lit.tag) {
         case "num":
-            return { ...lit, value: BigInt(lit.value) }
+            return { ...lit, value: BigInt((lit.value).toLocaleString('fullwide', {useGrouping:false})) }
         case "bool":
             return lit
         case "none":
