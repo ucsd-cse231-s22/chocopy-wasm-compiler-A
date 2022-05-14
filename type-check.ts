@@ -170,11 +170,13 @@ export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Arra
 export function tcAssignable(env : GlobalTypeEnv, locals : LocalTypeEnv, assignable : Assignable<null>) : Assignable<Type> {
   var expr : Expr<null> = { ...assignable };
   var typedExpr = tcExpr(env, locals, expr);
-  var typedAss : Assignable<Type> = { ...assignable, a: typedExpr.a };
-  switch(assignable.tag) {
+  switch(typedExpr.tag) {
     case "id":
+      var typedAss : Assignable<Type> = { ...typedExpr };
+      return typedAss;
     case "lookup":
     // TODO: if we need to support more types, add them here
+      var typedAss : Assignable<Type> = { ...typedExpr };
       return typedAss;
     default:
       throw new TypeCheckError(`unimplemented type checking for assignment: ${assignable}`);

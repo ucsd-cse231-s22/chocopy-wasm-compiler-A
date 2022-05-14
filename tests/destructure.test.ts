@@ -154,7 +154,21 @@ describe('tc for destructure', () => {
     print(b)
     `, ['1', '2']);
 
-    assertPrint("destructure-assignment-in-func-sep", `
+    assertPrint("destructure-assignment-in-class-sep", `
+    ${rangeDef}
+    c: cl = None
+  
+    class cl(Object):
+        f1: int = 0
+        f2: bool = False
+    
+    c = cl()
+    c.f1, c.f2 = 1, True
+    print(c.f1)
+    print(c.f2)
+    `, ['1', 'True']);
+
+    assertPrint("destructure-assignment-in-class-range-sep", `
     ${rangeDef}
     c: cl = None
   
@@ -167,5 +181,30 @@ describe('tc for destructure', () => {
     print(c.f1)
     print(c.f2)
     `, ['1', '2']);
+
+    assertTCFail("destructure-assignment-in-class-type-failure", `
+    c: cl = None
+  
+    class cl(Object):
+        f1: bool = 0
+        f2: bool = 0
+    
+    c = cl()
+    c.f1, c.f2 = range(1, 3)
+    `);
+
+    assertPrint("destructure-assignment-in-mix-sep", `
+    ${rangeDef}
+    c: cl = None
+    a: int = 0
+  
+    class cl(Object):
+        f1: int = 0
+    
+    c = cl()
+    c.f1, _, a = range(1, 4)
+    print(c.f1)
+    print(a)
+    `, ['1', '3']);
     
 });

@@ -145,6 +145,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
                       });
                     outputInits = outputInits.concat(oinits);
                     outputInits = outputInits.concat(ninits);
+                    break;
                   default:
                     throw new Error("should not reach here");
                 }
@@ -197,6 +198,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
                     });
                   outputInits = outputInits.concat(oinits);
                   outputInits = outputInits.concat(ninits);
+                  break;
                 default:
                   throw new Error("should not reach here");
               }
