@@ -193,6 +193,7 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         `call $load`
       ]
     case "str-index":
+      // TODO: second load-store change to copy
       return [
         `(call $alloc (i32.const 2))`,
         `(local.set $$last)`,
@@ -289,6 +290,7 @@ function StoreConcatStr(lhsStmts: string[], rhsStmts: string[]) : string[] {
 function codeGenBinOpStr(op : BinOp, lhsStmts : string[], rhsStmts : string[]) : string[] {
   switch (op) {
     case BinOp.Plus:
+      // TODO: fix string literal concat
       return [
         ...AllocConcatStr(lhsStmts, rhsStmts),
         `(local.set $$last)`,

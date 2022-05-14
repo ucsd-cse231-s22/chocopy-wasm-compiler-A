@@ -2,6 +2,8 @@ import { Value, Type } from "./ast";
 
 export function PyValue(typ: Type, result: number): Value {
   switch (typ.tag) {
+    case "str":
+      return PyObj("$strObj", result);
     case "number":
       return PyInt(result);
     case "bool":

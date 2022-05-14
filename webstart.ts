@@ -1,14 +1,17 @@
 import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
+import {NUM, BOOL, NONE, STR} from './utils';
 
-function stringify(typ: Type, arg: any) : string {
+function stringify(memory:WebAssembly.Memory, typ: Type, arg: any) : string {
   switch(typ.tag) {
     case "number":
       return (arg as number).toString();
     case "bool":
       return (arg as boolean)? "True" : "False";
+    case "str":
+      const len = new Uint32Array(memory.buffer, arg, 1)[0];
+      return String.fromCharCode.apply(null, new Uint32Array(memory.buffer, arg + 4, len));
     case "none":
       return "None";
     case "class":
@@ -16,12 +19,21 @@ function stringify(typ: Type, arg: any) : string {
   }
 }
 
-function print(typ: Type, arg : number) : any {
+function print(memory: WebAssembly.Memory, typ: Type, arg : number) : any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
-  elt.innerText = stringify(typ, arg);
+  elt.innerText = stringify(memory, typ, arg);
   return arg;
+}
+
+function len(memory: WebAssembly.Memory, typ: Type, arg: any): Number {
+  switch (typ.tag) {
+    case "str":
+      return new Uint32Array(memory.buffer, arg, 1)[0];
+    default:
+      throw new Error(`Undefined function len for type ${typ}`);
+  }
 }
 
 function assert_not_none(arg: any) : any {
@@ -45,9 +57,12 @@ function webStart() {
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
-        print_num: (arg: number) => print(NUM, arg),
-        print_bool: (arg: number) => print(BOOL, arg),
-        print_none: (arg: number) => print(NONE, arg),
+        print_num: (arg: number) => print(memory, NUM, arg),
+        print_bool: (arg: number) => print(memory, BOOL, arg),
+        print_str: (arg: number) => print(memory, STR, arg),
+        print_none: (arg: number) => print(memory, NONE, arg),
+        len: (arg: any) => len(memory, STR, arg),
+        len_str: (arg: number) => len(memory, STR, arg),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
@@ -72,7 +87,13 @@ function webStart() {
           elt.innerHTML = (result.value) ? "True" : "False";
           break;
         case "object":
-          elt.innerHTML = `<${result.name} object at ${result.address}`
+          // handle string as object
+          if (result.name === "$strObj") {
+            const len = new Uint32Array(memory.buffer, result.address, 1)[0];
+            elt.innerHTML = String.fromCharCode.apply(null, new Uint32Array(memory.buffer, result.address + 4, len));
+          } else {
+            elt.innerHTML = `<${result.name} object at ${result.address}`
+          }
           break
         default: throw new Error(`Could not render value: ${result}`);
       }
