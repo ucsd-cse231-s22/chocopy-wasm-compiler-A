@@ -33,4 +33,6 @@ export function PyNone(): Value {
 export const NUM : Type = {tag: "number"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
+export const STR : Type = {tag: "str"};
+export function LIST(type : Type) : Type {return {tag: "list", type}};
 export function CLASS(name : string) : Type {return {tag: "class", name}};
