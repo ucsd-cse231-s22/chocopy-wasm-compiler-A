@@ -212,7 +212,26 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
         throw new TypeCheckError("Condition Expression Must be a bool");
       return {a: NONE, tag:stmt.tag, cond: tCond, body: tBody};
     case "pass":
+    case "break":
+    case "continue":
       return {a: NONE, tag: stmt.tag};
+    case "for":
+      var tIterator = tcExpr(env, locals, stmt.iterator)
+      if(tIterator.tag!="id")
+        throw new TypeCheckError("iterator must be an id");
+      var tValObject = tcExpr(env, locals, stmt.values)
+      if (tValObject.a.tag !== "class") 
+        throw new TypeCheckError("values require an object");
+      if (!env.classes.has(tValObject.a.name)) 
+        throw new TypeCheckError("values on an unknown class");
+      
+      const [__, methods] = env.classes.get(tValObject.a.name);
+      if(!(methods.has("hasnext")) || methods.get("hasnext")[1].tag != BOOL.tag)
+        throw new TypeCheckError("iterable class must have hasnext method with boolean return type");
+      if(!(methods.has("next")) || methods.get("next")[1]!= tIterator.a)
+        throw new TypeCheckError("iterable class must have next method with same return type as iterator");
+      const tforBody = tcBlock(env, locals, stmt.body);
+      return {a:tIterator.a, tag: stmt.tag, iterator:tIterator, values: tValObject, body: tforBody }
     case "field-assign":
       var tObj = tcExpr(env, locals, stmt.obj);
       const tVal = tcExpr(env, locals, stmt.value);

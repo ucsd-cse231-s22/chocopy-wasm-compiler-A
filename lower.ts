@@ -2,6 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
+import { BOOL } from './utils';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -191,6 +192,38 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: whileStartLbl });
 
       blocks.push({  a: s.a, label: whileEndLbl, stmts: [] })
+
+      return [...cinits, ...bodyinits]
+    case "continue":
+      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl:  env.labels[0]})
+      return []
+    case "break":
+      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl:  env.labels[-1]})
+      return []
+    case "for":
+      var forStartLbl = generateName("$forstart");
+      var forbodyLbl = generateName("$forbody");
+      var forEndLbl = generateName("$forend");
+      var localenv = env
+      localenv.labels.push(forStartLbl,forbodyLbl,forEndLbl)
+      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl })
+      blocks.push({  a: s.a, label: forStartLbl, stmts: [] })
+      var hasnextCall : AST.Expr<AST.Type> = {tag:"method-call", obj:s.values, method:"hasnext", arguments:[], a:BOOL}
+      var nextCall : AST.Expr<AST.Type> = {tag:"method-call", obj:s.values, method:"next", arguments:[], a:s.a}
+      var iteratorName = "" 
+      if(s.iterator.tag=="id")
+        iteratorName =s.iterator.name
+      var [cinits, cstmts, cexpr] = flattenExprToVal(hasnextCall, localenv); 
+      pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: forbodyLbl, els: forEndLbl });
+
+      blocks.push({  a: s.a, label: forbodyLbl, stmts: [] })
+      var nextAssign : AST.Stmt<AST.Type>[] = [{tag:"assign",name:iteratorName, value: nextCall,a:s.a }]
+      var bodyinits = flattenStmts(nextAssign, blocks, localenv);
+
+      bodyinits.concat(flattenStmts(s.body, blocks, localenv));
+      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl });
+
+      blocks.push({  a: s.a, label: forEndLbl, stmts: [] })
 
       return [...cinits, ...bodyinits]
   }
