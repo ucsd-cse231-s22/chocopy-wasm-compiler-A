@@ -39,6 +39,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         tag: "id",
         name: s.substring(c.from, c.to)
       }
+    // parsing list-comp
     case "ArrayComprehensionExpression":
       c.firstChild(); // '['
       c.nextSibling();

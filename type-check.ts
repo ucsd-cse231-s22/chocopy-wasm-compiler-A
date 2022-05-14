@@ -185,6 +185,7 @@ export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Arra
   return tStmts;
 }
 
+// new function for list-comp type-checking
 export function tcListComp(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<null>, tExpr: Expr<any>) : Stmt<Type>{
   if(tExpr.tag === "list-comp")
   {
@@ -253,7 +254,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
     case "expr":
       const tExpr = tcExpr(env, locals, stmt.expr);
         
-      // code to generate IR
+      // code to generate IR for list-comps
       if(tExpr.tag === "list-comp")
       {
         return tcListComp(env,locals,stmt,tExpr);

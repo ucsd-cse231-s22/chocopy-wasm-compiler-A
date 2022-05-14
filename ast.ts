@@ -7,7 +7,6 @@ export type Type =
   | {tag: "none"}
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
-  // | { tag: "list", listitems : Array<Type>}
 
 export type Parameter<A> = { name: string, type: Type }
 
@@ -41,7 +40,7 @@ export type Expr<A> =
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string, arguments: Array<Expr<A>> }
-  // | {  a?: A, tag: "list-construct", items: Array<Expr<A>> } // implemented by the list team. 
+  // ast for list-comp
   | {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Expr<A>, iterable_cond?: Expr<A>, body?: Array<Stmt<A>> }
 
   // Possible Typechecks here ::

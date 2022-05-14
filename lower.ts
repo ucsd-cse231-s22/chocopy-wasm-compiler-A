@@ -113,6 +113,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
     // ]];
   
     case "expr":
+      // list-comp changes
       if(s.tag == "expr" && s.expr.tag == "list-comp")
       {
         console.log("list comp in ir :: ",s.expr);
