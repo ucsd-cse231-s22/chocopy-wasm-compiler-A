@@ -183,6 +183,7 @@ describe('tc for destructure', () => {
     `, ['1', '2']);
 
     assertTCFail("destructure-assignment-in-class-type-failure", `
+    ${rangeDef}
     c: cl = None
   
     class cl(Object):
@@ -194,6 +195,7 @@ describe('tc for destructure', () => {
     `);
 
     assertTCFail("destructure-assignment-in-none-obj-failure", `
+    ${rangeDef}
     c: cl = None
   
     class cl(Object):
@@ -204,6 +206,7 @@ describe('tc for destructure', () => {
     `);
 
     assertTCFail("destructure-assignment-in-not-class-failure", `
+    ${rangeDef}
     c : int = 0
     c.f1, c.f2 = range(1, 3)
     `);
