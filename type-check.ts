@@ -1,13 +1,11 @@
 
 import { Annotation, BinOp, Class, Expr, FunDef, Literal, Location, Program, Stmt, stringifyOp, Type, UniOp, VarInit } from './ast';
 import { BOOL, CLASS, NONE, NUM } from './utils';
+import { fullSrcLine, drawSquiggly } from './errors';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 
-export function fullSrcLine(SRC: string, fromLoc: Location, endLoc: Location) {
-  const lineStart = fromLoc.srcIdx - fromLoc.col + 1; // src and col has an offset of 1
-  return SRC.slice(lineStart, endLoc.srcIdx);
-}
+
 
 export class TypeCheckError extends Error {
   __proto__: Error
@@ -17,9 +15,9 @@ export class TypeCheckError extends Error {
     const eolLoc = a?.eolLoc;
     const trueProto = new.target.prototype;
     const loc = (a) ? ` on line ${fromLoc.row} at col ${fromLoc.col}` : '';
-    const src = (a) ? fullSrcLine(SRC, fromLoc, eolLoc) : '';
+    const src = (a) ? fullSrcLine(SRC, fromLoc.srcIdx, fromLoc.col, eolLoc.srcIdx) : '';
     // TODO: how to draw squigglies if the error spans multiple lines?
-    const squiggly = (a && fromLoc.row === endLoc.row) ? `${' '.repeat(fromLoc.col - 1)}${'^'.repeat(endLoc.col - fromLoc.col)}` : '';
+    const squiggly = drawSquiggly(fromLoc.row, endLoc.row, fromLoc.col, endLoc.col);
     const msg = `\n\n${src}\n${squiggly}`;
     super("TYPE ERROR: " + message + loc + msg);
 
