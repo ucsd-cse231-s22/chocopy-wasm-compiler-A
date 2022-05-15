@@ -14,42 +14,51 @@ export function drawSquiggly(fromLocRow: number, endLocRow: number, fromLocCol: 
 
 /****** Runtime Errors *******/
 // TODO: make a register for errors so that we don't need to pass so many arguments at runtime
-// TODO: pretty print source
-export function assert_not_none(arg: any, row: any, col: any, pos_start: any, pos_end: any) : any {
-    if (arg === 0)
-      throw new Error(`RUNTIME ERROR: cannot perform operation on none at row ${row} col ${col}`);
+// TODO: refactor code to reduce repetition. Approaches: 1. Subclass Error. 2. Make a bunch of helper functions.
+export function assert_not_none(arg: any, start_row: any, start_col: any, start_idx: any, end_row: any, end_col: any, end_idx: any, eol_idx: any) : any {
+    if (arg === 0){
+        const loc = ` on line ${start_row} at col ${start_col}`;
+        const src = fullSrcLine(importObjectErrors.src, start_idx, start_col, eol_idx);
+        const squiggly = drawSquiggly(start_row, end_row, start_col, end_col);
+        const msg = `\n\n${src}\n${squiggly}`;
+        throw new Error(`RUNTIME ERROR: cannot perform operation on none` + loc + msg);
+    }
     return arg;
 }
 
-// TODO: unable to do run time error w/ messages atm because not sure how to pass in string arguments in WASM
 export function flattenAssertNotNone(oval:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
-    const src = fullSrcLine("", oval.a.fromLoc.srcIdx, oval.a.fromLoc.col, oval.a.eolLoc.srcIdx);
-    const squigglies = drawSquiggly(oval.a.fromLoc.row, oval.a.endLoc.row, oval.a.fromLoc.col, oval.a.endLoc.col);
-    const posArgs = [oval.a.fromLoc.row, oval.a.fromLoc.col, oval.a.fromLoc.srcIdx, oval.a.endLoc.srcIdx].map(x => flattenWasmInt(x));
+
+    const posArgs = [oval.a.fromLoc.row, oval.a.fromLoc.col, oval.a.fromLoc.srcIdx, oval.a.endLoc.row, oval.a.endLoc.col, oval.a.endLoc.srcIdx, oval.a.eolLoc.srcIdx].map(x => flattenWasmInt(x));
     return { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [oval, ...posArgs]}}
 }
 
-export function divide_by_zero(arg: any, row: any, col: any, pos_start: any, pos_end: any) : any {
-    if (arg === 0)
-      throw new Error(`RUNTIME ERROR: cannot divide by zero at row ${row} col ${col}`);
+export function divide_by_zero(arg: any, start_row: any, start_col: any, start_idx: any, end_row: any, end_col: any, end_idx: any, eol_idx: any) : any {
+    if (arg === 0){
+        const loc = ` on line ${start_row} at col ${start_col}`;
+        const src = fullSrcLine(importObjectErrors.src, start_idx, start_col, eol_idx);
+        const squiggly = drawSquiggly(start_row, end_row, start_col, end_col);
+        const msg = `\n\n${src}\n${squiggly}`;
+        throw new Error(`RUNTIME ERROR: cannot divide by zero` + loc + msg);
+    }
     return arg;
 }
 
-// TODO: unable to do run time error w/ messages atm because not sure how to pass in string arguments in WASM
 export function flattenDivideByZero(oval:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
-    const srcLine = fullSrcLine("", oval.a.fromLoc.srcIdx, oval.a.fromLoc.col, oval.a.eolLoc.srcIdx);
-    const squigglies = drawSquiggly(oval.a.fromLoc.row, oval.a.endLoc.row, oval.a.fromLoc.col, oval.a.endLoc.col);
-    const posArgs = [oval.a.fromLoc.row, oval.a.fromLoc.col, oval.a.fromLoc.srcIdx, oval.a.endLoc.srcIdx].map(x => flattenWasmInt(x));
+    const posArgs = [oval.a.fromLoc.row, oval.a.fromLoc.col, oval.a.fromLoc.srcIdx, oval.a.endLoc.row, oval.a.endLoc.col, oval.a.endLoc.srcIdx, oval.a.eolLoc.srcIdx].map(x => flattenWasmInt(x));
     return { tag: "expr", expr: { tag: "call", name: `divide_by_zero`, arguments: [oval, ...posArgs]}}
 }
 
+// TODO: src field here is a temporary hack. Source doesn't get properly if it is not in the last compiled source. 
+// For example, when running code in REPL, if a runtime error happens in code 
+// that belongs to a previous REPL block or the main editor, source code does not get properly reported.
 export const importObjectErrors : any = {
-    assert_not_none: (arg: any, row: any, col: any, pos_start: any, pos_end: any) => assert_not_none(arg, row, col, pos_start, pos_end),
-    divide_by_zero: (arg: any, row: any, col: any, pos_start: any, pos_end: any) => divide_by_zero(arg, row, col, pos_start, pos_end),
+    src: "",         // For reporting source code in runtime errors.  
+    assert_not_none, 
+    divide_by_zero,
 }
 
 export const wasmErrorImports : string = `
-    (func $assert_not_none (import "errors" "assert_not_none") (param i32) (param i32) (param i32) (param i32) (param i32) (result i32))
-    (func $divide_by_zero (import "errors" "divide_by_zero") (param i32) (param i32) (param i32) (param i32) (param i32) (result i32))
+    (func $assert_not_none (import "errors" "assert_not_none") (param i32)  (param i32) (param i32) (param i32) (param i32) (param i32) (param i32) (param i32) (result i32))
+    (func $divide_by_zero (import "errors" "divide_by_zero") (param i32)  (param i32) (param i32) (param i32) (param i32) (param i32) (param i32) (param i32) (result i32))
 `
 

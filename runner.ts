@@ -69,6 +69,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
 
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
 export async function run(source : string, config: Config) : Promise<[Value<Annotation>, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
+  config.importObject.errors.src = source; // for error reporting
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   const globalEnv = augmentEnv(config.env, tprogram);
