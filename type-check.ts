@@ -17,7 +17,7 @@ export class TypeCheckError extends Error {
     const loc = (a) ? ` on line ${fromLoc.row} at col ${fromLoc.col}` : '';
     const src = (a) ? fullSrcLine(SRC, fromLoc.srcIdx, fromLoc.col, eolLoc.srcIdx) : '';
     // TODO: how to draw squigglies if the error spans multiple lines?
-    const squiggly = drawSquiggly(fromLoc.row, endLoc.row, fromLoc.col, endLoc.col);
+    const squiggly = (a) ? drawSquiggly(fromLoc.row, endLoc.row, fromLoc.col, endLoc.col) : '';
     const msg = `\n\n${src}\n${squiggly}`;
     super("TYPE ERROR: " + message + loc + msg);
 
