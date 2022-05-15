@@ -22,8 +22,8 @@ export function assert_not_none(arg: any, row: any, col: any, pos_start: any, po
 }
 
 // TODO: unable to do run time error w/ messages atm because not sure how to pass in string arguments in WASM
-export function flattenAssertNotNone(SRC: string, oval:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
-    const src = fullSrcLine(SRC, oval.a.fromLoc.srcIdx, oval.a.fromLoc.col, oval.a.eolLoc.srcIdx);
+export function flattenAssertNotNone(oval:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
+    const src = fullSrcLine("", oval.a.fromLoc.srcIdx, oval.a.fromLoc.col, oval.a.eolLoc.srcIdx);
     const squigglies = drawSquiggly(oval.a.fromLoc.row, oval.a.endLoc.row, oval.a.fromLoc.col, oval.a.endLoc.col);
     const posArgs = [oval.a.fromLoc.row, oval.a.fromLoc.col, oval.a.fromLoc.srcIdx, oval.a.endLoc.srcIdx].map(x => flattenWasmInt(x));
     return { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [oval, ...posArgs]}}
@@ -36,8 +36,8 @@ export function divide_by_zero(arg: any, row: any, col: any, pos_start: any, pos
 }
 
 // TODO: unable to do run time error w/ messages atm because not sure how to pass in string arguments in WASM
-export function flattenDivideByZero(SRC: string, oval:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
-    const srcLine = fullSrcLine(SRC, oval.a.fromLoc.srcIdx, oval.a.fromLoc.col, oval.a.eolLoc.srcIdx);
+export function flattenDivideByZero(oval:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
+    const srcLine = fullSrcLine("", oval.a.fromLoc.srcIdx, oval.a.fromLoc.col, oval.a.eolLoc.srcIdx);
     const squigglies = drawSquiggly(oval.a.fromLoc.row, oval.a.endLoc.row, oval.a.fromLoc.col, oval.a.endLoc.col);
     const posArgs = [oval.a.fromLoc.row, oval.a.fromLoc.col, oval.a.fromLoc.srcIdx, oval.a.endLoc.srcIdx].map(x => flattenWasmInt(x));
     return { tag: "expr", expr: { tag: "call", name: `divide_by_zero`, arguments: [oval, ...posArgs]}}
