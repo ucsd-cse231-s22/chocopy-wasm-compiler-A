@@ -70,10 +70,6 @@ export function emptyLocalTypeEnv(): LocalTypeEnv {
   };
 }
 
-export type TypeError = {
-  message: string
-}
-
 export function equalType(t1: Type, t2: Type) {
   return (
     t1 === t2 ||
