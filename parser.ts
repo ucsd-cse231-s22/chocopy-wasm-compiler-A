@@ -46,7 +46,8 @@ export function indToLoc(srcIdx: number, env: ParserEnv): Location {
 }
 
 export function nextLineBreakLoc(loc: Location, env: ParserEnv): Location {
-  const row = loc.row;
+  // if ending index is at the beginning of a new line, then the line break should be at one row above
+  const row = (loc.col === 1) ? loc.row - 1 : loc.row;
   const col = env.lineBreakIndices[row] - env.lineBreakIndices[row - 1];
   return { row: row, col: col, srcIdx: env.lineBreakIndices[row] }
 }

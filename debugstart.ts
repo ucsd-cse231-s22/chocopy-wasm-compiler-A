@@ -12,8 +12,13 @@ class C(object):
       return 0
     else:
       return`
-//   var source = `
-// 1 // 0`
+  // var source = `
+  // class C(object):
+  //   def __init__(self:C, other:D):
+  //     pass
+  
+  // x:C = None
+  // x = C()`
 const ast = parse(source);
 // console.log(ast);
   
