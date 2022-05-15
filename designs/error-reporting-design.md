@@ -1,13 +1,3 @@
-# TODOs:
-- implement offset -> line / col algorithm
-  - TODO: image
-- pretty source code: AST (with from and to) -> draw squiggly
-- better type error (wrapped inside functions based on lisa's code) + print/len type check
-- kw as arg names????
-- division by zero???? (how to get src locs for runtime errors)
-
-
-
 # Error Reporting
 
 ## Design
@@ -17,14 +7,11 @@
     2. [Report Column Number](#report-column-number)
     3. [Report Source Code](#report-source-code)
     4. [Pretty Source Code for single line](#pretty-source-code)
-
 2. Better type error
     1. [Assignment with different types](#Assignment-with-different-types)
     2. [Override \_\_init\_\_ signature](#override-\_\_init\_\_-signature)
     3. [Binary operator type hint](#binary-operator-type-hint)
     4. [Condition expression type hint](#condition-expression-type-hint)
-    5. [Type check print/len argument](#type-check-print/len-argument)
-
 4. Run-time error
     1. [Divide by zero](#divide-by-zero)
     2. [Access None Field](#access-none)
@@ -32,13 +19,12 @@
 
 ### Future Work
 1. [Stack trace](#stack-trace)
-
 2. [Pretty Source Code for multiple lines](#pretty-source-code)
-
+3. Explanation of the error in the context of the source code
 3. Better type error
     1. [Function return check](#function-return-check)
     2. [Branch return hint](#branch-return-hint)
-
+    2. [Type check print/len argument](#type-check-print/len-argument)
 4. Better Run-time error
     1. [Assert not none](#assert-not-none)
     2. [Out of memory](#out-of-memory)
@@ -74,13 +60,36 @@ Loc = {
 
 ## Changes to Data Structures (Week 7) 
 
-We should pay attention to the following changes during merging.
+We should pay attention to the following changes during merging:
 
-We added `Annotation` and `Location` types for source reporting. We additionally added `eolLoc` so that we can report the whole line of source.
-We changed all `a` fields to use `Annotation`. 
-We added `a` field to `AST.Literal` and `AST.Value` for error reporting.
-In the parser, to annotate `AST` nodes with `Location`s, we made a wrapper `wrap_locs` for all the parser traverse functions. 
-We also added an environment `ParserEnv` that contains indices of line breaks in source code to parser functions so that we can calculate the column number of `AST` nodes.
+1. We added `Annotation` and `Location` types for source reporting. We additionally added `eolLoc` so that we can report the whole line of source. The new data structures we added to the AST now become the following:
+
+   ```ts
+   export type Annotation = {
+     type?: Type,
+     fromLoc?: Location,
+     endLoc?: Location,
+     eolLoc: Location,
+     src?: string
+   }
+   export type Location = {
+     row: number,
+     col: number,
+     srcIdx: number,
+   }
+   ```
+
+   
+
+2. We changed all `a` fields to use `Annotation`. 
+
+3. We added `a` fields to `AST.Literal` and `AST.Value` for error reporting.
+
+4. In the parser, to annotate `AST` nodes with `Location`s, we made a wrapper `wrap_locs` for all the parser traverse functions. 
+
+5. We stored the full source code in the `src` field of the `a` field of the head of the AST, the `Program` node.
+
+6. We also added an environment `ParserEnv` that contains indices of line breaks in source code to parser functions so that we can calculate the column number of `AST` nodes.
 
 ## Design decisions
 
@@ -91,6 +100,8 @@ To annotate the start and end position of `AST` nodes, we enforce that a travers
 
 We can calculate the row and column number of a particular position in the source by first finding out where all the line breaks are in the source code, then do a binary search on the line break positions. For now, we are precalculating every row&col number during parsing. A more efficient way would be to calculate the row&col numbers when needed in reporting errors. But we will postpone that since we don't see efficiency problems right now.
 
+Finally, we stored the full source code in the `Program` AST node only so that we could access the appropriate lines of source code based on the annotated locations in type checking.
+
 ### Runtime errors
 We report runtime errors by calling checking functions, such as `assert_not_none`, in WASM. These checking functions are added in in `lower.ts`. All checking functions, import objects, and wasm imports are managed inside `errors.ts`. 
 
@@ -98,21 +109,38 @@ To report locations and get the locations needed for reporting source code, we p
 
 To get the source code during runtime, we added a src field to `importedObjects`, so that our checking functions can access the source code. However, it gets replaced every time a new program is being compiled. As a result, source isn't properly reported if it is not in the last compiled source. For example, when running code in REPL, if a runtime error happens in code that belongs to a previous REPL block or the main editor, source code does not get properly reported.
 
-## Functions to Add
-### Parsing
-During parsing, we will need to record the starting and ending location of each AST node. We need to figure out how to get line and column number out of lezer or count them ourselves. We may add `annotateLocation(ast, lezer_cursor)` function that calculates location information from a lezer cursor and add to the annotation field of the AST node.
+## Functions We Have Added
 
-### Type Checking
-We will add a collection of functions, such as `binaryOperatorTypeError(ast)` that helps format the error message using the annotation in the AST node.
+### `errors.ts`
 
-### Compiler
-We plan to implement a global `trace()` function that accumulates stack traces at runtime: a trace will be added whenever a function/method frame is entered, which contains the name of the frame and its location. Based on the current architecture, we will add the `trace()` function to `compile.ts`, and the traces will be reused in `runner.ts` when a runtime error is caught for printing out the stack trace.
+We added this separate file that contains the following helper functions for error reporting:
+
+- `fullSrcLine()`: given the full source code, the starting position of the erroneous token, and the index of the first new line character after that token, generate the full line(s) of source code that triggers the error
+- `drawSquiggly()`: given the starting and ending positions of the errorneous token, produce a squiggly line that has the same length as that token and necessary padding before it if the errorneous code does not span across multiple lines, or an empty string if otherwise.
+- Functions for embedding source code and location information into runtime errors of `divide_by_zero` and `assert_not_none`.
+
+### `parser.ts`
+
+We added the following functions to calculate and add location information to the AST nodes:
+
+- `wrap_locs()`: adding location information after each node traversal
+  - To do so, we also changed the original function names `traverse<NodeType>` to `traverse<NodeType>Helper`, and declare `traverse<NodeType>` as `wrap_locs(traverse<NodeType>Helper)` to maintain the lowest cost of refactoring and code merging.
+- `indToLoc()`: given `srcIdx` from the `lezer` parser, find the `srcIdx` of the first new line character after it to further calculate `row` and `col`.
+  - We implemented a `binarySearch()` on an array of source indices of line breaks to facilitate the search.
+- `nextLineBreakLoc()`: given a token's ending location, find the location of the first new line character after it.
+
+
+
+### Other changes in `type-check.ts`, `lower.ts` and `runner.ts` 
+
+- Passing the full source code stored in the `Program` node to all type checking functions as an additional argument in `type-check.ts`.
+- Calls to helper functions in `errors.ts` in the constructor of `TypeCheckError` to add the source code and squiggly lines (if any) to the static error message.
+- Calls to helper functions in `errors.ts` in `lower.ts` to add source code information to runtime error reporting.
+- Adding the full source code the `importObject` in `runner.ts` to facilitate runtim error reporting with source code information.
 
 ## Examples of Design
 
-### What we aim to achieve by next week
-
-#### Report Line Number 
+### What we have achieved by week 7
 
 We report the line at which an error occurred. See examples below.
 
@@ -126,7 +154,7 @@ We report the full line of source code that contains an error. See examples belo
 
 #### Pretty Source Code
 
-We highlight the part in the source code that led to an error with squiggly lines (similar to Rust error reporting). See examples below.
+We highlight the part in the source code that led to an error with squiggly lines (similar to Rust error reporting). See examples below. **Note:** We have NOT added the error explanation (in the context of the source code) behind the squggily lines yet.
 
 #### Assignment with different types
 
@@ -203,27 +231,6 @@ if a:
    ^^ attempt to use `a` of type `int` as a conditional expression
 ```
 
-
-
-#### Type check print/len argument
-
-```python
-c:C = None
-c = C()
-print(c)
-```
-
-Should report the following static error:
-
-```
-TypeError: print() only takes types `int` and `bool` as the argument, got `C` on line 3 at col 6
-
-print(c)
-      ^^ attempt to call print() on `c` which has type `C`
-```
-
-
-
 #### Using keywords as variable
 
 ```python
@@ -257,7 +264,27 @@ ZeroDivisionError: divide by zero on line 1 at col 5
 ```
 
 ### Future Work
+#### Type check print/len argument
+
+```python
+c:C = None
+c = C()
+print(c)
+```
+
+Should report the following static error:
+
+```
+TypeError: print() only takes types `int` and `bool` as the argument, got `C` on line 3 at col 6
+
+print(c)
+      ^^ attempt to call print() on `c` which has type `C`
+```
+
+Although we have had the implementation ready, it is failing one of the existing tests that prints a non-`int`/`bool` value. We wonder if `print()` in our language is no longer limited by the ChocoPy specs, which we will confirm with the instructors in the coming week.
+
 #### Function/method return check
+
 ```python 
 def foo(x: bool, y: bool) -> int:
     pass
