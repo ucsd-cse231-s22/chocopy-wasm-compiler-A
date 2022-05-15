@@ -185,6 +185,7 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
         // I can't think of a scenario where checking none right after
         // obj is computed leads to problems. 
         // this way I moved assert not none errors to ir
+        // TODO: remove comment after approved.
         ...codeGenValue(expr.offset, env),
         `call $load`
       ]
