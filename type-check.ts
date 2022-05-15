@@ -5,19 +5,21 @@ import { BOOL, CLASS, NONE, NUM } from './utils';
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 
 export function fullSrcLine(SRC: string, fromLoc: Location, endLoc: Location) {
-  // TODO: real full line -- including string after endLoc
-  const lineStart = fromLoc.srcIdx - fromLoc.col;
+  const lineStart = fromLoc.srcIdx - fromLoc.col + 1; // src and col has an offset of 1
   return SRC.slice(lineStart, endLoc.srcIdx);
 }
-// TODO: add eolLoc to constructor of TypeCheckError
+
 export class TypeCheckError extends Error {
   __proto__: Error
-  constructor(SRC?: string, message?: string, fromLoc?: Location, endLoc?: Location) {
+  constructor(SRC?: string, message?: string, a?: Annotation) {
+    const fromLoc = a?.fromLoc;
+    const endLoc = a?.endLoc;
+    const eolLoc = a?.eolLoc;
     const trueProto = new.target.prototype;
-    const loc = (fromLoc) ? ` on line ${fromLoc.row} at col ${fromLoc.col}` : '';
-    const src = (fromLoc && endLoc) ? fullSrcLine(SRC, fromLoc, endLoc) : '';
+    const loc = (a) ? ` on line ${fromLoc.row} at col ${fromLoc.col}` : '';
+    const src = (a) ? fullSrcLine(SRC, fromLoc, eolLoc) : '';
     // TODO: how to draw squigglies if the error spans multiple lines?
-    const squiggly = (fromLoc && endLoc && fromLoc.row === endLoc.row) ? `${' '.repeat(fromLoc.col - 1)}${'^'.repeat(endLoc.col - fromLoc.col + 1)}` : '';
+    const squiggly = (a && fromLoc.row === endLoc.row) ? `${' '.repeat(fromLoc.col - 1)}${'^'.repeat(endLoc.col - fromLoc.col)}` : '';
     const msg = `\n\n${src}\n${squiggly}`;
     super("TYPE ERROR: " + message + loc + msg);
 
@@ -147,7 +149,7 @@ export function tcInit(env: GlobalTypeEnv, init: VarInit<Annotation>, SRC: strin
   } else {
     console.log(init.type);
     console.log(valTyp);
-    throw new TypeCheckError(SRC, `Expected type ${JSON.stringify(init.type.tag)}; got type ${JSON.stringify(valTyp.tag)}`, init.value.a.fromLoc, init.value.a.endLoc);
+    throw new TypeCheckError(SRC, `Expected type ${JSON.stringify(init.type.tag)}; got type ${JSON.stringify(valTyp.tag)}`, init.value.a);
   }
 }
 
@@ -178,7 +180,7 @@ export function tcClass(env: GlobalTypeEnv, cls: Class<Annotation>, SRC: string)
         (!equalType(init.parameters[0].type, CLASS(cls.name))) ? `parameter type ${JSON.stringify(init.parameters[0].type.tag)}` :
           (init.ret !== NONE) ? `return type ${JSON.stringify(init.ret.tag)}` : "unknown reason";
 
-    throw new TypeCheckError(SRC, `__init__ takes 1 parameter \`self\` of the same type of the class \`${cls.name}\` with return type of \`None\`, got ${reason}`, init.a.fromLoc, init.a.endLoc);
+    throw new TypeCheckError(SRC, `__init__ takes 1 parameter \`self\` of the same type of the class \`${cls.name}\` with return type of \`None\`, got ${reason}`, init.a);
   }
   return { a: { ...cls.a, type: NONE }, name: cls.name, fields: tFields, methods: tMethods };
 }
@@ -203,7 +205,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       }
       if (!isAssignable(env, tValExpr.a.type, nameTyp))
         throw new TypeCheckError(SRC, `Assignment value should have assignable type to type ${JSON.stringify(nameTyp.tag)}, got ${JSON.stringify(tValExpr.a.type.tag)}`,
-        tValExpr.a.fromLoc, tValExpr.a.endLoc);
+        tValExpr.a);
       return { a: { ...stmt.a, type: NONE }, tag: stmt.tag, name: stmt.name, value: tValExpr };
     case "expr":
       const tExpr = tcExpr(env, locals, stmt.expr, SRC);
@@ -216,7 +218,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       const tEls = tcBlock(env, locals, stmt.els, SRC);
       const elsTyp = locals.actualRet;
       if (tCond.a.type !== BOOL)
-        throw new TypeCheckError(SRC, `Condition Expression Must be have type "bool", got ${JSON.stringify(tCond.a.type.tag)}`, tCond.a.fromLoc, tCond.a.endLoc);
+        throw new TypeCheckError(SRC, `Condition Expression Must be have type "bool", got ${JSON.stringify(tCond.a.type.tag)}`, tCond.a);
       if (thnTyp !== elsTyp)
         locals.actualRet = { tag: "either", left: thnTyp, right: elsTyp }
       return { a: { ...stmt.a, type: thnTyp }, tag: stmt.tag, cond: tCond, thn: tThn, els: tEls };
@@ -227,14 +229,14 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       const tRet = tcExpr(env, locals, stmt.value, SRC);
       if (!isAssignable(env, tRet.a.type, locals.expectedRet))
         throw new TypeCheckError(SRC, "expected return type `" + (locals.expectedRet as any).tag + "`; got type `" + (tRet.a.type as any).tag + "`",
-          stmt.a.fromLoc, stmt.a.endLoc); // returning the loc of the entire return statement here because the retExpr might be empty
+          stmt.a); // returning the loc of the entire return statement here because the retExpr might be empty
       locals.actualRet = tRet.a.type;
       return { a: tRet.a, tag: stmt.tag, value: tRet };
     case "while":
       var tCond = tcExpr(env, locals, stmt.cond, SRC);
       const tBody = tcBlock(env, locals, stmt.body, SRC);
       if (!equalType(tCond.a.type, BOOL))
-        throw new TypeCheckError(SRC, `Condition Expression Must be a bool, got ${JSON.stringify(tCond.a.type.tag)}`, tCond.a.fromLoc, tCond.a.endLoc);
+        throw new TypeCheckError(SRC, `Condition Expression Must be a bool, got ${JSON.stringify(tCond.a.type.tag)}`, tCond.a);
       return { a: { ...stmt.a, type: NONE }, tag: stmt.tag, cond: tCond, body: tBody };
     case "pass":
       return { a: { ...stmt.a, type: NONE }, tag: stmt.tag };
@@ -242,15 +244,15 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       var tObj = tcExpr(env, locals, stmt.obj, SRC);
       const tVal = tcExpr(env, locals, stmt.value, SRC);
       if (tObj.a.type.tag !== "class")
-        throw new TypeCheckError(SRC, `field assignments require an object, got ${JSON.stringify(tObj.a.type.tag)}`, tObj.a.fromLoc, tObj.a.endLoc);
+        throw new TypeCheckError(SRC, `field assignments require an object, got ${JSON.stringify(tObj.a.type.tag)}`, tObj.a);
       if (!env.classes.has(tObj.a.type.name))
-        throw new TypeCheckError(SRC, `field assignment on an unknown class \`${tObj.a.type.name}\``, tObj.a.fromLoc, tObj.a.endLoc);
+        throw new TypeCheckError(SRC, `field assignment on an unknown class \`${tObj.a.type.name}\``, tObj.a);
       const [fields, _] = env.classes.get(tObj.a.type.name);
       if (!fields.has(stmt.field))
-        throw new TypeCheckError(SRC, `could not find field \`${stmt.field}\` in class \`${tObj.a.type.name}\``, stmt.a.fromLoc, stmt.a.endLoc);
+        throw new TypeCheckError(SRC, `could not find field \`${stmt.field}\` in class \`${tObj.a.type.name}\``, stmt.a);
       if (!isAssignable(env, tVal.a.type, fields.get(stmt.field)))
         throw new TypeCheckError(SRC, `field \`${stmt.field}\` expected type: ${JSON.stringify(fields.get(stmt.field).tag)}, got value of type ${JSON.stringify(tVal.a.type.tag)}`,
-          tVal.a.fromLoc, tVal.a.endLoc);
+          tVal.a);
       return { ...stmt, a: { ...stmt.a, type: NONE }, obj: tObj, value: tVal };
   }
 }
@@ -271,29 +273,29 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         case BinOp.Mod:
           if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: NUM } } }
           else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
-            expr.a.fromLoc, expr.a.endLoc); }
+            expr.a); }
         case BinOp.Eq:
         case BinOp.Neq:
           if (tLeft.a.type.tag === "class" || tRight.a.type.tag === "class") throw new TypeCheckError(SRC, "cannot apply operator '==' on class types")
           if (equalType(tLeft.a.type, tRight.a.type)) { return { ...tBin, a: { ...expr.a, type: BOOL } }; }
           else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects the same type on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
-            expr.a.fromLoc, expr.a.endLoc); }
+            expr.a); }
         case BinOp.Lte:
         case BinOp.Gte:
         case BinOp.Lt:
         case BinOp.Gt:
           if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: BOOL } }; }
           else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
-          expr.a.fromLoc, expr.a.endLoc); }
+          expr.a); }
         case BinOp.And:
         case BinOp.Or:
           if (equalType(tLeft.a.type, BOOL) && equalType(tRight.a.type, BOOL)) { return { ...tBin, a: { ...expr.a, type: BOOL } }; }
           else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "bool" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
-          expr.a.fromLoc, expr.a.endLoc); }
+          expr.a); }
         case BinOp.Is:
           if (!isNoneOrClass(tLeft.a.type) || !isNoneOrClass(tRight.a.type))
             throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "class" or "none" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
-            expr.a.fromLoc, expr.a.endLoc);
+            expr.a);
           return { ...tBin, a: { ...expr.a, type: BOOL } };
       }
     case "uniop":
@@ -303,11 +305,11 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         case UniOp.Neg:
           if (equalType(tExpr.a.type, NUM)) { return tUni }
           else { throw new TypeCheckError(SRC, `Unary operator \`${stringifyOp(expr.op)}\` expects type "number", got ${JSON.stringify(tExpr.a.type.tag)}`,
-          expr.a.fromLoc, expr.a.endLoc); }
+          expr.a); }
         case UniOp.Not:
           if (equalType(tExpr.a.type, BOOL)) { return tUni }
           else { throw new TypeCheckError(SRC, `Unary operator \`${stringifyOp(expr.op)}\` expects type "bool", got ${JSON.stringify(tExpr.a.type.tag)}`,
-          expr.a.fromLoc, expr.a.endLoc); }
+          expr.a); }
       }
     case "id":
       if (locals.vars.has(expr.name)) {
@@ -315,7 +317,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       } else if (env.globals.has(expr.name)) {
         return { ...expr, a: { ...expr.a, type: env.globals.get(expr.name) } };
       } else {
-        throw new TypeCheckError(SRC, "Unbound id: " + expr.name, expr.a.fromLoc, expr.a.endLoc);
+        throw new TypeCheckError(SRC, "Unbound id: " + expr.name, expr.a);
       }
     case "builtin1":
       // TODO: type check `len` after lists are implemented
@@ -324,7 +326,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         
         // [lisa] commented out for now because it's failing some hidden test
         // if (tArg.a.type.tag !== "number" && tArg.a.type.tag !== "bool") {
-        //   throw new TypeCheckError(SRC, `print() expects types "int" or "bool" as the argument, got ${JSON.stringify(tArg.a.type.tag)}`, tArg.a.fromLoc, tArg.a.endLoc);
+        //   throw new TypeCheckError(SRC, `print() expects types "int" or "bool" as the argument, got ${JSON.stringify(tArg.a.type.tag)}`, tArg.a, tArg.a.endLoc);
         // }
         return { ...expr, a: tArg.a, arg: tArg };
       } else if (env.functions.has(expr.name)) {
@@ -335,10 +337,10 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
           return { ...expr, a: { ...expr.a, type: retTyp }, arg: tArg };
         } else {
           throw new TypeCheckError(SRC, `Function call expects an argument of type ${JSON.stringify(expectedArgTyp.tag)}, got ${JSON.stringify(tArg.a.type.tag)}`,
-            expr.a.fromLoc, expr.a.endLoc);
+            expr.a);
         }
       } else {
-        throw new TypeCheckError(SRC, "Undefined function: " + expr.name, expr.a.fromLoc, expr.a.endLoc);
+        throw new TypeCheckError(SRC, "Undefined function: " + expr.name, expr.a);
       }
     case "builtin2":
       if (env.functions.has(expr.name)) {
@@ -349,10 +351,10 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
           return { ...expr, a: { ...expr.a, type: retTyp }, left: tLeftArg, right: tRightArg };
         } else {
           throw new TypeCheckError(SRC, `Function call expects arguments of types ${JSON.stringify(leftTyp.tag)} and ${JSON.stringify(rightTyp.tag)}, got ${JSON.stringify(tLeftArg.a.type.tag)} and ${JSON.stringify(tRightArg.a.type.tag)}`,
-            expr.a.fromLoc, expr.a.endLoc);
+            expr.a);
         }
       } else {
-        throw new TypeCheckError(SRC, "Undefined function: " + expr.name, expr.a.fromLoc, expr.a.endLoc);
+        throw new TypeCheckError(SRC, "Undefined function: " + expr.name, expr.a);
       }
     case "call":
       if (env.classes.has(expr.name)) {
@@ -362,9 +364,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         if (methods.has("__init__")) {
           const [initArgs, initRet] = methods.get("__init__");
           if (expr.arguments.length !== initArgs.length - 1)
-            throw new TypeCheckError(SRC, `__init__ takes 1 parameter \`self\` of the same type of the class \`${expr.name}\` with return type of \`None\`, got ${expr.arguments.length} parameters`, expr.a.fromLoc, expr.a.endLoc);
+            throw new TypeCheckError(SRC, `__init__ takes 1 parameter \`self\` of the same type of the class \`${expr.name}\` with return type of \`None\`, got ${expr.arguments.length} parameters`, expr.a);
           if (initRet !== NONE)
-            throw new TypeCheckError(SRC, `__init__ takes 1 parameter \`self\` of the same type of the class \`${expr.name}\` with return type of \`None\`, gotreturn type ${JSON.stringify(initRet.tag)}`, expr.a.fromLoc, expr.a.endLoc);
+            throw new TypeCheckError(SRC, `__init__ takes 1 parameter \`self\` of the same type of the class \`${expr.name}\` with return type of \`None\`, gotreturn type ${JSON.stringify(initRet.tag)}`, expr.a);
           return tConstruct;
         } else {
           return tConstruct;
@@ -380,10 +382,10 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
           const tArgsStr = tArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
           const argTypesStr = argTypes.map(argType => JSON.stringify(argType.tag)).join(", ");
           throw new TypeCheckError(SRC, `Function call expects arguments of types [${argTypesStr}], got [${tArgsStr}]`,
-          expr.a.fromLoc, expr.a.endLoc);
+          expr.a);
         }
       } else {
-        throw new TypeCheckError(SRC, "Undefined function: " + expr.name, expr.a.fromLoc, expr.a.endLoc);
+        throw new TypeCheckError(SRC, "Undefined function: " + expr.name, expr.a);
       }
     case "lookup":
       var tObj = tcExpr(env, locals, expr.obj, SRC);
@@ -393,13 +395,13 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
           if (fields.has(expr.field)) {
             return { ...expr, a: { ...expr.a, type: fields.get(expr.field) }, obj: tObj };
           } else {
-            throw new TypeCheckError(SRC, `could not find field ${expr.field} in class ${tObj.a.type.name}`, expr.a.fromLoc, expr.a.endLoc);
+            throw new TypeCheckError(SRC, `could not find field ${expr.field} in class ${tObj.a.type.name}`, expr.a);
           }
         } else {
-          throw new TypeCheckError(SRC, `field lookup on an unknown class ${tObj.a.type.name}`, expr.a.fromLoc, expr.a.endLoc);
+          throw new TypeCheckError(SRC, `field lookup on an unknown class ${tObj.a.type.name}`, expr.a);
         }
       } else {
-        throw new TypeCheckError(SRC, `field lookups require an object of type "class", got ${JSON.stringify(tObj.a.type.tag)}`, expr.a.fromLoc, expr.a.endLoc);
+        throw new TypeCheckError(SRC, `field lookups require an object of type "class", got ${JSON.stringify(tObj.a.type.tag)}`, expr.a);
       }
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj, SRC);
@@ -417,19 +419,19 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
               const argTypesStr = methodArgs.map(argType => JSON.stringify(argType.tag)).join(", ");
               const tArgsStr = realArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
               throw new TypeCheckError(SRC, `Method call ${expr.method} expects arguments of types [${argTypesStr}], got [${tArgsStr}]`,
-              expr.a.fromLoc, expr.a.endLoc);
+              expr.a);
             }
           } else {
             throw new TypeCheckError(SRC, `could not found method ${expr.method} in class ${tObj.a.type.name}`,
-            expr.a.fromLoc, expr.a.endLoc);
+            expr.a);
           }
         } else {
-          throw new TypeCheckError(SRC, `method call on an unknown class ${tObj.a.type.name}`, expr.a.fromLoc, expr.a.endLoc);
+          throw new TypeCheckError(SRC, `method call on an unknown class ${tObj.a.type.name}`, expr.a);
         }
       } else {
-        throw new TypeCheckError(SRC, `method calls require an object of type "class", got ${JSON.stringify(tObj.a.type.tag)}`, expr.a.fromLoc, expr.a.endLoc);
+        throw new TypeCheckError(SRC, `method calls require an object of type "class", got ${JSON.stringify(tObj.a.type.tag)}`, expr.a);
       }
-    default: throw new TypeCheckError(SRC, `unimplemented type checking for expr: ${expr}`, expr.a.fromLoc, expr.a.endLoc);
+    default: throw new TypeCheckError(SRC, `unimplemented type checking for expr: ${expr}`, expr.a);
   }
 }
 

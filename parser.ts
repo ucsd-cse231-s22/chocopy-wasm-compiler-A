@@ -41,9 +41,8 @@ export function indToLoc(srcIdx: number, env: ParserEnv): Location {
 
 export function nextLineBreakLoc(loc: Location, env: ParserEnv): Location {
   const row = loc.row;
-  const colLastEOL = row === 1 ? 0 : env.lineBreakIndices[row - 2];
-  const col = env.lineBreakIndices[row - 1] - colLastEOL;
-  return { row: row, col: col, srcIdx: env.lineBreakIndices[row - 1] }
+  const col = env.lineBreakIndices[row] - env.lineBreakIndices[row - 1];
+  return { row: row, col: col, srcIdx: env.lineBreakIndices[row] }
 }
 
 
