@@ -210,7 +210,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
       var checkDenom : Array<IR.Stmt<Annotation>> = [];
       if (e.op == AST.BinOp.IDiv || e.op == AST.BinOp.Mod) { // check division by zero
-        checkDenom.push(ERRORS.flattenDivideByZero(rval));
+        checkDenom.push(ERRORS.flattenDivideByZero(e.a, rval));
       }
       return [[...linits, ...rinits], [...lstmts, ...rstmts, ...checkDenom], {
           ...e,
@@ -250,7 +250,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.type.tag);
       }
       const className = objTyp.type.name;
-      const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(objval);
+      const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, objval);
       const callMethod : IR.Expr<Annotation> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
       return [
         [...objinits, ...arginits],
@@ -263,7 +263,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       if(e.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
       const classdata = env.classes.get(e.obj.a.type.name);
       const [offset, _] = classdata.get(e.field);
-      const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(oval);
+      const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, oval);
       return [oinits, [...ostmts, checkObj], {
         tag: "load",
         start: oval,

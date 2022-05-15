@@ -11,12 +11,12 @@
 # Error Reporting
 
 ## Design
-### What we aim to achieve by next week
+### What have right now
 1. More information in all error messages
     1. [Report Line Number](#report-line-number)
     2. [Report Column Number](#report-column-number)
     3. [Report Source Code](#report-source-code)
-    4. [Pretty Source Code](#pretty-source-code)
+    4. [Pretty Source Code for single line](#pretty-source-code)
 
 2. Better type error
     1. [Assignment with different types](#Assignment-with-different-types)
@@ -25,26 +25,30 @@
     4. [Condition expression type hint](#condition-expression-type-hint)
     5. [Type check print/len argument](#type-check-print/len-argument)
 
-3. Better parse error
-    1. [Using keywords as variable names](#using-keywords-as-variable)
-
-4. Better Run-time error
+4. Run-time error
     1. [Divide by zero](#divide-by-zero)
+    2. [Access None Field](#access-none)
+    3. [Access None Method](#access-none)
 
 ### Future Work
 1. [Stack trace](#stack-trace)
 
-2. Better type error
+2. [Pretty Source Code for multiple lines](#pretty-source-code)
+
+3. Better type error
     1. [Function return check](#function-return-check)
     2. [Branch return hint](#branch-return-hint)
 
-2. Better Run-time error
+4. Better Run-time error
     1. [Assert not none](#assert-not-none)
     2. [Out of memory](#out-of-memory)
 
 
+5. Better parse error
+    1. [Using keywords as variable names](#using-keywords-as-variable)
 
-## Changes to Data Structures
+
+## Changes to Data Structures (Week 6)
 
 The only changes we would add to the AST is the following:
 
@@ -67,6 +71,32 @@ Loc = {
     srcIdx: num
 }
 ```
+
+## Changes to Data Structures (Week 7) 
+
+We should pay attention to the following changes during merging.
+
+We added `Annotation` and `Location` types for source reporting. We additionally added `eolLoc` so that we can report the whole line of source.
+We changed all `a` fields to use `Annotation`. 
+We added `a` field to `AST.Literal` and `AST.Value` for error reporting.
+In the parser, to annotate `AST` nodes with `Location`s, we made a wrapper `wrap_locs` for all the parser traverse functions. 
+We also added an environment `ParserEnv` that contains indices of line breaks in source code to parser functions so that we can calculate the column number of `AST` nodes.
+
+## Design decisions
+
+### Source and Locations
+We decided to do pretty source code reporting. This require us to calculate and preserve a lot of position information for errors. stroing parts of the source string to AST nodes are not enough since we might want to display the context, at least the whole line. 
+
+To annotate the start and end position of `AST` nodes, we enforce that a traverser function in the parser for a node will always start at the start of the node and end at the end of the node. We also enforce that each `AST` node should have a traverser fucntion. With this promise, we get the start and end position of all the `AST` nodes by looking at the position of the cursor `c` before and after the traverser functions. 
+
+We can calculate the row and column number of a particular position in the source by first finding out where all the line breaks are in the source code, then do a binary search on the line break positions. For now, we are precalculating every row&col number during parsing. A more efficient way would be to calculate the row&col numbers when needed in reporting errors. But we will postpone that since we don't see efficiency problems right now.
+
+### Runtime errors
+We report runtime errors by calling checking functions, such as `assert_not_none`, in WASM. These checking functions are added in in `lower.ts`. All checking functions, import objects, and wasm imports are managed inside `errors.ts`. 
+
+To report locations and get the locations needed for reporting source code, we pass in the location information from WASM as a list of `wasmint` arguments. These location arguments are moved from `AST` `Annotation`s to `IR` `wasmint`s in `lower.ts`. Right now we are using 7 location arguments. We might be able to reduce it by registering the errors in some dictionary and retrive them during actual error.
+
+To get the source code during runtime, we added a src field to `importedObjects`, so that our checking functions can access the source code. However, it gets replaced every time a new program is being compiled. As a result, source isn't properly reported if it is not in the last compiled source. For example, when running code in REPL, if a runtime error happens in code that belongs to a previous REPL block or the main editor, source code does not get properly reported.
 
 ## Functions to Add
 ### Parsing

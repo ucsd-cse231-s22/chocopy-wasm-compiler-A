@@ -1,4 +1,5 @@
 import * as AST from './ast';
+import { Annotation } from './ast';
 import * as IR from './ir';
 import {flattenWasmInt} from './lower';
 
@@ -26,9 +27,9 @@ export function assert_not_none(arg: any, start_row: any, start_col: any, start_
     return arg;
 }
 
-export function flattenAssertNotNone(oval:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
+export function flattenAssertNotNone(a: Annotation, oval:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
 
-    const posArgs = [oval.a.fromLoc.row, oval.a.fromLoc.col, oval.a.fromLoc.srcIdx, oval.a.endLoc.row, oval.a.endLoc.col, oval.a.endLoc.srcIdx, oval.a.eolLoc.srcIdx].map(x => flattenWasmInt(x));
+    const posArgs = [a.fromLoc.row, a.fromLoc.col, a.fromLoc.srcIdx, a.endLoc.row, a.endLoc.col, a.endLoc.srcIdx, a.eolLoc.srcIdx].map(x => flattenWasmInt(x));
     return { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [oval, ...posArgs]}}
 }
 
@@ -43,9 +44,9 @@ export function divide_by_zero(arg: any, start_row: any, start_col: any, start_i
     return arg;
 }
 
-export function flattenDivideByZero(oval:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
-    const posArgs = [oval.a.fromLoc.row, oval.a.fromLoc.col, oval.a.fromLoc.srcIdx, oval.a.endLoc.row, oval.a.endLoc.col, oval.a.endLoc.srcIdx, oval.a.eolLoc.srcIdx].map(x => flattenWasmInt(x));
-    return { tag: "expr", expr: { tag: "call", name: `divide_by_zero`, arguments: [oval, ...posArgs]}}
+export function flattenDivideByZero(a:Annotation , rval:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
+    const posArgs = [a.fromLoc.row, a.fromLoc.col, a.fromLoc.srcIdx, a.endLoc.row, a.endLoc.col, a.endLoc.srcIdx, a.eolLoc.srcIdx].map(x => flattenWasmInt(x));
+    return { tag: "expr", expr: { tag: "call", name: `divide_by_zero`, arguments: [rval, ...posArgs]}}
 }
 
 // TODO: src field here is a temporary hack. Source doesn't get properly if it is not in the last compiled source. 

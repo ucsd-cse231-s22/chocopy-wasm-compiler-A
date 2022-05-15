@@ -50,7 +50,7 @@ c.f(None)`,
 
 assertFailWithSrc("divide-by-zero", 
 `1 // 0`, 
-`1 // 0`, 1, 6, 
+`1 // 0`, 1, 1, 
 [RUNTIME_ERROR_STRING, "cannot divide by zero"]);
 
 assertFailWithSrc("divide-by-zero-dyn", 
@@ -58,7 +58,7 @@ assertFailWithSrc("divide-by-zero-dyn",
     1 % a
 x : int = 0
 foo(x)`, 
-`    1 % a`, 2, 9, 
+`    1 % a`, 2, 5, 
 [RUNTIME_ERROR_STRING, "cannot divide by zero"]);
 });
 
