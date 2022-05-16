@@ -141,3 +141,20 @@ and add to Expr:
 ```
 
 We also expect to have changes to the globals so we can support a function to print lists, get the length of the list, and also index the element at the correct offset. Since lists are also mutable and expandable, we're thinking of having some notion of the correct offsets or locations in memory that correspond to the list values. We also need to make some changes in parser, typecheck, and compiler that are corresponding to the changes we made in ast and some of the new syntax rules that the data structure list would support. 
+
+
+# Project Milestone 1
+## Our compiler now supports
+- empty list
+- list of numbers
+- list of bools
+- list of classes (class instances must be of the same class)
+- list of lists (list instances must have same itemType)
+- list indexing, get value and set value
+
+## Design Decisions
+
+We decided to store the number of elements in the list at the first 4 bytes so it will be easy to use later for other functions such as print or len. We plan to incorporate the other functions and especially slicing functionality in the upcoming milestones. 
+
+## Error Handling
+Our compiler is able to handle the index of bounds exception among the type check errors (see lists.test.ts).

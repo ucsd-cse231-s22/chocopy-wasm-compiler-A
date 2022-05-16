@@ -50,7 +50,15 @@ export const importObject : any = {
     min: Math.min,
     max: Math.max,
     pow: Math.pow,
+
+    // list imported functions
+    index_out_of_bounds: () => index_out_of_bounds(),
   },
 
   output: "",
 };
+
+// List runtime errors
+function index_out_of_bounds() {
+  throw new Error(`RUNTIME ERROR: index out of bounds`);
+}

@@ -34,3 +34,5 @@ export const NUM : Type = {tag: "number"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
 export function CLASS(name : string) : Type {return {tag: "class", name}};
+export function LIST(itemType : Type) : Type {return {tag: "list", itemType}};
+export function EMPTY(): Type {return {tag: "empty"}};
