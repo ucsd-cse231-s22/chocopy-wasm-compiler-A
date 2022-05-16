@@ -279,20 +279,21 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       c.nextSibling(); // Focus on : thn
       c.firstChild(); // Focus on :
       var thn = [];
+      var els = [];
       while(c.nextSibling()) {  // Focus on thn stmts
         thn.push(traverseStmt(c,s));
       }
       // console.log("Thn:", thn);
       c.parent();
       
-      c.nextSibling(); // Focus on else
-      c.nextSibling(); // Focus on : els
-      c.firstChild(); // Focus on :
-      var els = [];
-      while(c.nextSibling()) { // Focus on els stmts
-        els.push(traverseStmt(c, s));
+      if (c.nextSibling()) {  // Focus on else
+        c.nextSibling(); // Focus on : els
+        c.firstChild(); // Focus on :
+        while(c.nextSibling()) { // Focus on els stmts
+          els.push(traverseStmt(c, s));
+        }
+        c.parent();  
       }
-      c.parent();
       c.parent();
       return {
         tag: "if",
