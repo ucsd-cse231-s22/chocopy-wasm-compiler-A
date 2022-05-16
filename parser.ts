@@ -365,7 +365,11 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
         c.nextSibling(); // Focus on : els
         c.firstChild(); // Focus on :
         while(c.nextSibling()) { // Focus on els stmts
+<<<<<<< HEAD
           els.push(traverseStmt(c, s, env));
+=======
+          els.push(traverseStmt(c, s));
+>>>>>>> 78f4281005336b091c1c2c87c86016f2f9f2ee33
         }
         c.parent();  
       }
