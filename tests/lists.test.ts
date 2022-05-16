@@ -514,6 +514,14 @@ describe("runner for lists", () => {
   a[1] = [2,3,4]
   print(a[1][2])
   `, [`4`]);
+
+  assertPrint(`list len 1`, `
+  a : [int] = None
+  a = [1,2,3]
+  print(len(a))
+  print(len([]))
+  print(len([1,2,3,4,5]))
+  `, [`3`, `0`, `5`]);
   // assertPrint(
   //   `list print`,
   //   `

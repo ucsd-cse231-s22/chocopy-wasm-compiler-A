@@ -45,6 +45,7 @@ defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
+defaultGlobalFunctions.set("len", [[LIST(NUM)], NUM]);
 
 export const defaultTypeEnv = {
   globals: new Map(),
@@ -451,10 +452,9 @@ export function tcExpr(
       } else if (env.functions.has(expr.name)) {
         const [argTypes, retType] = env.functions.get(expr.name);
         const tArgs = expr.arguments.map((arg) => tcExpr(env, locals, arg));
-
         if (
           argTypes.length === expr.arguments.length &&
-          tArgs.every((tArg, i) => tArg.a === argTypes[i])
+          tArgs.every((tArg, i) => isAssignable(env, tArg.a, argTypes[i]))
         ) {
           return { ...expr, a: retType, arguments: expr.arguments };
         } else {
