@@ -233,19 +233,8 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
 export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<null>) : Expr<Type> {
   switch(expr.tag) {
     case "index":
-      // var obj = expr.obj;
-      // const index = expr.index;
-      // if (obj.tag == "literal" && obj.value.tag == "str"){
-      //   const strLength = obj.value.length;
-      //   if (index>= strLength || index < 0)
-      //     throw new Error("RUNTIME ERROR: Index out of boundary!");
-      //     obj.value.value = String(obj.value.value.charAt(index));
-      //   return {...obj,a:tcLiteral(obj.value)};
-      // }
       return {...expr,a:STRING};
     case "literal":
-      //console.log(expr.value.tag);
-
       return {...expr, a: tcLiteral(expr.value)};
     case "binop":
       var tLeft = tcExpr(env, locals, expr.left);
@@ -259,7 +248,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Mod:
           if(equalType(tLeft.a, STRING) && equalType(tRight.a, STRING)){
             if (tLeft.tag == "literal" && tLeft.value.tag == "str" && tRight.tag == "literal" && tRight.value.tag == "str"){
-              console.log("+ with STR");
               tLeft.value.value = String(tLeft.value.value + tRight.value.value);
               return{...tLeft, a:tcLiteral(tLeft.value)};
             }
@@ -270,7 +258,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Neq:
           if(tLeft.a.tag === "class" || tRight.a.tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")
           if(equalType(tLeft.a, tRight.a)) {
-            console.log("BOP",tBin);
             if (tLeft.a.tag == "str" && tLeft.tag == "literal" && tRight.a.tag == "str" && tRight.tag == "literal"){
               if (tLeft.value.tag == "str" &&tRight.value.tag == "str" && tLeft.value.value === tRight.value.value){
                 const l:Expr<Type> = {

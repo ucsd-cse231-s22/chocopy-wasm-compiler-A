@@ -27,10 +27,11 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
     var firstBlock : IR.BasicBlock<Type> = { a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     var inits = flattenStmts(p.stmts, blocks, env);
+    inits = [...inits, ...lowerVarInits(p.inits, env, blocks)];
     return {
         a: p.a,
         funs: lowerFunDefs(p.funs, env),
-        inits: [...inits, ...lowerVarInits(p.inits, env)],
+        inits: inits,
         classes: lowerClasses(p.classes, env),
         body: blocks
     }
@@ -45,18 +46,57 @@ function lowerFunDef(f : AST.FunDef<Type>, env : GlobalEnv) : IR.FunDef<Type> {
   var firstBlock : IR.BasicBlock<Type> = {  a: f.a, label: generateName("$startFun"), stmts: [] }
   blocks.push(firstBlock);
   var bodyinits = flattenStmts(f.body, blocks, env);
-    return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks}
+    return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env,blocks)], body: blocks}
 }
 
-function lowerVarInits(inits: Array<AST.VarInit<Type>>, env: GlobalEnv) : Array<IR.VarInit<Type>> {
-    return inits.map(i => lowerVarInit(i, env));
+function lowerVarInits(inits: Array<AST.VarInit<Type>>, env: GlobalEnv, blocks?: Array<IR.BasicBlock<Type>>) : Array<IR.VarInit<Type>> {
+    return inits.map(i => lowerVarInit(i, env,blocks));
 }
 
-function lowerVarInit(init: AST.VarInit<Type>, env: GlobalEnv) : IR.VarInit<Type> {
-    return {
+function lowerVarInit(init: AST.VarInit<Type>, env: GlobalEnv,blocks: Array<IR.BasicBlock<Type>>) : IR.VarInit<Type> {
+  if (init.value.tag == "str"){
+    // new function here
+    return lowerStringInits(init, blocks);
+  }  
+  
+  return {
         ...init,
         value: literalToVal(init.value)
     }
+}
+
+function lowerStringInits(init: AST.VarInit<Type>,blocks: Array<IR.BasicBlock<Type>>):IR.VarInit<Type> {
+  var lit = init.value;
+  if (lit.tag == "str") {
+    let v = lit;
+    const strLength:number = v.value.length;
+    const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength + 1 } };
+    var assigns_string : IR.Stmt<Type>[] = [];
+    console.log(strLength);
+    assigns_string.push({
+      tag: "store",
+      start: {tag: "id", name: init.name},
+      offset: {tag:"wasmint", value: 0},
+      value: {a:NUM , tag:"wasmint", value:strLength}
+    });
+    for (var i=1; i<=strLength;i++){
+      const ascii = v.value.charCodeAt(i-1);
+      assigns_string.push({
+        tag: "store",
+        start: {tag: "id", name: init.name},
+        offset: {tag:"wasmint", value: i},
+        value: {a:NUM , tag:"wasmint", value:ascii}
+      });
+    }
+    var valinits: IR.VarInit<Type> = { name: init.name, type: init.a, value: { tag: "none" } }
+    var valstmts:Array<IR.Stmt<Type>> = 
+      [ { tag: "assign", name: init.name, value: alloc_string }, ...assigns_string,
+      ];
+    blocks[blocks.length - 1].stmts.unshift(...valstmts);
+    return valinits;
+  }
+
+
 }
 
 function lowerClasses(classes: Array<AST.Class<Type>>, env : GlobalEnv) : Array<IR.Class<Type>> {
