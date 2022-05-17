@@ -56,9 +56,8 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
 
         c.nextSibling(); // Focus on ,
         c.nextSibling(); // Focus on lambda
-        let exprName = c.type.name;
-        // @ts-ignore
-        if(exprName !== "LambdaExpression") {
+        let maybeLambda = c;
+        if(maybeLambda.type.name !== "LambdaExpression") {
           throw new Error(`Second argument to ${MKLAMBDA} must be a lamdba.`);
         }
         c.firstChild(); // Focus on object
