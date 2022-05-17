@@ -1,3 +1,10 @@
+# TODOs
+Passing AST with row/col info to front-end runtime so that the front end team can use:
+- `TypeCheckError` should now be represented as the following:
+```ts
+{"message": <error_msg>, "ASTObj": <AST_node>}
+```
+
 # Error Reporting
 
 ## Design
