@@ -35,9 +35,6 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
 export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
   switch(c.type.name) {
     case "String":
-      // const str_ = s.substring(c.from,c.to).replace(/["']/g, "") 
-      // const strConstruct: Expr<null> = {tag:"construct-string", value: str_};
-      // return strConstruct;
     case "Number":
     case "Boolean":
     case "None":
