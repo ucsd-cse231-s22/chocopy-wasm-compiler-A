@@ -103,11 +103,13 @@ We can calculate the row and column number of a particular position in the sourc
 Finally, we stored the full source code in the `Program` AST node only so that we could access the appropriate lines of source code based on the annotated locations in type checking.
 
 ### Runtime errors
-We report runtime errors by calling checking functions, such as `assert_not_none`, in WASM. These checking functions are added in in `lower.ts`. All checking functions, import objects, and wasm imports are managed inside `errors.ts`. 
+We report runtime errors by calling checking functions, such as `assert_not_none`, in WASM. These checking functions are added in in `lower.ts`. All checking functions, import objects, and wasm imports are managed inside `errors.ts`.  
 
 To report locations and get the locations needed for reporting source code, we pass in the location information from WASM as a list of `wasmint` arguments. These location arguments are moved from `AST` `Annotation`s to `IR` `wasmint`s in `lower.ts`. Right now we are using 7 location arguments. We might be able to reduce it by registering the errors in some dictionary and retrive them during actual error.
 
 To get the source code during runtime, we added a src field to `importedObjects`, so that our checking functions can access the source code. However, it gets replaced every time a new program is being compiled. As a result, source isn't properly reported if it is not in the last compiled source. For example, when running code in REPL, if a runtime error happens in code that belongs to a previous REPL block or the main editor, source code does not get properly reported.
+
+We made the decision to add error checking functions to IR in `lower.ts` instead of handling them in `compile.ts` since it looks cleaner in `lower.ts`. We can't think of any senario that only handling code in `lower.ts` breaks the correctness of the compiler. As a result, `assert_not_none` error for AST `lookup` (or IR `load`) is moved from `compile.ts` to `lower.ts`. 
 
 ## Functions We Have Added
 
