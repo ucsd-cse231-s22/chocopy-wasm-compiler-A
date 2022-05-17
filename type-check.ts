@@ -8,7 +8,10 @@ import { fullSrcLine, drawSquiggly } from './errors';
 
 
 export class TypeCheckError extends Error {
-  __proto__: Error
+  __proto__: Error;
+  a?: Annotation | undefined;
+  errMsg: string;
+
   constructor(SRC?: string, message?: string, a?: Annotation) {
     const fromLoc = a?.fromLoc;
     const endLoc = a?.endLoc;
@@ -19,10 +22,22 @@ export class TypeCheckError extends Error {
     // TODO: how to draw squigglies if the error spans multiple lines?
     const squiggly = (a) ? drawSquiggly(fromLoc.row, endLoc.row, fromLoc.col, endLoc.col) : '';
     const msg = `\n\n${src}\n${squiggly}`;
-    super("TYPE ERROR: " + message + loc + msg);
+    const res = "TYPE ERROR: " + message + loc + msg;
+    super(res);
+    this.a = (a) ?? undefined;
+    this.errMsg = res;
+
 
     // Alternatively use Object.setPrototypeOf if you have an ES6 environment.
     this.__proto__ = trueProto;
+  }
+
+  public getA(): Annotation | undefined {
+    return this.a;
+  }
+
+  public getErrMsg(): string {
+    return this.errMsg;
   }
 
 }
@@ -141,8 +156,6 @@ export function tcInit(env: GlobalTypeEnv, init: VarInit<Annotation>, SRC: strin
   if (isAssignable(env, valTyp, init.type)) {
     return { ...init, a: { ...init.a, type: NONE } };
   } else {
-    console.log(init.type);
-    console.log(valTyp);
     throw new TypeCheckError(SRC, `Expected type ${JSON.stringify(init.type.tag)}; got type ${JSON.stringify(valTyp.tag)}`, init.value.a);
   }
 }

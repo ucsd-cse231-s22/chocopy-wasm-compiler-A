@@ -1,9 +1,6 @@
 # TODOs
 Passing AST with row/col info to front-end runtime so that the front end team can use:
-- `TypeCheckError` should now be represented as the following:
-```ts
-{"message": <error_msg>, "ASTObj": <AST_node>}
-```
+- class `TypeCheckError` will have a `getA()` method for getting the AST info (if any, could be undefined) and a `getErrMsg()` method for getting the full string of error message
 
 # Error Reporting
 

@@ -1,6 +1,6 @@
 import {BasicREPL} from './repl';
 import { Type, Value, Annotation } from './ast';
-import { defaultTypeEnv } from './type-check';
+import { defaultTypeEnv, TypeCheckError } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
 import { importObjectErrors } from './errors';
 
@@ -82,6 +82,12 @@ function webStart() {
     }
 
     function renderError(result : any) : void {
+      // only `TypeCheckError` has `getA` and `getErrMsg`
+      if (result instanceof TypeCheckError) {
+        console.log(result.getA()); // could be undefined if no Annotation information is passed to the constructor of TypeCheckError
+        console.log(result.getErrMsg());
+      }
+
       const elt = document.createElement("pre");
       document.getElementById("output").appendChild(elt);
       elt.setAttribute("style", "color: red");
