@@ -304,6 +304,6 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
 function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = `${cls.name}$${method.name}`);
-  const result = methods.map(method => codeGenDef(method, env));
+  const result = methods.map(method => method.class === cls.name ? codeGenDef(method, env) : []);
   return result.flat();
   }

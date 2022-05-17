@@ -449,7 +449,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   c.parent();      // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
   c.parent();      // Pop to FunctionDefinition
-  return { name, parameters, ret, inits, body }
+  return { name, parameters, ret, inits, body, class: "" }
 }
 
 export function traverseClass(c : TreeCursor, s : string) : Class<null> {
@@ -461,13 +461,19 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   if (invalidNames.has(className) || c.type.name !== "VariableName")
     throw new ParserError(`Invalid Class Name ${className}`);
   c.nextSibling(); // Focus on arglist/superclass
+  c.firstChild(); // Focus on (
+  c.nextSibling(); // Focus on object/superclass
+  const parent = s.substring(c.from, c.to);
+  c.parent();
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
   while(c.nextSibling()) { // Focuses first field
     if (isVarInit(c, s)) {
       fields.push(traverseVarInit(c, s));
     } else if (isFunDef(c, s)) {
-      methods.push(traverseFunDef(c, s));
+      var fundef = traverseFunDef(c, s);
+      fundef.class = className;
+      methods.push(fundef);
     } else {
       throw new ParserError(`Could not parse the body of class: ${className}` );
     }
@@ -476,12 +482,13 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   c.parent();
 
   if (!methods.find(method => method.name === "__init__")) {
-    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
+    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [], class: className });
   }
   return {
     name: className,
     fields,
-    methods
+    methods,
+    parents: [parent]
   };
 }
 
@@ -564,7 +571,9 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
 }
 
 export function parse(source : string) : Program<null> {
-  const t = parser.parse(source);
-  const str = stringifyTree(t.cursor(), source, 0);
-  return traverse(t.cursor(), source);
+  const t = parser.parse(source).cursor();
+  const str = stringifyTree(t, source, 0);
+  console.log(str);
+  console.log(t);
+  return traverse(t, source);
 }
