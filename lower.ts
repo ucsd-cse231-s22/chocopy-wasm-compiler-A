@@ -2,6 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
+import { table } from 'console';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -31,7 +32,8 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
         funs: lowerFunDefs(p.funs, env),
         inits: [...inits, ...lowerVarInits(p.inits, env)],
         classes: lowerClasses(p.classes, env),
-        body: blocks
+        body: blocks,
+        table: p.table
     }
 }
 

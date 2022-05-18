@@ -1,8 +1,10 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
+import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, ClassIndex } from './ast';
 import { NUM, BOOL, NONE, EMPTY, CLASS, LIST } from './utils';
 import { emptyEnv } from './compiler';
+import { BlockList } from 'net';
+import { IncomingMessage } from 'http';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends Error {
@@ -23,7 +25,12 @@ export type GlobalTypeEnv = {
   inheritance: Inheritance
 }
 
-export type Inheritance = Map<string, [string[], Map<string, VarInit<null>>, Map<string, string>]>
+export type Inheritance = {
+  classname: string,
+  fields: Array<string>,
+  methods: Array<string>,
+  children: Array<Inheritance>
+}
 
 export type LocalTypeEnv = {
   vars: Map<string, Type>,
@@ -46,12 +53,21 @@ export const defaultTypeEnv = {
   inheritance: new Map()
 };
 
+export function emptyInheritance() : Inheritance {
+  return {
+    classname: "object",
+    fields: [],
+    methods: [],
+    children: []
+  }
+}
+
 export function emptyGlobalTypeEnv() : GlobalTypeEnv {
   return {
     globals: new Map(),
     functions: new Map(),
     classes: new Map(),
-    inheritance: new Map()
+    inheritance: emptyInheritance()
   };
 }
 
@@ -90,7 +106,7 @@ export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type) : boolean {
   return (
     equalType(t1, t2) ||
     (t1.tag === "none" && (t2.tag === "class" || t2.tag === "list" )) ||
-    (t1.tag === "class" && t2.tag === "class" && env.inheritance.has(t1.name) && env.inheritance.get(t1.name)[0].includes(t2.name)) ||
+    (t1.tag === "class" && t2.tag === "class" && inheritanceHasChild(env.inheritance, t2.name, t1.name)) ||
     (t1.tag === "empty" && t2.tag === "list")
   );
 }
@@ -103,12 +119,97 @@ export function join(env : GlobalTypeEnv, t1 : Type, t2 : Type) : Type {
   return NONE
 }
 
+export function inheritanceFlat(classes: Inheritance[]) : Array<ClassIndex<null>> {
+  var result : Array<ClassIndex<null>> = [];
+  classes.forEach(inClass => {
+    result.push({
+      classname: inClass.classname,
+      fields: inClass.fields,
+      methods: inClass.methods
+    });
+    result = result.concat(inheritanceFlat(inClass.children));
+  });
+  return result;
+}
+
+export function inheritanceHas(tree: Inheritance, classname: string) : Inheritance {
+  if (tree.classname === classname) {
+    return tree;
+  }
+
+  tree.children.forEach(child => {
+    var t = inheritanceHas(child, classname);
+    if (t !== null)
+      return t;
+  })
+
+  return null;
+}
+
+export function inheritanceHasChild(tree: Inheritance, parent: string, child: string) : boolean {
+  tree.children.forEach(inClass => {
+    var tem = inheritanceHas(inClass, parent);
+    if (tem !== null) {
+      if (inheritanceHas(tem, child) === null) {
+        return false;
+      }
+      return true;
+    }
+  })
+  return false;
+}
+
+export function inheritanceUpdate(originalNodes: Array<Inheritance>, newclass: Class<null>) : Array<Inheritance> {
+  var result : Array<Inheritance> = [];
+  originalNodes.forEach(parent => {
+    if (parent.classname === newclass.parents[-1]) {
+      var children = parent.children;
+      var fields = parent.fields;
+      var methods = parent.methods;
+      newclass.fields.forEach(field => {
+        if (fields.includes(field.name)) {
+          throw new TypeCheckError("cannot redefine attribute:" + field.name);
+        } else {
+          fields.push(field.name);
+        }
+      })
+      newclass.methods.forEach(method => {
+        if (!methods.includes(method.name)) {
+          methods.push(method.name);
+        }
+      })
+      children.push({
+        classname: newclass.name,
+        fields,
+        methods,
+        children: []
+      })
+      result.push({
+        classname: parent.classname,
+        fields: parent.fields,
+        methods: parent.methods,
+        children: children
+      })
+    } else {
+      result.push({
+        classname: parent.classname,
+        fields: parent.fields,
+        methods: parent.methods,
+        children: inheritanceUpdate(parent.children, newclass)
+      })
+    }
+  })
+
+  return result;
+}
+
 export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : GlobalTypeEnv {
   const newGlobs = new Map(env.globals);
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
-  const newInheritance = new Map();
-  newInheritance.set("object", [[], new Map(), new Map()]); // parents list, variables, method-class
+  const newInheritance = emptyInheritance();
+  const temp = new Map();
+  temp.set("object", [[], new Map(), new Map()]); // parents list, variables, method-class
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
   program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
   // program.classes.forEach(cls => {
@@ -128,9 +229,6 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
       if (!visitedClasses.has(cls.name) && visitedClasses.has(cls.parents[-1])) {
         var parents = visitedClasses.get(cls.parents[-1]);
         visitedClasses.set(cls.name, [...parents, cls.parents[-1]])
-        if (!newInheritance.has(cls.parents[-1])) {
-          throw new TypeCheckError("strange error happens in finding inheritance");
-        }
         var currFields = new Map();
         var currMethods = new Map();
         var methodClass = new Map();
@@ -144,7 +242,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
           methodClass.set(method.name, cls.name);
         });
         var [parentFields, parentMethods] = newClasses.get(cls.parents[-1]);
-        var [_,fieldCla, methodCla] = newInheritance.get(cls.parents[-1]);
+        var [_,fieldCla, methodCla] = temp.get(cls.parents[-1]);
         for (const entry of parentFields) {
           if (currFields.has(entry[0])) {
             throw new TypeCheckError("cannot redefine attribute:" + entry[0]);
@@ -165,8 +263,19 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
           }
         }
         newClasses.set(cls.name, [currFields, currMethods])
-        newInheritance.set(cls.name, [visitedClasses.get(cls.name), fieldexist, methodClass])
+        temp.set(cls.name, [visitedClasses.get(cls.name), fieldexist, methodClass])
         classCount ++;
+        if (cls.parents[-1] === "object") {
+          newInheritance.children.push({
+            classname: cls.name,
+            fields: cls.fields.map(field => field.name),
+            methods: cls.methods.map(method => method.name),
+            children: []
+          })
+        } else {
+          newInheritance.children = inheritanceUpdate(newInheritance.children, cls);
+        }
+        
       }
     })
     if (classCount === numClass)
@@ -210,7 +319,9 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   for (let name of locals.vars.keys()) {
     newEnv.globals.set(name, locals.vars.get(name));
   }
-  const aprogram = {a: lastTyp, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody};
+  const table = inheritanceFlat(newEnv.inheritance.children);
+
+  const aprogram = {a: lastTyp, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody, table};
   return [aprogram, newEnv];
 }
 
@@ -245,7 +356,7 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
     !equalType(init.parameters[0].type, CLASS(cls.name)) ||
     init.ret !== NONE)
     throw new TypeCheckError("Cannot override __init__ type signature");
-  return {a: NONE, name: cls.name, fields: tFields, methods: tMethods, parents: env.inheritance.get(cls.name)[0]};
+  return {a: NONE, name: cls.name, fields: tFields, methods: tMethods, parents: cls.parents};
 }
 
 export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Array<Stmt<null>>) : Array<Stmt<Type>> {

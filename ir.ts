@@ -1,6 +1,8 @@
 import {Type, BinOp, UniOp, Parameter} from './ast';
 
-export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, body: Array<BasicBlock<A>> }
+export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, body: Array<BasicBlock<A>>, table?: Array<ClassIndex<A>> }
+
+export type ClassIndex<A> = {a?: A, classname: string, fields: Array<string>, methods: Array<string>}
 
 export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
 
