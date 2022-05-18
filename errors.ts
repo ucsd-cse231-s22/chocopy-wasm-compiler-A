@@ -95,8 +95,9 @@ function assert_not_zero(arg: any, reNum: any) : any {
 
 
 /********** Divide by Zero Error ***********/
+export const DivideByZeroNote = "cannot divide by zero"
 export class DivideByZeroError extends RuntimeError {
-    note: string = "division by zero";
+    note: string = DivideByZeroNote;
 }
 
 export const divide_by_zero = assert_not_zero;
@@ -111,8 +112,9 @@ export function flattenDivideByZero(a:Annotation , rval:IR.Value<AST.Annotation>
 
 /********* Operation On None Error *********/
 // TODO: Separate into different cases (Method call on None, Field access on None, indexing on None, etc.)
+export const OperationOnNoneNote = "cannot perform operation on none"
 export class OperationOnNoneError extends RuntimeError {
-    note: string = "operation on none";
+    note: string = OperationOnNoneNote;
 }
 
 export const assert_not_none = assert_not_zero;

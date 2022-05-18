@@ -6,16 +6,16 @@ import { importObject } from "./import-object.test";
 import {run, typeCheck} from "./helpers.test";
 import { fail } from 'assert'
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
-import { RUNTIME_ERROR_STRING, TYPE_ERROR_STRING } from "../errors"
+import * as ERRORS from "../errors"
 
 // Assert an error gets thrown at runtime, with reported source, row/col number, and some messages
-export function assertFailWithSrc(name: string, source: string, reportSource: string, row: number, col: number, msgs: Array<string>) {
+export function assertFailWithSrc(name: string, source: string, errorName: string, row: number, col: number, msgs: Array<string>) {
     it(name, async () => {
       try {
         await run(source);
         fail("Expected an exception");
       } catch (err) {
-        expect(err.message).to.contain(reportSource);
+        expect(err.name).to.contain(errorName);
         expect(err.message).to.contain(`line ${row} at col ${col}`);
         msgs.forEach(msg => expect(err.message).to.contain(msg));
       }
@@ -30,8 +30,8 @@ c1 : C = None
 c2 : C = None
 c1 = C()
 c2.x`, 
-`c2.x`, 6, 1, 
-[RUNTIME_ERROR_STRING, "cannot perform operation on none"]
+ERRORS.RUNTIME_ERROR_STRING, 6, 1, 
+[`c2.x`,  ERRORS.OperationOnNoneNote]
 );
     
 assertFailWithSrc("method-of-none", 
@@ -43,33 +43,35 @@ assertFailWithSrc("method-of-none",
 c : C = None
 c = C()
 c.f(None)`, 
-`        other.f(self)`, 4, 9, 
-[RUNTIME_ERROR_STRING, "cannot perform operation on none"]
+ERRORS.RUNTIME_ERROR_STRING, 4, 9, 
+[`        other.f(self)`,ERRORS.OperationOnNoneNote]
 );
 
 assertFailWithSrc("divide-by-zero", 
 `1 // 0`, 
-`1 // 0`, 1, 1, 
-[RUNTIME_ERROR_STRING, "cannot divide by zero"]);
+ERRORS.RUNTIME_ERROR_STRING, 1, 1, 
+[`1 // 0`, ERRORS.DivideByZeroNote]);
 
 assertFailWithSrc("divide-by-zero-dyn", 
 `def foo(a:int):
     1 % a
 x : int = 0
 foo(x)`, 
-`    1 % a`, 2, 5, 
-[RUNTIME_ERROR_STRING, "cannot divide by zero"]);
+ERRORS.RUNTIME_ERROR_STRING, 2, 5, 
+[`    1 % a`, ERRORS.DivideByZeroNote]);
 });
 
 
 
-
+// TODO: Move TYPE_ERROR_STRING from err.message to err.name.
 describe("Type Check Errors", () => {
 assertFailWithSrc("binop-num-wrong-type",
 `a: int = 1
 b: bool = True
 a + b`, 
-`a + b`, 3, 1, 
-[TYPE_ERROR_STRING, `Binary operator \`+\` expects type "number" on both sides, got "number" and "bool"`]
+`Error`, 3, 1, 
+[`a + b`, ERRORS.TYPE_ERROR_STRING, `Binary operator \`+\` expects type "number" on both sides, got "number" and "bool"`]
 );
 });
+
+// TODO: test multiple sources
