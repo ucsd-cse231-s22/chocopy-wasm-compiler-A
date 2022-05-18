@@ -28,11 +28,12 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
     blocks.push(firstBlock);
     var inits = flattenStmts(p.stmts, blocks, env);
     inits = [...inits, ...lowerVarInits(p.inits, env, blocks)];
+    var classes:IR.Class<AST.Type>[] = lowerClasses(inits,p.classes, env,blocks)
     return {
         a: p.a,
         funs: lowerFunDefs(p.funs, env),
         inits: inits,
-        classes: lowerClasses(p.classes, env),
+        classes: classes,
         body: blocks
     }
 }
@@ -99,14 +100,36 @@ function lowerStringInits(init: AST.VarInit<Type>,blocks: Array<IR.BasicBlock<Ty
 
 }
 
-function lowerClasses(classes: Array<AST.Class<Type>>, env : GlobalEnv) : Array<IR.Class<Type>> {
-    return classes.map(c => lowerClass(c, env));
+function lowerClassVarInits(global_inits:IR.VarInit<AST.Type>[],cls: AST.Class<Type>,inits: Array<AST.VarInit<Type>>, env: GlobalEnv, blocks?: Array<IR.BasicBlock<Type>>) : Array<IR.VarInit<Type>> {
+
+  return inits.map(i => lowerClassVarInit(global_inits,cls,i, env,blocks));
 }
 
-function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : IR.Class<Type> {
+
+function lowerClassVarInit(global_inits:IR.VarInit<AST.Type>[],cls: AST.Class<Type>,init: AST.VarInit<Type>, env: GlobalEnv,blocks: Array<IR.BasicBlock<Type>>) : IR.VarInit<Type> {
+if (init.value.tag == "str"){
+  // new function here
+  init.name = cls.name + "$" + init.name;
+  global_inits.unshift({ name: init.name, type: init.a, value: { tag: "none" }});
+  return lowerStringInits(init, blocks);
+}  
+
+return {
+      ...init,
+      value: literalToVal(init.value)
+  }
+}
+
+
+
+function lowerClasses(inits:IR.VarInit<AST.Type>[],classes: Array<AST.Class<Type>>, env : GlobalEnv, blocks: Array<IR.BasicBlock<Type>>) : Array<IR.Class<Type>> {
+    return classes.map(c => lowerClass(inits,c, env, blocks));
+}
+
+function lowerClass(inits:IR.VarInit<AST.Type>[],cls: AST.Class<Type>, env : GlobalEnv,blocks:Array<IR.BasicBlock<Type>>) : IR.Class<Type> {
     return {
         ...cls,
-        fields: lowerVarInits(cls.fields, env),
+        fields: lowerClassVarInits(inits,cls,cls.fields, env,blocks),
         methods: lowerFunDefs(cls.methods, env)
     }
 }
@@ -404,6 +427,14 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
       const assigns : IR.Stmt<Type>[] = fields.map(f => {
         const [_, [index, value]] = f;
+        if (value.tag == "str"){
+          return {
+            tag: "store",
+            start: { tag: "id", name: newName },
+            offset: { tag: "wasmint", value: index },
+            value: {tag:"none"}
+          }
+        }
         return {
           tag: "store",
           start: { tag: "id", name: newName },
