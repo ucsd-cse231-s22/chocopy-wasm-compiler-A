@@ -185,39 +185,22 @@ l = B()
 print(l.get_a())
 print(l.get_b())
 `, [`1`,`4`]);
-assertPrint("method-doesnt-exist-in-superclass", `
-class A(object):
-	a : int = 1
-
-	def get_a(self: A) -> int: 
-		return self.a
-
-class B(A):
-	b : int = 2
-
-	def sum_a_b(self: B) -> int: 
-		return self.a + self.b
-
-l : B = None 
-l = B()
-print(l.sum_a_b())
-`, [`3`]);
 assertPrint("simple-method-overriding", `
 class Single(object):
 	a : int = 1
-	def sum1(self: Single) -> int: 
+	def sum(self: Single) -> int: 
 		return self.a
 class Two(Single):
 	b : int = 2
-	def sum2(self: Two) -> int: 
+	def sum(self: Two) -> int: 
 		return self.a + self.b
 class Three(Two):
 	c : int = 3
-	def sum3(self: Three) -> int: 
+	def sum(self: Three) -> int: 
 		return self.a + self.b + self.c
 l : Three = None 
 l = Three()
-print(l.sum3())
+print(l.sum())
 `, [`6`]);
 assertTCFail("method-doesnt-exist-in-any-class", `
 class A(object):
