@@ -27,7 +27,8 @@ export class RuntimeError extends Error {
     __proto__: Error;
     a?: Annotation | undefined;
     SRC?: string | undefined;
-    
+    note: string; 
+
     constructor(SRC?: string, a?: Annotation) {
         const trueProto = new.target.prototype;
         super();
@@ -39,11 +40,12 @@ export class RuntimeError extends Error {
         this.message = "You shouldn't see this. Compiler's cursed. Check if you prepared the error before throwing it out."
         this.note = "";
     }
-    note: string; 
   
     public getA(): Annotation | undefined {
         return this.a;
     }
+
+    // Create error message lazily to reduce memory overhead
     public prepare() {
         var locSquigglySrc = "";
         if (this.a && this.SRC) {
@@ -116,7 +118,7 @@ export class OperationOnNoneError extends RuntimeError {
 export const assert_not_none = assert_not_zero;
 
 export function flattenAssertNotNone(a: Annotation, oval:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
-    const error = new RuntimeError(importObjectErrors.src, a);
+    const error = new OperationOnNoneError(importObjectErrors.src, a);
     const reNum = registerRE(error);
     const posArg = flattenWasmInt(reNum);
     return { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [oval, posArg]}}

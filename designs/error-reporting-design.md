@@ -105,9 +105,11 @@ Finally, we stored the full source code in the `Program` AST node only so that w
 ### Runtime errors
 We report runtime errors by calling checking functions, such as `assert_not_none`, in WASM. These checking functions are added in in `lower.ts`. All checking functions, import objects, and wasm imports are managed inside `errors.ts`.  
 
-To report locations and get the locations needed for reporting source code, we pass in the location information from WASM as a list of `wasmint` arguments. These location arguments are moved from `AST` `Annotation`s to `IR` `wasmint`s in `lower.ts`. Right now we are using 7 location arguments. We might be able to reduce it by registering the errors in some dictionary and retrive them during actual error.
+For each place in `IR` that can produce an runtime error, we create a new `RuntimeError` instance and register it in an `RuntimeErrorRegistry`. The registered error will contain the location and source information. After registering the error, an integer key will be produced and put in WASM code as a `wasmint`. If the registered error need to be thrown during runtime, the key can be used to retrieve the error from the registery. 
 
-To get the source code during runtime, we added a src field to `importedObjects`, so that our checking functions can access the source code. However, it gets replaced every time a new program is being compiled. As a result, source isn't properly reported if it is not in the last compiled source. For example, when running code in REPL, if a runtime error happens in code that belongs to a previous REPL block or the main editor, source code does not get properly reported.
+We create the error messages lazily to reduce memory overhead. The reference of source is stored when the error is created and registered. We only `prepare()` the error with the error messages right before throwing the error.
+
+To get the source code into the `RuntimeError`s, we added a src field to `importedObjects` which gets a reference of the source code each time a new source is being compiled and ran.
 
 We made the decision to add error checking functions to IR in `lower.ts` instead of handling them in `compile.ts` since it looks cleaner in `lower.ts`. We can't think of any senario that only handling code in `lower.ts` breaks the correctness of the compiler. As a result, `assert_not_none` error for AST `lookup` (or IR `load`) is moved from `compile.ts` to `lower.ts`. 
 
@@ -256,14 +258,42 @@ if:int = 10
 ```
 Should report the following runtime error:
 ```
-Traceback:
-  Toplevel, line 1
-
-ZeroDivisionError: divide by zero on line 1 at col 5
+RUNTIME ERROR: division by zero on line 1 at col 1
 
 1 // 0
-^^^^^^ attempt to divide by zero
+^^^^^^
 ```
+
+#### Foreign Source Reporting in Runtime Errors
+The main editor contains the following python code:
+```python 
+class A(object):
+  x:int = 0
+a:A = None
+def foo():
+  print(a.x)
+```
+
+In the REPL, the following two lines of code gives corresponding errors:
+1.  ```python
+    a.x
+    ```
+    ```
+    RUNTIME ERROR: operation on none on line 1 at col 1
+
+    a.x
+    ^^^
+    ```
+2.
+    ```python
+    foo()
+    ```
+    ```
+    RUNTIME ERROR: operation on none on line 5 at col 9
+
+      print(a.x)
+            ^^^
+    ```
 
 ### Future Work
 #### Type check print/len argument
@@ -350,7 +380,7 @@ print(c.foo())
 c.data = 0
 ```
 
-Should report the following runtime errors:
+Should report the following runtime errors separately:
 
 ```
 Traceback:
