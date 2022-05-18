@@ -81,18 +81,54 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
 function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
   switch (stmt.tag) {
     case "store":
-      return [
+      let post =  [
         ...codeGenValue(stmt.start, env),
+        `(i32.add)`,
+        `call $ref_lookup`,
+        `call $assert_not_none`,
         ...codeGenValue(stmt.offset, env),
         ...codeGenValue(stmt.value, env),
         `call $store`
       ]
+      let pre = [`(i32.const 0)`]
+      if (stmt.value.a && stmt.value.a.tag === "class") {
+        pre = [
+          ...codeGenValue(stmt.start, env),
+          `call $ref_lookup`,
+          `call $assert_not_none`,
+          ...codeGenValue(stmt.offset, env),
+          `(i32.mul (i32.const 4))`, // offset is in 4 byte units
+          `(i32.add)`,
+          `(i32.load)`, // load the ref number referred to by argument ref no. and the offset
+          `(i32.const 0)`,
+          `(i32.const -1) (call $traverse_update)`,
+          `(i32.mul (i32.const 0))`, // hack to take top value of stack
+          ...codeGenValue(stmt.value, env),
+          `(i32.add)`, // hack to take top value of stack
+          ...codeGenValue(stmt.start, env),
+          `(i32.const 1) (call $traverse_update)`,
+          `(i32.mul (i32.const 0))`
+        ]
+      }
+      return pre.concat(post);
+
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
+      if (stmt.value.a && stmt.value.a.tag === "class") { // if the assignment is object assignment
+        valStmts.push(`(i32.const 0)`, `(i32.const 1)`, `(call $traverse_update)`) // update the count of the object on the RHS
+      }
       if (env.locals.has(stmt.name)) {
-        return valStmts.concat([`(local.set $${stmt.name})`]); 
+        return [`(local.get $${stmt.name})`, // update the count of the object on the LHS
+        `(i32.const 0)`,
+        `(i32.const -1)`, 
+        `(call $traverse_update)`,
+        `(local.set $${stmt.name})`].concat(valStmts).concat([`(local.set $${stmt.name})`]); 
       } else {
-        return valStmts.concat([`(global.set $${stmt.name})`]); 
+        return [`(global.get $${stmt.name})`,
+        `(i32.const 0)`,
+        `(i32.const -1)`,
+        `(call $traverse_update)`,
+        `(global.set $${stmt.name})`].concat(valStmts).concat([`(global.set $${stmt.name})`]); 
       }
 
     case "return":
@@ -170,17 +206,24 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(call $${expr.name})`);
-      return valStmts;
+      // Not sure if plugging in the scope calls here is the best way to do this
+      return [
+        `(call $add_scope)`,
+        ...valStmts,
+        `(call $remove_scope)`
+      ];
 
     case "alloc":
       return [
         ...codeGenValue(expr.amount, env),
-        `call $alloc`
+        `call $alloc`,
+        `call $mem_gen_ref`
       ];
     case "load":
       return [
         ...codeGenValue(expr.start, env),
         `call $assert_not_none`,
+        `call $ref_lookup`,
         ...codeGenValue(expr.offset, env),
         `call $load`
       ]

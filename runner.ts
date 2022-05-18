@@ -10,6 +10,7 @@ import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
+import { memInit } from './memory';
 
 export type Config = {
   importObject: any;
@@ -98,7 +99,8 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
     importObject.js = { memory: memory };
   }
-
+  memInit(new Int32Array(importObject.js.memory.buffer));
+  // memory functions are explicitly declared rn, they can be added to config.functions when implemented in WASM
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
@@ -112,6 +114,11 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $mem_gen_ref (import "libmemory" "memGenRef") (param i32) (result i32))
+    (func $ref_lookup (import "libmemory" "refLookup") (param i32) (result i32))
+    (func $add_scope (import "libmemory" "addScope"))
+    (func $remove_scope (import "libmemory" "removeScope"))
+    (func $traverse_update (import "libmemory" "traverseUpdate") (param i32) (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}

@@ -2,6 +2,7 @@ import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
+import * as memMgmt from './memory';
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -53,7 +54,7 @@ function webStart() {
         max: Math.max,
         pow: Math.pow
       },
-      libmemory: memoryModule.instance.exports,
+      libmemory: {...memoryModule.instance.exports, ...memMgmt},
       memory_values: memory,
       js: {memory: memory}
     };
