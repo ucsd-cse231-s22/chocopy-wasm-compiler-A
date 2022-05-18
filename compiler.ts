@@ -180,14 +180,10 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       return valStmts;
 
     case "call_indirect":
-      if (expr.fn.a.tag !== "callable") {
-        throw new Error("cursed");
-      }
-      
-      var valStmts = codeGenValue(expr.fn, env);
+      var valStmts = codeGenExpr(expr.fn, env);
       var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       // +1 for self
-      return [...fnStmts, ...valStmts, `(i32.const 0)`, `call $load`, `(call_indirect (type ${makeWasmFunType(expr.fn.a.params.length + 1)}))`];
+      return [...fnStmts, ...valStmts, `(call_indirect (type ${makeWasmFunType(expr.arguments.length)}))`];
 
     case "alloc":
       return [

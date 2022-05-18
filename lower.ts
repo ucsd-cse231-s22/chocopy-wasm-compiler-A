@@ -310,11 +310,11 @@ function flattenExprToExpr(e : AST.Expr<Type>, blocks: Array<IR.BasicBlock<Type>
       const checkObj: IR.Stmt<Type> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [fval] } };
       return [
         [...finits, ...callinits],
-        [...fstmts, checkObj, ...callstmts],
+        [...fstmts, checkObj, ...callstmts, { tag: "expr", expr: { tag: "value", value: { tag: "wasmint", value: 0 } } }],
         {
           ...e,
           tag: "call_indirect",
-          fn: fval,
+          fn: { tag: "load", start: fval, offset: { tag: "wasmint", value: 0 } },
           arguments: [fval, ...callvals]
         },
         [...fclasses, ...callclasses]
