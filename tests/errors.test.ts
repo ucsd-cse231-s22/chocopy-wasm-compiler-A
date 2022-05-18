@@ -6,9 +6,8 @@ import { importObject } from "./import-object.test";
 import {run, typeCheck} from "./helpers.test";
 import { fail } from 'assert'
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
+import { RUNTIME_ERROR_STRING, TYPE_ERROR_STRING } from "../errors"
 
-const RUNTIME_ERROR_STRING = "RUNTIME ERROR"
-const TYPE_ERROR_STRING = "TYPE ERROR"
 // Assert an error gets thrown at runtime, with reported source, row/col number, and some messages
 export function assertFailWithSrc(name: string, source: string, reportSource: string, row: number, col: number, msgs: Array<string>) {
     it(name, async () => {
