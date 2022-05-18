@@ -5,5 +5,4 @@ debugger
 cli
 *.sw*
 mochawesome-report
-*lock*
 *.DS_Store
