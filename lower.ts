@@ -23,16 +23,18 @@ function generateName(base : string) : string {
 // }
 
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
+    console.log("classes env: ",env.classes);
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = { a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     var inits = flattenStmts(p.stmts, blocks, env);
     inits = [...inits, ...lowerVarInits(p.inits, env, blocks)];
+    var classes:IR.Class<AST.Type>[] = lowerClasses(inits,p.classes, env,blocks)
     return {
         a: p.a,
         funs: lowerFunDefs(p.funs, env),
         inits: inits,
-        classes: lowerClasses(p.classes, env),
+        classes: classes,
         body: blocks
     }
 }
@@ -99,14 +101,43 @@ function lowerStringInits(init: AST.VarInit<Type>,blocks: Array<IR.BasicBlock<Ty
 
 }
 
-function lowerClasses(classes: Array<AST.Class<Type>>, env : GlobalEnv) : Array<IR.Class<Type>> {
-    return classes.map(c => lowerClass(c, env));
+function lowerClassVarInits(global_inits:IR.VarInit<AST.Type>[],cls: AST.Class<Type>,inits: Array<AST.VarInit<Type>>, env: GlobalEnv, blocks?: Array<IR.BasicBlock<Type>>) : Array<IR.VarInit<Type>> {
+
+  //return inits.map(i => lowerClassVarInit(global_inits,cls,i, env,blocks));
+  return inits.map(i => tmpVarInit(global_inits,cls,i, env,blocks));
 }
 
-function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : IR.Class<Type> {
+function tmpVarInit(global_inits:IR.VarInit<AST.Type>[],cls: AST.Class<Type>,init: AST.VarInit<Type>, env: GlobalEnv,blocks: Array<IR.BasicBlock<Type>>) : IR.VarInit<Type> {
+  return {
+    ...init,
+    value: literalToVal(init.value)
+}
+}
+
+function lowerClassVarInit(global_inits:IR.VarInit<AST.Type>[],cls: AST.Class<Type>,init: AST.VarInit<Type>, env: GlobalEnv,blocks: Array<IR.BasicBlock<Type>>) : IR.VarInit<Type> {
+if (init.value.tag == "str"){
+  // new function here
+  init.name = cls.name + "$" + init.name;
+  global_inits.unshift({ name: init.name, type: init.a, value: { tag: "none" }});
+  return lowerStringInits(init, blocks);
+}  
+
+return {
+      ...init,
+      value: literalToVal(init.value)
+  }
+}
+
+
+
+function lowerClasses(inits:IR.VarInit<AST.Type>[],classes: Array<AST.Class<Type>>, env : GlobalEnv, blocks: Array<IR.BasicBlock<Type>>) : Array<IR.Class<Type>> {
+    return classes.map(c => lowerClass(inits,c, env, blocks));
+}
+
+function lowerClass(inits:IR.VarInit<AST.Type>[],cls: AST.Class<Type>, env : GlobalEnv,blocks:Array<IR.BasicBlock<Type>>) : IR.Class<Type> {
     return {
         ...cls,
-        fields: lowerVarInits(cls.fields, env),
+        fields: lowerClassVarInits(inits,cls,cls.fields, env,blocks),
         methods: lowerFunDefs(cls.methods, env)
     }
 }
@@ -402,19 +433,81 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
       const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
-      const assigns : IR.Stmt<Type>[] = fields.map(f => {
+      const newassigns: IR.Stmt<Type>[] = [];
+      const strassigns: IR.Stmt<Type>[] = []; // For string memory allocation and store
+      var initsArray: Array<IR.VarInit<Type>> = [];
+      initsArray.push({ name: newName, type: e.a, value: { tag: "none" } });
+      fields.forEach( f=>{
         const [_, [index, value]] = f;
-        return {
-          tag: "store",
-          start: { tag: "id", name: newName },
-          offset: { tag: "wasmint", value: index },
-          value: value
+        console.log("Value: ",value);
+        if (value.tag != "str"){
+          var storestmt:IR.Stmt<Type> = {
+            tag: "store",
+            start: { tag: "id", name: newName },
+            offset: { tag: "wasmint", value: index },
+            value: value
+          };
+          newassigns.push(storestmt);
+        }else{//Now it is a string
+          const strLength = value.value.length;
+          //newassigns.push({ tag: "assign", name: newName, value: str_alloc });
+          //Push string address into the memory
+          const get_address: IR.Expr<Type> = {tag: "alloc",amount: { tag: "wasmint", value: 0 }}
+          newassigns.push({
+            tag: "store_str",
+            start: {tag: "id", name: newName},
+            offset: {tag:"wasmint", value: index},
+            value: get_address
+          });
+          let v = value;
+          const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength + 1 } };
+          //var assigns_string : IR.Stmt<Type>[] = [];
+          const newStrName1 = generateName("newStr"); 
+          initsArray.push({ name: newStrName1, type: e.a, value: { tag: "none" } });
+          newassigns.push({ tag: "assign", name: newStrName1, value: alloc_string })
+          newassigns.push({
+            tag: "store",
+            start: {tag: "id", name: newStrName1},
+            offset: {tag:"wasmint", value: 0},
+            value: {a:NUM , tag:"wasmint", value:strLength}
+          });
+          for (var i=1; i<=strLength;i++){
+            const ascii = v.value.charCodeAt(i-1);
+            newassigns.push({
+              tag: "store",
+              start: {tag: "id", name: newStrName1},
+              offset: {tag:"wasmint", value: i},
+              value: {a:NUM , tag:"wasmint", value:ascii}
+            });
+          }
         }
-      });
+        
+      })
+      //const new_alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: alloc_space } };
+
+      // const assigns : IR.Stmt<Type>[] = fields.map(f => {
+      //   const [_, [index, value]] = f;
+      //   if (value.tag == "str"){
+      //     return {
+      //       tag: "store",
+      //       start: { tag: "id", name: newName },
+      //       offset: { tag: "wasmint", value: index },
+      //       value: {tag:"none"}
+      //     }
+      //   }
+      //   return {
+      //     tag: "store",
+      //     start: { tag: "id", name: newName },
+      //     offset: { tag: "wasmint", value: index },
+      //     value: value
+      //   }
+      // });
 
       return [
-        [ { name: newName, type: e.a, value: { tag: "none" } }],
-        [ { tag: "assign", name: newName, value: alloc }, ...assigns,
+        //[ { name: newName, type: e.a, value: { tag: "none" } }],
+        initsArray,
+        [ //{ tag: "assign", name: newName, value: alloc }, ...assigns,
+        { tag: "assign", name: newName, value: alloc }, ...newassigns,
           { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
@@ -481,10 +574,13 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
 
 function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>] {
   var [binits, bstmts, bexpr] = flattenExprToExpr(e, env);
+  //console.log("BEXPR",bexpr);
   if(bexpr.tag === "value") {
+  
     return [binits, bstmts, bexpr.value];
   }
   else {
+    console.log("E: ",bexpr);
     var newName = generateName("valname");
     var setNewName : IR.Stmt<Type> = {
       tag: "assign",
