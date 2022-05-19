@@ -87,6 +87,14 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
         ...codeGenValue(stmt.value, env),
         `call $store`
       ]
+    // To handle how to get the address from a allocate expr  
+    case "store_str":
+      return [
+        ...codeGenValue(stmt.start, env),
+        ...codeGenValue(stmt.offset, env),
+        ...codeGenExpr(stmt.value, env),
+        `call $store`
+      ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
       if (env.locals.has(stmt.name)) {
