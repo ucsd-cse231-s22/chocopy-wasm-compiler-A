@@ -22,9 +22,15 @@ function stringify(typ: Type, arg: any) : string {
 function print(typ: Type, arg : number) : any {
   console.log("Logging from WASM: ", arg);
   if (typ.tag == "str") {
-    const elt = document.createElement("nobr");
-    document.getElementById("output").appendChild(elt);
-    elt.innerText = stringify(typ, arg);
+    //  start
+    if (arg == 256) {
+      const elt = document.createElement("pre");
+      document.getElementById("output").appendChild(elt);
+    }
+    else {
+      const elt: Element = document.getElementById("output").children[document.getElementById("output").children.length-1]
+      elt.innerHTML += stringify(typ, arg)
+    }
     return arg;
   }
   else {
@@ -54,10 +60,10 @@ function webStart() {
     // https://github.com/mdn/webassembly-examples/issues/5
 
     const memory = new WebAssembly.Memory({initial:10, maximum:100});
-    const memoryModule = await fetch('memory.wasm').then(response => 
+    const memoryModule = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()
     ).then(bytes => 
-      WebAssembly.instantiate(bytes, { js: { mem: memory } })
+      WebAssembly.instantiate(bytes, { js: { mem: memory }, imports: {print_str: (arg: number) => print(STRING, arg)} })
     );
 
     var importObject = {
@@ -65,8 +71,6 @@ function webStart() {
         assert_not_none: (arg: any) => assert_not_none(arg),
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),
-        print_str: (arg: number) => print(STRING, arg),
-        print_enter: (arg: number) => printEnter(arg),
         print_none: (arg: number) => print(NONE, arg),
         abs: Math.abs,
         min: Math.min,

@@ -106,8 +106,6 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
-    (func $print_str (import "imports" "print_str") (param i32) (result i32))
-    (func $print_enter (import "imports" "print_enter") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
@@ -116,6 +114,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $read_str (import "libmemory" "read_str") (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
