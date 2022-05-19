@@ -17,11 +17,6 @@ function generateName(base : string) : string {
   }
 }
 
-// function lbl(a: Type, base: string) : [string, IR.Stmt<Type>] {
-//   const name = generateName(base);
-//   return [name, {tag: "label", a: a, name: name}];
-// }
-
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = { a: p.a, label: generateName("$startProg"), stmts: [] }
@@ -161,31 +156,6 @@ function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Typ
   return inits;
 }
 
-//string case 
-/*
-vale = "abcd"
-
-*/
-// function storeStr(s:AST.Stmt<Type>,blocks: Array<IR.BasicBlock<Type>>,str: string): IR.Stmt<AST.Type>[]{
-
-//   var len = s.length;
-//   for (var i = 0; i < len; i++){
-//     var ascii = str.charCodeAt(i);
-//     var store_stmt = {
-//       tag: "store",
-//       a: s.a,
-//       start: oval,
-//       offset: offset,
-//       value: nval
-//     };
-//     blocks[blocks.length - 1].stmts.push()
-
-//   }
-//   return;
-// }
-
-
-
 function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
   switch(s.tag) {
     case "assign":
@@ -295,41 +265,6 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
 
 function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Expr<Type>] {
   switch(e.tag) {
-    // case "indexing":
-      
-    //   if (e.value.tag == "str") {
-    //     let v = e.value;
-    //     const strLength:number = v.value.length;
-    //     const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength + 1 } };
-    //     var assigns_string : IR.Stmt<Type>[] = [];
-    //     const newStrName = generateName("newStr"); 
-    //     console.log(strLength);
-    //     assigns_string.push({
-    //       tag: "store",
-    //       start: {tag: "id", name: newStrName},
-    //       offset: {tag:"wasmint", value: 0},
-    //       value: {a:NUM , tag:"wasmint", value:strLength}
-    //     });
-    //     for (var i=1; i<=strLength;i++){
-    //       const ascii = v.value.charCodeAt(i-1);
-    //       assigns_string.push({
-    //         tag: "store",
-    //         start: {tag: "id", name: newStrName},
-    //         offset: {tag:"wasmint", value: i},
-    //         value: {a:NUM , tag:"wasmint", value:ascii}
-    //       });
-    //     }
-    //     return [
-    //       //[ { name: newStrName, type: e.a, value: { tag: "str", value: v.value } }],
-    //       [ { name: newStrName, type: e.a, value: { tag: "none" } }],
-    //       [ { tag: "assign", name: newStrName, value: alloc_string }, ...assigns_string,
-    //       //  { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
-    //       ],
-    //       {  tag: "value", value: { a: e.a, tag: "id", name: newStrName } }
-    //     ];
-    //   }
-
-    //   return;
     case "uniop":
       var [inits, stmts, val] = flattenExprToVal(e.expr, env);
       return [inits, stmts, {
@@ -425,7 +360,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         [...indexostmts, { tag: "assign", name: newIndexStrName, value: alloc_index_string }, ...assigns_index_string,], 
         {  tag: "value", value: { a: e.a, tag: "id", name: newIndexStrName } }];
     }
-
     case "construct":
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
@@ -566,7 +500,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
   }
 }
-
 
 function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>] {
   var [binits, bstmts, bexpr] = flattenExprToExpr(e, env);
