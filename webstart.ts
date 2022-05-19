@@ -41,13 +41,6 @@ function print(typ: Type, arg : number) : any {
   }
 }
 
-function printEnter(arg: any) {
-  console.log("nextLine");
-  const elt = document.createElement("br");
-  document.getElementById("output").appendChild(elt);
-  return arg
-}
-
 function assert_not_none(arg: any) : any {
   if (arg === 0)
     throw new Error("RUNTIME ERROR: cannot perform operation on none");

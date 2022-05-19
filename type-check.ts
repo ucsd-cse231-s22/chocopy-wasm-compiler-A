@@ -35,6 +35,7 @@ defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
+defaultGlobalFunctions.set("len", [[CLASS("object")], NUM]);
 
 export const defaultTypeEnv = {
   globals: new Map(),
@@ -315,7 +316,15 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg);
         return {...expr, a: tArg.a, arg: tArg};
-      } else if(env.functions.has(expr.name)) {
+      }
+      else if (expr.name === "len") {
+        const tArg = tcExpr(env, locals, expr.arg);
+        if (tArg.a !== STRING) {
+          throw new TypeError("Invalid argument");
+        }
+        return {...expr, a: NUM, arg: tArg};
+        }
+      else if(env.functions.has(expr.name)) {
         const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
         const tArg = tcExpr(env, locals, expr.arg);
         
