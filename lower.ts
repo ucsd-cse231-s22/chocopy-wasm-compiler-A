@@ -23,7 +23,6 @@ function generateName(base : string) : string {
 // }
 
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
-    console.log("classes env: ",env.classes);
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = { a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
@@ -74,7 +73,6 @@ function lowerStringInits(init: AST.VarInit<Type>,blocks: Array<IR.BasicBlock<Ty
     const strLength:number = v.value.length;
     const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength + 1 } };
     var assigns_string : IR.Stmt<Type>[] = [];
-    console.log(strLength);
     assigns_string.push({
       tag: "store",
       start: {tag: "id", name: init.name},
@@ -439,7 +437,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       initsArray.push({ name: newName, type: e.a, value: { tag: "none" } });
       fields.forEach( f=>{
         const [_, [index, value]] = f;
-        console.log("Value: ",value);
         if (value.tag != "str"){
           var storestmt:IR.Stmt<Type> = {
             tag: "store",
@@ -542,7 +539,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength + 1 } };
         var assigns_string : IR.Stmt<Type>[] = [];
         const newStrName = generateName("newStr"); 
-        console.log(strLength);
         assigns_string.push({
           tag: "store",
           start: {tag: "id", name: newStrName},
@@ -574,13 +570,10 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
 
 function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>] {
   var [binits, bstmts, bexpr] = flattenExprToExpr(e, env);
-  //console.log("BEXPR",bexpr);
   if(bexpr.tag === "value") {
-  
     return [binits, bstmts, bexpr.value];
   }
   else {
-    console.log("E: ",bexpr);
     var newName = generateName("valname");
     var setNewName : IR.Stmt<Type> = {
       tag: "assign",
