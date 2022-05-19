@@ -8,7 +8,7 @@ export type Type =
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
 
-export type Parameter<A> = { name: string, type: Type }
+export type Parameter<A> = { name: string, type: Type, value?: Expr<A> }
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
 
@@ -34,11 +34,11 @@ export type Expr<A> =
   | {  a?: A, tag: "binop", op: BinOp, left: Expr<A>, right: Expr<A>}
   | {  a?: A, tag: "uniop", op: UniOp, expr: Expr<A> }
   | {  a?: A, tag: "builtin1", name: string, arg: Expr<A> }
-  | {  a?: A, tag: "builtin2", name: string, left: Expr<A>, right: Expr<A>}
-  | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>> } 
+  | {  a?: A, tag: "builtin2", name: string, left: Expr<A>, right: Expr<A> }
+  | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>>, kwarguments?: Map<string, Expr<A>> } 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
-  | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
+  | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>>, kwarguments?: Map<string, Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
 
 export type Literal = 

@@ -73,3 +73,11 @@ export function assertTCFail(name: string, source: string) {
   });
 }
 
+export function assertParseFail(name: string, source: string) {
+  it(name, async () => {
+    expect(function(){
+      typeCheck(source);
+  }).to.throw('Syntax ERROR:');
+  });
+}
+
