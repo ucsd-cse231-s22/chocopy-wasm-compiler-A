@@ -120,19 +120,22 @@ export function isNoneOrClass(env: GlobalTypeEnv, t: Type) {
   return t.tag === "none" || (t.tag === "class" && t.name !== UNCONSTRAINED);
 }
 
-export function getClassName(env: GlobalTypeEnv, t: Type): string {
+// Resolve t to its underlying type in based on the environment mapping
+// if required, except when it is the UNCONSTRAINED class type.
+export function getClassType(env: GlobalTypeEnv, t: Type): Type {
+  let newT = {...t};
   if(t.tag === "typevar") {
     // If t is a type-variables, then the actual type
     // that it is currently instantiated to needs to be fetched from
     // the environment.
-    t = env.typevars.get(t.name)[2];
+    newT = env.typevars.get(t.name)[2];
   }
 
-  if(t.tag !== "class" || t.name === UNCONSTRAINED) {
-    return undefined;
+  if(newT.tag === "class" && newT.name === UNCONSTRAINED) {
+    return t;
   }
 
-  return t.name;
+  return newT;
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
@@ -621,14 +624,14 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       var tObj = tcExpr(env, locals, stmt.obj);
       const tVal = tcExpr(env, locals, stmt.value);
       
-      let tObjClass = getClassName(env, tObj.a);
-      if (!tObjClass) 
+      let tObjType = getClassType(env, tObj.a);
+      if (tObjType.tag !== "class") 
         throw new TypeCheckError("field assignments require an object");
-      if (!env.classes.has(tObjClass)) 
+      if (!env.classes.has(tObjType.name)) 
         throw new TypeCheckError("field assignment on an unknown class");
-      const [fields, _] = env.classes.get(tObjClass);
+      const [fields, _] = env.classes.get(tObjType.name);
       if (!fields.has(stmt.field)) 
-        throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObjClass}`);
+        throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObjType.name}`);
 
       let fieldTy = specializeFieldType(env, tObj.a, fields.get(stmt.field));
 
@@ -764,14 +767,14 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       }
     case "lookup":
       var tObj = tcExpr(env, locals, expr.obj);
-      let tObjClass = getClassName(env, tObj.a);
-      if (tObjClass) {
-        if (env.classes.has(tObjClass)) {
-          const [fields, _] = env.classes.get(tObjClass);
+      let tObjType = getClassType(env, tObj.a);
+      if (tObjType.tag === "class") {
+        if (env.classes.has(tObjType.name)) {
+          const [fields, _] = env.classes.get(tObjType.name);
           if (fields.has(expr.field)) {
             return {...expr, a: specializeFieldType(env, tObj.a, fields.get(expr.field)), obj: tObj};
           } else {
-            throw new TypeCheckError(`could not found field ${expr.field} in class ${tObjClass}`);
+            throw new TypeCheckError(`could not found field ${expr.field} in class ${tObjType.name}`);
           }
         } else {
           throw new TypeCheckError("field lookup on an unknown class");
@@ -782,10 +785,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj);
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-      let tObjClassName = getClassName(env, tObj.a)
-      if (tObjClassName) {
-        if (env.classes.has(tObjClassName)) {
-          const [_, methods] = env.classes.get(tObjClassName);
+      let tObjClassTypem = getClassType(env, tObj.a)
+      if (tObjClassTypem.tag === "class") {
+        if (env.classes.has(tObjClassTypem.name)) {
+          const [_, methods] = env.classes.get(tObjClassTypem.name);
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = specializeMethodType(env, tObj.a, methods.get(expr.method));
             const realArgs = [tObj].concat(tArgs);
@@ -796,7 +799,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
                throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}` );
               }
           } else {
-            throw new TypeCheckError(`could not found method ${expr.method} in class ${tObjClassName}`);
+            throw new TypeCheckError(`could not found method ${expr.method} in class ${tObjClassTypem.name}`);
           }
         } else {
           throw new TypeCheckError("method call on an unknown class");
