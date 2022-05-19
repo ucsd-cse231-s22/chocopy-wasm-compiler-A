@@ -13,10 +13,6 @@
     (local.get $addr))
 
 
-  (func (export "getHeap") (result i32)
-    (local.get $heap))
-
-
   ;; Given an address handle, return the value at that address
   (func (export "load") (param $addr i32) (param $offset i32) (result i32)
     (i32.load (i32.add (local.get $addr) (i32.mul (local.get $offset) (i32.const 4)))))
