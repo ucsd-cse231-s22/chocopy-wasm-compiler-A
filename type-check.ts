@@ -74,8 +74,11 @@ export type TypeError = {
 }
 
 // combine the elements of two arrays into an array of tuples.
-// DANGER: behaves weirdly with arrays of different length.
+// DANGER: throws an error if argument arrays don't have the same length.
 function zip<A, B>(l1: Array<A>, l2: Array<B>) : Array<[A, B]> {
+  if(l1.length !== l2.length) {
+    throw new TypeCheckError(`Tried to zip two arrays of different length`);
+  }
   return l1.map((el, i) => [el, l2[i]]); 
 }
 
@@ -195,8 +198,6 @@ export function isValidType(env: GlobalTypeEnv, t: Type) : boolean {
 
   return zip(typeparams, t.params).reduce((isValid, [typevar, typeparam]) => {
     let [_canonicalName, constraints, _mapping] = env.typevars.get(typevar); 
-
-    // TODO: check if typeparam satisfies constraints
 
     return isValid && isValidType(env, typeparam) && satisfiesConstraints(env, typeparam, constraints);
   }, true);
@@ -388,7 +389,12 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
   var locals = emptyLocalTypeEnv();
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
-  fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
+  fun.parameters.forEach(p => {
+    if(!isValidType(env, p.type)) {
+      throw new TypeCheckError(`Invalid type annotation '${JSON.stringify(p.type)}' for parameter '${p.name}' in function '${fun.name}'`);
+    }
+    locals.vars.set(p.name, p.type)
+  });
   fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init).type));
   
   const tBody = tcBlock(env, locals, fun.body);
