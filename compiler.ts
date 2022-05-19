@@ -182,7 +182,6 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
     case "call_indirect":
       var valStmts = codeGenExpr(expr.fn, env);
       var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
-      // +1 for self
       return [...fnStmts, ...valStmts, `(call_indirect (type ${makeWasmFunType(expr.arguments.length)}))`];
 
     case "alloc":
