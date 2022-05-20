@@ -51,6 +51,14 @@ describe("set-test", ()=>{
   x:set = set()
   x = {3,76,5}
   x`, SET(NUM));
+  assertTC("tc-set-update-iter",`
+  x:set = set()
+  x.update(set(2,12,32))
+  x`, SET(NUM));
+  assertTCFail("tcfail-set-update-noniter",`
+  x:set = set()
+  a:int = 2
+  x.update(a)`);
   assertFail("fail-remove-non-exist",`
   x:set = set()
   x.add(1)

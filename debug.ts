@@ -29,7 +29,7 @@ export function stringifyTree(t: TreeCursor, source: string, d: number){
 var source = `
 x:set = set()
 x = {1,2,3}
-x.has(1)
+x.update({4,5})
 `; // s:set = {3,5,7}\n3 in s
 /* DONE:
 s = {3,5,7}
