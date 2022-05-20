@@ -254,6 +254,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
             if (tLeft.tag == "literal" && tLeft.value.tag == "str" && tRight.tag == "literal" && tRight.value.tag == "str"){
               tLeft.value.value = String(tLeft.value.value + tRight.value.value);
               return{...tLeft, a:tcLiteral(tLeft.value)};
+            }else{
+              // string concatenation is not a simple BinOp
+              return{a:STRING,tag:"str-concat",left:tLeft,right:tRight};
             }
           }
           if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}

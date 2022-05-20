@@ -271,6 +271,42 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         ...e,
         expr: val
       }];
+
+    case "str-concat":
+      var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
+      var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
+      //load the legnth of left
+      const load_left_length: IR.Expr<Type> = {
+        tag: "load",
+        start: lval,
+        offset: { tag: "wasmint", value: 0 }
+      };
+      //load the length of right
+      const load_right_length: IR.Expr<Type> = {
+        tag: "load",
+        start: rval,
+        offset: { tag: "wasmint", value: 0 }
+      };
+
+      const alloc_index_string_length : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: 1 } };
+      const newIndexStrName = generateName("newStr");
+      const Randomname = generateName("Random");
+      var initsArray: Array<IR.VarInit<Type>> = [];
+      var strConcatstmts: IR.Stmt<AST.Type>[]
+      initsArray.push({ name: newIndexStrName, type: STRING, value: { tag: "none" } });
+      initsArray.push({ name: Randomname, type: STRING, value: { tag: "none" } });
+
+      strConcatstmts.push({ tag: "assign", name: newIndexStrName, value: alloc_index_string_length });
+      //TODO: store the length of A + B into the newIndexStrName
+
+      strConcatstmts.push({ tag: "assign", name: Randomname, value: load_left_length });
+      //TODO: store each character of A into the Randomname
+
+      strConcatstmts.push({ tag: "assign", name: Randomname, value: load_right_length });
+      //TODO: store each character of B into the Randomname
+
+      //TODO: return [initsArray,strConcatstmts,{ a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName }]
+      return;
     case "binop":
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
@@ -326,7 +362,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     }
     case "lookup": {
       const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
-      console.log("OBJ",e.obj);
       if(e.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
       const classdata = env.classes.get(e.obj.a.name);
       const [offset, _] = classdata.get(e.field);
@@ -363,7 +398,6 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         });
       
         indexoinits.push({ name: newIndexStrName, type: STRING, value: { tag: "none" } });
-      
       return [indexoinits, 
         [...indexostmts, { tag: "assign", name: newIndexStrName, value: alloc_index_string }, ...assigns_index_string,], 
         {  tag: "value", value: { a: e.a, tag: "id", name: newIndexStrName } }];
