@@ -69,8 +69,60 @@ Because list comprehension expression is parsed as `ArrayComprehensionExpression
 
 ## Memory Management
 
+The memory management group had a very general design that should work for any pieces of data stored on the memory. They track the number of references for each varaiables on the heap and perform defragmentation when necessary. If implemented fully and correctly, our lists should be fully managed by the memomry module.
+
+Example Cases:
+```
+a:[int] = None
+a = [1,2,3]
+print(a[0])
+a = None
+```
+
+We can change our implementation slightly on their request to make their work easier, or share details on how we interact with memory.
+
 ## Optimization
+
+The optimization group may be interested in constant-propagation while constructing literal lists.
+
+Example Cases:
+```
+a: int = None
+b: [int] = None
+a = 3
+print([a, 2*a, 3*a][2])
+
+b = [1,2,3]
+print(b[0])
+```
+
+However, to optimize in those cases, they will have to deal with values stored on the memory. In addition, indices used to access elements in the list may be propogated from other functions, which makes the work harder.
+
+Because their implementation is very general and solves the optimization problem at a high-level (with scopes and variable tags), if they implement a general memory constant propogation scheme for any data strctures stored on the heap, our implementation should be easily portable under that scheme.
 
 ## Sets/Tuples/Dictionaries
 
+These data structures are eventually represented as pointers to some memory chunks on the heap. Therefore, our code should work with their existing implementation.
+
+Example Cases:
+```
+s:set = set()
+a:[set] = None
+s = {1,2,5,7}
+a[0] = s
+print(len(a[0]))
+```
+
 ## Strings
+
+The strings group had a similar design as ours for list. Strings are eventually stored as an `id` with a pointer to a memory chunk in heap. Because of the similar design we can treat strings as lists of characters. Since our implementation supports list of lists, list of strings should work out of the box.
+
+Example Cases:
+```
+a:str = None
+ss: [str] = None
+a = "abcd"
+ss = [a, "defg]
+print(ss[0])
+print(ss[1])
+```
