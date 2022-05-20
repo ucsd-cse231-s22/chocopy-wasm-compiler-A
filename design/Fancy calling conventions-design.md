@@ -225,7 +225,6 @@ def f(x : int = d()):
 f()
 ```
 
-
 ### Stage 2
 
 Support tuple arguments and keyword arguments.
@@ -249,4 +248,3 @@ f(y=1, x=2)
 
 def f(a, *ab, *ac):
 ```
-

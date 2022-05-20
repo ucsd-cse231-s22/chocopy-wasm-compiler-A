@@ -63,7 +63,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
           obj: callExpr.obj,
           method: callExpr.field,
           arguments: args,
-	  kwarguments: kwargs,
+	        kwarguments: kwargs,
         }
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
@@ -426,6 +426,7 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
   c.parent();       // Pop to ParamList
   return parameters;
 }
+
 export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
   c.firstChild(); // go to name
   var name = s.substring(c.from, c.to);
