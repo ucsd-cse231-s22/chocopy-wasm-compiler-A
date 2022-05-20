@@ -1,6 +1,6 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
+import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Parameter } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 
@@ -18,8 +18,8 @@ export class TypeCheckError extends Error {
 
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
-  functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>
+  functions: Map<string, [Array<Parameter<Type>>, Type]>,
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Parameter<Type>>, Type]>]>
 }
 
 export type LocalTypeEnv = {
@@ -91,12 +91,12 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
-  program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
+  program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters, fun.ret]));
   program.classes.forEach(cls => {
     const fields = new Map();
     const methods = new Map();
     cls.fields.forEach(field => fields.set(field.name, field.type));
-    cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
+    cls.methods.forEach(method => methods.set(method.name, [method.parameters, method.ret]));
     newClasses.set(cls.name, [fields, methods]);
   });
   return { globals: newGlobs, functions: newFuns, classes: newClasses };
@@ -109,6 +109,18 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   const tDefs = program.funs.map(fun => tcDef(newEnv, fun));
   const tClasses = program.classes.map(cls => tcClass(newEnv, cls));
 
+  const newFuns = new Map(env.functions);
+  const newClasses = new Map(env.classes);
+  tDefs.forEach(fun => newFuns.set(fun.name, [fun.parameters, fun.ret]));
+  tClasses.forEach(cls => {
+    const fields = new Map<string, Type>();
+    const methods = new Map<string, [Array<Parameter<Type>>, Type]>();
+    cls.fields.forEach(field => fields.set(field.name, field.type));
+    cls.methods.forEach(method => methods.set(method.name, [method.parameters, method.ret]));
+    newClasses.set(cls.name, [fields, methods]);
+  });
+  newEnv.classes = newClasses
+  newEnv.functions = newFuns
   // program.inits.forEach(init => env.globals.set(init.name, tcInit(init)));
   // program.funs.forEach(fun => env.functions.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
   // program.funs.forEach(fun => tcDef(env, fun));
@@ -137,17 +149,32 @@ export function tcInit(env: GlobalTypeEnv, init : VarInit<null>) : VarInit<Type>
   }
 }
 
+export function tcPar(env: GlobalTypeEnv, par : Parameter<null>):Parameter<Type>{
+  if(par.value == undefined){
+    return {...par}
+  }
+  else{
+    var value = tcExpr(env,emptyLocalTypeEnv(), par.value)
+    if (!equalType(value.a,par.type)){
+      throw new TypeCheckError(`Expected type ${JSON.stringify(par.type)} but get value.a`);
+    }
+    else{
+      return {...par,value}
+    }
+  }
+}
 export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
   var locals = emptyLocalTypeEnv();
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
   fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
+  const tpar = fun.parameters.map(p=>tcPar(env,p))
   fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init).type));
   
   const tBody = tcBlock(env, locals, fun.body);
   if (!isAssignable(env, locals.actualRet, locals.expectedRet))
     throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`)
-  return {...fun, a: NONE, body: tBody};
+  return {...fun, parameters:tpar, a: NONE, body: tBody};
 }
 
 export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
@@ -289,7 +316,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         const tArg = tcExpr(env, locals, expr.arg);
         return {...expr, a: tArg.a, arg: tArg};
       } else if(env.functions.has(expr.name)) {
-        const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
+        const [[expectedParam], retTyp] = env.functions.get(expr.name);
+        const expectedArgTyp = expectedParam.type;
         const tArg = tcExpr(env, locals, expr.arg);
         
         if(isAssignable(env, tArg.a, expectedArgTyp)) {
@@ -302,7 +330,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       }
     case "builtin2":
       if(env.functions.has(expr.name)) {
-        const [[leftTyp, rightTyp], retTyp] = env.functions.get(expr.name);
+        const [[leftParam, rightParam], retTyp] = env.functions.get(expr.name);
+        const leftTyp = leftParam.type;
+        const rightTyp = rightParam.type;
         const tLeftArg = tcExpr(env, locals, expr.left);
         const tRightArg = tcExpr(env, locals, expr.right);
         if(isAssignable(env, leftTyp, tLeftArg.a) && isAssignable(env, rightTyp, tRightArg.a)) {
@@ -329,15 +359,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           return tConstruct;
         }
       } else if(env.functions.has(expr.name)) {
-        const [argTypes, retType] = env.functions.get(expr.name);
-        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-
-        if(argTypes.length === expr.arguments.length &&
-           tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
-             return {...expr, a: retType, arguments: expr.arguments};
-           } else {
-            throw new TypeError("Function call type mismatch: " + expr.name);
-           }
+        const [expectedParams, retType] = env.functions.get(expr.name);
+        const tArgs = tcCallOrMethod(expr.name, expectedParams, expr.arguments, expr.kwarguments, env, locals);
+        return {...expr, a: retType, arguments: tArgs, kwarguments: undefined };
       } else {
         throw new TypeError("Undefined function: " + expr.name);
       }
@@ -359,19 +383,16 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       }
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj);
-      var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
       if (tObj.a.tag === "class") {
         if (env.classes.has(tObj.a.name)) {
           const [_, methods] = env.classes.get(tObj.a.name);
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = methods.get(expr.method);
-            const realArgs = [tObj].concat(tArgs);
-            if(methodArgs.length === realArgs.length &&
-              methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a, argTyp))) {
-                return {...expr, a: methodRet, obj: tObj, arguments: tArgs};
-              } else {
-               throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}` );
-              }
+            const realArgs = [expr.obj].concat(expr.arguments);
+            const tArgs = tcCallOrMethod(expr.method, methodArgs, realArgs, expr.kwarguments, env, locals);
+            // Remove self from arguments
+            tArgs.shift();
+            return {...expr, a: methodRet, obj: tObj, arguments: tArgs, kwarguments: undefined};
           } else {
             throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a.name}`);
           }
@@ -391,4 +412,52 @@ export function tcLiteral(literal : Literal) {
         case "num": return NUM;
         case "none": return NONE;
     }
+}
+
+// export function tcCallOrMethod(funcName: string, realArgs: Array<Expr<null>>, realKwArgs: Map<string, Expr<null>>, env: GlobalTypeEnv, locals: LocalTypeEnv, obj?: Expr<null>): Expr<Type> {
+export function tcCallOrMethod(funcName: string, expectedParams:Array<Parameter<Type>>, realArgs: Array<Expr<null>>, realKwArgs: Map<string, Expr<null>>, env: GlobalTypeEnv, locals: LocalTypeEnv): Array<Expr<Type>> {
+  const expectedArgTypes = expectedParams.map(p => p.type);
+  const expectedArgNames = expectedParams.map(p => p.name);
+  if (realArgs.length > expectedArgTypes.length) {
+    throw new TypeCheckError(`${funcName}() takes from 1 to ${expectedArgTypes.length} positional arguments but ${realArgs.length} were given`);
+  }
+  const tAllArgs = Array<Expr<Type>>(expectedArgTypes.length).fill(null);
+  realArgs.map((arg, i) => {
+    const tArg = tcExpr(env, locals, arg);
+    if (!isAssignable(env, tArg.a, expectedArgTypes[i])) {
+      throw new TypeCheckError(`${funcName}() expected type ${JSON.stringify(expectedArgTypes[i])} for argument ${i}. Got ${JSON.stringify(tArg.a)}`);
+    }
+    tAllArgs[i] = tArg;
+  });
+  realKwArgs.forEach((value: Expr<null>, name: string) => {
+    const argIndex = expectedArgNames.findIndex(argName => argName == name);
+    if (argIndex == -1) {
+      throw new TypeCheckError(`${funcName}() got an unexpected keyword argument ${name}`);
+    }
+    if (tAllArgs[argIndex] !== null) {
+      throw new TypeCheckError(`${funcName}() got multiple values for argument ${name}`);
+    }
+    const tKwArg = tcExpr(env, locals, value);
+    if (!isAssignable(env, tKwArg.a, expectedArgTypes[argIndex])) {
+      throw new TypeCheckError(`${funcName}() expected type ${JSON.stringify(expectedArgTypes[argIndex])} for argument ${name}. Got ${JSON.stringify(tKwArg.a)}`);
+    }
+    tAllArgs[argIndex] = tKwArg;
+  });
+  const defaultValues = expectedParams.reduce((map, obj) => {
+    if (obj.value) {
+      map.set(obj.name, obj.value);
+    }
+    return map;
+  }, new Map<string, Expr<Type>>());
+
+  tAllArgs.forEach((tArg, i) => {
+    if (tArg === null && defaultValues.has(expectedArgNames[i])) {
+      tAllArgs[i] = { ...defaultValues.get(expectedArgNames[i]) };
+    }
+  });
+  if (tAllArgs.findIndex(arg => arg === null) !== -1) {
+    let missingArgs = tAllArgs.filter(arg => arg === null);
+    throw new TypeCheckError(`${funcName}() missing ${missingArgs.length} required positional argument: ${missingArgs.join(", ")}`);
+  }
+  return tAllArgs;
 }
