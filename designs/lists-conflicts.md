@@ -22,7 +22,34 @@ We get back an integer value that can easily be evaluated and stored in memory.
 
 ## Closures/first class/anonymous functions
 
+Since closures just return a function with various types, I think the cases where they test lists would be needed to be updated. This change wouldn't be on our end but rather this team could simply add more tests to return their lists with different types or values.
+
+Example Case:
+```
+def g(y: [int]) -> int:
+    return y[0]
+x : Callable[[[int]], int] = None
+fs : [Callable[[[int]], int] = None
+x = g
+fs = [x]
+print(fs[0]([1,2,3]))
+```
+
+Since we support nested lists (matricies) and length of lists, this could be tested upon in their test cases.
+
 ## Comprehensions
+
+Comprehension expressions are generated as a loop in the current implementation. Our code doesn't work well with theirs in a case like:
+
+```
+a : [int] = None
+a = [i*2 for i in range(0,3)]
+print(a[0])
+```
+
+To make our and their code compatible, the comprehension group needs to add additional list construction code in `lower.ts` similar to our `construct-list` function. In other words, they need to construct a list on the heap from the comprehension expression and pass the pointer along.
+
+Because list comprehension expression is parsed as `ArrayComprehensionExpression` rather than `ArrayExpression`, it's out of our control to decide what code is generated for it.
 
 ## Destructuring assignment
 
