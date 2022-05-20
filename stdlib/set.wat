@@ -5,10 +5,11 @@
     (loop $my_loop
 
     ;; Find the address of the ith entry
-    ;; Clear the entry
     (local.get $baseAddr)
     (local.get $i)
     (i32.mul (i32.const 4))
+
+    ;; Clear the entry
     (i32.const 0)
     (call $store)
 
@@ -38,36 +39,35 @@
     ;; Use a for loop (i from 0 to 10)
     (loop $my_loop
 
-        ;; Find the address of the entry
-        (local.get $baseAddr)
-        (local.get $i)
-        (i32.mul (i32.const 4))
+    ;; Find the address of the entry
+    (local.get $baseAddr)
+    (local.get $i)
+    (call $load)
 
-        ;; Check if there is a follwing linkedlist
-        (call $load)
-        (i32.const 0)
-        (i32.eq)
-        ;; If there's no follwing element, do nothing
-        (if
-        (then
-        )
-        ;; Else, iterate the list
-        (else ;; Opening else
-            ;; There is an element, size++
-            (local.get $size)
-            (i32.const 1)
-            (i32.add)
-            (local.set $size)
-            (local.get $baseAddr) ;; Recomputing the bucketAddress to follow the linkedList.
-            (local.get $i)
-            (i32.mul (i32.const 4))
-            (call $load) ;; Loading head of linkedList
-            (i32.const 4)
-            (i32.add) ;; Next pointer
-            (local.set $nodePtr)
-            (block
-            ;; While loop till we find a node whose next is None
-                (loop
+    ;; Check if there is a follwing linkedlist
+    (i32.const 0)
+    (i32.eq)
+    ;; If there's no follwing element, do nothing
+    (if
+    (then
+        ;; do nothing
+    )
+    ;; Else, iterate the list
+    (else ;; Opening else
+        ;; There is an element, size++
+        (local.get $size)
+        (i32.const 1)
+        (i32.add)
+        (local.set $size)
+        (local.get $baseAddr) ;; Recomputing the bucketAddress to follow the linkedList.
+        (local.get $i)
+        (call $load) ;; Loading head of linkedList
+        (i32.const 4)
+        (i32.add) ;; Next pointer
+        (local.set $nodePtr)
+        (block
+        ;; While loop till we find a node whose next is None
+            (loop
                 (local.get $nodePtr)
                 (i32.const 0)
                 (call $load) ;; Traversing to head of next node
@@ -96,20 +96,20 @@
                     (i32.ne) ;; If nodePtr not None
                 ) ;; Closing br_if
                 (br 1)
-                ) ;; Closing loop
-            ) ;; Closing Block
-        ) ;; Closing else
-        ) ;; Closing if
+            ) ;; Closing loop
+        ) ;; Closing Block
+    ) ;; Closing else
+    ) ;; Closing if
 
-        ;; Update the counter and go to the next entry
-        (local.get $i)
-        (i32.const 1)
-        (i32.add)
-        (local.set $i)
-        (local.get $i)
-        (i32.const 10)
-        (i32.lt_s)
-        (br_if $my_loop)
+    ;; Update the counter and go to the next entry
+    (local.get $i)
+    (i32.const 1)
+    (i32.add)
+    (local.set $i)
+    (local.get $i)
+    (i32.const 10)
+    (i32.lt_s)
+    (br_if $my_loop)
     )
 
     ;; Return the $size
@@ -126,17 +126,14 @@
     (i32.const 2)   ;; size in bytes
     (call $alloc)
     (local.tee $$allocPointer)
-
+    (i32.const 0)
     ;; Store the value
     (local.get $val)
-    (i32.const 0)
     (call $store)
 
     ;; Store the pointer to 0 (None) because it is the last element
     (local.get $$allocPointer)
     (i32.const 4)
-    (i32.add)
-    (i32.const 0)
     (i32.const 0)
     (call $store)
     (local.get $$allocPointer)
@@ -156,7 +153,6 @@
     (local.get $val)
     (i32.const 10)
     (i32.rem_u) ;; Compute hash
-    (i32.mul (i32.const 4)) ;; Multiply by 4 for memory offset
     (call $load)
     (i32.const 0) ;; None
     (i32.eq)
@@ -170,7 +166,6 @@
         (local.get $val)
         (i32.const 10)
         (i32.rem_u)
-        (i32.mul (i32.const 4))
         (call $load)
         (i32.const 0)
         (call $load)
@@ -187,7 +182,6 @@
         (local.get $val)
         (i32.const 10)
         (i32.rem_u)
-        (i32.mul (i32.const 4))
         (call $load)
         (i32.const 4)
         (i32.add)
@@ -220,8 +214,8 @@
                     (i32.const 4)
                     (i32.add)
                     (local.set $nodePtr)
-                    )
-                ) ;; close else
+                )
+                )
                 (br_if 0
                     (local.get $nodePtr)
                     (i32.const 0)
@@ -251,7 +245,6 @@
     (local.get $val)
     (i32.const 10)
     (i32.rem_u)
-    (i32.mul (i32.const 4))
     (call $load)
     (i32.const 0)
     (i32.eq)
@@ -264,7 +257,6 @@
         (local.get $val)
         (i32.const 10)
         (i32.rem_u)
-        (i32.mul (i32.const 4))
         (local.get $$allocPointer)
         (call $store)
     )
@@ -274,7 +266,6 @@
         (local.get $val)
         (i32.const 10)
         (i32.rem_u)
-        (i32.mul (i32.const 4))
         (call $load)
         (i32.const 0)
         (call $load)
@@ -291,7 +282,6 @@
         (local.get $val)
         (i32.const 10)
         (i32.rem_u)
-        (i32.mul (i32.const 4))
         (call $load)
         (i32.const 4)
         (i32.add)
@@ -334,8 +324,8 @@
                     (i32.ne)
                 )
                 (br 1)
-            ) ;; close loop
-        ) ;; close block
+            )
+        )
         (local.get $tagHitFlag)
         (i32.const 0)
         (i32.eq)
@@ -348,10 +338,10 @@
             (i32.const 0)
             (local.get $$allocPointer)
             (call $store)
-        ) ;; close then
-        ) ;; close if
-    ) ;; close outer else
-    ) ;; close outer if
+        )
+        )
+    )
+    )
 
     (i32.const 0)
     (return))
@@ -372,13 +362,11 @@
     (local.get $val)
     (i32.const 10)
     (i32.rem_u)
-    (i32.mul (i32.const 4))
     (call $load)
     (i32.const 0)
     (i32.eq)
     (if
     (then
-        ;; do nothing
     )
 
     (else
@@ -393,7 +381,6 @@
         (local.get $val)
         (i32.const 10)
         (i32.rem_u)
-        (i32.mul (i32.const 4))
         (call $load)
         (i32.const 0)
         (call $load)
@@ -404,14 +391,13 @@
             (i32.const 1)
             (local.set $tagHitFlag)
             (local.get $prePtr)
-            (i32.const 0) ;; store offset
+            (i32.const 0)
             (local.get $baseAddr)
             (local.get $val)
             (i32.const 10)
             (i32.rem_u)
-            (i32.mul (i32.const 4))
             (call $load)
-            (i32.const 4)
+            (i32.const 1)
             (call $load)
             (call $store)
         )
@@ -420,7 +406,6 @@
         (local.get $val)
         (i32.const 10)
         (i32.rem_u)
-        (i32.mul (i32.const 4))
         (call $load)
         (i32.const 4)
         (i32.add)
@@ -446,11 +431,11 @@
                         (i32.const 1)
                         (local.set $tagHitFlag)
                         (local.get $nodePtr)
-                        (i32.const 0)
+                        (i32.const 0) ;; offset
                         (local.get $nodePtr)
                         (i32.const 0)
                         (call $load)
-                        (i32.const 4)
+                        (i32.const 1)
                         (call $load)
                         (call $store)
                     )
@@ -492,91 +477,184 @@
     ;; Iterate all elements in set B
     (loop $my_loop
 
+    (local.get $baseAddr)
+    (local.get $i)
+    (call $load)
+    (i32.const 0)
+    (i32.eq)
+    (if
+    (then
+    ;; No element under current entry, do nothing
+    )
+    (else
+
+        ;; Add the element found in set B to set A
+        (local.get $baseAddr$new)
         (local.get $baseAddr)
         (local.get $i)
-        (i32.mul (i32.const 4))
         (call $load)
-
         (i32.const 0)
-        (i32.eq)
-        (if
-        (then
-            ;; No element under current entry, do nothing
-        )
-        (else
+        (call $load)
+        (call $set$add)
+        (local.set $dump)
 
-            ;; Add the element found in set B to set A
-            (local.get $baseAddr$new)
-            (local.get $baseAddr)
-            (local.get $i)
-            (i32.mul (i32.const 4))
-            (call $load)
-            (132.const 0)
-            (call $load)
-            (call $set$add)
-            (local.set $dump)
-
-            ;; ;; Move to next element
-            (local.get $baseAddr)
-            (local.get $i)
-            (i32.mul (i32.const 4))
-            (call $load)
-            (i32.const 4)
-            (i32.add)
-            (local.set $nodePtr)
-                (block
-                    (loop
-                        (local.get $nodePtr)
-                        (i32.const 0)
-                        (call $load)
-                        (i32.const 0)
-                        (i32.ne)
-                        (if
-                        (then
-
-                            ;; Add the found element in set B to set A
-                            (local.get $baseAddr$new)
-                            (local.get $nodePtr)
-                            (i32.const 0)
-                            (call $load)
-                            (i32.const 0)
-                            (call $load)
-                            (call $set$add)
-                            (local.set $dump)
-
-                            ;; Move to next node
-                            (local.get $nodePtr)
-                            (i32.const 0)
-                            (call $load)
-                            (i32.const 4)
-                            (i32.add)
-                            (local.set $nodePtr)
-                        )
-                        )
-                        (br_if 0
-                            (local.get $nodePtr)
-                            (i32.const 0)
-                            (call $load)
-                            (i32.const 0)
-                            (i32.ne)
-                        )
-                        (br 1)
-                    ) ;; close loop
-                ) ;; close block
-        ) ;; close else
-        ) ;; close if
-
-        ;; Check if all entries are visited
+        ;; ;; Move to next element
+        (local.get $baseAddr)
         (local.get $i)
-        (i32.const 1)
+        (call $load)
+        (i32.const 4)
         (i32.add)
-        (local.set $i)
-        (local.get $i)
-        (i32.const 10)
-        (i32.lt_s)
-        (br_if $my_loop)
+        (local.set $nodePtr)
+        (block
+            (loop
+                (local.get $nodePtr)
+                (i32.const 0)
+                (call $load)
+                (i32.const 0)
+                (i32.ne)
+                (if
+                (then
+
+                ;; Add the found element in set B to set A
+                (local.get $baseAddr$new)
+                (local.get $nodePtr)
+                (i32.const 0)
+                (call $load)
+                (i32.const 0)
+                (call $load)
+                (call $set$add)
+                (local.set $dump)
+
+                ;; Move to next node
+                (local.get $nodePtr)
+                (i32.const 0)
+                (call $load)
+                (i32.const 4)
+                (i32.add)
+                (local.set $nodePtr)
+                )
+                )
+                (br_if 0
+                    (local.get $nodePtr)
+                    (i32.const 0)
+                    (call $load)
+                    (i32.const 0)
+                    (i32.ne)
+                )
+                (br 1)
+            ) ;; close loop
+        ) ;; close block
+    ) ;; close else
+    ) ;; close if
+
+    ;; Check if all entries are visited
+    (local.get $i)
+    (i32.const 1)
+    (i32.add)
+    (local.set $i)
+    (local.get $i)
+    (i32.const 10)
+    (i32.lt_s)
+    (br_if $my_loop)
     )
 
     ;; Return a dump value
     (local.get $dump)
+    (return))
+
+
+
+;; Basic idea is to iterate through all set entries and aggregate the number of elements followed by each entry
+(func $set$print (param $baseAddr i32) (result i32)
+    (local $i i32)
+    (local $size i32)
+    (local $nodePtr i32)
+    (local $dum i32)
+
+    ;; Use a for loop (i from 0 to 10)
+    (loop $my_loop
+
+    ;; Find the address of the entry
+    (local.get $baseAddr)
+    (local.get $i)
+    (call $load)
+
+    ;; Check if there is a follwing linkedlist
+    (i32.const 0)
+    (i32.eq)
+    ;; If there's no follwing element, do nothing
+    (if
+    (then
+        ;; do nothing
+    )
+    ;; Else, iterate the list
+    (else ;; Opening else
+        ;; There is an element, size++
+        (local.get $baseAddr) ;; Recomputing the bucketAddress to follow the linkedList.
+        (local.get $i)
+        (call $load)
+        (i32.const 0)
+        (call $load)
+        (call $print_num)
+        (local.set $dum)
+
+        (local.get $baseAddr) ;; Recomputing the bucketAddress to follow the linkedList.
+        (local.get $i)
+        (call $load) ;; Loading head of linkedList
+        (i32.const 4)
+        (i32.add) ;; Next pointer
+        (local.set $nodePtr)
+        (block
+        ;; While loop till we find a node whose next is None
+            (loop
+                (local.get $nodePtr)
+                (i32.const 0)
+                (call $load) ;; Traversing to head of next node
+                (i32.const 0) ;; None
+                (i32.ne) ;; If nodePtr not None
+                (if
+                (then
+                    ;; There is an element, size++
+                    (local.get $nodePtr)
+                    (i32.const 0)
+                    (call $load)
+                    (i32.const 0)
+                    (call $load)
+                    (call $print_num)
+                    (local.set $dum)
+                    
+                    (local.get $nodePtr)
+                    (i32.const 0)
+                    (call $load) ;; Loading head of linkedList
+                    (i32.const 4)
+                    (i32.add) ;; Next pointer
+                    (local.set $nodePtr)
+                ) ;; Closing then
+                ) ;; Closing if
+                (br_if 0 ;; Opening br_if
+                    (local.get $nodePtr)
+                    (i32.const 0)
+                    (call $load) ;; Traversing to head of next node
+                    (i32.const 0) ;; None
+                    (i32.ne) ;; If nodePtr not None
+                ) ;; Closing br_if
+                (br 1)
+            ) ;; Closing loop
+        ) ;; Closing Block
+    ) ;; Closing else
+    ) ;; Closing if
+
+    ;; Update the counter and go to the next entry
+    (local.get $i)
+    (i32.const 1)
+    (i32.add)
+    (local.set $i)
+    (local.get $i)
+    (i32.const 10)
+    (i32.lt_s)
+    (br_if $my_loop)
+    )
+
+    ;; Return the $size
+    (local.get $size)
     (return))

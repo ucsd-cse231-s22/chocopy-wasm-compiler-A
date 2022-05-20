@@ -72,11 +72,13 @@ describe("basic-set-functions", ()=>{
 
   assertPrint("set-has",`
   s:set = set()
-  s = {1,2,12,5}
+  s = {1,2,12,11}
   s.remove(12)
+  s.remove(1)
+  print(11 in s)
   print(12 in s)
   print(2 in s)
-  print(1 in s)`,["False","True","True"]);
+  print(1 in s)`,["True","False","True","False"]);
 
   assertFail("set-remove",`
   s:set = set()
@@ -85,16 +87,23 @@ describe("basic-set-functions", ()=>{
 
   assertPrint("set-clear-has",`
   x:set = set()
-  x = {1,2,3,7}
+  x = {1,3,7}
   x.add(2)
   x.clear()
-  print(x.has(7))
+  print(x.has(2))
   `,["False"]);
 
   assertPrint("set-update",`
   x:set = set()
   x.add(2)
-  x.update({2,3,12,13})
+  x.update({3,12,13})
   print(x.size())`,["4"]);
+
+
+  assertPrint("set-print",`
+  x:set = set()
+  x.add(2)
+  x.update({3,12,13})
+  x.print()`,["2","12","3","13"]);
 
 });

@@ -432,6 +432,15 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
               // }
               return {...expr,a:{tag:"none"},obj:{...expr.obj,a:SET(NUM)}};
               break;
+            case "print":
+                // for (i=1;i<numArgs;i++){
+                //     let ele_typ = tcExpr(env,locals,expr.arguments[i]);
+                //     if (!isAssignable(env,ele_typ.a,tObj.a)){
+                //       throw new TypeCheckError(`Set.update failed as ${ele_typ.a} cannot be assigned to $(tObj.a)`)
+                //     }
+                // }
+              return {...expr,a:NUM,obj:{...expr.obj,a:SET(NUM)}};
+              break;
             case "has":
               return {...expr,a:BOOL,obj:{...expr.obj,a:SET(NUM)}};
           }
