@@ -229,18 +229,19 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       return_val.push(`(local.set $$scratch)`);
       
       // store the bignum in (n+1) blocks
+      // store number of blocks in the first block
+      return_val.push(`(local.get $$scratch)`);
+      return_val.push(`(i32.const ${i})`);
+      return_val.push(`(i32.const ${n-1})`);
+      return_val.push(`call $store`); 
+      
+      i = i + 1;
+      // store the digits in the rest of blocks
       for (i; i < n; i++) {
-        if (i == 0) {
-          return_val.push(`(local.get $$scratch)`);
-          return_val.push(`(i32.const ${i})`);
-          return_val.push(`(i32.const ${n-1})`);
-          return_val.push(`call $store`);        
-        } else {
-          return_val.push(`(local.get $$scratch)`);
-          return_val.push(`(i32.const ${i})`);
-          return_val.push(`(i32.const ${digits[i-1]})`);
-          return_val.push(`call $store`);
-        }
+        return_val.push(`(local.get $$scratch)`);
+        return_val.push(`(i32.const ${i})`);
+        return_val.push(`(i32.const ${digits[i-1]})`);
+        return_val.push(`call $store`);    
       }
       return_val.push(`(local.get $$scratch)`)
       return return_val;
