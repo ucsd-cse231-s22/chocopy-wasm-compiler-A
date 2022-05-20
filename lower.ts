@@ -336,7 +336,11 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       var index_offset: number = 0;
       if (indexval.tag == "num") 
        index_offset = Number(indexval.value) + 1
-
+       const loadStmt:IR.Expr<Type> = {
+        tag: "load",
+        start: indexoval,
+        offset: { tag: "wasmint", value: index_offset }
+      };
        const alloc_index_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: 2 } };
        var assigns_index_string : IR.Stmt<Type>[] = [];
        const newIndexStrName = generateName("newStr"); 
@@ -346,12 +350,11 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
          offset: {tag:"wasmint", value: 0},
          value: {a:NUM , tag:"wasmint", value:1}
        });
-        const ascii_index = "i".charCodeAt(0);
         assigns_index_string.push({
-          tag: "store",
+          tag: "store_str",
           start: {tag: "id", name: newIndexStrName},
           offset: {tag:"wasmint", value: 1},
-          value: {a:NUM , tag:"wasmint", value:ascii_index}
+          value: loadStmt
         });
       
         indexoinits.push({ name: newIndexStrName, type: STRING, value: { tag: "none" } });
