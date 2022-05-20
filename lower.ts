@@ -218,14 +218,19 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var idxInit : AST.VarInit<Type> = { a: NONE, name: idx, type: NUM, value: PyLiteralInt(0) };
       var irIdx = lowerVarInit(idxInit, env);
       // if (s.iterable.tag !== "list-obj") throw new Error("Compiler is cursed, go home.")
-      var curState : AST.Expr<Type> = {  a: NUM, tag: "index", obj: s.iterable, index: {  a: NUM, tag: "id", name: idx }};
+      var curState : AST.Expr<Type>;
+      if(s.iterable.a.tag === "list") {
+        curState = {  a: s.iterable.a.elementtype, tag: "index", obj: s.iterable, index: {  a: NUM, tag: "id", name: idx }};
+      } else if(s.iterable.a.tag === "str") {
+        curState = {  a: STR, tag: "index", obj: s.iterable, index: {  a: NUM, tag: "id", name: idx }};
+      }
       var assignStmt : AST.Stmt<Type> = {  a: NONE, tag: "assign", name: s.name, value: curState };
-
       var stepExpr : AST.Expr<Type> = {  a: NUM, tag: "binop", op: BinOp.Plus, left: {  a: NUM, tag: "id", name: idx }, right: PyLiteralExpr(PyInt(1))};
       var stepStmt : AST.Stmt<Type> = {  a: NONE, tag: "assign", name: idx, value: stepExpr };
 
       var whileBody : Array<AST.Stmt<Type>> = [assignStmt, ...s.body, stepStmt];
-      var lenExpr : AST.Expr<Type> = {  a: NUM, tag: "list-length", list: s.iterable}
+      var lenExpr : AST.Expr<Type> = {  a: NUM, tag: "list-length", list: s.iterable};
+      // var lenExpr : AST.Expr<Type> = {  a: NUM, tag: "builtin1",  name: "len", arg: s.iterable}
       var condExpr : AST.Expr<Type> = {  a: BOOL, tag: "binop", op: BinOp.Lt, left: {  a: NUM, tag: "id", name: idx }, right: lenExpr};
       var whileStmt : AST.Stmt<Type> = {  a: NONE, tag: "while", cond: condExpr, body: whileBody };
       return [irIdx, ...flattenStmt(whileStmt, blocks, env)]
@@ -409,14 +414,19 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: listName } }
       ]
     case "list-length":
-      var [startinits, startstmts, startval] = flattenExprToVal(e.list, env);
-      return[
-        [...startinits],
-        [...startstmts],
-        {tag: "load",
-          start: startval,
-          offset: literalToVal(PyLiteralInt(0))}
-      ]
+      if(e.a.tag === "str") {
+        const [oinits, ostmts, oval] = flattenExprToVal(e.list, env);
+        return [[...oinits], [...ostmts], {tag: "str-index", start: oval, offset: literalToVal(PyLiteralInt(-1))} ];
+      } else {
+        var [startinits, startstmts, startval] = flattenExprToVal(e.list, env);
+        return[
+          [...startinits],
+          [...startstmts],
+          {tag: "load",
+            start: startval,
+            offset: literalToVal(PyLiteralInt(0))}
+        ]
+      }
     case "index":
       if(e.a.tag=="str"){
         const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
