@@ -22,7 +22,26 @@ We get back an integer value that can easily be evaluated and stored in memory.
 
 ## Closures/first class/anonymous functions
 
+Since closures just return a function with various types, I think the cases where they test lists would be needed to be updated. This change wouldn't be on our end but rather this team could simply add more tests to return their lists with different types or values.
+
+Example Cases:
+One test case would be a function that returns another function that returns a list. You could construct a list internally and do some manipulation with the length of the list.
+
+Since we support nested lists (matricies) and length of lists, this could be tested upon in their test cases.
+
 ## Comprehensions
+
+I think we will need to work closely with this team in order to get things working between our features. Comprehensions deal mostly with expanding lists and their contents. Looking at their design doc, they use List as a type which isn't what we implemented. Rather, we internally parsed `[int]` and stuff like that to be compiled and stored differently in memory. 
+
+Example Cases:
+`
+a : [[int]] = None
+a = [[j for j in range(3)] for i in range(3)]
+`
+
+In the above case, the Comprehensions team should define a variable as such but are free to create the list with comprehensions in any way they like as long as the resulting list is a 2D matrix with integers. 
+
+Another case the comprehensions team mentions is about creating an Iterable. I think this part will be a little complex to integrate as I think it will have to work with the way we layout list values in memory. Currently, we do not support mutable list lengths so it is possible to support the external functions `next()` and `hasNext()` mentioned in their proposal.
 
 ## Destructuring assignment
 
