@@ -34,10 +34,10 @@ Since we support nested lists (matricies) and length of lists, this could be tes
 I think we will need to work closely with this team in order to get things working between our features. Comprehensions deal mostly with expanding lists and their contents. Looking at their design doc, they use List as a type which isn't what we implemented. Rather, we internally parsed `[int]` and stuff like that to be compiled and stored differently in memory. 
 
 Example Cases:
-`
+```
 a : [[int]] = None
 a = [[j for j in range(3)] for i in range(3)]
-`
+```
 
 In the above case, the Comprehensions team should define a variable as such but are free to create the list with comprehensions in any way they like as long as the resulting list is a 2D matrix with integers. 
 
