@@ -3,6 +3,7 @@ import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
 import {NUM, BOOL, NONE, CLASS, STRING} from './utils';
 import { emptyEnv } from './compiler';
+import exp from 'constants';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends Error {
@@ -234,7 +235,9 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
 export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<null>) : Expr<Type> {
   switch(expr.tag) {
     case "index":
-      return {...expr,a:STRING};
+      const typedObj:Expr<Type> = tcExpr(env,locals,expr.obj);
+      const typedIdx:Expr<Type> = tcExpr(env,locals,expr.index);
+      return {  a: STRING, tag: "index", obj: typedObj, index: typedIdx };
     case "literal":
       return {...expr, a: tcLiteral(expr.value)};
     case "binop":

@@ -274,6 +274,10 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "binop":
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
+
+
+
+
       return [[...linits, ...rinits], [...lstmts, ...rstmts], {
           ...e,
           left: lval,
@@ -322,6 +326,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     }
     case "lookup": {
       const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
+      console.log("OBJ",e.obj);
       if(e.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
       const classdata = env.classes.get(e.obj.a.name);
       const [offset, _] = classdata.get(e.field);
