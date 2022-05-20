@@ -95,7 +95,7 @@ class Start:
   b : string = ""
   def set(self, a : string , b : string):
      self.a = a
-	 self.b = b
+	   self.b = b
   def concatenate(self)-> str:
      return self.a + self.b
   def RAfirst(self) -> str:
