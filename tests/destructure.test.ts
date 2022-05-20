@@ -80,6 +80,12 @@ describe('ut for destructure', () => {
     a, b = 2
     `);
 
+    assertTCFail("destructure-assignment-num-failure-2", `
+    a : int = 1
+    b : bool = True
+    a, b = 2, False, 3
+    `);
+
     // TODO: after introducing list
     // assertTCFail("destructure-assignment-with-star-failure", `
     // a : int = 1
@@ -122,6 +128,20 @@ describe('ut for destructure', () => {
     print(a)
     print(b)
     `, ['2', 'False']);
+
+    assertPrint("destructure-assignment-func-sep", `
+    def f(a: int)->int:
+        return a*2
+    def g(a: int)->int:
+        return a+3
+    a : int = 0
+    b : int = 0
+    c : int = 0
+    a, b, c = 2, f(5), g(3)+10
+    print(a)
+    print(b)
+    print(c)
+    `, ['2', '10', '16']);
 
     assertPrint("destructure-assignment-with-ignore-sep", `
     a : int = 1
