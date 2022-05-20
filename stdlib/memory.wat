@@ -13,9 +13,29 @@
     (local.get $addr))
 
 
+
+  (func (export "duplicate_str") (param $source i32) (param $dest i32)
+    (local $length i32)
+    (local $i i32)
+    (local $val i32)
+    (local.set $i (i32.const 0))
+    (local.set $length (i32.add (i32.load (i32.add (local.get $source) (i32.mul (local.get $i) (i32.const 4)))) (i32.const 1)))
+    (local.set $i (i32.const 1))
+    (loop $my_loop
+      (local.set $val (i32.load (i32.add (local.get $source) (i32.mul (local.get $i) (i32.const 4)))))
+      (i32.store (i32.add (local.get $dest) (i32.mul (local.get $i) (i32.const 4))) (local.get $val))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (local.get $i)
+      (local.get $length)
+      (i32.lt_s)
+      br_if $my_loop
+    )
+  )
+
   ;; Given an address handle, return the value at that address
   (func (export "load") (param $addr i32) (param $offset i32) (result i32)
     (i32.load (i32.add (local.get $addr) (i32.mul (local.get $offset) (i32.const 4)))))
+
 
   ;; Given an address handle and a new value, update the value at that adress to
   ;; that value
@@ -43,5 +63,9 @@
       br_if $my_loop
     )
     (local.get $addr)
+  )
+
+    (func (export "get_Length") (param $addr1 i32) (param $addr2 i32) (result i32)
+  (i32.add (i32.load (local.get $addr1)) (i32.load (local.get $addr2)))
   )
 )
