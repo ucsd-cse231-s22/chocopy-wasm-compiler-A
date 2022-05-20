@@ -61,6 +61,10 @@ export class BasicREPL {
     const [tprogram, tenv] = tc(config.typeEnv, parsed);
     const globalEnv = augmentEnv(config.env, tprogram);
     const irprogram = lowerProgram(tprogram, globalEnv);
+    if(!this.importObject.js) {
+      const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
+      this.importObject.js = { memory: memory };
+    }
     return [ irprogram, optimizeProgram(irprogram) ];
   }
   tc(source: string): Type {

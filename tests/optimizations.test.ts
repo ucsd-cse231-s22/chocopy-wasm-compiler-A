@@ -1,7 +1,361 @@
-import { assertPrint, assertFail, assertTCFail, assertTC, assertOptimize } from "./asserts.test";
+import { assertPrint, assertFail, assertTCFail, assertTC, assertOptimize, assertOptimizeIR } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("Optimizations tests", () => {
+    assertOptimizeIR(
+        "IR-simple-constant-folding", 
+        `
+        a: int = 0
+        a = 1*2+3--4
+        `,
+        {
+            "a": {
+              "tag": "none"
+            },
+            "funs": [],
+            "inits": [
+              {
+                "a": {
+                  "tag": "number"
+                },
+                "name": "valname1",
+                "type": {
+                  "tag": "number"
+                },
+                "value": {
+                  "tag": "none"
+                }
+              },
+              {
+                "a": {
+                  "tag": "number"
+                },
+                "name": "valname2",
+                "type": {
+                  "tag": "number"
+                },
+                "value": {
+                  "tag": "none"
+                }
+              },
+              {
+                "a": {
+                  "tag": "number"
+                },
+                "name": "valname3",
+                "type": {
+                  "tag": "number"
+                },
+                "value": {
+                  "tag": "none"
+                }
+              },
+              {
+                "name": "a",
+                "type": {
+                  "tag": "number"
+                },
+                "value": {
+                  "tag": "num",
+                  "value": 0n
+                },
+                "a": {
+                  "tag": "none"
+                }
+              }
+            ],
+            "classes": [],
+            "body": [
+              {
+                "a": {
+                  "tag": "none"
+                },
+                "label": "$startProg1",
+                "stmts": [
+                  {
+                    "tag": "assign",
+                    "a": {
+                      "tag": "number"
+                    },
+                    "name": "valname1",
+                    "value": {
+                      "a": {
+                        "tag": "number"
+                      },
+                      "tag": "value",
+                      "value": {
+                        "tag": "num",
+                        "value": 2n
+                      }
+                    }
+                  },
+                  {
+                    "tag": "assign",
+                    "a": {
+                      "tag": "number"
+                    },
+                    "name": "valname2",
+                    "value": {
+                      "a": {
+                        "tag": "number"
+                      },
+                      "tag": "value",
+                      "value": {
+                        "tag": "num",
+                        "value": 5n
+                      }
+                    }
+                  },
+                  {
+                    "tag": "assign",
+                    "a": {
+                      "tag": "number"
+                    },
+                    "name": "valname3",
+                    "value": {
+                      "tag": "value",
+                      "value": {
+                       "tag": "num",
+                       "value": -4n
+                      }
+                    }
+                  },
+                  {
+                    "a": {
+                      "tag": "none"
+                    },
+                    "tag": "assign",
+                    "name": "a",
+                    "value": {
+                      "a": {
+                        "tag": "number"
+                      },
+                      "tag": "value",
+                      "value": {
+                        "tag": "num",
+                        "value": 9n
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+    );
+    
+    assertOptimizeIR(
+        "IR-if-else-propagate", 
+        `
+        a: int = 15
+        b:int = 0
+        if(10 > 11):
+            a = 15
+        b = a + 5
+        `,
+        {
+            "a": {
+              "tag": "none"
+            },
+            "funs": [],
+            "inits": [
+              {
+                "a": {
+                  "tag": "bool"
+                },
+                "name": "valname4",
+                "type": {
+                  "tag": "bool"
+                },
+                "value": {
+                  "tag": "none"
+                }
+              },
+              {
+                "name": "a",
+                "type": {
+                  "tag": "number"
+                },
+                "value": {
+                  "tag": "num",
+                  "value": 15n
+                },
+                "a": {
+                  "tag": "none"
+                }
+              },
+              {
+                "name": "b",
+                "type": {
+                  "tag": "number"
+                },
+                "value": {
+                  "tag": "num",
+                  "value": 0n
+                },
+                "a": {
+                  "tag": "none"
+                }
+              }
+            ],
+            "classes": [],
+            "body": [
+              {
+                "a": {
+                  "tag": "none"
+                },
+                "label": "$startProg2",
+                "stmts": [
+                  {
+                    "tag": "assign",
+                    "a": {
+                      "tag": "bool"
+                    },
+                    "name": "valname4",
+                    "value": {
+                      "a": {
+                        "tag": "bool"
+                      },
+                      "tag": "value",
+                      "value": {
+                        "tag": "bool",
+                        "value": false
+                      }
+                    }
+                  },
+                  {
+                    "tag": "ifjmp",
+                    "cond": {
+                      "tag": "id",
+                      "name": "valname4",
+                      "a": {
+                        "tag": "bool"
+                      }
+                    },
+                    "thn": "$then1",
+                    "els": "$else1"
+                  }
+                ]
+              },
+              {
+                "a": {
+                  "tag": "none"
+                },
+                "label": "$then1",
+                "stmts": [
+                  {
+                    "a": {
+                      "tag": "none"
+                    },
+                    "tag": "assign",
+                    "name": "a",
+                    "value": {
+                      "tag": "value",
+                      "value": {
+                        "tag": "num",
+                        "value": 15n
+                      }
+                    }
+                  },
+                  {
+                    "tag": "jmp",
+                    "lbl": "$end1"
+                  }
+                ]
+              },
+              {
+                "a": {
+                  "tag": "none"
+                },
+                "label": "$else1",
+                "stmts": [
+                  {
+                    "a": {
+                      "tag": "none"
+                    },
+                    "tag": "assign",
+                    "name": "a",
+                    "value": {
+                      "tag": "value",
+                      "value": {
+                        "tag": "num",
+                        "value": 15n
+                      }
+                    }
+                  },
+                  {
+                    "tag": "jmp",
+                    "lbl": "$end1"
+                  }
+                ]
+              },
+              {
+                "a": {
+                  "tag": "none"
+                },
+                "label": "$end1",
+                "stmts": [
+                  {
+                    "a": {
+                      "tag": "none"
+                    },
+                    "tag": "assign",
+                    "name": "b",
+                    "value": {
+                      "a": {
+                        "tag": "number"
+                      },
+                      "tag": "value",
+                      "value": {
+                        "tag": "num",
+                        "value": 20n
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+    );
+
+    assertOptimize(
+        "IR-if-else-notpropagate", 
+        `
+        a: int = 16
+        b:int=0
+        if(10 > 11):
+            a = 15
+        b = a + 5
+        `,
+        { print: ["0","12"], isIrDifferent: true }
+    );
+
+    assertOptimize(
+        "IR-while-propagate", 
+        `
+        a: int = 10
+        i: int = 0
+        b:int = 0
+        while(i<3):
+            a = 7 + 3
+            i = i + 1
+        b = a + 1 + i
+        `,
+        { print: ["0","12"], isIrDifferent: true }
+    );
+
+    assertOptimize(
+        "IR-fn-propagate", 
+        `
+        def f(b:int)->int:
+            a:int = 2
+            return b//a
+        
+        f(10)
+        `,
+        { print: ["0","12"], isIrDifferent: true }
+    );
+
+
     assertOptimize(
         "sanity-simple-constant-folding", 
         `
