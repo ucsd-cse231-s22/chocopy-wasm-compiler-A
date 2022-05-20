@@ -273,22 +273,6 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
         destruct,
         value,
       }
-      // if (target.tag === "lookup") {
-      //   return {
-      //     tag: "field-assign",
-      //     obj: target.obj,
-      //     field: target.field,
-      //     value: value
-      //   }
-      // } else if (target.tag === "id") {
-      //   return {
-      //     tag: "assign",
-      //     name: target.name,
-      //     value: value
-      //   }  
-      // } else {
-      //   throw new Error("Unknown target while parsing assignment");
-      // }
     case "ExpressionStatement":
       c.firstChild();
       const expr = traverseExpr(c, s);
