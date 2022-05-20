@@ -142,9 +142,7 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       if (expr.op == BinOp.Is || expr.op == BinOp.And || expr.op == BinOp.Or) {
         return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
       }
-      // return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
       const callStmts = codeGenBinOp(expr.op);
-      // return [...lhsStmts, ...rhsStmts, `(call $${callName})`]
       return [...lhsStmts, ...rhsStmts, callStmts]
 
     case "uniop":

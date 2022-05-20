@@ -60,9 +60,6 @@ export const bigMath = {
 export function binop_bignum(args: number[], builtin: Function, libmem: WebAssembly.Exports): number {
   var rslt : bigint = BigInt(0);
   const load = libmem.load;
-  // if(args.length === 1)
-  //   rslt = builtin(load_bignum(args[0], load));
-  // else 
   
   if(args.length === 2)
     rslt = builtin(load_bignum(args[0], load), load_bignum(args[1], load));
@@ -75,9 +72,6 @@ export function binop_bignum(args: number[], builtin: Function, libmem: WebAssem
 export function binop_comp_bignum(args: number[], builtin: Function, libmem: WebAssembly.Exports): number {
   var rslt : bigint = BigInt(0);
   const load = libmem.load;
-  // if(args.length === 1)
-  //   rslt = builtin(load_bignum(args[0], load));
-  // else 
   
   if(args.length === 2)
     rslt = builtin(load_bignum(args[0], load), load_bignum(args[1], load));
@@ -93,7 +87,6 @@ export function load_bignum(addr: number, loader: WebAssembly.ExportValue): bigi
   const numlength = load(addr, 0);
   console.log("load bignum len"+numlength)
   var bignum : bigint = BigInt(0);
-  // console.log(numlength);
   for (let i = Math.abs(numlength); i > 0; i--) {
     bignum <<= BigInt(31);
     bignum += BigInt(load(addr, i) & 0x7fffffff); // mask number to 2^31
@@ -106,7 +99,6 @@ export function load_bignum(addr: number, loader: WebAssembly.ExportValue): bigi
 
 export function alloc_bignum(numlength: number, allocator: WebAssembly.ExportValue): number {
   const alloc = allocator as CallableFunction;
-  // return alloc(Math.abs(numlength));
   return alloc(Math.abs(numlength)+1);
 }
 
