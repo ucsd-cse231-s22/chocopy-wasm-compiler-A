@@ -70,8 +70,10 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
+  console.log("type-checking program:",tprogram);
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
+  console.log(irprogram);
   const progTyp = tprogram.a;
   var returnType = "";
   var returnExpr = "";
@@ -102,6 +104,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
+    (func $ele_not_found (import "imports" "ele_not_found") (param i32) (result i32))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
@@ -124,5 +127,6 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   console.log(wasmSource);
   const [result, instance] = await runWat(wasmSource, importObject);
 
+  // return wasmSource;
   return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance];
 }

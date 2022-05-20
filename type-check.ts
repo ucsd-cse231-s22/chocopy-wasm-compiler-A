@@ -1,8 +1,9 @@
-
-import { table } from 'console';
+// import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
-import { NUM, BOOL, NONE, CLASS } from './utils';
+import { NUM, BOOL, NONE, CLASS, SET } from './utils';
 import { emptyEnv } from './compiler';
+import { setExprTC, setMethodTC } from './setTC';
+// import common from 'mocha/lib/interfaces/common';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends Error {
@@ -69,15 +70,22 @@ export function equalType(t1: Type, t2: Type) {
     (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
   );
 }
+export function equalSet(t1: Type, t2: Type) {
+  return (
+    t1 === t2 ||
+    (t1.tag === "set" && t2.tag === "set" && t1.content_type.tag === t2.content_type.tag)
+  );
+}
 
 export function isNoneOrClass(t: Type) {
   return t.tag === "none" || t.tag === "class";
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
+  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" || equalSet(t1,t2)
+  // none is assignable to set
+  || t1.tag === "set" && t2.tag === "none" 
 }
-
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
   return isSubtype(env, t1, t2);
 }
@@ -379,8 +387,20 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           throw new TypeCheckError("method call on an unknown class");
         }
       } else {
-        throw new TypeCheckError("method calls require an object");
+        // Dealing with other data structures here
+        const objATag = tObj.a.tag;
+        switch (objATag){
+          case "set":
+            //Use setMethodTC function defined in "setTC.ts"
+            return setMethodTC(env,locals,expr);
+          default:
+            console.log(`objTag of ${objATag} not supported`)
+        }
+        break;
       }
+      case "set_expr":
+          // Use setExprTC defined in "setTC.ts"
+          return setExprTC(env,locals,expr);
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
 }
@@ -390,5 +410,7 @@ export function tcLiteral(literal : Literal) {
         case "bool": return BOOL;
         case "num": return NUM;
         case "none": return NONE;
+        case "set": return SET(NUM);  
     }
 }
+

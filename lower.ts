@@ -2,6 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
+import { NONE } from './utils';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -77,7 +78,9 @@ function literalToVal(lit: AST.Literal) : IR.Value<Type> {
         case "bool":
             return lit
         case "none":
-            return lit        
+            return lit 
+        case "set":
+            return lit       
     }
 }
 
@@ -234,6 +237,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           arguments: callvals
         }
       ];
+
     case "method-call": {
       const [objinits, objstmts, objval] = flattenExprToVal(e.obj, env);
       const argpairs = e.arguments.map(a => flattenExprToVal(a, env));
@@ -241,6 +245,15 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const argstmts = argpairs.map(cp => cp[1]).flat();
       const argvals = argpairs.map(cp => cp[2]).flat();
       var objTyp = e.obj.a;
+      if(objTyp.tag == "set"){
+        const callMethod : IR.Expr<Type> = { tag: "call", name: `set$${e.method}`, arguments: [objval, ...argvals] }
+        return [
+          [...objinits, ...arginits],
+          [...objstmts, ...argstmts],
+          callMethod
+        ];
+      }
+      
       if(objTyp.tag !== "class") { // I don't think this error can happen
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
       }
@@ -285,6 +298,23 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
       ];
+
+    case "set_expr":
+        const name = generateName("newSet");
+        const setAlloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: 10  } };
+        const elealloc : IR.Stmt<Type>[] = e.contents.map(n => {
+          const v = flattenExprToVal(n, env);
+          return {
+            tag: "expr",
+            expr: { tag: "call", name: `set$add`, arguments: [{ tag: "id", name: name },v[2]] }
+          }
+        });
+        return [
+          [{ a: e.a, name: name, type: e.a, value: { tag: "none" } }],
+          [ { tag: "assign", name: name, value: setAlloc }, ...elealloc],
+          { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: name } }
+        ];
+
     case "id":
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":

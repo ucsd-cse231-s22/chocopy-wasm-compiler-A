@@ -24,6 +24,11 @@ function assert_not_none(arg: any) : any {
     throw new Error("RUNTIME ERROR: cannot perform operation on none");
   return arg;
 }
+function ele_not_found(arg:any) : any{
+  if (arg === 0)
+    throw new Error("RUNTIME ERROR: element not found in iterable");
+  return arg;
+  }
 
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
@@ -42,6 +47,7 @@ export const importObject : any = {
     //  We can then examine output to see what would have been printed in the
     //  console.
     assert_not_none: (arg: any) => assert_not_none(arg),
+    ele_not_found: (arg:any) => ele_not_found(arg),
     print: (arg: any) => print(Type.Num, arg),
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
