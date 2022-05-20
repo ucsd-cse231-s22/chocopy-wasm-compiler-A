@@ -144,4 +144,36 @@ describe('e2e tests to check generics', () => {
     `
 
     assertPrint('Generic field access', prog4, ["True", "False", "False"]);
+
+    const prog5 = `
+    L = TypeVar('L')
+    R = TypeVar('R')
+
+    class Pair(Generic[L, R]):
+        left: L = __ZERO__
+        right: R = __ZERO__
+
+        def createNewPairWithSwappedArguments(self: Pair[L, R]) -> Pair[R, L]:
+            p1 : Pair[R, L] = None
+            p1 = Pair()
+            p1.right = self.left
+            p1.left = self.right
+            return p1
+
+    p1 : Pair[int, bool] = None
+    p2 : Pair[bool, int] = None
+
+    p1 = Pair()
+    p1.left = 10
+    p1.right = True
+
+    p2 = p1.createNewPairWithSwappedArguments()
+
+    print(p1.left)
+    print(p1.right)
+    print(p2.left)
+    print(p2.right)
+    `
+
+    assertPrint('Generic Pair class with swap function', prog5, ["10", "True", "True", "10"]);
 })
