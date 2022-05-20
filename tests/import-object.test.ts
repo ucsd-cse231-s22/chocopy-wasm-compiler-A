@@ -52,13 +52,16 @@ export const importObject : any = {
     pow: Math.pow,
 
     // list imported functions
-    index_out_of_bounds: () => index_out_of_bounds(),
+    check_index_out_of_bounds: (index: number, length: number) => check_index_out_of_bounds(index, length),
   },
 
   output: "",
 };
 
 // List runtime errors
-function index_out_of_bounds() {
-  throw new Error(`RUNTIME ERROR: index out of bounds`);
+function check_index_out_of_bounds(index: number, length: number) {
+  if(index < 0 || index >= length) {
+    throw new Error(`RUNTIME ERROR: index out of bounds`);
+  }
+  return index;
 }

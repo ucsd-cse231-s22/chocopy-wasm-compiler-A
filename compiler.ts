@@ -80,21 +80,6 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
 function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
   switch (stmt.tag) {
     case "store":
-      if(stmt.start.tag === "listaddr") {
-        // Add bounds check for list index; TODO negative index
-        var listAddr = codeGenValue(stmt.start, env);
-        var listLen = [`call $assert_not_none`, `(i32.const 0)`, `call $load`];
-        var listIndex = codeGenValue(stmt.offset, env);
-        var outBounds = [`(i32.le_s)`, `if`, `call $index_out_of_bounds`, `end`];
-        var negBounds = codeGenValue(stmt.offset, env).concat([`(i32.const 0)`, `(i32.lt_s)`, `if`, `call $index_out_of_bounds`, `end`]);
-        return [
-          ...listAddr, ...listLen, ...listIndex, ...outBounds, ...negBounds,
-          ...codeGenValue(stmt.start, env), ...codeGenValue(stmt.offset, env),
-          `(i32.const 1)`, `(i32.add)`,
-          ...codeGenValue(stmt.value, env),
-          `call $store`
-        ];
-      }
       return [
         ...codeGenValue(stmt.start, env),
         ...codeGenValue(stmt.offset, env),
@@ -195,20 +180,6 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         `call $alloc`
       ];
     case "load":
-      if(expr.start.tag === "listaddr") {
-        // Add bounds check for list index; TODO negative index
-        var listAddr = codeGenValue(expr.start, env);
-        var listLen = [`call $assert_not_none`, `(i32.const 0)`, `call $load`];
-        var listIndex = codeGenValue(expr.offset, env);
-        var outBounds = [`(i32.le_s)`, `if`, `call $index_out_of_bounds`, `end`];
-        var negBounds = codeGenValue(expr.offset, env).concat([`(i32.const 0)`, `(i32.lt_s)`, `if`, `call $index_out_of_bounds`, `end`]);
-        return [
-          ...listAddr, ...listLen, ...listIndex, ...outBounds, ...negBounds,
-          ...codeGenValue(expr.start, env), ...codeGenValue(expr.offset, env),
-          `(i32.const 1)`, `(i32.add)`,
-          `call $load`
-        ];
-      }
       return [
         ...codeGenValue(expr.start, env),
         `call $assert_not_none`,
@@ -234,8 +205,6 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       } else {
         return [`(global.get $${val.name})`];
       }
-    case "listaddr":
-      return codeGenValue(val.addr, env);
   }
 }
 

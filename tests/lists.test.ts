@@ -522,6 +522,42 @@ describe("runner for lists", () => {
   print(len([]))
   print(len([1,2,3,4,5]))
   `, [`3`, `0`, `5`]);
+
+  assertPrint(`list in function 1`, `
+  def first3(a: [int]):
+    print(len(a))
+    print(a[0])
+    print(a[1])
+    print(a[2])
+  first3([1,2,3])
+  `, [`3`, `1`, `2`, `3`]);
+  assertPrint(`list in function 2`, `
+  def get_list() -> [int]:
+    return [1,2,3]
+  a: [int] = None
+  a = get_list()
+  print(len(a))
+  print(a[0])
+  print(a[1])
+  print(a[2])
+  `, [`3`, `1`, `2`, `3`]);
+  // assertPrint(`list in function 3`, `
+  // def get_list(start: int) -> [int]:
+  //   return [start,start+1,start+2]
+  // def append(a: [int], b: [int]) -> [[int]]:
+  //   return [a, b]
+  // a: [int] = None
+  // b: [int] = None
+  // c: [[int]] = None
+  // a = get_list(1)
+  // b = get_list(5)
+  // c = append(a, b)
+  // print(len(c))
+  // print(len(c[0]))
+  // print(len(c[1]))
+  // print(c[0][0])
+  // print(c[1][0])
+  // `, [`2`, `3`, `3`, `1`, `5`]);
   // assertPrint(
   //   `list print`,
   //   `

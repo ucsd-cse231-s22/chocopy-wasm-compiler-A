@@ -30,8 +30,11 @@ function assert_not_none(arg: any) : any {
   return arg;
 }
 
-function index_out_of_bounds(arg: any) : any {
-  throw new Error("RUNTIME ERROR: index out of bound");
+function check_index_out_of_bounds(index: number, length: number) {
+  if(index < 0 || index >= length) {
+    throw new Error(`RUNTIME ERROR: index out of bounds`);
+  }
+  return index;
 }
 
 function webStart() {
@@ -48,7 +51,7 @@ function webStart() {
 
     var importObject = {
       imports: {
-        index_out_of_bounds: (arg:any) => index_out_of_bounds(arg),
+        check_index_out_of_bounds: (index: number, length: number) => check_index_out_of_bounds(index, length),
         assert_not_none: (arg: any) => assert_not_none(arg),
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),

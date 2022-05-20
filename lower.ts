@@ -144,19 +144,60 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var [oinits, ostmts, oval] = flattenExprToVal(s.obj, env);
       var [iinits, istmts, ival] = flattenExprToVal(s.index, env);
       var [ninits, nstmts, nval] = flattenExprToVal(s.value, env);
-
       if (s.obj.a.tag !== "list") {
         throw new Error("Compiler's cursed, go home.");
       }
-      pushStmtsToLastBlock(blocks, ...ostmts, ...istmts, ...nstmts, {
+      var lenVar = generateName("listLen");
+      var lenStmt: IR.Stmt<Type> = {
+        a: {tag: "number"},
+        tag: "assign",
+        name: lenVar,
+        value: {
+          a: {tag: "number"},
+          tag: "load",
+          start: oval,
+          offset: {a: {tag: "number"}, tag: "wasmint", value: 0}
+        }
+      };
+      var boundsCheckStmt: IR.Stmt<Type> = {
+        a: {tag: "number"},
+        tag: "expr",
+        expr: {
+          a: {tag: "number"},
+          tag: "call",
+          name: "check_index_out_of_bounds",
+          arguments: [ival, {a: {tag: "number"}, tag: "id", name: lenVar}]
+        }
+      };
+
+      pushStmtsToLastBlock(blocks, ...ostmts, ...istmts, ...nstmts, lenStmt, boundsCheckStmt);
+
+      var indexAdd: AST.Expr<Type> = {
+        a: {tag: "number"},
+        tag: "binop",
+        op: AST.BinOp.Plus,
+        left: s.index,
+        right: {a: {tag:"number"}, tag: "literal", value: {tag: "num", value: 1}}
+      };
+      var [ixits, ixstmts, ixexpr] = flattenExprToVal(indexAdd, env);
+      var storeStmt: IR.Stmt<Type> = {
         tag: "store",
-        a: s.a,
-        start: { a: oval.a, tag: "listaddr", addr: oval },
+        a: {tag: "none"},
+        start: oval,
         //@ts-ignore
-        offset: ival,
+        offset: ixexpr,
         value: nval,
-      });
-      return [...oinits, ...iinits, ...ninits];
+      };
+      pushStmtsToLastBlock(blocks, ...ixstmts, storeStmt);
+
+      return [...oinits, ...iinits, ...ninits,
+        {
+          name: lenVar,
+          type: {tag: "number"},
+          value: { a: {tag: "number"}, tag: "none" },
+        },
+        ...ixits,
+      ];
     }
       // return [[...oinits, ...ninits], [...ostmts, ...nstmts, {
       //   tag: "field-assign",
@@ -334,7 +375,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           {
             name: newListName,
             type: e.a,
-            value: { a: e.a, tag: "listaddr", addr: { tag: "none" } },
+            value: { a: e.a, tag: "none" },
           },
           ...inits,
         ],
@@ -349,22 +390,59 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           tag: "value",
           value: {
             a: e.a,
-            tag: "listaddr",
-            addr: { a: e.a, tag: "id", name: newListName },
+            tag: "id",
+            name: newListName
           },
         },
       ];
     case "index":
       var [objInit, objStmts, objExpr] = flattenExprToVal(e.obj, env);
       var [idxInit, idxStmts, idxExpr] = flattenExprToVal(e.index, env);
-      return [
-        [...objInit, ...idxInit],
-        [...objStmts, ...idxStmts],
-        {
-          a: e.a,
+
+      // Bounds check code
+      var lenVar = generateName("listLen");
+      var lenStmt: IR.Stmt<Type> = {
+        a: {tag: "number"},
+        tag: "assign",
+        name: lenVar,
+        value: {
+          a: {tag: "number"},
           tag: "load",
-          start: { a: { tag: "number" }, tag: "listaddr", addr: objExpr },
-          offset: idxExpr,
+          start: objExpr,
+          offset: {a: {tag: "number"}, tag: "wasmint", value: 0}
+        }
+      };
+      var checkBoundStmt: IR.Stmt<Type> = {
+        a: {tag: "number"},
+        tag: "expr",
+        expr: {
+          a: {tag: "number"},
+          tag: "call",
+          name: "check_index_out_of_bounds", arguments: [idxExpr, {a: {tag: "number"}, tag: "id", name: lenVar}] }
+      }
+      var indexAdd: AST.Expr<Type> = {
+        a: {tag: "number"},
+        tag: "binop",
+        op: AST.BinOp.Plus,
+        left: e.index,
+        right: {a: {tag:"number"}, tag: "literal", value: {tag: "num", value: 1}}
+      };
+      var [idxAddInit, idxAddStmts, idxAddExpr] = flattenExprToVal(indexAdd, env);
+
+      return [
+        [...objInit, ...idxInit, ...idxAddInit,
+          {
+            name: lenVar,
+            type: {tag: "number"},
+            value: { a: e.a, tag: "none" },
+          }
+        ],
+        [...objStmts, ...idxStmts, lenStmt, checkBoundStmt, ...idxAddStmts],
+        {
+          a: {tag: "number"},
+          tag: "load",
+          start: objExpr,
+          offset: idxAddExpr,
         },
       ];
     case "id":
