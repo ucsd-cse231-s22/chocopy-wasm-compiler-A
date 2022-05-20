@@ -316,7 +316,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         a: STRING,
         tag: "duplicate_str",
         source: lval,
-        dest: {  a: STRING, tag: "id", name: newIndexStrName }
+        dest: {  a: STRING, tag: "id", name: Randomname }
       });
       
       //we need to alloc lengthB to randomname
@@ -326,7 +326,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         a: STRING,
         tag: "duplicate_str",
         source: rval,
-        dest: {  a: STRING, tag: "id", name: newIndexStrName }
+        dest: {  a: STRING, tag: "id", name: Randomname }
       });
       return [initsArray,
         strConcatstmts,
