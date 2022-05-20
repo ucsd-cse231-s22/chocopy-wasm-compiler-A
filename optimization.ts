@@ -407,11 +407,16 @@ function mergeAllPreds(predecessorBlocks: Array<string>, outEnvMapping: Map<stri
 }
 
 function checkEnvEquality(a: Env, b: Env): boolean{
-    a.vars.forEach((aValue: compileVal, key: string) => {
-        const bValue: compileVal = b.vars.get(key);
-        if (!checkCompileValEquality(aValue, bValue))
-            return false;
-    });
+    
+    const aVars = a.vars;
+    const bVars = b.vars;
+
+    for (let key in aVars.keys()){
+        const aValue = aVars.get(key);
+        const bValue = bVars.get(key);
+        
+        if (!checkCompileValEquality(aValue, bValue)) return false;
+    }
     return true;
 }
 

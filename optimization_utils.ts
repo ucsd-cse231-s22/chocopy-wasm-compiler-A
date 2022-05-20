@@ -79,10 +79,11 @@ export function checkExprEquality(a: Expr<any>, b: Expr<any>): boolean{
         case "call":
             if (b.tag !== "call") throw new Error(`Compiler Error!`); //Will never be executed, sanity check
             if (a.name !== b.name || a.arguments.length !== b.arguments.length) return false;
-            a.arguments.forEach((argA, index) => {
-                var argB = b.arguments[index];
+            for (let index = 0; index < a.arguments.length; index++){
+                const argA = a.arguments[index];
+                const argB = b.arguments[index];
                 if (!checkValueEquality(argA, argB)) return false;
-            });
+            }
             return true;
         case "alloc":
             if (b.tag !== "alloc") throw new Error(`Compiler Error!`); //Will never be executed, sanity check
