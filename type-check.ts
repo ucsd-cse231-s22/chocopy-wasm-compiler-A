@@ -248,8 +248,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Minus:
         case BinOp.Mul:
         case BinOp.IDiv:
+          if ((equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) || (equalType(tLeft.a, FLOAT) && equalType(tRight.a, FLOAT))) { return { a: tRight.a, ...tBin } }
+          else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Mod:
-          if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
+          if ((equalType(tLeft.a, NUM) && equalType(tRight.a, NUM))) { return { a: NUM, ...tBin } }
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
         case BinOp.Neq:
@@ -260,7 +262,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Gte:
         case BinOp.Lt:
         case BinOp.Gt:
-          if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: BOOL, ...tBin} ; }
+          if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM) || (equalType(tLeft.a, FLOAT) && equalType(tRight.a, FLOAT))) { return {a: BOOL, ...tBin} ; }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op) }
         case BinOp.And:
         case BinOp.Or:
@@ -276,7 +278,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       const tUni = {...expr, a: tExpr.a, expr: tExpr}
       switch(expr.op) {
         case UniOp.Neg:
-          if(equalType(tExpr.a, NUM)) { return tUni }
+          if(equalType(tExpr.a, NUM) || equalType(tExpr.a, FLOAT)) { return tUni }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op);}
         case UniOp.Not:
           if(equalType(tExpr.a, BOOL)) { return tUni }

@@ -130,6 +130,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
     (func $print_newline (import "imports" "print_newline") (param i32) (result i32))
     (func $print_ellipsis (import "imports" "print_ellipsis") (param i32) (result i32))
+    (func $print_float (import "imports" "print_float") (param f32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $int (import "imports" "abs") (param i32) (result i32))
     (func $bool (import "imports" "abs") (param i32) (result i32))

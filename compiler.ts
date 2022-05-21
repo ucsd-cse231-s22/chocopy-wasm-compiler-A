@@ -345,8 +345,11 @@ function codeGenBinOp(op : BinOp,tp:Type) : string {
 }
 
 function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
-  const value = codeGenValue(init.value, env);
+  var value = codeGenValue(init.value, env);
   // if (env.locals.has(init.name) || env.localfloats.has(init.name)) {
+  if (init.type.tag ==="float" && init.value.tag==="none"){
+    value.push(`(f32.reinterpret_i32)`)
+  }
   if (env.locals.has(init.name)) {
       return [...value, `(local.set $${init.name})`]; 
   } else {
