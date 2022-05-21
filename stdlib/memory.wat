@@ -70,5 +70,38 @@
 
     (func (export "get_Length") (param $addr1 i32) (param $addr2 i32) (result i32)
   (i32.add (i32.load (local.get $addr1)) (i32.load (local.get $addr2)))
-\  )
+  )
+
+  (func (export "str_comparison") (param $addr1 i32) (param $addr2 i32) (result i32)
+    (local $len1 i32)
+    (local $len2 i32)
+    (local $i i32)
+    (local $str1 i32)
+    (local $str2 i32)
+    (local $$res i32)
+    (local.set $len1 (i32.load (local.get $addr1)))
+    (local.set $len2 (i32.load (local.get $addr2)))
+    (local.set $i (i32.const 1))
+
+    (local.set $$res (i32.const 0))
+    
+    (i32.eq (local.get $len1) (local.get $len2))
+    (if
+      (then
+        (loop $my_loop
+        (i32.load (i32.add (local.get $addr1) (i32.mul (local.get $i) (i32.const 4))))
+        (i32.load (i32.add (local.get $addr2) (i32.mul (local.get $i) (i32.const 4))))
+        (i32.eq)
+        (if (then) (else (local.get $$res) (return)))
+        (local.set $i (i32.add (local.get $i) (i32.const 1)))
+        (local.get $i)
+        (local.get $len1)
+        (i32.lt_s)
+        br_if $my_loop 
+        )
+        (local.set $$res (i32.const 1))
+      )
+    )
+    (local.get $$res)
+  )
 )

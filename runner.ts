@@ -129,6 +129,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $read_str (import "libmemory" "read_str") (param i32) (result i32))
     (func $get_Length (import "libmemory" "get_Length") (param i32) (param i32) (result i32))
     (func $duplicate_str (import "libmemory" "duplicate_str") (param i32) (param i32))
+    (func $str_comparison (import "libmemory" "str_comparison") (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}

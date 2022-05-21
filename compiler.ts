@@ -153,6 +153,10 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+    case "str_compare":
+      const str_lhsStmts = codeGenValue(expr.left, env);
+      const str_rhsStmts = codeGenValue(expr.right, env);
+      return [...str_lhsStmts, ...str_rhsStmts, `(call $str_comparison)`, `(i32.const 1)`, `(i32.eq)` ]
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
