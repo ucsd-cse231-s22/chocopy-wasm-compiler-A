@@ -56,8 +56,7 @@ function webStart() {
     const memoryModule = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()
     ).then(bytes => 
-      WebAssembly.instantiate(bytes, { js: { mem: memory }, imports: {print_str: (arg: number) => print(STRING, arg),
-        print_num: (arg: number) => print(NUM, arg)} })
+      WebAssembly.instantiate(bytes, { js: { mem: memory }, imports: {print_str: (arg: number) => print(STRING, arg)} })
     );
 
     var importObject = {
@@ -90,7 +89,7 @@ function webStart() {
           elt.innerHTML = (result.value) ? "True" : "False";
           break;
         case "str":
-          elt.innerText = result.value;
+          elt.innerText = result.value[0];
           break
         case "object":
           elt.innerHTML = `<${result.name} object at ${result.address}`

@@ -252,7 +252,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Mod:
           if(equalType(tLeft.a, STRING) && equalType(tRight.a, STRING)){
             if (tLeft.tag == "literal" && tLeft.value.tag == "str" && tRight.tag == "literal" && tRight.value.tag == "str"){
-              tLeft.value.value = String(tLeft.value.value + tRight.value.value);
+
+              tLeft.value.value = [...tLeft.value.value, ...tRight.value.value]
               return{...tLeft, a:tcLiteral(tLeft.value)};
             }else{
               // string concatenation is not a simple BinOp

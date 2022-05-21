@@ -74,8 +74,9 @@ function lowerStringInits(init: AST.VarInit<Type>,blocks: Array<IR.BasicBlock<Ty
       offset: {tag:"wasmint", value: 0},
       value: {a:NUM , tag:"wasmint", value:strLength}
     });
+    const strArr = parseString(v.value)
     for (var i=1; i<=strLength;i++){
-      const ascii = v.value.charCodeAt(i-1);
+      const ascii = strArr[i-1]
       assigns_string.push({
         tag: "store",
         start: {tag: "id", name: init.name},
@@ -474,8 +475,9 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
             offset: {tag:"wasmint", value: 0},
             value: {a:NUM , tag:"wasmint", value:strLength}
           });
+          const strArr = parseString(v.value)
           for (var i=1; i<=strLength;i++){
-            const ascii = v.value.charCodeAt(i-1);
+            const ascii = strArr[i-1]
             newassigns.push({
               tag: "store",
               start: {tag: "id", name: newStrName1},
@@ -551,8 +553,9 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           offset: {tag:"wasmint", value: 0},
           value: {a:NUM , tag:"wasmint", value:strLength}
         });
+        const strArr = parseString(v.value)
         for (var i=1; i<=strLength;i++){
-          const ascii = v.value.charCodeAt(i-1);
+          const ascii = strArr[i-1]
           assigns_string.push({
             tag: "store",
             start: {tag: "id", name: newStrName},
@@ -598,4 +601,31 @@ function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarIn
 
 function pushStmtsToLastBlock(blocks: Array<IR.BasicBlock<Type>>, ...stmts: Array<IR.Stmt<Type>>) {
   blocks[blocks.length - 1].stmts.push(...stmts);
+}
+
+function parseString(strArr: string[]) : number[] {
+  let res: number[] = []
+  for(var i = 0; i < strArr.length; i++) {
+    const curString = strArr[i]
+    if (curString.length == 1) {
+      res.push(curString.charCodeAt(0))
+    }
+    else {
+      switch (curString){
+        case "\\t":
+          res.push(9)
+          break
+        case "\\n":
+          res.push(10)
+          break
+        case "\\\\":
+          res.push(92)
+          break
+        case '\\"':
+          res.push(34)
+          break
+      }
+    }
+  }
+  return res
 }
