@@ -328,8 +328,8 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         source: rval,
         dest: {  a: STRING, tag: "id", name: Randomname }
       });
-      return [initsArray,
-        strConcatstmts,
+      return [[...initsArray,...linits,...rinits],
+        [...lstmts,...rstmts,...strConcatstmts],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newIndexStrName }}];
     case "binop":
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
