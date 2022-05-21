@@ -53,6 +53,15 @@ Because list comprehension expression is parsed as `ArrayComprehensionExpression
 
 ## Destructuring assignment
 
+This team will be using some parts of lists. For example, they want to treat lists as possible values in their approach and have the compiler "intelligently" know the destructured value corresponds to a list.
+
+Example Scenario:
+```
+(a, b, c) = 1, 2, [1,3]
+```
+
+In order for such scenarios to work, their code must know where to look up the list memory address and how to handle the representation of lists in memory. It may require some work with the memory management team so it will be easier to write and understand what values are at what addresses when they look things up.
+
 ## Error Reporting
 
 ## Fancy calling conventions
