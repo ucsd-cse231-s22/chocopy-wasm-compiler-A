@@ -88,6 +88,7 @@
     (i32.eq (local.get $len1) (local.get $len2))
     (if
       (then
+        (local.set $len1 (i32.add (local.get $len1) (i32.const 1)))
         (loop $my_loop
         (i32.load (i32.add (local.get $addr1) (i32.mul (local.get $i) (i32.const 4))))
         (i32.load (i32.add (local.get $addr2) (i32.mul (local.get $i) (i32.const 4))))
