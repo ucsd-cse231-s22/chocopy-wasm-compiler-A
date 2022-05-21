@@ -18,6 +18,9 @@ function stringify(typ: Type, arg: any): string {
 
 function print(typ: Type, arg: any): any {
   importObject.output += stringify(typ, arg);
+  if (typ != Type.String) {
+    importObject.output += "\n";
+  }
   return arg;
 }
 
