@@ -70,6 +70,5 @@
 
     (func (export "get_Length") (param $addr1 i32) (param $addr2 i32) (result i32)
   (i32.add (i32.load (local.get $addr1)) (i32.load (local.get $addr2)))
-  call $print_num
-  )
+\  )
 )
