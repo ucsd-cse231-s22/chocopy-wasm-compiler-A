@@ -8,11 +8,30 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   switch(c.type.name) {
     case "String":
       const str_ = s.substring(c.from+1,c.to-1);
-
+      let charArr = []
+      for (let i = 0; i < str_.length; i++) {
+        if (str_[i] != "\\"){
+          charArr.push(str_[i])
+        }
+        else {
+          i += 1
+          if (i == str_.length-1) {
+            throw new Error("Token Unrecognized" + "\\")
+          }
+          else if (str_[i] != "t" && str_[i] != "n" && str_[i] != "\\" && str_[i] != "\"") {
+            throw new Error("Token Unrecognized" + "\\" + str_[i])
+          }
+          else {
+            charArr.push(str_[i-1] + str_[i])
+            console.log("push")
+            console.log(charArr[charArr.length-1])
+          }
+        }
+      }
       return{
         tag: "str",
-        value: str_,
-        length: str_.length
+        value: charArr,
+        length: charArr.length
       }
     case "Number":
       return {

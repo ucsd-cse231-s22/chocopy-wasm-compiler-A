@@ -90,7 +90,7 @@ function webStart() {
           elt.innerHTML = (result.value) ? "True" : "False";
           break;
         case "str":
-          elt.innerText = result.value;
+          elt.innerText = result.value[0];
           break
         case "object":
           elt.innerHTML = `<${result.name} object at ${result.address}`
