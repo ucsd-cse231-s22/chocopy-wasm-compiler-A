@@ -298,7 +298,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
 
       strConcatstmts.push({ tag: "assign", name: newIndexStrName, value: alloc_index_string_length });
       //TODO: store the length of A + B into the newIndexStrName
-      const getLength: IR.Expr<Type>  = {  a:STRING, tag: "getLength", addr1: load_left_length, addr2:load_right_length};
+      const getLength: IR.Expr<Type>  = {  a:STRING, tag: "getLength", addr1: lval, addr2:rval};
       strConcatstmts.push({
         tag: "store_str",
         start: {tag: "id", name: newIndexStrName},

@@ -32,7 +32,7 @@ export type Expr<A> =
   | {  a?: A, tag: "alloc", amount: Value<A> }
   | {  a?: A, tag: "load", start: Value<A>, offset: Value<A> }
   | {  a?: A, tag: "alloc_expr", amount: Expr<A> }
-  | {  a?: A, tag: "getLength", addr1: Expr<A>, addr2:Expr<A>}
+  | {  a?: A, tag: "getLength", addr1: Value<A>, addr2:Value<A>}
 export type Value<A> = 
     { a?: A, tag: "num", value: bigint }
   | { a?: A, tag: "str", value: string }

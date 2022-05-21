@@ -192,8 +192,8 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
     case "getLength":
-      const addr1 = codeGenExpr(expr.addr1,env);
-      const addr2 = codeGenExpr(expr.addr2,env);
+      const addr1 = codeGenValue(expr.addr1,env);
+      const addr2 = codeGenValue(expr.addr2,env);
       return [...addr1,
         ...addr2,
         `call $get_Length`

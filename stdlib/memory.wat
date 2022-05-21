@@ -1,5 +1,6 @@
 (module
   (memory (import "js" "mem") 1)
+    (func $print_num (import "imports" "print_num") (param i32) (result i32))
   (func $print_str (import "imports" "print_str") (param i32) (result i32))
   (global $heap (mut i32) (i32.const 4))
 
@@ -69,5 +70,6 @@
 
     (func (export "get_Length") (param $addr1 i32) (param $addr2 i32) (result i32)
   (i32.add (i32.load (local.get $addr1)) (i32.load (local.get $addr2)))
+  call $print_num
   )
 )
