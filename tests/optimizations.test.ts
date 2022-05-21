@@ -266,20 +266,6 @@ describe("Optimizations tests", () => {
                 "label": "$else1",
                 "stmts": [
                   {
-                    "a": {
-                      "tag": "none"
-                    },
-                    "tag": "assign",
-                    "name": "a",
-                    "value": {
-                      "tag": "value",
-                      "value": {
-                        "tag": "num",
-                        "value": 15n
-                      }
-                    }
-                  },
-                  {
                     "tag": "jmp",
                     "lbl": "$end1"
                   }
@@ -314,21 +300,172 @@ describe("Optimizations tests", () => {
           }
     );
 
-        // a: int = 16
-        // b:int=0
-        // if(10 > 11):
-        //     a = 15
-        // b = a + 5
-    assertOptimize(
+    assertOptimizeIR(
         "IR-if-else-notpropagate", 
         `
-        a: int = 15
+        a: int = 16
         b:int = 0
         if(10 > 11):
             a = 15
         b = a + 5
         `,
-        { print: ["0","12"], isIrDifferent: true }
+        {
+            "a": {
+              "tag": "none"
+            },
+            "funs": [],
+            "inits": [
+              {
+                "a": {
+                  "tag": "bool"
+                },
+                "name": "valname5",
+                "type": {
+                  "tag": "bool"
+                },
+                "value": {
+                  "tag": "none"
+                }
+              },
+              {
+                "name": "a",
+                "type": {
+                  "tag": "number"
+                },
+                "value": {
+                  "tag": "num",
+                  "value": 16n
+                },
+                "a": {
+                  "tag": "none"
+                }
+              },
+              {
+                "name": "b",
+                "type": {
+                  "tag": "number"
+                },
+                "value": {
+                  "tag": "num",
+                  "value": 0n
+                },
+                "a": {
+                  "tag": "none"
+                }
+              }
+            ],
+            "classes": [],
+            "body": [
+              {
+                "a": {
+                  "tag": "none"
+                },
+                "label": "$startProg3",
+                "stmts": [
+                  {
+                    "tag": "assign",
+                    "a": {
+                      "tag": "bool"
+                    },
+                    "name": "valname5",
+                    "value": {
+                      "a": {
+                        "tag": "bool"
+                      },
+                      "tag": "value",
+                      "value": {
+                        "tag":"bool",
+                        "value":false
+                      }
+                    }
+                  },
+                  {
+                    "tag": "ifjmp",
+                    "cond": {
+                      "tag": "bool",
+                      "value": false,
+                      "a": {
+                        "tag": "bool"
+                      }
+                    },
+                    "thn": "$then2",
+                    "els": "$else2"
+                  }
+                ]
+              },
+              {
+                "a": {
+                  "tag": "none"
+                },
+                "label": "$then2",
+                "stmts": [
+                  {
+                    "a": {
+                      "tag": "none"
+                    },
+                    "tag": "assign",
+                    "name": "a",
+                    "value": {
+                      "tag": "value",
+                      "value": {
+                        "tag": "num",
+                        "value": 15n
+                      }
+                    }
+                  },
+                  {
+                    "tag": "jmp",
+                    "lbl": "$end2"
+                  }
+                ]
+              },
+              {
+                "a": {
+                  "tag": "none"
+                },
+                "label": "$else2",
+                "stmts": [
+                  {
+                    "tag": "jmp",
+                    "lbl": "$end2"
+                  }
+                ]
+              },
+              {
+                "a": {
+                  "tag": "none"
+                },
+                "label": "$end2",
+                "stmts": [
+                  {
+                    "a": {
+                      "tag": "none"
+                    },
+                    "tag": "assign",
+                    "name": "b",
+                    "value": {
+                      "a": {
+                        "tag": "number"
+                      },
+                      "tag": "binop",
+                      "op": 0,
+                      "left": {
+                        "a": {
+                          "tag": "number"
+                        },
+                        "tag": "id",
+                        "name": "a"
+                      },
+                      "right": {
+                        "tag": "num",
+                        "value": 5n
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
     );
 
     assertOptimize(
