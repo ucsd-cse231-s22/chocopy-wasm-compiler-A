@@ -65,7 +65,6 @@ export function binop_bignum(args: number[], builtin: Function, libmem: WebAssem
     rslt = builtin(load_bignum(args[0], load), load_bignum(args[1], load));
   else
     throw new Error("Runtime Error: too many arguments for builtin functions");
-  console.log("binop result:", rslt)
   return save_bignum(rslt, libmem);
 }
 
@@ -77,15 +76,12 @@ export function binop_comp_bignum(args: number[], builtin: Function, libmem: Web
     rslt = builtin(load_bignum(args[0], load), load_bignum(args[1], load));
   else
     throw new Error("Runtime Error: too many arguments for builtin functions");
-  console.log("binop comp result:", rslt)
   return Number(rslt);
 }
 
 export function load_bignum(addr: number, loader: WebAssembly.ExportValue): bigint {
   const load = loader as CallableFunction;
-  console.log("load bignum addr"+addr)
   const numlength = load(addr, 0);
-  console.log("load bignum len"+numlength)
   var bignum : bigint = BigInt(0);
   for (let i = Math.abs(numlength); i > 0; i--) {
     bignum <<= BigInt(31);
@@ -93,12 +89,12 @@ export function load_bignum(addr: number, loader: WebAssembly.ExportValue): bigi
   }
   if (numlength < 0)
     bignum *= BigInt(-1);
-  console.log(bignum);
   return bignum;
 }
 
 export function alloc_bignum(numlength: number, allocator: WebAssembly.ExportValue): number {
   const alloc = allocator as CallableFunction;
+  // allocate one extra space for metadata (length)
   return alloc(Math.abs(numlength)+1);
 }
 

@@ -139,16 +139,13 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
-      if (expr.op == BinOp.Is || expr.op == BinOp.And || expr.op == BinOp.Or) {
-        return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
-      }
-      const callStmts = codeGenBinOp(expr.op);
-      return [...lhsStmts, ...rhsStmts, callStmts]
+      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)];
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
       switch(expr.op){
         case UniOp.Neg:
+          // negate bignum length to indicate sign change
           return [
             ...exprStmts,
             `(local.set $$scratch)`, // bignum addr
