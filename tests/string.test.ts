@@ -18,7 +18,6 @@ describe("String tests", () => {
   assertPrint("Print-String-4",`
   print("ab\\\\cd")`,['ab\\cd']) 
 
-
   assertPrint("Print-String-Fun",`
   def get()->str:
     s:str = "abc"

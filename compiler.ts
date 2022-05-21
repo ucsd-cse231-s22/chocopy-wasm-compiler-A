@@ -42,7 +42,7 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
-  console.log(ast.inits, globalNames);
+  //console.log(ast.inits, globalNames);
   const funs : Array<string> = [];
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
@@ -183,7 +183,7 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         argStmts = argStmts.concat(['(i32.const 0)'])
         callName = "load"
       }
-      console.log(argStmts)
+      //console.log(argStmts)
       return argStmts.concat([`(call $${callName})`]);
 
     case "builtin2":
