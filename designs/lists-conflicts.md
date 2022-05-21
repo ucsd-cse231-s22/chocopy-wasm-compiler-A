@@ -214,7 +214,7 @@ The example above uses lists and inheritance, but there is no new features neede
 
 The memory management group had a very general design that should work for any pieces of data stored on the memory. They track the number of references for each varaiables on the heap and perform defragmentation when necessary. If implemented fully and correctly, our lists should be fully managed by the memomry module.
 
-Example Cases:
+Example Scenario:
 ```
 a:[int] = None
 a = [1,2,3]
@@ -255,6 +255,7 @@ s = {1,2,5,7}
 a[0] = s
 print(len(a[0]))
 ```
+Expected Output: 4
 
 ## Strings
 
@@ -265,7 +266,8 @@ Example Cases:
 a:str = None
 ss: [str] = None
 a = "abcd"
-ss = [a, "defg]
+ss = [a, "defg"]
 print(ss[0])
 print(ss[1])
 ```
+Expected Output: 'abcd', 'defg'
