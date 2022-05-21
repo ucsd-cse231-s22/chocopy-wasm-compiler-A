@@ -20,6 +20,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "jmp", lbl: string }
   | { a?: A, tag: "store", start: Value<A>, offset: Value<A>, value: Value<A> } // start should be an id
   | { a?: A, tag: "store_str", start: Value<A>, offset: Value<A>, value: Expr<A> } // start should be an id
+  | { a?: A, tag: "duplicate_str", source: Value<A>, dest: Value<A>}//duplicate the source string into the destination address
   
 export type Expr<A> =
   | {  a?: A, tag: "value", value: Value<A> }
@@ -30,8 +31,8 @@ export type Expr<A> =
   | {  a?: A, tag: "call", name: string, arguments: Array<Value<A>> }
   | {  a?: A, tag: "alloc", amount: Value<A> }
   | {  a?: A, tag: "load", start: Value<A>, offset: Value<A> }
-  | {  a?: A, tag: "add", left: Value<A>, right: Value<A>}
-
+  | {  a?: A, tag: "alloc_expr", amount: Expr<A> }
+  | {  a?: A, tag: "getLength", addr1: Value<A>, addr2:Value<A>}
 export type Value<A> = 
     { a?: A, tag: "num", value: bigint }
   | { a?: A, tag: "str", value: string }

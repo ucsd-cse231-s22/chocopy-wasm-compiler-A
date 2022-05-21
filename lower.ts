@@ -275,7 +275,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "str-concat":
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
-      //load the length of left
+      //load the legnth of left
       const load_left_length: IR.Expr<Type> = {
         tag: "load",
         start: lval,
@@ -292,24 +292,45 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const newIndexStrName = generateName("newStr");
       const Randomname = generateName("Random");
       var initsArray: Array<IR.VarInit<Type>> = [];
-      var strConcatstmts: IR.Stmt<AST.Type>[] = []
+      var strConcatstmts: IR.Stmt<AST.Type>[] = [];
       initsArray.push({ name: newIndexStrName, type: STRING, value: { tag: "none" } });
       initsArray.push({ name: Randomname, type: STRING, value: { tag: "none" } });
-      //const lengthSum : IR.Expr<Type> = {tag: "add", left: load_left_length, right: load_right_length}
+
       strConcatstmts.push({ tag: "assign", name: newIndexStrName, value: alloc_index_string_length });
       //TODO: store the length of A + B into the newIndexStrName
-      strConcatstmts.push({ a: e.a, tag: "store", start: { tag: "id", name: newIndexStrName, a: e.a}, offset: {tag: "wasmint", value: 0, a: NUM}, value: {tag: "wasmint", value: 0, a: NUM}})
+      const getLength: IR.Expr<Type>  = {  a:STRING, tag: "getLength", addr1: lval, addr2:rval};
+      strConcatstmts.push({
+        tag: "store_str",
+        start: {tag: "id", name: newIndexStrName},
+        offset: {tag:"wasmint", value: 0},
+        value: getLength
+      });
 
-      strConcatstmts.push({ tag: "assign", name: Randomname, value: load_left_length });
+      const alloc_left_string : IR.Expr<Type> = { tag: "alloc_expr", amount: load_left_length };
+      const alloc_right_string : IR.Expr<Type> = { tag: "alloc_expr", amount: load_right_length };
+
+      //we need to alloc lengthA to randomname
+      strConcatstmts.push({ tag: "assign", name: Randomname, value: alloc_left_string });
       //TODO: store each character of A into the Randomname
-
-      strConcatstmts.push({ tag: "assign", name: Randomname, value: load_right_length });
+      strConcatstmts.push({
+        a: STRING,
+        tag: "duplicate_str",
+        source: lval,
+        dest: {  a: STRING, tag: "id", name: Randomname }
+      });
+      
+      //we need to alloc lengthB to randomname
+      strConcatstmts.push({ tag: "assign", name: Randomname, value: alloc_right_string });
       //TODO: store each character of B into the Randomname
-
-      //TODO: return [initsArray,strConcatstmts,{ a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName }]
-      return [initsArray,strConcatstmts,{
-        a: e.a, tag: "value", value: { a: e.a, tag: "id", name: Randomname }}];
-
+      strConcatstmts.push({
+        a: STRING,
+        tag: "duplicate_str",
+        source: rval,
+        dest: {  a: STRING, tag: "id", name: Randomname }
+      });
+      return [[...initsArray,...linits,...rinits],
+        [...lstmts,...rstmts,...strConcatstmts],
+        { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newIndexStrName }}];
     case "binop":
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);

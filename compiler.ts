@@ -95,6 +95,12 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
         ...codeGenExpr(stmt.value, env),
         `call $store`
       ]
+    case "duplicate_str":
+      return [
+        ...codeGenValue(stmt.source, env),
+        ...codeGenValue(stmt.dest, env),
+        `call $duplicate_str`
+      ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
       if (env.locals.has(stmt.name)) {
@@ -185,10 +191,21 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
-
+    case "getLength":
+      const addr1 = codeGenValue(expr.addr1,env);
+      const addr2 = codeGenValue(expr.addr2,env);
+      return [...addr1,
+        ...addr2,
+        `call $get_Length`
+      ];
     case "alloc":
       return [
         ...codeGenValue(expr.amount, env),
+        `call $alloc`
+      ];
+    case "alloc_expr":
+      return [
+        ...codeGenExpr(expr.amount, env),
         `call $alloc`
       ];
     case "load":
