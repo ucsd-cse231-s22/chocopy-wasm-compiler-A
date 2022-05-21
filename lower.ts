@@ -74,10 +74,14 @@ function literalToVal(lit: AST.Literal) : IR.Value<Type> {
     switch(lit.tag) {
         case "num":
             return { ...lit, value: BigInt(lit.value) }
+        case "float":
+            return lit
         case "bool":
             return lit
         case "none":
-            return lit        
+            return lit   
+        case "...":
+            return lit     
     }
 }
 
@@ -91,6 +95,9 @@ function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Typ
 
 function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
   switch(s.tag) {
+    case "import":
+      // TODO(rongyi): bypass import lowering
+      return [];
     case "assign":
       var [valinits, valstmts, vale] = flattenExprToExpr(s.value, env);
       blocks[blocks.length - 1].stmts.push(...valstmts, { a: s.a, tag: "assign", name: s.name, value: vale});
@@ -223,6 +230,15 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           left: lval,
           right: rval
         }];
+    case "builtinarb":
+      
+      // var [inits, stmts, args] = flattenExprToVal(e.args, env);
+      const argpairs = e.args.map(a => flattenExprToVal(a, env));
+      const arginits = argpairs.map(cp => cp[0]).flat();
+      const argstmts = argpairs.map(cp => cp[1]).flat();
+      const argvals = argpairs.map(cp => cp[2]).flat();
+
+      return [arginits, argstmts, { tag: "builtinarb", a: e.a, name: e.name, args: argvals }];
     case "call":
       const callpairs = e.arguments.map(a => flattenExprToVal(a, env));
       const callinits = callpairs.map(cp => cp[0]).flat();
@@ -286,9 +302,16 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
       ];
     case "id":
+      if (e.a.tag === "float") {
+        var newNameFloat = generateName("valname");
+        return [[], [], {
+          tag: "load",
+          start: {tag: "id", name: newNameFloat, a: e.a},
+          offset: { tag: "wasmint", value: 4 }}];
+      }
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
-      return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+      return [[], [], {tag: "value", value: {a:e.a, ...literalToVal(e.value)} }];
   }
 }
 
