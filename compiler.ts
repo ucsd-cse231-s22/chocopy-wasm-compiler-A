@@ -5,27 +5,22 @@ import { errorMonitor } from "events";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  globalfloats: Map<string, boolean>;
   classes: Map<string, Map<string, [number, Value<Type>]>>;  
   locals: Set<string>;
-  localfloats: Set<string>;
   labels: Array<string>;
   offset: number;
 }
 
 export const emptyEnv : GlobalEnv = { 
   globals: new Map(), 
-  globalfloats: new Map(),
   classes: new Map(),
   locals: new Set(),
-  localfloats: new Set(),
   labels: [],
   offset: 0 
 };
 
 type CompileResult = {
   globals: string[],
-  globalfloats: string[],
   functions: string,
   mainSource: string,
   newEnv: GlobalEnv
@@ -39,33 +34,20 @@ export function makeLocals(locals: Set<string>) : Array<string> {
   return localDefines;
 }
 
-export function makeLocalFloatss(localfloats: Set<string>) : Array<string> {
-  const localfloatDefines : Array<string> = [];
-  localfloats.forEach(v => {
-    localfloatDefines.push(`(local $${v} f32)`);
-  });
-  return localfloatDefines;
-}
-
 export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
 
   const definedVars : Set<string> = new Set(); //getLocals(ast);
-  const definedfloatVars : Set<string> = new Set();
   definedVars.add("$last");
   definedVars.add("$selector");
+  definedVars.add("$scratch");
   definedVars.forEach(env.locals.add, env.locals);
-  definedfloatVars.add("$flast");
-  definedfloatVars.forEach(env.localfloats.add, env.localfloats);
   const localDefines = makeLocals(definedVars);
-  const localfloatDefines = makeLocalFloatss(definedfloatVars);
   const globalNames : string[] = [];
-  const globalfloatNames : string[] = [];
   ast.inits.forEach(init => {
-    if (init.type.tag === "float") {globalfloatNames.push(init.name);}
-    else {globalNames.push(init.name);}
+    globalNames.push(init.name);
   })
-  console.log(ast.inits, globalNames, globalfloatNames);
+  console.log(ast.inits, globalNames);
   const funs : Array<string> = [];
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
@@ -91,12 +73,10 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   bodyCommands += ") ;; end $loop"
 
   // const commandGroups = ast.stmts.map((stmt) => codeGenStmt(stmt, withDefines));
-  const allCommands = [...localDefines, ...localfloatDefines, ...inits, bodyCommands];
+  const allCommands = [...localDefines, ...inits, bodyCommands]; 
   withDefines.locals.clear();
-  withDefines.localfloats.clear()
   return {
     globals: globalNames,
-    globalfloats: globalfloatNames,
     functions: allFuns,
     mainSource: allCommands.join("\n"),
     newEnv: withDefines
@@ -114,7 +94,7 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
-      if (env.locals.has(stmt.name) || env.localfloats.has(stmt.name)) {
+      if (env.locals.has(stmt.name)) {
         return valStmts.concat([`(local.set $${stmt.name})`]); 
       } else {
         return valStmts.concat([`(global.set $${stmt.name})`]); 
@@ -127,7 +107,6 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
 
     case "expr":
       var exprStmts = codeGenExpr(stmt.expr, env);
-      if (stmt.a === FLOAT) {return exprStmts.concat([`(local.set $$flast)`])}
       return exprStmts.concat([`(local.set $$last)`]);
 
     case "pass":
@@ -271,7 +250,25 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
     case "wasmint":
       return ["(i32.const " + val.value + ")"];
     case "float":
-      return ["(f32.const " + val.value + ")"];
+      const returnVal : string[] = [];
+      returnVal.push(`(i32.const 4)`);
+      returnVal.push(`(call $alloc)`);
+      returnVal.push(`(local.set $$scratch)`);
+      if (val.value === Infinity){
+        returnVal.push(`(local.get $$scratch)`);
+        returnVal.push(`(i32.const 0)`)
+        returnVal.push(`(f32.const inf)`);
+        returnVal.push(`(call $store_float)`);
+      }
+      else {
+        returnVal.push(`(local.get $$scratch)`);
+        returnVal.push(`(i32.const 0)`)
+        returnVal.push("(f32.const " + val.value + ")");
+        returnVal.push(`(call $store_float)`);
+      }
+      returnVal.push(`(local.get $$scratch)`);
+      return returnVal;
+    //   return ["(f32.const " + val.value + ")"];
     case "bool":
       return [`(i32.const ${Number(val.value)})`];
     case "none":
@@ -279,7 +276,7 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
     case "...":
       return [`(i32.const 0)`];
     case "id":
-      if (env.locals.has(val.name) || env.localfloats.has(val.name)) {
+      if (env.locals.has(val.name)) {
         return [`(local.get $${val.name})`];
       } else {
         return [`(global.get $${val.name})`];
@@ -322,7 +319,7 @@ function codeGenBinOp(op : BinOp) : string {
 
 function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
   const value = codeGenValue(init.value, env);
-  if (env.locals.has(init.name) || env.localfloats.has(init.name)) {
+  if (env.locals.has(init.name)) {
     return [...value, `(local.set $${init.name})`]; 
   } else {
     return [...value, `(global.set $${init.name})`]; 
@@ -334,6 +331,7 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
   def.inits.forEach(v => definedVars.add(v.name));
   definedVars.add("$last");
   definedVars.add("$selector");
+  definedVars.add("$scratch"); // for memory allocation
   // def.parameters.forEach(p => definedVars.delete(p.name));
   definedVars.forEach(env.locals.add, env.locals);
   def.parameters.forEach(p => env.locals.add(p.name));

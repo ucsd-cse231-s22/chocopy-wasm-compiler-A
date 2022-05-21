@@ -413,6 +413,7 @@ export function tcLiteral(literal : Literal) {
         case "bool": return BOOL;
         case "num": return NUM;
         case "float": return FLOAT;
+        // TODO: check import of inf if necessary
         case "none": return NONE;
         case "...": return ELLIPSIS;
     }

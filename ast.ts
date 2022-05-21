@@ -47,7 +47,7 @@ export type Expr<A> =
 
 export type Literal = 
     { tag: "num", value: number }
-  | { tag: "float", value: number}
+  | { tag: "float", value: number, import?: string} // use inf for typechecking imports of math or inf (from math import inf)
   | { tag: "bool", value: boolean }
   | { tag: "none" }
   | { tag: "..." }
