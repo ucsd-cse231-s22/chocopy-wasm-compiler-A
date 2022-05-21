@@ -335,9 +335,15 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "binop":
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
-
-
-
+      if (lval.tag == "id") {
+        if (lval.a.tag == "str" && rval.a.tag == "str") {
+          return [[...linits, ...rinits], [...lstmts, ...rstmts], {
+            tag: "str_compare",
+            left: lval,
+            right: rval
+          }];
+        }
+      }
 
       return [[...linits, ...rinits], [...lstmts, ...rstmts], {
           ...e,
