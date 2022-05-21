@@ -3,12 +3,19 @@ import { TreeCursor} from "lezer-tree";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
 import { NUM, FLOAT, BOOL, NONE, ELLIPSIS, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
+import { isFloat32Array } from "util/types";
+
+export function isFloat(n : string) : boolean {
+  // not considering bignum here, only consider 32-bit float
+  const floatChars = /[.e]/;
+  return floatChars.test(n);
+}
 
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   switch(c.type.name) {
     case "Number":
       const tonum = Number(s.substring(c.from, c.to));
-      if (tonum !== Math.floor(tonum)){
+      if (isFloat(s.substring(c.from, c.to))){
         return {
         tag: "float",
         value: tonum
@@ -30,6 +37,37 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
     case "Ellipsis":
       return {
         tag: "..."
+      }
+    case "VariableName": // x : float = inf
+      if (s.substring(c.from, c.to) === "inf"){
+        return {
+          tag: "float",
+          value: Infinity,
+          import: "inf"
+        }
+      }
+      else { throw new Error("Not literal") }
+      case "MemberExpression": // x : float = inf
+      c.firstChild();
+      if (s.substring(c.from, c.to) === "math"){
+        c.nextSibling(); // focus :
+        c.nextSibling(); 
+        if (s.substring(c.from, c.to) === "inf"){
+          c.parent();
+          return {
+            tag: "float",
+            value: Infinity,
+            import: "math"
+          }
+        }
+        else {
+          c.parent();
+          throw new Error("Not literal")
+        }
+      }
+      else { 
+        c.parent();
+        throw new Error("Not literal") 
       }
     default:
       throw new Error("Not literal")

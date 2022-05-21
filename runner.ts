@@ -45,15 +45,11 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 
 export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
-  const newGlobalfloats = new Map(env.globalfloats);
   const newClasses = new Map(env.classes);
 
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
-    if(v.type.tag === "float"){
-      newGlobalfloats.set(v.name, true);
-    }
-    else {newGlobals.set(v.name, true);}
+    newGlobals.set(v.name, true);
   });
   prog.classes.forEach(cls => {
     const classFields = new Map();
@@ -62,10 +58,8 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   });
   return {
     globals: newGlobals,
-    globalfloats: newGlobalfloats,
     classes: newClasses,
     locals: env.locals,
-    localfloats: env.localfloats,
     labels: env.labels,
     offset: newOffset
   }
@@ -85,31 +79,18 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   // const lastExprTyp = lastExpr.a;
   // console.log("LASTEXPR", lastExpr);
   if(progTyp !== NONE) {
-    if (progTyp === FLOAT){
-      returnType = "(result f32)";
-      returnExpr = "(local.get $$flast)";
-    }
-    else{
-      returnType = "(result i32)";
-      returnExpr = "(local.get $$last)";
-    }
+    returnType = "(result i32)";
+    returnExpr = "(local.get $$last)";
   } 
   let globalsBefore = config.env.globals;
-  let globalfloatsBefore = config.env.globalfloats;
   // const compiled = compiler.compile(tprogram, config.env);
   const compiled = compile(irprogram, globalEnv);
 
   const globalImports = [...globalsBefore.keys()].map(name =>
     `(import "env" "${name}" (global $${name} (mut i32)))`
   ).join("\n");
-  const globalfloatImports = [...globalfloatsBefore.keys()].map(name =>
-    `(import "env" "${name}" (global $${name} (mut f32)))`
-  ).join("\n");
   const globalDecls = compiled.globals.map(name =>
     `(global $${name} (export "${name}") (mut i32) (i32.const 0))`
-  ).join("\n");
-  const globalfloatDecls = compiled.globalfloats.map(name =>
-    `(global $${name} (export "${name}") (mut f32) (f32.const 0.0))`
   ).join("\n");
 
   const importObject = config.importObject;
@@ -134,10 +115,9 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $store_float (import "libmemory" "store_float") (param i32) (param i32) (param f32))
     ${globalImports}
-    ${globalfloatImports}
     ${globalDecls}
-    ${globalfloatDecls}
     ${config.functions}
     ${compiled.functions}
     (func (export "exported_func") ${returnType}
