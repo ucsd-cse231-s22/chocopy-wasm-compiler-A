@@ -12,7 +12,12 @@ function stringify(typ: Type, arg: any): string {
     case Type.None:
       return "None";
     case Type.String:
+      if (arg as number == 256) {
+        return ""
+      }
+      else {
         return String.fromCharCode(arg as number);
+      }
   }
 }
 
