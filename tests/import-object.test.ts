@@ -7,6 +7,8 @@ function stringify(typ: Type, arg: any): string {
   switch (typ) {
     case Type.Num:
       return (arg as number).toString();
+    case Type.FLOAT:
+      return (arg as number).toString();
     case Type.Bool:
       return (arg as boolean) ? "True" : "False";
     case Type.None:
