@@ -135,8 +135,6 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     ${config.functions}
     ${compiled.functions}
     (func (export "exported_func") ${returnType}
-      (local $i i32)
-      (local $length i32)
       ${compiled.mainSource}
       ${returnExpr}
     )
