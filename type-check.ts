@@ -237,7 +237,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
     case "index":
       const typedObj:Expr<Type> = tcExpr(env,locals,expr.obj);
       const typedIdx:Expr<Type> = tcExpr(env,locals,expr.index);
-      return {  a: STRING, tag: "index", obj: typedObj, index: typedIdx };
+      return {  a: typedObj.a, tag: "index", obj: typedObj, index: typedIdx };
     case "literal":
       return {...expr, a: tcLiteral(expr.value)};
     case "binop":
@@ -246,10 +246,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       const tBin = {...expr, left: tLeft, right: tRight};
       switch(expr.op) {
         case BinOp.Plus:
-        case BinOp.Minus:
-        case BinOp.Mul:
-        case BinOp.IDiv:
-        case BinOp.Mod:
           if(equalType(tLeft.a, STRING) && equalType(tRight.a, STRING)){
             if (tLeft.tag == "literal" && tLeft.value.tag == "str" && tRight.tag == "literal" && tRight.value.tag == "str"){
 
@@ -260,6 +256,12 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
               return{a:STRING,tag:"str-concat",left:tLeft,right:tRight};
             }
           }
+          if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
+          else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
+        case BinOp.Minus:
+        case BinOp.Mul:
+        case BinOp.IDiv:
+        case BinOp.Mod:
           if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
