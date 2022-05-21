@@ -15,7 +15,18 @@ class C(object):
     else:
       return`
   source = `
-  print(12)
+  class C(object):
+  x : int = 123
+  def getX(self: C) -> int:
+    return self.x
+  def setX(self: C, x: int):
+    self.x = x
+
+c : C = None
+c = C()
+print(c.getX())
+c.setX(42)
+print(c.getX())
 `;
   console.log(stringifyTree(parser.parse(source).cursor(),source, 0));
   const ast = parse(source);

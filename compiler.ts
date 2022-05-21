@@ -2,70 +2,80 @@ import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp } from "./ast"
 import { BOOL, NONE, ELLIPSIS, NUM, FLOAT } from "./utils";
 import { errorMonitor } from "events";
+import exp from "constants";
 
 export type GlobalEnv = {
-  globals: Map<string, boolean>;
-  globalfloats: Map<string, boolean>;
+  globals: Map<string, [boolean, Type]>;
+  // globalfloats: Map<string, boolean>;
   classes: Map<string, Map<string, [number, Value<Type>]>>;  
-  locals: Set<string>;
-  localfloats: Set<string>;
+  locals: Map<string, Type>;
+  // localfloats: Set<string>;
   labels: Array<string>;
   offset: number;
 }
 
 export const emptyEnv : GlobalEnv = { 
   globals: new Map(), 
-  globalfloats: new Map(),
+  // globalfloats: new Map(),
   classes: new Map(),
-  locals: new Set(),
-  localfloats: new Set(),
+  locals: new Map(),
+  // localfloats: new Set(),
   labels: [],
   offset: 0 
 };
 
 type CompileResult = {
-  globals: string[],
-  globalfloats: string[],
+  globals: Array<[string, Type]>,
+  // globalfloats: string[],
   functions: string,
   mainSource: string,
   newEnv: GlobalEnv
 };
 
-export function makeLocals(locals: Set<string>) : Array<string> {
+export function makeLocals(locals: Map<string, Type>) : Array<string> {
   const localDefines : Array<string> = [];
-  locals.forEach(v => {
-    localDefines.push(`(local $${v} i32)`);
+  locals.forEach((v,k) => {
+    localDefines.push(v.tag!=="float" ? `(local $${k} i32)` : `(local $${k} f32)`);
   });
   return localDefines;
 }
 
-export function makeLocalFloatss(localfloats: Set<string>) : Array<string> {
-  const localfloatDefines : Array<string> = [];
-  localfloats.forEach(v => {
-    localfloatDefines.push(`(local $${v} f32)`);
-  });
-  return localfloatDefines;
-}
+// export function makeLocalFloatss(localfloats: Set<string>) : Array<string> {
+//   const localfloatDefines : Array<string> = [];
+//   localfloats.forEach(v => {
+//     localfloatDefines.push(`(local $${v} f32)`);
+//   });
+//   return localfloatDefines;
+// }
 
 export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
 
-  const definedVars : Set<string> = new Set(); //getLocals(ast);
+  const definedVars : Map<string, Type> = new Map(); //getLocals(ast);
   const definedfloatVars : Set<string> = new Set();
-  definedVars.add("$last");
-  definedVars.add("$selector");
-  definedVars.forEach(env.locals.add, env.locals);
-  definedfloatVars.add("$flast");
-  definedfloatVars.forEach(env.localfloats.add, env.localfloats);
+  definedVars.set("$last", {tag:"number"});
+  definedVars.set("$flast", {tag:"float"});
+  definedVars.set("$selector", {tag:"number"});
+  // definedVars.forEach(env.locals.set, env.locals);
+  definedVars.forEach((v, k) => { env.locals.set(k, v) })
+
+  // definedfloatVars.add("$flast");
+  // definedfloatVars.forEach(env.localfloats.add, env.localfloats);
   const localDefines = makeLocals(definedVars);
-  const localfloatDefines = makeLocalFloatss(definedfloatVars);
-  const globalNames : string[] = [];
-  const globalfloatNames : string[] = [];
+  // const localfloatDefines = makeLocalFloatss(definedfloatVars);
+  const globalNames : Array<[string, Type]> = [];
+  // const globalfloatNames : string[] = [];
   ast.inits.forEach(init => {
-    if (init.type.tag === "float") {globalfloatNames.push(init.name);}
-    else {globalNames.push(init.name);}
+    if (init.type.tag === "float") { 
+      // globalfloatNames.push(init.name);
+      globalNames.push([init.name, init.type])
+    }
+    else { 
+      globalNames.push([init.name, init.type]);
+    }
   })
-  console.log(ast.inits, globalNames, globalfloatNames);
+  // console.log(ast.inits, globalNames, globalfloatNames);
+  console.log(ast.inits, globalNames);
   const funs : Array<string> = [];
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
@@ -91,12 +101,13 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   bodyCommands += ") ;; end $loop"
 
   // const commandGroups = ast.stmts.map((stmt) => codeGenStmt(stmt, withDefines));
-  const allCommands = [...localDefines, ...localfloatDefines, ...inits, bodyCommands];
+  // const allCommands = [...localDefines, ...localfloatDefines, ...inits, bodyCommands];
+  const allCommands = [...localDefines, ...inits, bodyCommands];
   withDefines.locals.clear();
-  withDefines.localfloats.clear()
+  // withDefines.localfloats.clear()
   return {
     globals: globalNames,
-    globalfloats: globalfloatNames,
+    // globalfloats: globalfloatNames,
     functions: allFuns,
     mainSource: allCommands.join("\n"),
     newEnv: withDefines
@@ -114,8 +125,9 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
-      if (env.locals.has(stmt.name) || env.localfloats.has(stmt.name)) {
-        return valStmts.concat([`(local.set $${stmt.name})`]); 
+      // if (env.locals.has(stmt.name) || env.localfloats.has(stmt.name)) {
+      if (env.locals.has(stmt.name)) {
+          return valStmts.concat([`(local.set $${stmt.name})`]); 
       } else {
         return valStmts.concat([`(global.set $${stmt.name})`]); 
       }
@@ -164,13 +176,13 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
-      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op, expr.left.a)]
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
       switch(expr.op){
         case UniOp.Neg:
-          return [`(i32.const 0)`, ...exprStmts, `(i32.sub)`];
+          return expr.expr.a.tag !=="float" ? [`(i32.const 0)`, ...exprStmts, `(i32.sub)`] : [`(f32.const 0)`, ...exprStmts, `(f32.sub)`];
         case UniOp.Not:
           return [`(i32.const 0)`, ...exprStmts, `(i32.eq)`];
       }
@@ -209,33 +221,44 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       
       
       if (expr.name=== "print"){
-        argsStmts = argsStmts.concat([`(i32.const 0)`]);
+        // argsStmts = argsStmts.concat([`(i32.const 0)`]);
         expr.args.forEach(arg => {
           argsStmts = argsStmts.concat(codeGenValue(arg, env));
           switch (arg.a) {
             case NUM:
-              argsStmts = argsStmts.concat([`(i32.add)`]);
+              // argsStmts = argsStmts.concat([`(i32.add)`]);
               argsStmts = argsStmts.concat([`(call $print_num)`]);
+              argsStmts = argsStmts.concat([`(drop)`]);
               break;
             case BOOL:
               argsStmts = argsStmts.concat([`(call $print_bool)`]);
-              argsStmts = argsStmts.concat([`(i32.add)`]);
+              // argsStmts = argsStmts.concat([`(i32.add)`]);
+              argsStmts = argsStmts.concat([`(drop)`]);
+
               break;
             case NONE:
               argsStmts = argsStmts.concat([`(call $print_none)`]);
-              argsStmts = argsStmts.concat([`(i32.add)`]);
+              argsStmts = argsStmts.concat([`(drop)`]);
+
+              // argsStmts = argsStmts.concat([`(i32.add)`]);
+              break;
             case ELLIPSIS:
               argsStmts = argsStmts.concat([`(call $print_ellipsis)`]);
-              argsStmts = argsStmts.concat([`(i32.add)`]);              
+              argsStmts = argsStmts.concat([`(drop)`]);
+
+              // argsStmts = argsStmts.concat([`(i32.add)`]);              
 
               break;
-          
+            case FLOAT:
+              argsStmts = argsStmts.concat([`(call $print_float)`]);
+              argsStmts = argsStmts.concat([`(drop)`]);
+              break;
             default:
               break;
           }
         });
         argsStmts = argsStmts.concat([`(i32.const 0)`]);
-        argsStmts = argsStmts.concat([`(i32.add)`]);
+        // argsStmts = argsStmts.concat([`(i32.add)`]);
         callName = "print_newline"
         // argsStmts = argsStmts.concat([`(call $${callName})`]);
       }
@@ -279,40 +302,41 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
     case "...":
       return [`(i32.const 0)`];
     case "id":
-      if (env.locals.has(val.name) || env.localfloats.has(val.name)) {
-        return [`(local.get $${val.name})`];
+      // if (env.locals.has(val.name) || env.localfloats.has(val.name)) {
+      if (env.locals.has(val.name)) {
+          return [`(local.get $${val.name})`];
       } else {
         return [`(global.get $${val.name})`];
       }
   }
 }
 
-function codeGenBinOp(op : BinOp) : string {
+function codeGenBinOp(op : BinOp,tp:Type) : string {
   switch(op) {
     case BinOp.Plus:
-      return "(i32.add)"
+      return tp.tag !== "float" ? "(i32.add)" : "(f32.add)"
     case BinOp.Minus:
-      return "(i32.sub)"
+      return tp.tag !== "float" ? "(i32.sub)" : "(f32.sub)"
     case BinOp.Mul:
-      return "(i32.mul)"
+      return tp.tag !== "float" ? "(i32.mul)" : "(f32.mul)"
     case BinOp.IDiv:
-      return "(i32.div_s)"
+      return tp.tag !== "float" ? "(i32.div_s)" : "(f32.div)"
     case BinOp.Mod:
       return "(i32.rem_s)"
     case BinOp.Eq:
       return "(i32.eq)"
     case BinOp.Neq:
-      return "(i32.ne)"
+      return tp.tag !== "float" ? "(i32.ne)" : "(f32.ne)"
     case BinOp.Lte:
-      return "(i32.le_s)"
+      return tp.tag !== "float" ? "(i32.le_s)" : "(f32.le)"
     case BinOp.Gte:
-      return "(i32.ge_s)"
+      return tp.tag !== "float" ? "(i32.ge_s)" : "(f32.ge)"
     case BinOp.Lt:
-      return "(i32.lt_s)"
+      return tp.tag !== "float" ? "(i32.lt_s)" : "(f32.lt)"
     case BinOp.Gt:
-      return "(i32.gt_s)"
+      return tp.tag !== "float" ? "(i32.gt_s)" : "(f32.gt)"
     case BinOp.Is:
-      return "(i32.eq)";
+      return tp.tag !== "float" ? "(i32.eq)": "(f32.eq)"
     case BinOp.And:
       return "(i32.and)"
     case BinOp.Or:
@@ -322,21 +346,28 @@ function codeGenBinOp(op : BinOp) : string {
 
 function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
   const value = codeGenValue(init.value, env);
-  if (env.locals.has(init.name) || env.localfloats.has(init.name)) {
-    return [...value, `(local.set $${init.name})`]; 
+  // if (env.locals.has(init.name) || env.localfloats.has(init.name)) {
+  if (env.locals.has(init.name)) {
+      return [...value, `(local.set $${init.name})`]; 
   } else {
     return [...value, `(global.set $${init.name})`]; 
   }
 }
 
 function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
-  var definedVars : Set<string> = new Set();
-  def.inits.forEach(v => definedVars.add(v.name));
-  definedVars.add("$last");
-  definedVars.add("$selector");
+  var definedVars : Map<string,Type> = new Map();
+  def.inits.forEach(v => definedVars.set(v.name, v.type));
+  // definedVars.add("$last");
+  // definedVars.add("$selector");
   // def.parameters.forEach(p => definedVars.delete(p.name));
-  definedVars.forEach(env.locals.add, env.locals);
-  def.parameters.forEach(p => env.locals.add(p.name));
+  definedVars.set("$last", {tag:"number"});
+  definedVars.set("$flast", {tag:"float"});
+  definedVars.set("$selector", {tag:"number"});
+
+  // definedVars.forEach(env.locals.add, env.locals);
+  definedVars.forEach((v, k) => { env.locals.set(k, v) })
+
+  def.parameters.forEach(p => env.locals.set(p.name, p.type));
   env.labels = def.body.map(block => block.label);
   const localDefines = makeLocals(definedVars);
   const locals = localDefines.join("\n");

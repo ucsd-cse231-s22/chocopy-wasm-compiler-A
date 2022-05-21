@@ -45,15 +45,17 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 
 export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
-  const newGlobalfloats = new Map(env.globalfloats);
+  // const newGlobalfloats = new Map(env.globalfloats);
   const newClasses = new Map(env.classes);
 
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
     if(v.type.tag === "float"){
-      newGlobalfloats.set(v.name, true);
+      
+      // newGlobalfloats.set(v.name, true);
+      newGlobals.set(v.name, [true, v.type]);
     }
-    else {newGlobals.set(v.name, true);}
+    else {newGlobals.set(v.name, [true, v.type]);}
   });
   prog.classes.forEach(cls => {
     const classFields = new Map();
@@ -62,10 +64,10 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   });
   return {
     globals: newGlobals,
-    globalfloats: newGlobalfloats,
+    // globalfloats: newGlobalfloats,
     classes: newClasses,
     locals: env.locals,
-    localfloats: env.localfloats,
+    // localfloats: env.localfloats,
     labels: env.labels,
     offset: newOffset
   }
@@ -95,22 +97,24 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     }
   } 
   let globalsBefore = config.env.globals;
-  let globalfloatsBefore = config.env.globalfloats;
+  // let globalfloatsBefore = config.env.globalfloats;
   // const compiled = compiler.compile(tprogram, config.env);
   const compiled = compile(irprogram, globalEnv);
 
-  const globalImports = [...globalsBefore.keys()].map(name =>
-    `(import "env" "${name}" (global $${name} (mut i32)))`
+  const globalImports = [...globalsBefore.entries()].map(entry=>
+    entry[1][1].tag !=="float" ? `(import "env" "${entry[0]}" (global $${entry[0]} (mut i32)))` : `(import "env" "${entry[0]}" (global $${entry[0]} (mut f32)))`
   ).join("\n");
-  const globalfloatImports = [...globalfloatsBefore.keys()].map(name =>
-    `(import "env" "${name}" (global $${name} (mut f32)))`
+  // const globalfloatImports = [...globalfloatsBefore.keys()].map(name =>
+  //   `(import "env" "${name}" (global $${name} (mut f32)))`
+  // ).join("\n");
+  const globalfloatImports ="\n";
+  const globalDecls = compiled.globals.map(entry =>
+    entry[1].tag !=="float" ? `(global $${entry[0]} (export "${entry[0]}") (mut i32) (i32.const 0))` :`(global $${entry[0]} (export "${entry[0]}") (mut f32) (f32.const 0))`
   ).join("\n");
-  const globalDecls = compiled.globals.map(name =>
-    `(global $${name} (export "${name}") (mut i32) (i32.const 0))`
-  ).join("\n");
-  const globalfloatDecls = compiled.globalfloats.map(name =>
-    `(global $${name} (export "${name}") (mut f32) (f32.const 0.0))`
-  ).join("\n");
+  // const globalfloatDecls = compiled.globalfloats.map(name =>
+  //   `(global $${name} (export "${name}") (mut f32) (f32.const 0.0))`
+  // ).join("\n");
+  const globalfloatDecls = "\n"
 
   const importObject = config.importObject;
   if(!importObject.js) {
