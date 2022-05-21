@@ -127,6 +127,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     (func $read_str (import "libmemory" "read_str") (param i32) (result i32))
+    (func $add (import "libmemory" "add") (param $add1 i32) (param $add2 i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}

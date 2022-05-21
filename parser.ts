@@ -8,6 +8,7 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   switch(c.type.name) {
     case "String":
       const str_ = s.substring(c.from+1,c.to-1);
+
       return{
         tag: "str",
         value: str_,

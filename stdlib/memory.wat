@@ -44,4 +44,8 @@
     )
     (local.get $addr)
   )
+
+  (func (export "add") (param $add1 i32) (param $add2 i32) (result i32)
+    (i32.add (local.get $add1) (local.get $add2))
+  )
 )
