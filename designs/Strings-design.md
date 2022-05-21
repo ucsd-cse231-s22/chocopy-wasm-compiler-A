@@ -263,3 +263,16 @@ We would like to store the value of the string by (Extended)ASCII. Since ASCII i
 The most changllenging part of string is that string lies in the level of AST.Literal and IR.Value but it behaves in the level of AST.Expr and IR.Expr because we need the allocate the memory block and store its ASCIIs.
 
 For now, we cannot do operations on string if we don't refractor some sturtures. Any other features like len(), string concatenation, string indexing and string comparison is just a combination of them. As for the store part, we managed to store a string into the memory heap. But we add some restrictions on it (Assigning None to a string first). The hard part is that we cannot make modification on the CodeGen, and the expressions and statements that IR offered are limited which will make it significantly complicated to generate the right WASM code by compiler.ts.
+
+
+#Update Week 8:
+
+In this week, we nearly fix all the leftover of week 7. 
+1. Now we can directly define a string like a:str = "abcd" in body, functions and classses.
+2. Index, concatenation and comparison for strings are implemented.
+3. We change and encapsulate the code when we want to print a string. Now, it is not hard-coded in compiler.ts.
+4. We add supports for escape sequences: \\", \\\\, \n and \t.
+
+New feature:
+1. We might add string slicing like **a = "abcd"[0:2]**.
+2. Supports for more escape sequences.
