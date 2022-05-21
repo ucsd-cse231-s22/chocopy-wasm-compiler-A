@@ -5,8 +5,12 @@ import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("String tests", () => {
 
-  assertPrint("Print-String",`
+  assertPrint("Print-String-1",`
   print("abcd")`,['abcd'])
+
+  // we need to input string \n so "\\n" is the right input
+  assertPrint("Print-String-2",`
+  print("ab\\ncd")`,['ab','cd']) 
 
   assertPrint("Print-String-Fun",`
   def get()->str:
@@ -119,7 +123,7 @@ describe("String tests", () => {
   print(len("abc"))
   `,['3'])
 
-  assertPrint("String-Concatenate-From-Class",`
+  assertPrint("String-Concatenate-From-Class-1",`
   class A(object):
     a:str = "abc"
     b:str = "def"
@@ -127,6 +131,15 @@ describe("String tests", () => {
   c: A = None
   c = A()
   print(c.a+c.b)
+  `,['abcdef'])
+
+  assertPrint("String-Concatenate-From-Class-2",`
+  class A(object):
+    a:str = "abc"
+
+  c: A = None
+  c = A()
+  print(c.a+"def")
   `,['abcdef'])
 
   assertPrint("String-Concatenate-From-Functions",`
@@ -177,7 +190,7 @@ describe("String tests", () => {
   print(getFirst(a))  
   `,['a'])
 
-  assertPrint("String-Index-Comparison-In-Function",`
+  assertPrint("String-Index-Comparison-In-Function-1",`
   a:str = "abc"
   b:str = "abc"
   def getFirst(a:str)->str:
@@ -186,6 +199,24 @@ describe("String tests", () => {
     return a[1]
   print(getFirst(a) == getSecond(b))  
   `,['False'])
+
+  assertPrint("String-Index-Comparison-In-Function-2",`
+  a:str = "abc"
+  def getFirst(a:str)->str:
+    return a[0]
+  def getSecond(a:str)->str:
+    return a[1]
+  print(getFirst(a) == "abc")  
+  `,['False'])
+
+  assertPrint("String-Index-Comparison-In-Function-3",`
+  a:str = "abc"
+  def getFirst(a:str)->str:
+    return a[0]
+  def getSecond(a:str)->str:
+    return a[1]
+  print(getFirst(a) == getFirst("abc"))  
+  `,['True'])
 
   assertPrint("String-Index-Comparison-In-Class",`
   class A():
