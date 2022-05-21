@@ -411,7 +411,7 @@ function checkEnvEquality(a: Env, b: Env): boolean{
     const aVars = a.vars;
     const bVars = b.vars;
 
-    for (let key in aVars.keys()){
+    for (const key of aVars.keys()){
         const aValue = aVars.get(key);
         const bValue = bVars.get(key);
         
@@ -431,8 +431,9 @@ export function generateEnvironments(workList: Array<string>, inEnvMapping: Map<
     }
     inEnvMapping.set(currBlock, newInEnv);
     outEnvMapping.set(currBlock, updateEnvironmentByBlock(newInEnv, blockMapping.get(currBlock)));
-
-    generateEnvironments([...workList, ...succs.get(currBlock)], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
+    
+    const wlAddition: string[] = (succs.get(currBlock) === undefined)?([]):(succs.get(currBlock));
+    generateEnvironments([...workList, ...wlAddition], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
 
     return;
 }
