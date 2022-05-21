@@ -225,11 +225,8 @@ describe("Optimizations tests", () => {
                   {
                     "tag": "ifjmp",
                     "cond": {
-                      "tag": "id",
-                      "name": "valname4",
-                      "a": {
-                        "tag": "bool"
-                      }
+                        "tag": "bool",
+                        "value": false
                     },
                     "thn": "$then1",
                     "els": "$else1"
@@ -317,11 +314,16 @@ describe("Optimizations tests", () => {
           }
     );
 
+        // a: int = 16
+        // b:int=0
+        // if(10 > 11):
+        //     a = 15
+        // b = a + 5
     assertOptimize(
         "IR-if-else-notpropagate", 
         `
-        a: int = 16
-        b:int=0
+        a: int = 15
+        b:int = 0
         if(10 > 11):
             a = 15
         b = a + 5

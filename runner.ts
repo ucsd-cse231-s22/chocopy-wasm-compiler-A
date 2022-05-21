@@ -73,7 +73,9 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
+  console.log(irprogram);
   const optIr = optimizeProgram(irprogram);
+  console.log(optIr);
   const progTyp = tprogram.a;
   var returnType = "";
   var returnExpr = "";
