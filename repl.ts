@@ -54,7 +54,7 @@ export class BasicREPL {
     this.importObject.env = currentGlobals;
     return result;
   }
-  optimize(source: string): [ Program<Type>, Program<Type> ] {
+  optimize(source: string): [ Program<Annotation>, Program<Annotation> ] {
     // console.log(stmt);
     const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions};
     const parsed = parse(source);

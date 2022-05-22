@@ -9,15 +9,9 @@ describe("Optimizations tests", () => {
         a = 1*2+3--4
         `,
         {
-            "a": {
-              "tag": "none"
-            },
             "funs": [],
             "inits": [
               {
-                "a": {
-                  "tag": "number"
-                },
                 "name": "valname1",
                 "type": {
                   "tag": "number"
@@ -27,9 +21,6 @@ describe("Optimizations tests", () => {
                 }
               },
               {
-                "a": {
-                  "tag": "number"
-                },
                 "name": "valname2",
                 "type": {
                   "tag": "number"
@@ -39,9 +30,6 @@ describe("Optimizations tests", () => {
                 }
               },
               {
-                "a": {
-                  "tag": "number"
-                },
                 "name": "valname3",
                 "type": {
                   "tag": "number"
@@ -59,29 +47,17 @@ describe("Optimizations tests", () => {
                   "tag": "num",
                   "value": 0n
                 },
-                "a": {
-                  "tag": "none"
-                }
               }
             ],
             "classes": [],
             "body": [
               {
-                "a": {
-                  "tag": "none"
-                },
                 "label": "$startProg1",
                 "stmts": [
                   {
                     "tag": "assign",
-                    "a": {
-                      "tag": "number"
-                    },
                     "name": "valname1",
                     "value": {
-                      "a": {
-                        "tag": "number"
-                      },
                       "tag": "value",
                       "value": {
                         "tag": "num",
@@ -91,14 +67,8 @@ describe("Optimizations tests", () => {
                   },
                   {
                     "tag": "assign",
-                    "a": {
-                      "tag": "number"
-                    },
                     "name": "valname2",
                     "value": {
-                      "a": {
-                        "tag": "number"
-                      },
                       "tag": "value",
                       "value": {
                         "tag": "num",
@@ -108,9 +78,6 @@ describe("Optimizations tests", () => {
                   },
                   {
                     "tag": "assign",
-                    "a": {
-                      "tag": "number"
-                    },
                     "name": "valname3",
                     "value": {
                       "tag": "value",
@@ -121,15 +88,9 @@ describe("Optimizations tests", () => {
                     }
                   },
                   {
-                    "a": {
-                      "tag": "none"
-                    },
                     "tag": "assign",
                     "name": "a",
                     "value": {
-                      "a": {
-                        "tag": "number"
-                      },
                       "tag": "value",
                       "value": {
                         "tag": "num",
@@ -153,15 +114,9 @@ describe("Optimizations tests", () => {
         b = a + 5
         `,
         {
-            "a": {
-              "tag": "none"
-            },
             "funs": [],
             "inits": [
               {
-                "a": {
-                  "tag": "bool"
-                },
                 "name": "valname4",
                 "type": {
                   "tag": "bool"
@@ -179,9 +134,6 @@ describe("Optimizations tests", () => {
                   "tag": "num",
                   "value": 15n
                 },
-                "a": {
-                  "tag": "none"
-                }
               },
               {
                 "name": "b",
@@ -192,29 +144,17 @@ describe("Optimizations tests", () => {
                   "tag": "num",
                   "value": 0n
                 },
-                "a": {
-                  "tag": "none"
-                }
               }
             ],
             "classes": [],
             "body": [
               {
-                "a": {
-                  "tag": "none"
-                },
                 "label": "$startProg2",
                 "stmts": [
                   {
                     "tag": "assign",
-                    "a": {
-                      "tag": "bool"
-                    },
                     "name": "valname4",
                     "value": {
-                      "a": {
-                        "tag": "bool"
-                      },
                       "tag": "value",
                       "value": {
                         "tag": "bool",
@@ -234,15 +174,9 @@ describe("Optimizations tests", () => {
                 ]
               },
               {
-                "a": {
-                  "tag": "none"
-                },
                 "label": "$then1",
                 "stmts": [
                   {
-                    "a": {
-                      "tag": "none"
-                    },
                     "tag": "assign",
                     "name": "a",
                     "value": {
@@ -260,9 +194,6 @@ describe("Optimizations tests", () => {
                 ]
               },
               {
-                "a": {
-                  "tag": "none"
-                },
                 "label": "$else1",
                 "stmts": [
                   {
@@ -272,21 +203,12 @@ describe("Optimizations tests", () => {
                 ]
               },
               {
-                "a": {
-                  "tag": "none"
-                },
                 "label": "$end1",
                 "stmts": [
                   {
-                    "a": {
-                      "tag": "none"
-                    },
                     "tag": "assign",
                     "name": "b",
                     "value": {
-                      "a": {
-                        "tag": "number"
-                      },
                       "tag": "value",
                       "value": {
                         "tag": "num",
@@ -310,15 +232,9 @@ describe("Optimizations tests", () => {
         b = a + 5
         `,
         {
-            "a": {
-              "tag": "none"
-            },
             "funs": [],
             "inits": [
               {
-                "a": {
-                  "tag": "bool"
-                },
                 "name": "valname5",
                 "type": {
                   "tag": "bool"
@@ -336,9 +252,6 @@ describe("Optimizations tests", () => {
                   "tag": "num",
                   "value": 16n
                 },
-                "a": {
-                  "tag": "none"
-                }
               },
               {
                 "name": "b",
@@ -349,29 +262,17 @@ describe("Optimizations tests", () => {
                   "tag": "num",
                   "value": 0n
                 },
-                "a": {
-                  "tag": "none"
-                }
               }
             ],
             "classes": [],
             "body": [
               {
-                "a": {
-                  "tag": "none"
-                },
                 "label": "$startProg3",
                 "stmts": [
                   {
                     "tag": "assign",
-                    "a": {
-                      "tag": "bool"
-                    },
                     "name": "valname5",
                     "value": {
-                      "a": {
-                        "tag": "bool"
-                      },
                       "tag": "value",
                       "value": {
                         "tag":"bool",
@@ -384,9 +285,6 @@ describe("Optimizations tests", () => {
                     "cond": {
                       "tag": "bool",
                       "value": false,
-                      "a": {
-                        "tag": "bool"
-                      }
                     },
                     "thn": "$then2",
                     "els": "$else2"
@@ -394,15 +292,9 @@ describe("Optimizations tests", () => {
                 ]
               },
               {
-                "a": {
-                  "tag": "none"
-                },
                 "label": "$then2",
                 "stmts": [
                   {
-                    "a": {
-                      "tag": "none"
-                    },
                     "tag": "assign",
                     "name": "a",
                     "value": {
@@ -420,9 +312,6 @@ describe("Optimizations tests", () => {
                 ]
               },
               {
-                "a": {
-                  "tag": "none"
-                },
                 "label": "$else2",
                 "stmts": [
                   {
@@ -432,27 +321,15 @@ describe("Optimizations tests", () => {
                 ]
               },
               {
-                "a": {
-                  "tag": "none"
-                },
                 "label": "$end2",
                 "stmts": [
                   {
-                    "a": {
-                      "tag": "none"
-                    },
                     "tag": "assign",
                     "name": "b",
                     "value": {
-                      "a": {
-                        "tag": "number"
-                      },
                       "tag": "binop",
                       "op": 0,
                       "left": {
-                        "a": {
-                          "tag": "number"
-                        },
                         "tag": "id",
                         "name": "a"
                       },
@@ -480,15 +357,9 @@ describe("Optimizations tests", () => {
         b = a + 1 + i
         `,
         {
-          "a": {
-            "tag": "none"
-          },
           "funs": [],
           "inits": [
             {
-              "a": {
-                "tag": "bool"
-              },
               "name": "valname6",
               "type": {
                 "tag": "bool"
@@ -498,9 +369,6 @@ describe("Optimizations tests", () => {
               }
             },
             {
-              "a": {
-                "tag": "number"
-              },
               "name": "valname7",
               "type": {
                 "tag": "number"
@@ -518,9 +386,6 @@ describe("Optimizations tests", () => {
                 "tag": "num",
                 "value": 10n
               },
-              "a": {
-                "tag": "none"
-              }
             },
             {
               "name": "i",
@@ -531,9 +396,6 @@ describe("Optimizations tests", () => {
                 "tag": "num",
                 "value": 0n
               },
-              "a": {
-                "tag": "none"
-              }
             },
             {
               "name": "b",
@@ -544,17 +406,11 @@ describe("Optimizations tests", () => {
                 "tag": "num",
                 "value": 0n
               },
-              "a": {
-                "tag": "none"
-              }
             }
           ],
           "classes": [],
           "body": [
             {
-              "a": {
-                "tag": "none"
-              },
               "label": "$startProg4",
               "stmts": [
                 {
@@ -564,27 +420,15 @@ describe("Optimizations tests", () => {
               ]
             },
             {
-              "a": {
-                "tag": "none"
-              },
               "label": "$whilestart1",
               "stmts": [
                 {
                   "tag": "assign",
-                  "a": {
-                    "tag": "bool"
-                  },
                   "name": "valname6",
                   "value": {
-                    "a": {
-                      "tag": "bool"
-                    },
                     "tag": "binop",
                     "op": 9,
                     "left": {
-                      "a": {
-                        "tag": "number"
-                      },
                       "tag": "id",
                       "name": "i"
                     },
@@ -599,9 +443,6 @@ describe("Optimizations tests", () => {
                   "cond": {
                     "tag": "id",
                     "name": "valname6",
-                    "a": {
-                      "tag": "bool"
-                    }
                   },
                   "thn": "$whilebody1",
                   "els": "$whileend1"
@@ -609,21 +450,12 @@ describe("Optimizations tests", () => {
               ]
             },
             {
-              "a": {
-                "tag": "none"
-              },
               "label": "$whilebody1",
               "stmts": [
                 {
-                  "a": {
-                    "tag": "none"
-                  },
                   "tag": "assign",
                   "name": "a",
                   "value": {
-                    "a": {
-                      "tag": "number"
-                    },
                     "tag": "value",
                     "value": {
                       "tag": "num",
@@ -632,21 +464,12 @@ describe("Optimizations tests", () => {
                   }
                 },
                 {
-                  "a": {
-                    "tag": "none"
-                  },
                   "tag": "assign",
                   "name": "i",
                   "value": {
-                    "a": {
-                      "tag": "number"
-                    },
                     "tag": "binop",
                     "op": 0,
                     "left": {
-                      "a": {
-                        "tag": "number"
-                      },
                       "tag": "id",
                       "name": "i"
                     },
@@ -663,21 +486,12 @@ describe("Optimizations tests", () => {
               ]
             },
             {
-              "a": {
-                "tag": "none"
-              },
               "label": "$whileend1",
               "stmts": [
                 {
                   "tag": "assign",
-                  "a": {
-                    "tag": "number"
-                  },
                   "name": "valname7",
                   "value": {
-                    "a": {
-                      "tag": "number"
-                    },
                     "tag": "value",
                     "value": {
                       "tag": "num",
@@ -686,15 +500,9 @@ describe("Optimizations tests", () => {
                   }
                 },
                 {
-                  "a": {
-                    "tag": "none"
-                  },
                   "tag": "assign",
                   "name": "b",
                   "value": {
-                    "a": {
-                      "tag": "number"
-                    },
                     "tag": "binop",
                     "op": 0,
                     "left": {
@@ -702,9 +510,6 @@ describe("Optimizations tests", () => {
                       "value": 11n
                     },
                     "right": {
-                      "a": {
-                        "tag": "number"
-                      },
                       "tag": "id",
                       "name": "i"
                     }
@@ -727,7 +532,25 @@ describe("Optimizations tests", () => {
         `,
         {
           "a": {
-            "tag": "number"
+            "fromLoc": {
+              "row": 1,
+              "col": 1,
+              "srcIdx": 0
+            },
+            "endLoc": {
+              "row": 8,
+              "col": 1,
+              "srcIdx": 106
+            },
+            "eolLoc": {
+              "row": 7,
+              "col": 9,
+              "srcIdx": 105
+            },
+            "src": "\n        def f(b:int)->int:\n            a:int = 2\n            return b//a\n        \n        f(10)\n        \n",
+            "type": {
+              "tag": "number"
+            }
           },
           "funs": [
             {
@@ -737,6 +560,23 @@ describe("Optimizations tests", () => {
                   "name": "b",
                   "type": {
                     "tag": "number"
+                  },
+                  "a": {
+                    "fromLoc": {
+                      "row": 2,
+                      "col": 15,
+                      "srcIdx": 15
+                    },
+                    "endLoc": {
+                      "row": 2,
+                      "col": 20,
+                      "srcIdx": 20
+                    },
+                    "eolLoc": {
+                      "row": 2,
+                      "col": 27,
+                      "srcIdx": 27
+                    }
                   }
                 }
               ],
@@ -746,7 +586,24 @@ describe("Optimizations tests", () => {
               "inits": [
                 {
                   "a": {
-                    "tag": "number"
+                    "fromLoc": {
+                      "row": 4,
+                      "col": 20,
+                      "srcIdx": 69
+                    },
+                    "endLoc": {
+                      "row": 4,
+                      "col": 24,
+                      "srcIdx": 73
+                    },
+                    "eolLoc": {
+                      "row": 4,
+                      "col": 24,
+                      "srcIdx": 73
+                    },
+                    "type": {
+                      "tag": "number"
+                    }
                   },
                   "name": "valname8",
                   "type": {
@@ -763,52 +620,225 @@ describe("Optimizations tests", () => {
                   },
                   "value": {
                     "tag": "num",
-                    "value": 2n
+                    "value": 2n,
+                    "a": {
+                      "fromLoc": {
+                        "row": 3,
+                        "col": 21,
+                        "srcIdx": 48
+                      },
+                      "endLoc": {
+                        "row": 3,
+                        "col": 22,
+                        "srcIdx": 49
+                      },
+                      "eolLoc": {
+                        "row": 3,
+                        "col": 22,
+                        "srcIdx": 49
+                      }
+                    }
+                  },
+                  "a": {
+                    "fromLoc": {
+                      "row": 3,
+                      "col": 13,
+                      "srcIdx": 40
+                    },
+                    "endLoc": {
+                      "row": 3,
+                      "col": 22,
+                      "srcIdx": 49
+                    },
+                    "eolLoc": {
+                      "row": 3,
+                      "col": 22,
+                      "srcIdx": 49
+                    }
                   }
                 }
               ],
               "body": [
                 {
                   "a": {
-                    "tag": "none"
+                    "fromLoc": {
+                      "row": 2,
+                      "col": 9,
+                      "srcIdx": 9
+                    },
+                    "endLoc": {
+                      "row": 6,
+                      "col": 1,
+                      "srcIdx": 83
+                    },
+                    "eolLoc": {
+                      "row": 5,
+                      "col": 9,
+                      "srcIdx": 82
+                    },
+                    "type": {
+                      "tag": "none"
+                    }
                   },
-                  "label": "$startFun1",
+                  "label": "$startFun5",
                   "stmts": [
+                    {
+                      "tag": "expr",
+                      "expr": {
+                        "tag": "call",
+                        "name": "divide_by_zero",
+                        "arguments": [
+                          {
+                            "tag": "num",
+                            "value": 2n,
+                            "a": {
+                              "fromLoc": {
+                                "row": 4,
+                                "col": 23,
+                                "srcIdx": 72
+                              },
+                              "endLoc": {
+                                "row": 4,
+                                "col": 24,
+                                "srcIdx": 73
+                              },
+                              "eolLoc": {
+                                "row": 4,
+                                "col": 24,
+                                "srcIdx": 73
+                              },
+                              "type": {
+                                "tag": "number"
+                              }
+                            }
+                          },
+                          {
+                            "tag": "wasmint",
+                            "value": 5
+                          }
+                        ]
+                      }
+                    },
                     {
                       "tag": "assign",
                       "a": {
-                        "tag": "number"
+                        "fromLoc": {
+                          "row": 4,
+                          "col": 20,
+                          "srcIdx": 69
+                        },
+                        "endLoc": {
+                          "row": 4,
+                          "col": 24,
+                          "srcIdx": 73
+                        },
+                        "eolLoc": {
+                          "row": 4,
+                          "col": 24,
+                          "srcIdx": 73
+                        },
+                        "type": {
+                          "tag": "number"
+                        }
                       },
                       "name": "valname8",
                       "value": {
-                        "a": {
-                          "tag": "number"
-                        },
                         "tag": "binop",
                         "op": 3,
                         "left": {
-                          "a": {
-                            "tag": "number"
-                          },
                           "tag": "id",
-                          "name": "b"
+                          "name": "b",
+                          "a": {
+                            "fromLoc": {
+                              "row": 4,
+                              "col": 20,
+                              "srcIdx": 69
+                            },
+                            "endLoc": {
+                              "row": 4,
+                              "col": 21,
+                              "srcIdx": 70
+                            },
+                            "eolLoc": {
+                              "row": 4,
+                              "col": 24,
+                              "srcIdx": 73
+                            },
+                            "type": {
+                              "tag": "number"
+                            }
+                          }
                         },
                         "right": {
                           "tag": "num",
                           "value": 2n
+                        },
+                        "a": {
+                          "fromLoc": {
+                            "row": 4,
+                            "col": 20,
+                            "srcIdx": 69
+                          },
+                          "endLoc": {
+                            "row": 4,
+                            "col": 24,
+                            "srcIdx": 73
+                          },
+                          "eolLoc": {
+                            "row": 4,
+                            "col": 24,
+                            "srcIdx": 73
+                          },
+                          "type": {
+                            "tag": "number"
+                          }
                         }
                       }
                     },
                     {
                       "tag": "return",
                       "a": {
-                        "tag": "number"
+                        "fromLoc": {
+                          "row": 4,
+                          "col": 20,
+                          "srcIdx": 69
+                        },
+                        "endLoc": {
+                          "row": 4,
+                          "col": 24,
+                          "srcIdx": 73
+                        },
+                        "eolLoc": {
+                          "row": 4,
+                          "col": 24,
+                          "srcIdx": 73
+                        },
+                        "type": {
+                          "tag": "number"
+                        }
                       },
                       "value": {
                         "tag": "id",
                         "name": "valname8",
                         "a": {
-                          "tag": "number"
+                          "fromLoc": {
+                            "row": 4,
+                            "col": 20,
+                            "srcIdx": 69
+                          },
+                          "endLoc": {
+                            "row": 4,
+                            "col": 24,
+                            "srcIdx": 73
+                          },
+                          "eolLoc": {
+                            "row": 4,
+                            "col": 24,
+                            "srcIdx": 73
+                          },
+                          "type": {
+                            "tag": "number"
+                          }
                         }
                       }
                     }
@@ -816,7 +846,24 @@ describe("Optimizations tests", () => {
                 }
               ],
               "a": {
-                "tag": "none"
+                "fromLoc": {
+                  "row": 2,
+                  "col": 9,
+                  "srcIdx": 9
+                },
+                "endLoc": {
+                  "row": 6,
+                  "col": 1,
+                  "srcIdx": 83
+                },
+                "eolLoc": {
+                  "row": 5,
+                  "col": 9,
+                  "srcIdx": 82
+                },
+                "type": {
+                  "tag": "none"
+                }
               }
             }
           ],
@@ -825,14 +872,49 @@ describe("Optimizations tests", () => {
           "body": [
             {
               "a": {
-                "tag": "number"
+                "fromLoc": {
+                  "row": 1,
+                  "col": 1,
+                  "srcIdx": 0
+                },
+                "endLoc": {
+                  "row": 8,
+                  "col": 1,
+                  "srcIdx": 106
+                },
+                "eolLoc": {
+                  "row": 7,
+                  "col": 9,
+                  "srcIdx": 105
+                },
+                "src": "\n        def f(b:int)->int:\n            a:int = 2\n            return b//a\n        \n        f(10)\n        \n",
+                "type": {
+                  "tag": "number"
+                }
               },
-              "label": "$startProg5",
+              "label": "$startProg9",
               "stmts": [
                 {
                   "tag": "expr",
                   "a": {
-                    "tag": "number"
+                    "fromLoc": {
+                      "row": 6,
+                      "col": 9,
+                      "srcIdx": 91
+                    },
+                    "endLoc": {
+                      "row": 6,
+                      "col": 14,
+                      "srcIdx": 96
+                    },
+                    "eolLoc": {
+                      "row": 6,
+                      "col": 14,
+                      "srcIdx": 96
+                    },
+                    "type": {
+                      "tag": "number"
+                    }
                   },
                   "expr": {
                     "tag": "call",
@@ -840,11 +922,45 @@ describe("Optimizations tests", () => {
                     "arguments": [
                       {
                         "tag": "num",
-                        "value": 10n
+                        "value": 10n,
+                        "a": {
+                          "fromLoc": {
+                            "row": 6,
+                            "col": 11,
+                            "srcIdx": 93
+                          },
+                          "endLoc": {
+                            "row": 6,
+                            "col": 13,
+                            "srcIdx": 95
+                          },
+                          "eolLoc": {
+                            "row": 6,
+                            "col": 14,
+                            "srcIdx": 96
+                          }
+                        }
                       }
                     ],
                     "a": {
-                      "tag": "number"
+                      "fromLoc": {
+                        "row": 6,
+                        "col": 9,
+                        "srcIdx": 91
+                      },
+                      "endLoc": {
+                        "row": 6,
+                        "col": 14,
+                        "srcIdx": 96
+                      },
+                      "eolLoc": {
+                        "row": 6,
+                        "col": 14,
+                        "srcIdx": 96
+                      },
+                      "type": {
+                        "tag": "number"
+                      }
                     }
                   }
                 }

@@ -30,7 +30,7 @@ export function assert(name: string, source: string, expected: Value<Annotation>
   });
 }
 
-export async function assertOptimizeIR(name: string, source: string, expectedIR: Program<Type>) {
+export async function assertOptimizeIR(name: string, source: string, expectedIR: Program<Annotation>) {
   it(name, async () => {
     const repl = new BasicREPL(await addLibs());
     const [ preOptimizedIr, optimizedIr ] = repl.optimize(source);
@@ -39,7 +39,7 @@ export async function assertOptimizeIR(name: string, source: string, expectedIR:
     //     ? value.toString()
     //     : value // return everything else unchanged
     // ));
-    chai.expect(optimizedIr).excludingEvery('a').to.deep.eq(expectedIR);
+    chai.expect(optimizedIr).excludingEvery(['a', 'label']).to.deep.eq(expectedIR);
   });
 }
 
