@@ -449,25 +449,12 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
   return { name, type, value }
 }
 
-export function traverseFunDef(c : TreeCursor, s : string) : Array<FunDef<null>> {
-  var flattenedFun: Array<FunDef<null>> = [];
-  var funnamestack: Array<string> = [];
-  var paramstack: Array<Array<Parameter<null>>> = [];
-  traverseFunDef_helper(c, s, funnamestack, paramstack, flattenedFun);
-  return flattenedFun;
-}
-
-function traverseFunDef_helper(c : TreeCursor, s : string, funnamestack: Array<string>, paramstack: Array<Array<Parameter<null>>>, flattenedFun: Array<FunDef<null>>){
-  var nestedfuncname: Map<string, string> = new Map();
+export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   c.firstChild();  // Focus on def
   c.nextSibling(); // Focus on name of function
-  var funcname = s.substring(c.from, c.to);
-  funnamestack.push(funcname);
-  var fullname:string = funnamestack.join("$");
-  funnamestack.pop();
+  var name = s.substring(c.from, c.to);
   c.nextSibling(); // Focus on ParamList
   var parameters = traverseParameters(c, s)
-  var fullparams = parameters.concat(paramstack.flat())
   c.nextSibling(); // Focus on Body or TypeDef
   let ret : Type = NONE;
   if(c.type.name === "TypeDef") {
@@ -479,22 +466,19 @@ function traverseFunDef_helper(c : TreeCursor, s : string, funnamestack: Array<s
   c.firstChild();  // Focus on :
   var inits = [];
   var body = [];
+  var funs = [];
   
   var hasChild = c.nextSibling();
 
   while(hasChild) {
     if (isVarInit(c, s)) {
       inits.push(traverseVarInit(c, s));
-    }
-    else if(isFunDef(c, s)){
-      funnamestack.push(funcname);
-      nestedfuncname.set(funcname, fullname);
-      paramstack.push(parameters);
-      traverseFunDef_helper(c, s, funnamestack, paramstack, flattenedFun);
-      paramstack.pop();
-      funnamestack.pop();
     } 
-    else {
+    else if(isFunDef(c,s)){
+      funs.push(traverseFunDef(c,s));
+    }
+    else
+    {
       break;
     }
     hasChild = c.nextSibling();
@@ -509,8 +493,10 @@ function traverseFunDef_helper(c : TreeCursor, s : string, funnamestack: Array<s
   c.parent();      // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
   c.parent();      // Pop to FunctionDefinition
-  flattenedFun.push({ name:fullname, parameters: fullparams, ret, inits, body }) ;
+  return { name, parameters, ret, inits, funs, body }
 }
+
+
 
 export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   const fields : Array<VarInit<null>> = [];
@@ -525,7 +511,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
     if (isVarInit(c, s)) {
       fields.push(traverseVarInit(c, s));
     } else if (isFunDef(c, s)) {
-      methods.push(...traverseFunDef(c, s));
+      methods.push(traverseFunDef(c, s));
     } else {
       throw new Error(`Could not parse the body of class: ${className}` );
     }
@@ -534,7 +520,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   c.parent();
 
   if (!methods.find(method => method.name === "__init__")) {
-    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
+    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], funs: [], body: [] });
   }
   return {
     name: className,
@@ -552,7 +538,7 @@ export function traverseDefs(c : TreeCursor, s : string) : [Array<VarInit<null>>
     if (isVarInit(c, s)) {
       inits.push(traverseVarInit(c, s));
     } else if (isFunDef(c, s)) {
-      funs.push(...traverseFunDef(c, s));
+      funs.push(traverseFunDef(c, s));
     } else if (isClassDef(c, s)) {
       classes.push(traverseClass(c, s));
     } else {
@@ -597,7 +583,7 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
         if (isVarInit(c, s)) {
           inits.push(traverseVarInit(c, s));
         } else if (isFunDef(c, s)) {
-          funs.push(...traverseFunDef(c, s));
+          funs.push(traverseFunDef(c, s));
         } else if (isClassDef(c, s)) {
           classes.push(traverseClass(c, s));
         } else {
