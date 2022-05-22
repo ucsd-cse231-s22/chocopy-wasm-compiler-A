@@ -64,8 +64,7 @@ function webStart() {
       js: {memory: memory}
     };
     var repl = new BasicREPL(importObject);
-    console.log("importObject");
-    console.log(importObject);
+
     function renderResult(result : Value) : void {
       if(result === undefined) { console.log("skip"); return; }
       if (result.tag === "none") return;
