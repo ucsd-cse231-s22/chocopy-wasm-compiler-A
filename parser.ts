@@ -491,10 +491,21 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
 export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   const fields : Array<VarInit<null>> = [];
   const methods : Array<FunDef<null>> = [];
+  var superclass : string
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
   c.nextSibling(); // Focus on arglist/superclass
+  // parse super class name
+  c.firstChild(); // Focus on '('
+  c.nextSibling();
+  superclass = s.substring(c.from, c.to);
+  c.nextSibling();
+  if(c.type.name !== ')') {
+    throw new Error("ChocoPy does not support multiple inheritance")
+  }
+  c.parent();
+
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
   while(c.nextSibling()) { // Focuses first field
@@ -515,7 +526,8 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   return {
     name: className,
     fields,
-    methods
+    methods,
+    superclass,
   };
 }
 

@@ -2,7 +2,7 @@ import {Type, BinOp, UniOp, Parameter} from './ast';
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, body: Array<BasicBlock<A>> }
 
-export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
+export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, superclass: string }
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Value<A> }
 
@@ -32,6 +32,7 @@ export type Expr<A> =
   | {  a?: A, tag: "alloc", amount: Value<A> }
   | {  a?: A, tag: "load", start: Value<A>, offset: Value<A> }
   | {  a?: A, tag: "str-index", start: Value<A>, offset: Value<A> }
+  | {  a?: A, tag: "vtable", index: number, arguments: Array<Value<A>> }
 
 export type Value<A> = 
     { a?: A, tag: "num", value: bigint }
