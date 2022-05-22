@@ -927,4 +927,143 @@ print(a)
         { print: ["2", "3", "5"], isIrDifferent: true }
     );
 
+    assertOptimize(
+      "sanity-nestedif-1lev-constant-prop-folding",
+      `
+      a:int = 10
+      b:int = 100
+      if a==10:
+          if b==100:
+              b = b+a+b*a+b//a+b%a+b+a+b+a
+      
+      print(b)
+      `,
+      {print: ["1340"], isIrDifferent: true}
+    )
+
+    assertOptimize(
+      "sanity-nestedif-1lev-constant-prop-folding-neg",
+      `
+      a:int = 10
+      b:int = 100
+      if True:
+          if False:
+              a = 2
+              b = 3
+          if True:
+              b = b+a+b*a+b//a+b%a+b+a+b+a
+      print(b)
+      `,
+      {print: ["1340"], isIrDifferent: false}
+    )
+
+    assertOptimize(
+      "sanity-nestedif-while-1lev-constant-prop-folding",
+      `
+      a:int = 10
+      b:int = 100
+      c:int = 1
+      i:int = 0
+      while(i<10):
+          if a==10:
+            if b==100:
+                c = b+a+b*a+b//a+b%a+b+a+b+a
+          i = i+1
+      print(c)
+      `,
+      {print: ["1340"], isIrDifferent: true}
+    )
+
+    assertOptimize(
+      "sanity-nestedif-func-1lev-constant-prop-folding-neg",
+      `
+      def fun1()->int:
+          return 10
+      
+      a:int = 10
+      b:int = 100
+      if True:
+          if False:
+              a = fun1()
+              b = fun1()*10
+          if True:
+              b = b+a+b*a+b//a+b%a+b+a+b+a
+      print(b)
+      `,
+      {print: ["1340"], isIrDifferent: false}
+    )
+
+    assertOptimize(
+      "sanity-nestedif-func-1lev-constant-prop-folding",
+      `
+      def fun1(a:int, b:int)->int:
+          return a+b
+      
+      a:int = 10
+      b:int = 100
+      if True:
+          if False:
+              a = fun1(a,b)
+          if True:
+              b = b+a+b*a+b//a+b%a+b+a+b+a
+      print(b)
+      `,
+      {print: ["1340"], isIrDifferent: true}
+    )
+
+    assertOptimize(
+      "sanity-nestedif-func-1lev-constant-prop-folding",
+      `
+      def fun1(a:int, b:int)->int:
+          return a+b
+      
+      a:int = 10
+      b:int = 100
+      if True:
+          if False:
+              a = fun1(a,b)
+          if True:
+              b = b+a+b*a+b//a+b%a+b+a+b+a
+      print(b)
+      `,
+      {print: ["1340"], isIrDifferent: true}
+    )
+
+    assertOptimize(
+      "sanity-many-variables-constant-fold",
+      `
+a:int = 1
+b:int = 10
+c:int = 1000
+d:int = 109
+if True:
+  c = a+9
+  if False:
+    d= b*10 +9
+    if True:
+      d = a+b+c-c-a*2+b//2
+print(d)
+      `,
+      {print: ["109"], isIrDifferent: true}
+    )
+
+    assertOptimize(
+      "sanity-many-variables-constant-fold",
+      `
+a:int = 1
+b:int = 10
+c:int = 1000
+d:int = 109
+if True:
+  c = 11
+  if False:
+    b=2
+    a=1
+    if True:
+      d = a+b+c-c-a*2+b//2
+print(d)
+      `,
+      {print: ["109"], isIrDifferent: true}
+    )
+
 });
