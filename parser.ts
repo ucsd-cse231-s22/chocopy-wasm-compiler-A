@@ -4,6 +4,8 @@ import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Cl
 import { NUM, BOOL, NONE, STR, CLASS, LIST } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
+
+
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   switch(c.type.name) {
     case "Number":
@@ -333,7 +335,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       c.firstChild(); // Focus on :
       var els = [];
       while(c.nextSibling()) { // Focus on els stmts
-        els.push(traverseStmt(c, s));
+        els.push(traverseStmt(c,s));
       }
       c.parent();
       c.parent();
@@ -447,12 +449,25 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
   return { name, type, value }
 }
 
-export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
+export function traverseFunDef(c : TreeCursor, s : string) : Array<FunDef<null>> {
+  var flattenedFun: Array<FunDef<null>> = [];
+  var funnamestack: Array<string> = [];
+  var paramstack: Array<Array<Parameter<null>>> = [];
+  traverseFunDef_helper(c, s, funnamestack, paramstack, flattenedFun);
+  return flattenedFun;
+}
+
+function traverseFunDef_helper(c : TreeCursor, s : string, funnamestack: Array<string>, paramstack: Array<Array<Parameter<null>>>, flattenedFun: Array<FunDef<null>>){
+  var nestedfuncname: Map<string, string> = new Map();
   c.firstChild();  // Focus on def
   c.nextSibling(); // Focus on name of function
-  var name = s.substring(c.from, c.to);
+  var funcname = s.substring(c.from, c.to);
+  funnamestack.push(funcname);
+  var fullname:string = funnamestack.join("$");
+  funnamestack.pop();
   c.nextSibling(); // Focus on ParamList
   var parameters = traverseParameters(c, s)
+  var fullparams = parameters.concat(paramstack.flat())
   c.nextSibling(); // Focus on Body or TypeDef
   let ret : Type = NONE;
   if(c.type.name === "TypeDef") {
@@ -470,7 +485,16 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   while(hasChild) {
     if (isVarInit(c, s)) {
       inits.push(traverseVarInit(c, s));
-    } else {
+    }
+    else if(isFunDef(c, s)){
+      funnamestack.push(funcname);
+      nestedfuncname.set(funcname, fullname);
+      paramstack.push(parameters);
+      traverseFunDef_helper(c, s, funnamestack, paramstack, flattenedFun);
+      paramstack.pop();
+      funnamestack.pop();
+    } 
+    else {
       break;
     }
     hasChild = c.nextSibling();
@@ -485,7 +509,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   c.parent();      // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
   c.parent();      // Pop to FunctionDefinition
-  return { name, parameters, ret, inits, body }
+  flattenedFun.push({ name:fullname, parameters: fullparams, ret, inits, body }) ;
 }
 
 export function traverseClass(c : TreeCursor, s : string) : Class<null> {
@@ -501,7 +525,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
     if (isVarInit(c, s)) {
       fields.push(traverseVarInit(c, s));
     } else if (isFunDef(c, s)) {
-      methods.push(traverseFunDef(c, s));
+      methods.push(...traverseFunDef(c, s));
     } else {
       throw new Error(`Could not parse the body of class: ${className}` );
     }
@@ -528,7 +552,7 @@ export function traverseDefs(c : TreeCursor, s : string) : [Array<VarInit<null>>
     if (isVarInit(c, s)) {
       inits.push(traverseVarInit(c, s));
     } else if (isFunDef(c, s)) {
-      funs.push(traverseFunDef(c, s));
+      funs.push(...traverseFunDef(c, s));
     } else if (isClassDef(c, s)) {
       classes.push(traverseClass(c, s));
     } else {
@@ -573,7 +597,7 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
         if (isVarInit(c, s)) {
           inits.push(traverseVarInit(c, s));
         } else if (isFunDef(c, s)) {
-          funs.push(traverseFunDef(c, s));
+          funs.push(...traverseFunDef(c, s));
         } else if (isClassDef(c, s)) {
           classes.push(traverseClass(c, s));
         } else {
