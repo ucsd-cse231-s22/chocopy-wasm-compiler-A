@@ -44,6 +44,7 @@ export function assertFail(name: string, source: string) {
       await run(source);
       fail("Expected an exception");
     } catch (err) {
+     
       expect(err.message).to.contain("RUNTIME ERROR:");
     }
   });

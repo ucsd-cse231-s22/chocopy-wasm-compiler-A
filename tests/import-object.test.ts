@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-
+import {open, read, write, close, seek} from '../IO_File/FileSystem';
 enum Type { Num, Bool, None }
 
 function stringify(typ: Type, arg: any): string {
@@ -50,6 +50,11 @@ export const importObject : any = {
     min: Math.min,
     max: Math.max,
     pow: Math.pow,
+    buildin_open:  open,
+    buildin_read:  read,
+    buildin_write: write,
+    buildin_close: close,
+    buildin_seek:  seek,
   },
 
   output: "",

@@ -3,6 +3,7 @@ import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
 
+
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
   if(nameCounters.has(base)) {
@@ -22,6 +23,7 @@ function generateName(base : string) : string {
 // }
 
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
+   
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);

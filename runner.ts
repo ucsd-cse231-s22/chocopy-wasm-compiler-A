@@ -10,6 +10,7 @@ import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
+import {buildin_file_libs} from './IO_File/FileSystem';
 
 export type Config = {
   importObject: any;
@@ -94,6 +95,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   ).join("\n");
 
   const importObject = config.importObject;
+  
   if(!importObject.js) {
     const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
     importObject.js = { memory: memory };
@@ -112,6 +114,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    ${buildin_file_libs}
     ${globalImports}
     ${globalDecls}
     ${config.functions}
