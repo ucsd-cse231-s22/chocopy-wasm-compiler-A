@@ -1,6 +1,6 @@
 import "mocha";
 import { BasicREPL } from "../repl";
-import { Value } from "../ast";
+import { Value, Annotation } from "../ast";
 import { addLibs, importObject } from "./import-object.test";
 import { run, typeCheck } from "./helpers.test";
 import { fail } from 'assert'
@@ -22,7 +22,7 @@ before(function () {
   console.log = function () {};
 });
 
-export function assert(name: string, source: string, expected: Value) {
+export function assert(name: string, source: string, expected: Value<Annotation>) {
   it(name, async () => {
     const repl = new BasicREPL(importObject);
     const result = await repl.run(source);
@@ -61,7 +61,9 @@ export async function assertOptimize(name: string, source: string, expected: { p
     chai.expect(importObject.output.trim().split('\n')).to.deep.eq(expected.print);
   });
 }
-export function asserts(name: string, pairs: Array<[string, Value]>) {
+
+
+export function asserts(name: string, pairs: Array<[string, Value<Annotation>]>) {
   const repl = new BasicREPL(importObject);
 
   it(name, async () => {
@@ -79,7 +81,7 @@ export function assertFail(name: string, source: string) {
       await run(source);
       fail("Expected an exception");
     } catch (err) {
-      chai.expect(err.message).to.contain("RUNTIME ERROR:");
+      chai.expect(String(err)).to.contain("RUNTIME ERROR:");
     }
   });
 }
