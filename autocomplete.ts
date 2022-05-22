@@ -85,18 +85,10 @@ function getCompletions(wordList: any, token: any, context: any) {
         var obj = context.pop(),
             base;
 
-        if (obj.type == "variable") {
-            base = obj.string;
-        } else if (obj.type == "variable-3") {
-            base = ":" + obj.string;
-        } else if (obj.type == "property") {
-            base = obj.string;
-        } else if (obj.type == "builtin") {
-            base = obj.string;
-        } else if (obj.type == "keyword") {
+        const hasCompletion = ["variable", "property", "builtin", "keyword"];
+        if (obj.type in hasCompletion) {
             base = obj.string;
         }
-
         while (base != null && context.length) base = base[context.pop().string];
         if (base != null) {
             completions = gatherCompletions(wordList, prefix);
