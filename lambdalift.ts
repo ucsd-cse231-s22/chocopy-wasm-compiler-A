@@ -35,14 +35,15 @@ function lambdalift_helper(fun: FunDef<Type>,
                            generatedclasses: Class<Type>[])
 {
     env.visiblefuncs = fun.funs.map(f=> f.name);
+
     env.funnamestack.push(fun.name);
     var funcname = env.funnamestack.join("$");
-    env.funnamestack.pop();
-    var funcparams = fun.parameters.concat(env.funparamsstack.flat());
-    var funcbody = [];
+    var funcbody:Array<Stmt<Type>> = [];
     fun.body.forEach(s => {
-        funcbody.push(changeCallNameinStmt(s, env));
+        funcbody.push(changeCallinStmt(s, env));
     })
+    var funcparams = fun.parameters.concat(env.funparamsstack.flat());
+    env.funnamestack.pop();
 
     if(fun.funs.length!=0){
         env.funnamestack.push(fun.name);
@@ -53,26 +54,64 @@ function lambdalift_helper(fun: FunDef<Type>,
         env.funnamestack.pop();
         env.funparamsstack.pop();
     }
-    flattenedfun.push({ ...fun, name: funcname, parameters: funcparams, funs: []});
+    flattenedfun.push({ ...fun, name: funcname, parameters: funcparams, funs: [], body: funcbody});
 }
 
-// function changeCallNameinStmt(stmt: Stmt<Type>, env : LocalFuncEnv) : Array<Stmt<Type>>{
-//     switch (stmt.tag){
-//         case "assign":
-//             var value = changeCallName()
-//         case "return":
-//         case "expr":
-//         case "field-assign":
-//         case "index-assign":
-//         case "if":
-//         case "while":
-//         case "for":
-//     }
-// }
+function changeCallinStmt(s: any, env : LocalFuncEnv) : Stmt<Type>{
+    switch (s.tag){
+        case "assign":
+            var value = changeCallinExpr(s.value, env);
+            return {...s, value};
+        case "return":
+            var value = changeCallinExpr(s.value, env);
+            return {...s, value};
+        case "expr":
+            var expr = changeCallinExpr(s.expr, env);
+            return {...s, expr};
+        case "field-assign":
+        case "index-assign":
+        case "if":
+        case "while":
+        case "for":
+        default:
+            throw new Error("TODO");
+    }
+}
 
-// function changeCallNameinExpr(expr: Expr<Type>, env: LocalFuncEnv): Expr<Type>{
-
-// }
+function changeCallinExpr(e: Expr<Type>, env: LocalFuncEnv): Expr<Type>{
+    switch (e.tag){
+        case "literal":
+        case "id":
+            return e;
+        case "binop":
+            var left = changeCallinExpr(e.left, env);
+            var right = changeCallinExpr(e.right, env);
+            return{...e, left, right};
+        case "uniop":
+            var expr = changeCallinExpr(e.expr, env);
+            return {...e, expr}
+        case "builtin1":
+            var arg = changeCallinExpr(e.arg, env);
+            return {...e, arg}
+        case "builtin2":
+            var left = changeCallinExpr(e.left, env);
+            var right = changeCallinExpr(e.right, env);
+            return{...e, left, right};
+        case "call":
+            var newname;
+            var found = env.visiblefuncs.find(element => element === e.name);
+            if(found){
+                newname = env.funnamestack.join("$") + "$" + e.name;
+            }
+            else{
+                newname = e.name;
+            }
+            // also need to change arg lists.
+            return {...e, name: newname}
+        default: 
+            throw new Error("TODO");
+    }
+}
 
 function createEnv(): LocalFuncEnv{
     var funnamestack:Array<string> = [];
