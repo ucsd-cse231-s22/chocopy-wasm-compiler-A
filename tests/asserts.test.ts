@@ -33,12 +33,7 @@ export function assert(name: string, source: string, expected: Value<Annotation>
 export async function assertOptimizeIR(name: string, source: string, expectedIR: Program<Annotation>) {
   it(name, async () => {
     const repl = new BasicREPL(await addLibs());
-    const [ preOptimizedIr, optimizedIr ] = repl.optimize(source);
-    // throw new Error(JSON.stringify(preOptimizedIr, (key, value) =>
-    // typeof value === 'bigint'
-    //     ? value.toString()
-    //     : value // return everything else unchanged
-    // ));
+    const [ _, optimizedIr ] = repl.optimize(source);
     chai.expect(optimizedIr).excludingEvery(['a', 'label']).to.deep.eq(expectedIR);
   });
 }
@@ -48,11 +43,7 @@ export async function assertOptimize(name: string, source: string, expected: { p
   it(name, async () => {
     const repl = new BasicREPL(await addLibs());
     const [ preOptimizedIr, optimizedIr ] = repl.optimize(source);
-    // throw new Error(JSON.stringify(preOptimizedIr, (key, value) =>
-    // typeof value === 'bigint'
-    //     ? value.toString()
-    //     : value // return everything else unchanged
-    // ));
+    
     if (!expected.isIrDifferent)
       chai.expect(preOptimizedIr).to.deep.eq(optimizedIr);
     else
