@@ -69,9 +69,12 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   const parsed = parse(source);
+  console.log("PARSED AST: ", parsed);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
+  console.log("PARSED TYPE AST: ", tprogram);
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
+  console.log("IR AST: ", irprogram);
   const progTyp = tprogram.a;
   var returnType = "";
   var returnExpr = "";
@@ -102,9 +105,12 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
+    (func $assert_check_bounds (import "imports" "assert_check_bounds") (param i32) (param i32))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
+    (func $print_str (import "imports" "print_str") (param i32) (result i32))
+    (func $print_char (import "imports" "print_char") (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))

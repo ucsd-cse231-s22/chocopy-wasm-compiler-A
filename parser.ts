@@ -1,10 +1,10 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal } from "./ast";
-import { NUM, BOOL, NONE, CLASS } from "./utils";
+import { NUM, BOOL, NONE, CLASS, STR } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
-export function traverseLiteral(c : TreeCursor, s : string) : Literal {
+export function traverseLiteral(c : TreeCursor, s : string, isVarInit: boolean = false) : Literal {
   switch(c.type.name) {
     case "Number":
       return {
@@ -20,6 +20,29 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
       return {
         tag: "none"
       }
+    case "String":
+      let stringVal = s.substring(c.from, c.to);
+      if (stringVal.length < 2 || stringVal[0] !== '"' || stringVal[stringVal.length-1] !== '"') {
+        //TODO:
+        throw new Error("Invalid string literal");
+      }
+      stringVal = stringVal.substring(1, stringVal.length-1);
+      return {
+        tag: "str",
+        value: stringVal
+      }
+    case "ArrayExpression":
+      if (isVarInit) {
+        throw new Error("Not literal");
+      }
+      c.firstChild();
+      const value :Array<Expr<null>> = [];
+      while (c.nextSibling()) {
+        value.push(traverseExpr(c, s));
+        c.nextSibling();
+      }
+      c.parent();
+      return {tag: "list", value };
     default:
       throw new Error("Not literal")
   }
@@ -29,11 +52,13 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
   switch(c.type.name) {
     case "Number":
     case "Boolean":
+    case "ArrayExpression":
+    case "String":
     case "None":
       return { 
         tag: "literal", 
         value: traverseLiteral(c, s)
-      }      
+      }
     case "VariableName":
       return {
         tag: "id",
@@ -57,7 +82,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
         var expr : Expr<null>;
-        if (callName === "print" || callName === "abs") {
+        if (callName === "print" || callName === "abs" || callName === "len") {
           expr = {
             tag: "builtin1",
             name: callName,
@@ -172,13 +197,29 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s);
       c.nextSibling(); // Focus on .
-      c.nextSibling(); // Focus on property
-      var propName = s.substring(c.from, c.to);
-      c.parent();
-      return {
-        tag: "lookup",
-        obj: objExpr,
-        field: propName
+      if (c.node.type.name === '.') {
+        c.nextSibling(); // Focus on property
+        var propName = s.substring(c.from, c.to);
+        c.parent();
+        return {
+          tag: "lookup",
+          obj: objExpr,
+          field: propName
+        }
+      } else if (c.node.type.name === '[') {
+        c.nextSibling();
+        var indexExpr = traverseExpr(c, s);
+        c.nextSibling();
+        //@ts-ignore
+        if (c.node.type.name !== ']') {
+          //TODO:
+          throw new Error("PARSE ERROR: ");
+        }
+        c.parent();
+        return {"tag": "index", index: indexExpr, object: objExpr};
+      } else {
+        //TODO:
+        throw new Error("PARSE ERROR: ");
       }
     case "self":
       return {
@@ -237,6 +278,13 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
           name: target.name,
           value: value
         }  
+      } else if (target.tag === "index") {
+        return {
+          tag: "index-assign",
+          obj: target.object,
+          index: target.index,
+          value: value
+        }
       } else {
         throw new Error("Unknown target while parsing assignment");
       }
@@ -319,6 +367,27 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
         cond,
         body
       }
+    case "ForStatement":
+      c.firstChild(); // for
+      c.nextSibling(); // itertor
+      const iterator = s.substring(c.from, c.to);
+      c.nextSibling(); // in
+      c.nextSibling(); // iterable
+      const iterexpr = traverseExpr(c, s);
+      c.nextSibling(); // Body
+      var body = [];
+      c.firstChild(); // Focus on :
+      while(c.nextSibling()) {
+        body.push(traverseStmt(c, s));
+      }
+      c.parent();
+      c.parent();
+      return {
+        tag: "for",
+        iterator: iterator,
+        iterable: iterexpr,
+        body: body
+      }
     case "PassStatement":
       return { tag: "pass" }
     default:
@@ -328,10 +397,28 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
 
 export function traverseType(c : TreeCursor, s : string) : Type {
   // For now, always a VariableName
+  if (c.node.type.name === "ArrayExpression") {
+    c.firstChild(); // [
+    c.nextSibling();
+    const listType = traverseType(c, s);
+    c.nextSibling();
+    //@ts-ignore
+    if (c.node.type.name !== ']') {
+      //TODO: throw error
+      throw Error("PARSE ERROR");
+    }
+    c.parent();
+    return {"tag": "list", type: listType};
+  }
   let name = s.substring(c.from, c.to);
   switch(name) {
     case "int": return NUM;
     case "bool": return BOOL;
+    case "str": return STR;
+    case "None": {
+      //TODO
+      throw new Error("Parse error NONE not allowed");
+    }
     default: return CLASS(name);
   }
 }
@@ -373,7 +460,7 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
   
   c.nextSibling(); // go to =
   c.nextSibling(); // go to value
-  var value = traverseLiteral(c, s);
+  var value = traverseLiteral(c, s, true);
   c.parent();
 
   return { name, type, value }
@@ -528,5 +615,6 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
 export function parse(source : string) : Program<null> {
   const t = parser.parse(source);
   const str = stringifyTree(t.cursor(), source, 0);
+  console.log(str);
   return traverse(t.cursor(), source);
 }

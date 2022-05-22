@@ -1,6 +1,6 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp } from "./ast"
-import { BOOL, NONE, NUM } from "./utils";
+import { BOOL, NONE, NUM, STR } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -39,6 +39,13 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const definedVars : Set<string> = new Set(); //getLocals(ast);
   definedVars.add("$last");
   definedVars.add("$selector");
+  definedVars.add("sz1");
+  definedVars.add("sz2");
+  definedVars.add("addr");
+  definedVars.add("index");
+  definedVars.add("index1");
+  definedVars.add("addr1");
+  definedVars.add("addr2");
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
@@ -87,6 +94,15 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
         ...codeGenValue(stmt.value, env),
         `call $store`
       ]
+    case "list-store":
+      return [
+        ...codeGenValue(stmt.start, env),
+        ...codeGenValue(stmt.offset, env),
+        `(i32.const 1)`,
+        `(i32.add)`,
+        ...codeGenValue(stmt.value, env),
+        `call $store`
+      ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
       if (env.locals.has(stmt.name)) {
@@ -126,7 +142,44 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
     case "jmp":
       const lblIdx = env.labels.findIndex(e => e === stmt.lbl);
       return [`(local.set $$selector (i32.const ${lblIdx}))`, `(br $loop)`]
-
+    case "for":
+      let iteratorStr = "";
+      if (env.locals.has(stmt.iterator)) {
+        iteratorStr =`(local.set $${stmt.iterator})`; 
+      } else {
+        iteratorStr = `(global.set $${stmt.iterator})`; 
+      }
+      const codeGenStmtStr = stmt.body.map(stmt => codeGenStmt(stmt, env).join("\n")).join("\n");
+      return [
+        ...codeGenValue(stmt.iterable, env),
+        `(local.set $addr)
+        (local.get $addr)
+        (i32.const 0)
+          (call $load)
+          (local.set $sz1)
+          (i32.const 1)
+          (local.set $index)
+          (
+            loop $while
+              (local.get $index)
+              (local.get $sz1)
+              (i32.le_s)
+            (if
+              (then
+                  (local.get $addr)
+                  (local.get $index)
+                  (call $load)
+                  ${iteratorStr}
+                  ${codeGenStmtStr}
+                  (local.get $index)
+                  (i32.const 1)
+                  (i32.add)
+                  (local.set $index)
+                br $while
+              )
+            )
+          )`
+      ];
   }
 }
 
@@ -138,6 +191,90 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
+      try {
+      if ((expr.left.a.tag === "list" || expr.left.a.tag === "str") && expr.op === BinOp.Plus) {
+        return [
+          ...lhsStmts,
+          `(local.set $addr1)`,
+          ...rhsStmts,
+          `(local.set $addr2)
+          (local.get $addr1)
+          (i32.const 0)
+          (call $load)
+          (local.set $sz1)
+          (local.get $addr2)
+          (i32.const 0)
+          (call $load)
+          (local.set $sz2)
+          (local.get $sz1)
+          (local.get $sz2)
+          (i32.add)
+          (call $alloc)
+          (local.set $addr)
+          (i32.const 1)
+          (local.set $index)
+          (
+            loop $while
+              (local.get $index)
+              (local.get $sz1)
+              (i32.le_s)
+            (if
+              (then
+                  (local.get $addr)
+                  (local.get $index)
+                  (local.get $addr1)
+                  (local.get $index)
+                  (call $load)
+                  (call $store)
+                  (local.get $index)
+                  (i32.const 1)
+                  (i32.add)
+                  (local.set $index)
+                br $while
+              )
+            )
+          )
+          (local.get $index)
+          (local.set $index1)
+          (i32.const 1)
+          (local.set $index)
+          (
+            loop $while
+              (local.get $index)
+              (local.get $sz2)
+              (i32.le_s)
+            (if
+              (then
+                  (local.get $addr)
+                  (local.get $index1)
+                  (local.get $addr2)
+                  (local.get $index)
+                  (call $load)
+                  (call $store)
+                  (local.get $index)
+                  (i32.const 1)
+                  (i32.add)
+                  (local.set $index)
+                  (local.get $index1)
+                  (i32.const 1)
+                  (i32.add)
+                  (local.set $index1)
+                br $while
+              )
+            )
+          )
+          (local.get $addr)
+          (local.get $addr)
+          (i32.const 0)
+          (local.get $sz1)
+          (local.get $sz2)
+          (i32.add)
+          (call $store)`
+        ];
+      }
+      }
+      catch {
+      }
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
 
     case "uniop":
@@ -159,6 +296,18 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         callName = "print_bool";
       } else if (expr.name === "print" && argTyp === NONE) {
         callName = "print_none";
+      } else if (expr.name === "print" && argTyp === STR) {
+        callName = "print_str";
+      }
+      else if (expr.name === "print_char") {
+        callName = "print_char";
+      }
+      else if (expr.name === "len") {
+        return argStmts.concat([
+          `call $assert_not_none`,
+          `(i32.const 0)`,
+          `(call $load)`
+        ]);
       }
       return argStmts.concat([`(call $${callName})`]);
 
@@ -184,6 +333,21 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         ...codeGenValue(expr.offset, env),
         `call $load`
       ]
+    case "list-load":
+      return [
+        ...codeGenValue(expr.start, env),
+        ...codeGenValue(expr.start, env),
+        `call $assert_not_none`,
+        ...codeGenValue({ tag: "wasmint", value: 0 }, env),
+        `call $load`,
+        ...codeGenValue(expr.offset, env),
+        `call $assert_check_bounds`,
+        ...codeGenValue(expr.offset, env),// add 1
+        `(i32.const 1)`,
+        `(i32.add)`,
+        `call $load`
+      ];
+
   }
 }
 

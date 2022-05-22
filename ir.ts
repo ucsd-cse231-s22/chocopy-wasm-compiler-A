@@ -20,6 +20,8 @@ export type Stmt<A> =
   | {  a?: A, tag: "jmp", lbl: string }
 
   | { a?: A, tag: "store", start: Value<A>, offset: Value<A>, value: Value<A> } // start should be an id
+  | { a?: A, tag: "for", iterator: string, iterable: Value<A>, body: Array<Stmt<A>> }
+  | { a?: A, tag: "list-store", start: Value<A>, offset: Value<A>, value: Value<A> } // start should be an id
 
 export type Expr<A> =
   | {  a?: A, tag: "value", value: Value<A> }
@@ -31,6 +33,7 @@ export type Expr<A> =
 
   | {  a?: A, tag: "alloc", amount: Value<A> }
   | {  a?: A, tag: "load", start: Value<A>, offset: Value<A> }
+  | {  a?: A, tag: "list-load", start: Value<A>, offset: Value<A> }
 
 export type Value<A> = 
     { a?: A, tag: "num", value: bigint }
