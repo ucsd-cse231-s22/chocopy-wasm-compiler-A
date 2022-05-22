@@ -43,9 +43,7 @@ let fs = new Map<number, OpenFile>(); // track current open files
  */
 export function open(filePathAddr: number, mode: number): number {
 
-    // console.log(`open is called with mode: ${mode} and filePathAddr: ${filePathAddr}`);
-
-    const filePath = './test.txt';
+    const filePath = `./test${filePathAddr}.txt`;
 
     // treat as creating a new file for now. Later with string type, we check if the filePathAddr already existed first.
     if (window.localStorage.getItem(filePath) === null) {
@@ -62,7 +60,6 @@ export function open(filePathAddr: number, mode: number): number {
 }
 
 export function read(fd: number, numByte: number): number {
-    console.log(`read is called, fd: ${fd}, numByte: ${numByte}`);
     numByte = 1; // DUMMY VALUE
 
     let file = checkFDExistence(fd);
@@ -76,8 +73,6 @@ export function read(fd: number, numByte: number): number {
 
     file.fileSize = dataArray.length;
 
-    console.log(`file.fileSize: ${file.fileSize}, ${file.currentPosition}, ${dataArray}`)
-
     if (file.currentPosition >= file.fileSize) {
         throw new Error("RUNTIME ERROR: EOF");
     }
@@ -86,14 +81,13 @@ export function read(fd: number, numByte: number): number {
 }
 
 export function write(fd: number, c: number): number {
-    // console.log(`write is called, fd: ${fd}, c: ${c}`);
     const file = checkFDExistence(fd);
 
     // check mode
     if (file.mode === FileMode.OPEN || file.mode === FileMode.R_ONLY) {
         throw new Error(`RUNTIME ERROR: file with fd = ${fd} is not writable (mode = ${file.mode})`);
     }
-    console.log(window.localStorage);
+
     let data = window.localStorage.getItem(file.filePath);
     let dataArray: Array<number> = data ? JSON.parse(data) : [];
 
@@ -114,7 +108,6 @@ export function write(fd: number, c: number): number {
 
     file.fileSize = dataArray.length;
     window.localStorage.setItem(file.filePath, JSON.stringify(dataArray));
-    console.log(fs);
     return - 1;
 }
 
@@ -124,14 +117,13 @@ export function write(fd: number, c: number): number {
  * @param fd 
  */
 export function close(fd: number) {
-    // console.log("close is called");
     const f = checkFDExistence(fd);
 
-    fs.delete(fd); // remove this file from file descriptor
+    // remove this file from file descriptor
+    fs.delete(fd);
 }
 
 export function seek(fd: number, pos: number) {
-    // console.log("seek is called");
     const file = checkFDExistence(fd);
 
     // check the boundary of the position

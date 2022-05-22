@@ -1,7 +1,5 @@
 // import { TypeCheckError } from "./type-check";
 
-import { createModuleResolutionCache } from "typescript"
-
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
 export type Type =
   | {tag: "number"}
