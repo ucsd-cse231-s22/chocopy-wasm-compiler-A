@@ -2,7 +2,8 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
-
+import {CLASS, NONE, NUM} from './utils'
+import { CLASSNAME } from './type-check';
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
   if(nameCounters.has(base)) {
@@ -214,6 +215,21 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         }];
     case "builtin1":
       var [inits, stmts, val] = flattenExprToVal(e.arg, env);
+      if(e.name === "print" && e.arg.a.tag === "class"){
+        //find the index of the object
+        
+        const id = CLASSNAME.indexOf(e.arg.a.name);
+        const b21 = {a:e.a, name:"print_object", tag:"builtin2",left:{a:NUM, literal:{ tag: "num", value: id }},right:e.arg}
+      
+        const b2:AST.Expr<Type> = {
+          a: NONE,
+          tag: "builtin2",
+          name: "print_object",
+          left: {a:NUM,tag: "literal", value:{ tag: "num", value: id }},
+          right: e.arg
+        }
+        return flattenExprToExpr(b2,env)
+      }
       return [inits, stmts, {tag: "builtin1", a: e.a, name: e.name, arg: val}];
     case "builtin2":
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);

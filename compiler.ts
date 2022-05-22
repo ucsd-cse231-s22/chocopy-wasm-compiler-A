@@ -8,6 +8,7 @@ export type GlobalEnv = {
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
+  ordered_class: Array<string>;
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -15,7 +16,9 @@ export const emptyEnv : GlobalEnv = {
   classes: new Map(),
   locals: new Set(),
   labels: [],
-  offset: 0 
+  offset: 0,
+  ordered_class: []
+
 };
 
 type CompileResult = {
@@ -159,12 +162,16 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         callName = "print_bool";
       } else if (expr.name === "print" && argTyp === NONE) {
         callName = "print_none";
-      }
+      } 
       return argStmts.concat([`(call $${callName})`]);
 
     case "builtin2":
+
       const leftStmts = codeGenValue(expr.left, env);
       const rightStmts = codeGenValue(expr.right, env);
+      if(expr.name === "print_object") {
+        return  [...leftStmts, ...rightStmts, `(call $print_object)`] 
+      }
       return [...leftStmts, ...rightStmts, `(call $${expr.name})`]
 
     case "call":

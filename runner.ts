@@ -10,6 +10,7 @@ import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
+import { repl } from './webstart';
 
 export type Config = {
   importObject: any;
@@ -61,7 +62,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
     classes: newClasses,
     locals: env.locals,
     labels: env.labels,
-    offset: newOffset
+    offset: newOffset,
   }
 }
 
@@ -70,7 +71,11 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
+  repl.currentTypeEnv = tenv
+  
   const globalEnv = augmentEnv(config.env, tprogram);
+  repl.currentEnv = globalEnv
+
   const irprogram = lowerProgram(tprogram, globalEnv);
   const progTyp = tprogram.a;
   var returnType = "";
@@ -105,6 +110,8 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
+    (func $print_object (import "imports" "print_object") (param i32) (param i32)(result i32))
+
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))

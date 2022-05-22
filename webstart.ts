@@ -1,7 +1,7 @@
 import { BasicREPL } from './repl';
 import { Type, Value, Class } from './ast';
-import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
+import { CLASSNAME, defaultTypeEnv } from './type-check';
+import { NUM, BOOL, NONE, CLASS } from './utils';
 import CodeMirror from 'codemirror';
 import "codemirror/addon/edit/closebrackets";
 import "codemirror/mode/python/python";
@@ -13,7 +13,26 @@ import "./style.scss";
 
 import { autocompleteHint, populateAutoCompleteSrc } from "./autocomplete";
 import { default_keywords, default_functions } from "./const";
-
+import { type } from 'os';
+const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
+let memoryModule:WebAssembly.WebAssemblyInstantiatedSource;
+const importObject = {
+  imports: {
+    assert_not_none: (arg: any) => assert_not_none(arg),
+    print_num: (arg: number) => print(NUM, arg),
+    print_bool: (arg: number) => print(BOOL, arg),
+    print_none: (arg: number) => print(NONE, arg),
+    print_object:print_object,
+    abs: Math.abs,
+    min: Math.min,
+    max: Math.max,
+    pow: Math.pow
+  },
+  libmemory: 0 as any,
+  memory_values: memory,
+  js: { memory: memory }
+};
+export var repl = new BasicREPL(importObject);
 
 function stringify(typ: Type, arg: any): string {
   switch (typ.tag) {
@@ -24,11 +43,11 @@ function stringify(typ: Type, arg: any): string {
     case "none":
       return "None";
     case "class":
-      return typ.name;
+      return stringify_object( arg, typ.name, 0, new Map(), 1).join("\n");
   }
 }
 
-export function print_class(memory: WebAssembly.Memory, repl: BasicREPL, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number): Array<string> {
+export function stringify_object( pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number): Array<string> {
 
   var fields_offset_ = repl.currentEnv.classes.get(classname);
   var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
@@ -56,7 +75,7 @@ export function print_class(memory: WebAssembly.Memory, repl: BasicREPL, pointer
         display.push(`${space.repeat(level + 2)}${thisfield[0]} : none `);
       } else {
         display.push(`${space.repeat(level + 2)}${thisfield[0]}:{`)
-        display.push(...print_class(memory, repl, mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5, met_object, object_number + 1));
+        display.push(...stringify_object(mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5, met_object, object_number + 1));
         display.push(`${space.repeat(level + 2)}}`)
       }
     } else {
@@ -76,7 +95,14 @@ function print(typ: Type, arg: number): any {
   elt.innerText = stringify(typ, arg);
   return arg;
 }
-
+function print_object(id: number, arg: number): any {
+  console.log("Logging from WASM: ", arg);
+  const elt = document.createElement("pre");
+  document.getElementById("output").appendChild(elt);
+  const typ = CLASSNAME[id]
+  elt.innerText = stringify(CLASS(typ), arg);
+  return arg;
+}
 function assert_not_none(arg: any): any {
   if (arg === 0)
     throw new Error("RUNTIME ERROR: cannot perform operation on none");
@@ -147,16 +173,19 @@ c2.next = c3
 // setup codeMirror instance and events
 
 function webStart() {
-  document.addEventListener("DOMContentLoaded", async function () {
 
-    // https://github.com/mdn/webassembly-examples/issues/5
-    var codeContent: string | ArrayBuffer
-    const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
-    const memoryModule = await fetch('memory.wasm').then(response =>
+  document.addEventListener("DOMContentLoaded", async function () {
+  memoryModule  = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()
     ).then(bytes =>
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
+    importObject.libmemory=memoryModule.instance.exports;
+
+    // https://github.com/mdn/webassembly-examples/issues/5
+    var codeContent: string | ArrayBuffer
+    // const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
+
     function initCodeMirror() {
 
       let isClassMethod = false;
@@ -226,7 +255,7 @@ function webStart() {
                 pow: Math.pow,
               },
             };
-            const repl = new BasicREPL(importObject);
+            
             const source = document.getElementById("user-code") as HTMLTextAreaElement;
             repl.run(source.value).then((r) => {
               [defList, classMethodList] = populateAutoCompleteSrc(repl);
@@ -246,22 +275,8 @@ function webStart() {
     const editorBox = initCodeMirror();
 
 
-    var importObject = {
-      imports: {
-        assert_not_none: (arg: any) => assert_not_none(arg),
-        print_num: (arg: number) => print(NUM, arg),
-        print_bool: (arg: number) => print(BOOL, arg),
-        print_none: (arg: number) => print(NONE, arg),
-        abs: Math.abs,
-        min: Math.min,
-        max: Math.max,
-        pow: Math.pow
-      },
-      libmemory: memoryModule.instance.exports,
-      memory_values: memory,
-      js: { memory: memory }
-    };
-    var repl = new BasicREPL(importObject);
+
+     repl = new BasicREPL(importObject);
 
     function renderResult(result: Value): void {
       if (result === undefined) { console.log("skip"); return; }
@@ -277,7 +292,7 @@ function webStart() {
           break;
         case "object":
           // elt.innerHTML = `${result.name} object at ${result.address}`
-          elt.innerHTML = print_class(memory, repl, result.address, result.name, 0, new Map(), 1).join("\n");
+          elt.innerHTML = stringify_object( result.address, result.name, 0, new Map(), 1).join("\n");
           break
         default: throw new Error(`Could not render value: ${result}`);
       }
