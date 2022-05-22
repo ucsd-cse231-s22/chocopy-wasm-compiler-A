@@ -185,20 +185,33 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         tag: "id",
         name: "self"
       };
-    case "ArrayExpression":
-    case "TupleExpression":
-      let elements: Expr<null>[] = [];
+    case "ArrayExpression": // a, b, c = [1, 2, 3]
+      let arrayElements: Expr<null>[] = [];
       c.firstChild();
       c.nextSibling();
       while (s.substring(c.from, c.to).trim() !== "]") {
-        elements.push(traverseExpr(c, s));
+        arrayElements.push(traverseExpr(c, s));
         c.nextSibling();
         c.nextSibling();
       }
       c.parent();
       return {
         tag: "array-expr",
-        elements,
+        elements: arrayElements,
+      };
+    case "TupleExpression": // a, b, c = (1, 2, 3)
+      let tupleElements: Expr<null>[] = [];
+      c.firstChild();
+      c.nextSibling();
+      while (s.substring(c.from, c.to).trim() !== ")") {
+        tupleElements.push(traverseExpr(c, s));
+        c.nextSibling();
+        c.nextSibling();
+      }
+      c.parent();
+      return {
+        tag: "array-expr",
+        elements: tupleElements,
       };
     default:
       throw new Error("Could not parse expr at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to));
