@@ -102,6 +102,13 @@ describe('ut for destructure', () => {
     a, _, b = range(1, 4)
     `, NONE);
 
+    assertTC("destructure-assignment-with-class", `
+    ${rangeDef}
+    a : iterator = None
+    b : iterator = None
+    a, b = range(1, 4), None
+    `, NONE);
+
     assertTCFail("destructure-assignment-with-range-type-failure", `
     ${rangeDef}
     a : int = 0

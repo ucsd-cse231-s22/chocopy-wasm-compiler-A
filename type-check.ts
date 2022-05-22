@@ -243,7 +243,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
           if(tDestruct.vars[i].ignorable) {
             continue;
           }
-          if(!isAssignable(env, tDestruct.vars[i].a, tValExpr.elements[i].a)) {
+          if(!isAssignable(env, tValExpr.elements[i].a, tDestruct.vars[i].a)) {
             throw new TypeCheckError(`Non-assignable types: ${tValExpr.elements[i].a} to ${tDestruct.vars[i].a}`);
           }
         }
@@ -259,7 +259,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
             if(tDestruct.vars[i].ignorable) {
               continue;
             }
-            if(!isAssignable(env, tDestruct.vars[i].a, rightType)) {
+            if(!isAssignable(env, rightType, tDestruct.vars[i].a)) {
               throw new TypeCheckError(`Non-assignable types: ${rightType} to ${tDestruct.vars[i].a}`);
             }
           }
