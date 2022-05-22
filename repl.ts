@@ -54,13 +54,17 @@ export class BasicREPL {
     this.importObject.env = currentGlobals;
     return result;
   }
-  optimize(source: string): [ Program<Type>, Program<Type> ] {
+  optimize(source: string): [ Program<Annotation>, Program<Annotation> ] {
     // console.log(stmt);
     const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions};
     const parsed = parse(source);
     const [tprogram, tenv] = tc(config.typeEnv, parsed);
     const globalEnv = augmentEnv(config.env, tprogram);
     const irprogram = lowerProgram(tprogram, globalEnv);
+    if(!this.importObject.js) {
+      const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
+      this.importObject.js = { memory: memory };
+    }
     return [ irprogram, optimizeProgram(irprogram) ];
   }
   tc(source: string): Type {
