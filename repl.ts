@@ -24,6 +24,7 @@ export class BasicREPL {
       this.importObject.js = { memory: memory };
     }
     this.currentEnv = {
+      strings: new Map(),
       globals: new Map(),
       classes: new Map(),
       locals: new Set(),

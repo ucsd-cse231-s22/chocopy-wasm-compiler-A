@@ -5,7 +5,7 @@ import { GlobalEnv } from './compiler';
 import {BOOL, NONE, NUM, STR, PyInt, PyLiteralExpr, PyLiteralInt} from "./utils";
 
 const nameCounters : Map<string, number> = new Map();
-function generateName(base : string) : string {
+export function generateName(base : string) : string {
   if(nameCounters.has(base)) {
     var cur = nameCounters.get(base);
     nameCounters.set(base, cur + 1);

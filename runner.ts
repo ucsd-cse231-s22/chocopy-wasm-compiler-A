@@ -8,8 +8,9 @@ import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
-import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
-import { lowerProgram } from './lower';
+import {PyValue, NONE, BOOL, NUM, CLASS, STR} from "./utils";
+import {generateName, lowerProgram} from './lower';
+import {match} from "assert";
 
 export type Config = {
   importObject: any;
@@ -43,7 +44,7 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 }
 
 
-export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
+export function augmentEnv(env: GlobalEnv, prog: Program<Type>, strings : Map<string, string>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
 
@@ -57,6 +58,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
     newClasses.set(cls.name, classFields);
   });
   return {
+    strings,
     globals: newGlobals,
     classes: newClasses,
     locals: env.locals,
@@ -66,11 +68,23 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
 }
 
 
+function getStrings(source: string) : Map<string, string> {
+  // TODO: figure regexp out
+  var myRegExp = new RegExp(`(["'])(?:(?!\\1)[^\\\\]|\\\\.)*\\1`, "gm");
+  var matches = source.matchAll(myRegExp);
+  var res = new Map<string, string>();
+  for (const match of matches) {
+    res.set(match[0].slice(1, -1), generateName("newStr"));
+  }
+  return res;
+}
+
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
+  const strings = getStrings(source);
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
-  const globalEnv = augmentEnv(config.env, tprogram);
+  const globalEnv = augmentEnv(config.env, tprogram, strings);
   const irprogram = lowerProgram(tprogram, globalEnv);
   const progTyp = tprogram.a;
   var returnType = "";
