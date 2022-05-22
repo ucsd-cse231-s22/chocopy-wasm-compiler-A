@@ -48,11 +48,11 @@ export async function assertOptimize(name: string, source: string, expected: { p
   it(name, async () => {
     const repl = new BasicREPL(await addLibs());
     const [ preOptimizedIr, optimizedIr ] = repl.optimize(source);
-    throw new Error(JSON.stringify(preOptimizedIr, (key, value) =>
-    typeof value === 'bigint'
-        ? value.toString()
-        : value // return everything else unchanged
-    ));
+    // throw new Error(JSON.stringify(preOptimizedIr, (key, value) =>
+    // typeof value === 'bigint'
+    //     ? value.toString()
+    //     : value // return everything else unchanged
+    // ));
     if (!expected.isIrDifferent)
       chai.expect(preOptimizedIr).to.deep.eq(optimizedIr);
     else

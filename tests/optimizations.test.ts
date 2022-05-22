@@ -468,7 +468,7 @@ describe("Optimizations tests", () => {
           }
     );
 
-    assertOptimize(
+    assertOptimizeIR(
         "IR-while-propagate", 
         `
         a: int = 10
@@ -479,10 +479,244 @@ describe("Optimizations tests", () => {
             i = i + 1
         b = a + 1 + i
         `,
-        { print: ["0","12"], isIrDifferent: true }
+        {
+          "a": {
+            "tag": "none"
+          },
+          "funs": [],
+          "inits": [
+            {
+              "a": {
+                "tag": "bool"
+              },
+              "name": "valname6",
+              "type": {
+                "tag": "bool"
+              },
+              "value": {
+                "tag": "none"
+              }
+            },
+            {
+              "a": {
+                "tag": "number"
+              },
+              "name": "valname7",
+              "type": {
+                "tag": "number"
+              },
+              "value": {
+                "tag": "none"
+              }
+            },
+            {
+              "name": "a",
+              "type": {
+                "tag": "number"
+              },
+              "value": {
+                "tag": "num",
+                "value": 10n
+              },
+              "a": {
+                "tag": "none"
+              }
+            },
+            {
+              "name": "i",
+              "type": {
+                "tag": "number"
+              },
+              "value": {
+                "tag": "num",
+                "value": 0n
+              },
+              "a": {
+                "tag": "none"
+              }
+            },
+            {
+              "name": "b",
+              "type": {
+                "tag": "number"
+              },
+              "value": {
+                "tag": "num",
+                "value": 0n
+              },
+              "a": {
+                "tag": "none"
+              }
+            }
+          ],
+          "classes": [],
+          "body": [
+            {
+              "a": {
+                "tag": "none"
+              },
+              "label": "$startProg4",
+              "stmts": [
+                {
+                  "tag": "jmp",
+                  "lbl": "$whilestart1"
+                }
+              ]
+            },
+            {
+              "a": {
+                "tag": "none"
+              },
+              "label": "$whilestart1",
+              "stmts": [
+                {
+                  "tag": "assign",
+                  "a": {
+                    "tag": "bool"
+                  },
+                  "name": "valname6",
+                  "value": {
+                    "a": {
+                      "tag": "bool"
+                    },
+                    "tag": "binop",
+                    "op": 9,
+                    "left": {
+                      "a": {
+                        "tag": "number"
+                      },
+                      "tag": "id",
+                      "name": "i"
+                    },
+                    "right": {
+                      "tag": "num",
+                      "value": 3n
+                    }
+                  }
+                },
+                {
+                  "tag": "ifjmp",
+                  "cond": {
+                    "tag": "id",
+                    "name": "valname6",
+                    "a": {
+                      "tag": "bool"
+                    }
+                  },
+                  "thn": "$whilebody1",
+                  "els": "$whileend1"
+                }
+              ]
+            },
+            {
+              "a": {
+                "tag": "none"
+              },
+              "label": "$whilebody1",
+              "stmts": [
+                {
+                  "a": {
+                    "tag": "none"
+                  },
+                  "tag": "assign",
+                  "name": "a",
+                  "value": {
+                    "a": {
+                      "tag": "number"
+                    },
+                    "tag": "value",
+                    "value": {
+                      "tag": "num",
+                      "value": 10n
+                    }
+                  }
+                },
+                {
+                  "a": {
+                    "tag": "none"
+                  },
+                  "tag": "assign",
+                  "name": "i",
+                  "value": {
+                    "a": {
+                      "tag": "number"
+                    },
+                    "tag": "binop",
+                    "op": 0,
+                    "left": {
+                      "a": {
+                        "tag": "number"
+                      },
+                      "tag": "id",
+                      "name": "i"
+                    },
+                    "right": {
+                      "tag": "num",
+                      "value": 1n
+                    }
+                  }
+                },
+                {
+                  "tag": "jmp",
+                  "lbl": "$whilestart1"
+                }
+              ]
+            },
+            {
+              "a": {
+                "tag": "none"
+              },
+              "label": "$whileend1",
+              "stmts": [
+                {
+                  "tag": "assign",
+                  "a": {
+                    "tag": "number"
+                  },
+                  "name": "valname7",
+                  "value": {
+                    "a": {
+                      "tag": "number"
+                    },
+                    "tag": "value",
+                    "value": {
+                      "tag": "num",
+                      "value": 11n
+                    }
+                  }
+                },
+                {
+                  "a": {
+                    "tag": "none"
+                  },
+                  "tag": "assign",
+                  "name": "b",
+                  "value": {
+                    "a": {
+                      "tag": "number"
+                    },
+                    "tag": "binop",
+                    "op": 0,
+                    "left": {
+                      "tag": "num",
+                      "value": 11n
+                    },
+                    "right": {
+                      "a": {
+                        "tag": "number"
+                      },
+                      "tag": "id",
+                      "name": "i"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
     );
 
-    assertOptimize(
+    assertOptimizeIR(
         "IR-fn-propagate", 
         `
         def f(b:int)->int:
@@ -491,7 +725,133 @@ describe("Optimizations tests", () => {
         
         f(10)
         `,
-        { print: ["0","12"], isIrDifferent: true }
+        {
+          "a": {
+            "tag": "number"
+          },
+          "funs": [
+            {
+              "name": "f",
+              "parameters": [
+                {
+                  "name": "b",
+                  "type": {
+                    "tag": "number"
+                  }
+                }
+              ],
+              "ret": {
+                "tag": "number"
+              },
+              "inits": [
+                {
+                  "a": {
+                    "tag": "number"
+                  },
+                  "name": "valname8",
+                  "type": {
+                    "tag": "number"
+                  },
+                  "value": {
+                    "tag": "none"
+                  }
+                },
+                {
+                  "name": "a",
+                  "type": {
+                    "tag": "number"
+                  },
+                  "value": {
+                    "tag": "num",
+                    "value": 2n
+                  }
+                }
+              ],
+              "body": [
+                {
+                  "a": {
+                    "tag": "none"
+                  },
+                  "label": "$startFun1",
+                  "stmts": [
+                    {
+                      "tag": "assign",
+                      "a": {
+                        "tag": "number"
+                      },
+                      "name": "valname8",
+                      "value": {
+                        "a": {
+                          "tag": "number"
+                        },
+                        "tag": "binop",
+                        "op": 3,
+                        "left": {
+                          "a": {
+                            "tag": "number"
+                          },
+                          "tag": "id",
+                          "name": "b"
+                        },
+                        "right": {
+                          "tag": "num",
+                          "value": 2n
+                        }
+                      }
+                    },
+                    {
+                      "tag": "return",
+                      "a": {
+                        "tag": "number"
+                      },
+                      "value": {
+                        "tag": "id",
+                        "name": "valname8",
+                        "a": {
+                          "tag": "number"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "a": {
+                "tag": "none"
+              }
+            }
+          ],
+          "inits": [],
+          "classes": [],
+          "body": [
+            {
+              "a": {
+                "tag": "number"
+              },
+              "label": "$startProg5",
+              "stmts": [
+                {
+                  "tag": "expr",
+                  "a": {
+                    "tag": "number"
+                  },
+                  "expr": {
+                    "tag": "call",
+                    "name": "f",
+                    "arguments": [
+                      {
+                        "tag": "num",
+                        "value": 10n
+                      }
+                    ],
+                    "a": {
+                      "tag": "number"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
     );
 
 
