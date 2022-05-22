@@ -25,6 +25,24 @@ export const FileClass: Class<null> = {
         getFileClose()
     ]
 }
+
+export function FileClassString(): string  {
+    var s = `
+    class File:
+        fd: int = 0
+        def __init__(self:File):
+            pass
+        def read(self:File, byte_num:int):
+            return buildin_read(self.fd, byte_num)
+        def write(self:File, c:int):
+            return buildin_write(self.fd, c)
+        def seek(self:File, pos:int):
+            buildin_seek(self.fd,pos)
+        def close(self:File):
+            buildin_close(self.fd)`
+        ;
+    return s;
+}
 /** 
 function getFileInit(): FunDef<null> {
     return {
@@ -103,6 +121,18 @@ export const OpenFun: FunDef<null> = {
     ret: {tag:"class", name:"File"},
     inits: getOpenInits(),
     body: getOpenBody(),
+}
+
+export function OpenFunString(): string {
+    return `
+    def open(addr: num, mode:num) : File:
+        f: File = None
+        fd: int = 0
+        fd = buildin_open(addr, mode)
+        f = File()
+        f.fd = fd
+        return f
+    `
 }
 function getOpenInits(): VarInit<null>[] {
     return [{name:"f", type:{tag:"class", name:"File"},value: {tag:"none"}},
