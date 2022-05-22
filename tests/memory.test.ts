@@ -204,5 +204,129 @@ assertMemState("simple-cycle-deletion", `
     [456, refNumOffset, 1], // 1 references in the program where object id is 456
     ]); // all types are values or non-references
 
+    // TODO global
+    // TODOO inheritance
+assertMemState("simple-inherited-field", `
+    class List(object):
+        id: int = 0
+
+        def __init__(self: Link):
+            self.id = 123
+
+    class Link(List):
+        next: Link = None
+
+        def __init__(self: Link):
+            super().__init__()
+
+        def add(l: Link) -> Link:
+            l.next = Link()
+            l.id = 456
+            return l.next
+
+    x: Link = None
+    y: Link = None
+    x = Link()
+    x.id = 123
+    y = Link()
+    y.id = 456
+    x.next = y
+    y.next = x
+
+    x = None
+    `, [
+    // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
+    [123, refNumOffset, 1], // 1 references in the program where object id is 123
+    [456, refNumOffset, 1], // 1 references in the program where object id is 456
+    ]); // all types are values or non-references
+
+assertMemState("less-simple-cycle", `
+    class Link(object):
+        id: int = 0
+        next: Link = None
+        prev: Link = None
+
+    x: Link = None
+    y: Link = None
+    z: Link = None
+    x = Link()
+    x.id = 123
+    y = Link()
+    y.id = 456
+    z = Link()
+    z.id = 789
+    x.next = y
+    y.next = z
+    z.next = x
+    x.prev = z
+    y.prev = x
+    z.prev = y
+    `, [
+    // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
+    [123, refNumOffset, 3], // 3 references in the program where object id is 123
+    [456, refNumOffset, 3], // 3 references in the program where object id is 456
+    [789, refNumOffset, 3], // 3 references in the program where object id is 789
+    ]); // all types are values or non-references
+
+assertMemState("less-simple-cycle-deletion", `
+    class Link(object):
+        id: int = 0
+        next: Link = None
+        prev: Link = None
+
+    x: Link = None
+    y: Link = None
+    z: Link = None
+    x = Link()
+    x.id = 123
+    y = Link()
+    y.id = 456
+    z = Link()
+    z.id = 789
+    x.next = y
+    y.next = z
+    z.next = x
+    x.prev = z
+    y.prev = x
+    
+    y = None
+    `, [
+    // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
+    [123, refNumOffset, 3], // 3 references in the program where object id is 123
+    [456, refNumOffset, 2], // 2 references in the program where object id is 456
+    [789, refNumOffset, 3], // 3 references in the program where object id is 789
+    ]); // all types are values or non-references
+
+assertMemState("less-simple-cycle-complete-deletion", `
+    class Link(object):
+        id: int = 0
+        next: Link = None
+        prev: Link = None
+
+    x: Link = None
+    y: Link = None
+    z: Link = None
+    x = Link()
+    x.id = 123
+    y = Link()
+    y.id = 456
+    z = Link()
+    z.id = 789
+    x.next = y
+    y.next = z
+    z.next = x
+    x.prev = z
+    y.prev = x
+
+    y = None
+    x.next = None
+    z.prev = None
+    `, [
+    // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
+    [123, refNumOffset, 2], // 2 references in the program where object id is 123
+    [456, refNumOffset, 0], // 0 references in the program where object id is 456
+    [789, refNumOffset, 2], // 2 references in the program where object id is 789
+    ]); // all types are values or non-references
+
 });
 
