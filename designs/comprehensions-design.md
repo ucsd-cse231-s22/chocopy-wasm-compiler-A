@@ -6,55 +6,55 @@ All test cases were written in the tests/comprehension.test.ts file. Upon runnin
 
 1. simple comprehension output with min and max range
 ```j: int = 2```
-```print([j for a in range(5,7)])```
+```[j for a in range(5,7)]```
 Output: ```['2', '2']```
 
 2. simple comprehension output with only max range
 ```j: int = 7```
-```print([j for b in range(5)])```
+```[j for b in range(5)]```
 Output: ```['7', '7', '7', '7', '7']```
 
 3. simple comprehension output with bool values
 ```j: bool = True```
-```print([j for c in range(1,5)])```
+```[j for c in range(1,5)]```
 Output: ```['True', 'True', 'True', 'True']```
 
 4. simple comprehension output with expr values
 ```j: int = 5```
-```print([j*2 for d in range(1,5)])```
+```[j*2 for d in range(1,5)]```
 Output: ```['10', '10', '10', '10']```
 
 5. simple comprehension output using iterable class methods
-```print([e for e in range(1,5)])```
+```[e for e in range(1,5)]```
 Output: ```['1', '2', '3', '4']```
 
 6. simple comprehension output using iterable class methods and expr values
-```print([f*3 for f in range(1,5)])```
+```[f*3 for f in range(1,5)]```
 Output: ```['3', '6', '9', '12']```
 
 7. simple comprehension output with if condition
-```print([g for g in range(1,5) if g!= 3])```
+```[g for g in range(1,5) if g!= 3]```
 Output: ```['1', '2', '4']```
 
 8. simple comprehension output with bool binop expr values and if condition
 ```j: int = 3```
-```print([j<i for i in range(6) if i>3])```
+```[j<i for i in range(6) if i>3]```
 Output: ```['False', 'False', 'True']```
 
 9. simple comprehension output with function call as expr values
 ```def f(x:int)->int: return x*5```
-```print([f(l) for l in range(5)])```
+```[f(l) for l in range(5)]```
 Output: ```['0', '5', '10', '15', '20']```
 
 10. simple comprehension output with function call using counter variable as expr values
 ```def f(x:int)->int: return x*5```
 ```j: int = 5```
-```print([f(j) for l in range(5)])```
+```[f(j) for l in range(5)]```
 Output: ```['25', '25', '25', '25', '25]```
 
 11. Two comprehension expressions
-```print([m for m in range(5,6)])```
-```print([m for m in range(10,15)])```
+```[m for m in range(5,6)]```
+```[m for m in range(10,15)]```
 Output: ```['5', '6', '10', '11', '12', '13', '14']```
 
 12. simple function calls 1
@@ -76,37 +76,37 @@ Output: ```['0', '1', '2', '3', '4']```
 Output: ```['50', '50', '50', '50', '50']```
 
 14. simple comprehension output with step
-```print([k for k in range(10,20,2)])```
+```[k for k in range(10,20,2)])```
 Output: ```['10', '12', '14', '16', '18']```
 
 15. invalid expression in comprehension
-```print([j for a in range(1,5) if a!=1])```
+```[j for a in range(1,5) if a!=1])```
 Output: ```Error: j is undefined```
 
 16. invalid range in comprehension
 ```j: int = 2```
-```print([j for a in range(2,1)])```
+```[j for a in range(2,1)])```
 Output: ```Error```
 
 17. only if condition allowed in comprehension
 ```j: int = 2```
-```print([j for a in range(1,5) for a!=1])```
+```[j for a in range(1,5) for a!=1]```
 Output: ```Error```
 
 18. invalid condition in comprehension
 ```j: int = 2```
-```print([j for a in range(1,5) if a+2])```
+```[j for a in range(1,5) if a+2]```
 Output: ```Error```
 
 19. invalid iterable in comprehension
 ```j: int = 2```
 ```k: int = 3```
-```print([j for a in k if a!=2])```
+```[j for a in k if a!=2]```
 Output: ```Error```
 
 Test cases that does not work yet is the following:
 
-1. ```print([[j for j in range(3)] for i in range(3)])```
+1. ```[[j for j in range(3)] for i in range(3)]```
 2. 
 ```
  a : List = None
@@ -125,7 +125,7 @@ In case of the second test case, we skipped it because as suggested by proffesor
 
 Since, we have not yet collaborated with the lists group, we are only printing the elements of the list (constructed by the comprehension expression). We plan to collaborate with the lists team in the upcoming week, and display the lists in the proper format. For example:
 
-```print([1 for a in range(1,5)])``` gives the following output instead of ```[1,1,1,1,1]```::
+```[1 for a in range(1,5)]``` gives the following output instead of ```[1,1,1,1,1]```::
 ```
 1
 1
