@@ -228,9 +228,11 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const callinits = callpairs.map(cp => cp[0]).flat();
       const callstmts = callpairs.map(cp => cp[1]).flat();
       const callvals = callpairs.map(cp => cp[2]).flat();
+      if (e.fn.tag !== "id") { throw new Error("lower cannot get the name for the call expression."); }
       return [ callinits, callstmts,
         {
           ...e,
+          name: e.fn.name,
           arguments: callvals
         }
       ];

@@ -83,7 +83,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
           }
         }
         else {
-          expr = { tag: "call", name: callName, arguments: args, kwarguments: kwargs};
+          expr = { tag: "call", fn: callExpr, arguments: args, kwarguments: kwargs};
         }
         return expr;  
       } else {

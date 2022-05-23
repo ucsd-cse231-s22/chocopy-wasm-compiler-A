@@ -344,10 +344,13 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         throw new TypeError("Undefined function: " + expr.name);
       }
     case "call":
-      if(env.classes.has(expr.name)) {
+      if (expr.fn.tag !== "id") {
+        throw new TypeError("Call expression does not have a name");
+      }
+      if(env.classes.has(expr.fn.name)) {
         // surprise surprise this is actually a constructor
-        const tConstruct : Expr<Type> = { a: CLASS(expr.name), tag: "construct", name: expr.name };
-        const [_, methods] = env.classes.get(expr.name);
+        const tConstruct : Expr<Type> = { a: CLASS(expr.fn.name), tag: "construct", name: expr.fn.name };
+        const [_, methods] = env.classes.get(expr.fn.name);
         if (methods.has("__init__")) {
           const [initArgs, initRet] = methods.get("__init__");
           if (expr.arguments.length !== initArgs.length - 1)
@@ -358,12 +361,12 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         } else {
           return tConstruct;
         }
-      } else if(env.functions.has(expr.name)) {
-        const [expectedParams, retType] = env.functions.get(expr.name);
-        const tArgs = tcCallOrMethod(expr.name, expectedParams, expr.arguments, expr.kwarguments, env, locals);
+      } else if(env.functions.has(expr.fn.name)) {
+        const [expectedParams, retType] = env.functions.get(expr.fn.name);
+        const tArgs = tcCallOrMethod(expr.fn.name, expectedParams, expr.arguments, expr.kwarguments, env, locals);
         return {...expr, a: retType, arguments: tArgs, kwarguments: undefined };
       } else {
-        throw new TypeError("Undefined function: " + expr.name);
+        throw new TypeError("Undefined function: " + expr.fn.name);
       }
     case "lookup":
       var tObj = tcExpr(env, locals, expr.obj);
