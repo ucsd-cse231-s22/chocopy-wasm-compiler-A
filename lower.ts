@@ -29,9 +29,9 @@ export function generateVtable(p : AST.Program<Type>, env : GlobalEnv) {
     if (cls.super[0]!=="object") {
       const superClassIndexes = classIndexes.get(cls.super[0])
       var superClassVtable = vtable.slice(superClassIndexes[0], superClassIndexes[1])
-      cls.methods.filter(m => m.name !== "__init__").forEach(m => {
-        const methodOffset = env.classes.get(cls.name)[1].get(m.name)
-        if (methodOffset > superClassVtable.length) {
+      cls.methods.forEach(m => {
+        const methodOffset = env.classes.get(cls.name)[1].get(m.name);
+        if (methodOffset >= superClassVtable.length) {
           superClassVtable.push(`$${cls.name}$${m.name}`)
         } else {
           superClassVtable[methodOffset] = `$${cls.name}$${m.name}`;
@@ -41,8 +41,8 @@ export function generateVtable(p : AST.Program<Type>, env : GlobalEnv) {
       vtable = [...vtable , ...superClassVtable]
     } else {
       // add methods directly and increment methodIndex
-      classIndexes.set(cls.name, [vtable.length, vtable.length + cls.methods.length - 1])
-      cls.methods.filter(m => m.name !== "__init__").forEach(m => {
+      classIndexes.set(cls.name, [vtable.length, vtable.length + cls.methods.length])
+      cls.methods.forEach(m => {
         vtable.push(`$${cls.name}$${m.name}`)
       })
     }
@@ -278,9 +278,11 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       if(objTyp.tag !== "class") { // I don't think this error can happen
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
       }
-      const className = objTyp.name;
+      const className = getMethodClassName(objTyp.name, e.method, env);
+      const zeroOffset: IR.Value<Type> = { tag: "wasmint", value: 0 };
+      const methodOffset = env.classes.get(className)[1].get(e.method);
       const checkObj : IR.Stmt<Type> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [objval]}}
-      const callMethod : IR.Expr<Type> = { tag: "call_indirect", index: env.vtable.indexOf(`$${className}$${e.method}`), arguments: [objval, ...argvals] }
+      const callMethod : IR.Expr<Type> = { tag: "call_indirect", fn: { tag: "load", start: objval, offset: zeroOffset}, arguments: [objval, ...argvals], name: `${className}$${e.method}`, methodOffset: methodOffset }
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
@@ -323,13 +325,20 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       });
 
       const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1 } }; // + 1 to store class method index in vtable
+      const callCons : IR.Expr<Type> = { 
+        tag: "call_indirect", 
+        fn: { tag: "value", value : { tag: "wasmint", value: env.classIndexes.get(e.name)[0] }}, 
+        arguments: [{ a: e.a, tag: "id", name: newName }], 
+        name: `${e.name}$__init__`, 
+        methodOffset: env.classes.get(e.name)[1].get("__init__") 
+      };
 
       return [
         [ { name: newName, type: e.a, value: { tag: "none" } }],
         [ { tag: "assign", name: newName, value: alloc }, 
           {tag: "store",  start: { tag: "id", name: newName }, offset: { tag: "wasmint", value: 0 }, value: {tag: "num", value: BigInt(env.classIndexes.get(e.name)[0])}}, // store class method offset from vtable
           ...assigns,
-          { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
+          {tag: "expr", expr : callCons},
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
       ];
@@ -347,6 +356,15 @@ function getClassFieldOffet(className: string, fieldName: string, env: GlobalEnv
       return classdata[0].get(fieldName)[0] + 1;  // + 1 to store class method index in vtable
     }
     className = classdata[2][0];
+  }
+}
+
+// fetches class name of a method, including searching for method in super classes
+function getMethodClassName(className: string, methodName: string, env: GlobalEnv) : string {
+  if (env.classes.get(className)[1].has(methodName)) {
+    return className
+  } else {
+    return getMethodClassName(env.classes.get(className)[2][0], methodName, env);
   }
 }
 

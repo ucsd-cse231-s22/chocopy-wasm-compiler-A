@@ -4,7 +4,8 @@ import { BOOL, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, [Map<string, [number, Value<Type>]>, Map<string, number>, Array<string>]>;  // field -> field offset, value, mehtod -> method offset, super
+  // class name    ->   field -> field offset, value, mehtod -> method offset, super classes, super class method count
+  classes: Map<string, [Map<string, [number, Value<Type>]>, Map<string, number>, Array<string>, number]>;
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
@@ -52,10 +53,9 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
-  const classesCons : Array<string> = ast.classes.map(cls => codeGenClassCons(cls, withDefines)).flat();
   const classesMethods : Array<string> = ast.classes.map(cls => codeGenClassMethods(cls, withDefines)).flat();
 
-  const allFuns = funs.concat(classesCons).join("\n\n");
+  const allFuns = funs.join("\n\n");
 
   const vtable = `
   (table ${env.vtable.length} funcref)
@@ -185,9 +185,14 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
 
     // TODO: add call indirect case, lookup offset based on class and method name
     case "call_indirect":
-      var valStmts : Array<string> = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
-      valStmts.push(`(call_indirect (type $type${env.vtable[expr.index]}) (i32.const ${expr.index}))`)
-      return valStmts;
+      var valStmts : Array<string> = codeGenExpr(expr.fn, env);
+      var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      return [
+        ...fnStmts, 
+        ...valStmts, 
+        `(i32.add (i32.const ${expr.methodOffset}))`,
+        `(call_indirect (type $type$${expr.name}))`
+      ];
 
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
@@ -306,16 +311,10 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
     (return))`];
 }
 
-function codeGenClassCons(cls : Class<Type>, env : GlobalEnv) : Array<string> {
-  const methods = [...cls.methods];
-  methods.forEach(method => method.name = `${cls.name}$${method.name}`);
-  const result = methods.filter(m => m.name===`${cls.name}$__init__`).map(method => codeGenDef(method, env));
-  return result.flat();
-}
-
 function codeGenClassMethods(cls : Class<Type>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
-  const result = methods.filter(m => m.name!==`${cls.name}$__init__`).map(method => {
+  methods.forEach(method => method.name = `${cls.name}$${method.name}`); // append class name to method name
+  const result = methods.map(method => {
     var params = method.parameters.map(p => `(param $${p.name} i32)`).join(" ");
     return [...[`(type $type$${method.name} (func ${params} (result i32)))`], ...codeGenDef(method, env).flat()]
   });
