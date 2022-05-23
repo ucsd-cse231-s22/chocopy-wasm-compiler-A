@@ -172,6 +172,7 @@ For the above program, i is constant propogated inside the for loop. But the out
 <li> We won't be having any conflicts with the Frond-end team's codebase. The main changes they made were to the index.html and webstart.ts. The constant folding and propogation optimizations would work as intended since front-end changes are tangential to us.
 
 </ul>
+
 ## Generics and polymorphism
 
 No conflicts with the Generics team for optmizations since all their work happens before the `lower` phase. They don't make any changes to the IR. Constant folding and propagation should work as expected since due to the `monomorphize` phase before `lower`, we will know the types and constant values, if any, before the `optimization` phase.
