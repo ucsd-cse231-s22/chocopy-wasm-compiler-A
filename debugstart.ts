@@ -6,11 +6,20 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-a: str = "hello"
-b: [int] = None
-b = [1,2,3,4,5]
-len(a)
-len(b)
+class A(object):
+    x : int = 1
+    def fa(self: A) -> int:
+        return 1
+
+class B(A):
+    y : int = 1
+    def fb(self: B) -> int:
+        return 2
+
+b : B = None 
+b = B()
+print(b.fa())
+print(b.fb())
 `
 //   var source = `
 // def f() -> int:

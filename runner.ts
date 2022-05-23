@@ -10,6 +10,7 @@ import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
+import * as AST from "./ast";
 
 export type Config = {
   importObject: any;
@@ -42,26 +43,69 @@ export async function runWat(source : string, importObject : any) : Promise<any>
   return [result, wasmModule];
 }
 
+function generateDefaultMethods(program: AST.Program<any>) {
+  program.classes.forEach(cls => {
+    if(cls.superclass !== "object") {
+      const methods = cls.methods;
+      const supercls = cls.superclass;
+      const superMethods = program.classes.find(cls => cls.name === supercls).methods;
+      superMethods.forEach((sm, idx) => {
+        if(sm.name !== "__init__") {
+          if(!methods.some(method => method.name === sm.name)) {
+            cls.methods.push(sm);
+          }
+        }
+      })
+    }
+  })
+}
+
 
 export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
 
   var newOffset = env.offset;
+  var moffset = 0;
   prog.inits.forEach((v) => {
     newGlobals.set(v.name, true);
   });
+
   prog.classes.forEach(cls => {
     const classFields = new Map();
-    cls.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
-    newClasses.set(cls.name, classFields);
+    const methods = new Map();
+    var offset = 0;
+    if(cls.superclass !== "object") {
+      const superFields = newClasses.get(cls.superclass)[0];
+      superFields.forEach((v, _) => {
+        offset = Math.max(offset, v[0]+1);
+      })
+    }
+    cls.methods.filter(m => m.name !== "__init__").forEach((m, index) => {
+      var midx = moffset + index;
+      var override = false;
+      if (cls.superclass !== "object" ){
+        newClasses.get(cls.superclass)[1].forEach((v, k) => {
+          if (k === m.name) {
+            midx = v;
+            override = true;
+          }
+        })
+      }
+      if (!override) moffset += 1;
+      methods.set(m.name, midx)
+    })
+    cls.fields.forEach((field, i) => classFields.set(field.name, [i+offset, field.value]));
+    newClasses.set(cls.name, [classFields, methods, cls.superclass]);
   });
   return {
     globals: newGlobals,
     classes: newClasses,
     locals: env.locals,
     labels: env.labels,
-    offset: newOffset
+    offset: newOffset,
+    vtable: env.vtable,
+    classRange: env.classRange,
   }
 }
 
@@ -69,6 +113,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   const parsed = parse(source);
+  generateDefaultMethods(parsed);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
@@ -117,6 +162,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     (func $copy (import "libmemory" "copy") (param i32) (param i32) (param i32) (result i32))
+    ${compiled.vtable}
     ${globalImports}
     ${globalDecls}
     ${config.functions}

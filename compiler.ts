@@ -250,7 +250,7 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
 
     case "vtable":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
-      valStmts.push(`(vtable (type $type${env.vtable[expr.index]}) (i32.const ${expr.index}))`)
+      valStmts.push(`(call_indirect (type $type${env.vtable[expr.index]}) (i32.const ${expr.index}))`)
       return valStmts;
   }
 }

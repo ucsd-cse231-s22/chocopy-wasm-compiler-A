@@ -132,7 +132,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var [ninits, nstmts, nval] = flattenExprToVal(s.value, env);
       if(s.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
       // const classdata = env.classes.get(s.obj.a.name);
-      const offset : IR.Value<Type> = { tag: "wasmint", value: getOffset(s.obj.a.name, s.field, env) };
+      const offset : IR.Value<Type> = { tag: "wasmint", value: fieldOffset(s.obj.a.name, s.field, env) };
       pushStmtsToLastBlock(blocks,
         ...ostmts, ...nstmts, {
           tag: "store",
@@ -233,14 +233,10 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
   }
 }
 
-function getOffset(cls: string, field: string, env: GlobalEnv) : number {
-  var classdata = env.classes.get(cls);
+function fieldOffset(cls: string, field: string, env: GlobalEnv) : number {
+  const classdata = env.classes.get(cls);
   if(classdata[0].has(field)) return classdata[0].get(field)[0]+1;
-  // field in super class
-  const superclass = classdata[2];
-  classdata = env.classes.get(superclass);
-  if(classdata[0].has(field)) return classdata[0].get(field)[0]+1;
-  throw new Error("Can not find field in both class and superclass")
+  return fieldOffset(classdata[2], field, env)
 }
 
 function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Expr<Type>] {
@@ -345,7 +341,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const className = objTyp.name;
       const checkObj : IR.Stmt<Type> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [objval]}}
       // const callMethod : IR.Expr<Type> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
-      const callMethod : IR.Expr<Type> = { tag: "vtable", index: env.vtable.indexOf(`${className}$${e.method}`), arguments: [objval, ...argvals] }
+      const callMethod : IR.Expr<Type> = { tag: "vtable", index: env.vtable.indexOf(`$${className}$${e.method}`), arguments: [objval, ...argvals] }
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
@@ -356,7 +352,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
       if(e.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
       // const classdata = env.classes.get(e.obj.a.name);
-      const offset = getOffset(e.obj.a.name, e.field, env);
+      const offset = fieldOffset(e.obj.a.name, e.field, env);
       return [oinits, ostmts, {
         tag: "load",
         start: oval,
@@ -511,12 +507,12 @@ function buildVtable(program: AST.Program<Type>, env: GlobalEnv) {
   var classRange : Map<string, [number, number]> = new Map();
   program.classes.forEach(cls => {
     if(cls.superclass === "object") {
+      classRange.set(cls.name, [vtable.length, vtable.length+cls.methods.length-1]);
       cls.methods.forEach(m => {
         if(m.name !== "__init__") {
           vtable.push(`$${cls.name}$${m.name}`);
         }
       })
-      classRange.set(cls.name, [vtable.length, vtable.length+cls.methods.length-1]);
     } else {
       // inheritance
       const [start, end] = classRange.get(cls.superclass);

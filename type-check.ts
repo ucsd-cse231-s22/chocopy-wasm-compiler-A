@@ -20,7 +20,7 @@ export class TypeCheckError extends Error {
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, string]>
 }
 
 export type LocalTypeEnv = {
@@ -80,6 +80,44 @@ export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
   return equalType(t1, t2) 
   || t1.tag === "none" && t2.tag === "class" 
   || t1.tag === "none" && t2.tag === "list"
+  || isSubclass(env, t1, t2)
+}
+
+function isSubclass(env: GlobalTypeEnv, t1: Type, t2: Type) : boolean {
+  if(t1.tag !== "class" || t2.tag !== "class") return false
+  const superclasses = findAllSuper(env, t1.name)
+  return superclasses.includes(t2.name)
+}
+
+function findAllSuper(env: GlobalTypeEnv, cls: string) : Array<string> {
+  if(cls === "object") return []
+  const superclass = env.classes.get(cls)[2];
+  if(superclass === "object") return []
+  return [superclass, ...findAllSuper(env, superclass)]
+}
+
+function findAllSuperFields(env: GlobalTypeEnv, cls: string) : Map<string, Type> {
+  var result = new Map<string, Type>();
+  if(cls === "object") return result;
+  const superclass = env.classes.get(cls)[2];
+  if(superclass === "object") return result;
+  const superFields = env.classes.get(superclass)[0];
+  superFields.forEach((t, field) => {
+    result.set(field, t);
+  })
+  return new Map([...result].concat([...findAllSuperFields(env, superclass)]))
+}
+
+function findAllSuperMethods(env: GlobalTypeEnv, cls: string) : Map<string, [Array<Type>, Type]> {
+  var result = new Map<string, [Array<Type>, Type]>();
+  if(cls === "object") return result
+  const superclass = env.classes.get(cls)[2];
+  if(superclass === "object") return result
+  const superMethods = env.classes.get(superclass)[1];
+  superMethods.forEach((v, m) => {
+    result.set(m, v);
+  })
+  return new Map<string, [Array<Type>, Type]>([...result].concat([...findAllSuperMethods(env, superclass)]))
 }
 
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
@@ -94,6 +132,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
   const newGlobs = new Map(env.globals);
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
+  const clsToSuper = new Map();
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
   program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
   program.classes.forEach(cls => {
@@ -101,8 +140,19 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
     const methods = new Map();
     cls.fields.forEach(field => fields.set(field.name, field.type));
     cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
-    newClasses.set(cls.name, [fields, methods]);
+    newClasses.set(cls.name, [fields, methods, null]);
+    clsToSuper.set(cls.name, cls.superclass);
   });
+  clsToSuper.forEach((supercls, cls) => {
+    const clsdata = newClasses.get(cls);
+    if (supercls === "object") {
+      newClasses.set(cls, [clsdata[0], clsdata[1], "object"])
+    } else {
+      if (program.classes.find(cls => cls.name === supercls) === undefined)
+        throw new TypeCheckError("Supper class "+supercls+" does not exist.");
+      newClasses.set(cls, [clsdata[0], clsdata[1], supercls])
+    }
+  })
   return { globals: newGlobs, functions: newFuns, classes: newClasses };
 }
 
@@ -156,6 +206,13 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
 
 export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
   const tFields = cls.fields.map(field => tcInit(env, field));
+  // check fields redefined
+  const superFields = findAllSuperFields(env, cls.name)
+  cls.fields.forEach(field => {
+    if (superFields.has(field.name))
+      throw new TypeCheckError("Can not override field "+field.name);
+  });
+
   const tMethods = cls.methods.map(method => tcDef(env, method));
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
   if (init.parameters.length !== 1 || 
@@ -163,7 +220,7 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
     !equalType(init.parameters[0].type, CLASS(cls.name)) ||
     init.ret !== NONE)
     throw new TypeCheckError("Cannot override __init__ type signature");
-  return {a: NONE, name: cls.name, fields: tFields, methods: tMethods};
+  return {a: NONE, name: cls.name, fields: tFields, methods: tMethods, superclass: cls.superclass};
 }
 
 export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Array<Stmt<null>>) : Array<Stmt<Type>> {
@@ -247,10 +304,11 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       if (!env.classes.has(tObj.a.name)) 
         throw new TypeCheckError("field assignment on an unknown class");
       const [fields, _] = env.classes.get(tObj.a.name);
-      if (!fields.has(stmt.field)) 
+      const superFields = findAllSuperFields(env, tObj.a.name);
+      if (!fields.has(stmt.field) && !superFields.has(stmt.field))
         throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObj.a.name}`);
-      if (!isAssignable(env, tVal.a, fields.get(stmt.field)))
-        throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
+      if (!isAssignable(env, tVal.a, fields.get(stmt.field)) && !isAssignable(env, tVal.a, superFields.get(stmt.field)))
+        throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${superFields.get(stmt.field)}`);
       return {...stmt, a: NONE, obj: tObj, value: tVal};
     case "index-assign":
       var typedlist = tcExpr(env, locals, stmt.list);
@@ -390,8 +448,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       if (tObj.a.tag === "class") {
         if (env.classes.has(tObj.a.name)) {
           const [fields, _] = env.classes.get(tObj.a.name);
+          const superFields = findAllSuperFields(env, tObj.a.name);
           if (fields.has(expr.field)) {
             return {...expr, a: fields.get(expr.field), obj: tObj};
+          } else if(superFields.has(expr.field)) {
+            return {...expr, a: superFields.get(expr.field), obj: tObj};
           } else {
             throw new TypeCheckError(`could not found field ${expr.field} in class ${tObj.a.name}`);
           }
@@ -419,6 +480,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       if (tObj.a.tag === "class") {
         if (env.classes.has(tObj.a.name)) {
           const [_, methods] = env.classes.get(tObj.a.name);
+          const superMethods = findAllSuperMethods(env, tObj.a.name);
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = methods.get(expr.method);
             const realArgs = [tObj].concat(tArgs);
@@ -428,6 +490,15 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
               } else {
                throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}` );
               }
+          } else if(superMethods.has(expr.method)) {
+            const [methodArgs, methodRet] = superMethods.get(expr.method);
+            const realArgs = [tObj].concat(tArgs);
+            if(methodArgs.length === realArgs.length &&
+                methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a, argTyp))) {
+              return {...expr, a: methodRet, obj: tObj, arguments: tArgs};
+            } else {
+              throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}` );
+            }
           } else {
             throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a.name}`);
           }
