@@ -2,7 +2,7 @@ import { run, Config } from "./runner";
 // import { GlobalEnv } from "./compiler";
 import { GlobalEnv } from "./compiler";
 import { tc, defaultTypeEnv, GlobalTypeEnv } from "./type-check";
-import { Value, Type } from "./ast";
+import { Value, Type, Annotation } from "./ast";
 import { parse } from "./parser";
 
 interface REPL {
@@ -36,7 +36,7 @@ export class BasicREPL {
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";
   }
-  async run(source : string) : Promise<Value> {
+  async run(source : string) : Promise<Value<Annotation>> {
     const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions};
     const [result, newEnv, newTypeEnv, newFunctions, instance] = await run(source, config);
     this.currentEnv = newEnv;
@@ -58,6 +58,6 @@ export class BasicREPL {
     const config: Config = { importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions };
     const parsed = parse(source);
     const [result, _] = tc(this.currentTypeEnv, parsed);
-    return result.a;
+    return result.a.type;
   }
 }

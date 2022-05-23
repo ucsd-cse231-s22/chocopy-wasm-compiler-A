@@ -1,6 +1,6 @@
-import { Value, Type, Callable } from "./ast";
+import { Value, Type, Annotation } from "./ast";
 
-export function PyValue(typ: Type, result: number): Value {
+export function PyValue(typ: Type, result: number): Value<Annotation> {
   switch (typ.tag) {
     case "number":
       return PyInt(result);
@@ -13,20 +13,20 @@ export function PyValue(typ: Type, result: number): Value {
   }
 }
 
-export function PyInt(n: number): Value {
+export function PyInt(n: number): Value<Annotation> {
   return { tag: "num", value: n };
 }
 
-export function PyBool(b: boolean): Value {
+export function PyBool(b: boolean): Value<Annotation> {
   return { tag: "bool", value: b };
 }
 
-export function PyObj(name: string, address: number): Value {
+export function PyObj(name: string, address: number): Value<Annotation> {
   if (address === 0) return PyNone();
   else return { tag: "object", name, address };
 }
 
-export function PyNone(): Value {
+export function PyNone(): Value<Annotation> {
   return { tag: "none" };
 }
 

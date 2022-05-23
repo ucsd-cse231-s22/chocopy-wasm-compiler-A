@@ -1,10 +1,10 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
-import { BinOp, Type, UniOp } from "./ast"
+import { Annotation, BinOp, Type, UniOp } from "./ast"
 import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, Map<string, [number, Value<Type>]>>;  
+  classes: Map<string, Map<string, [number, Value<Annotation>]>>;  
   classIndices: Map<string, number>;
   functionNames: Map<string, string>;
   locals: Set<string>;
@@ -39,7 +39,7 @@ export function makeLocals(locals: Set<string>) : Array<string> {
   return localDefines;
 }
 
-export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
+export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
 
   const definedVars : Set<string> = new Set(); //getLocals(ast);
@@ -85,7 +85,7 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   };
 }
 
-function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
+function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
   switch (stmt.tag) {
     case "store":
       return [
@@ -137,7 +137,7 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
   }
 }
 
-function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
+function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
   switch (expr.tag) {
     case "value":
       return codeGenValue(expr.value, env)
@@ -157,7 +157,7 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       }
 
     case "builtin1":
-      const argTyp = expr.a;
+      const argTyp = expr.a.type;
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
       if (expr.name === "print" && argTyp === NUM) {
@@ -192,14 +192,13 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
     case "load":
       return [
         ...codeGenValue(expr.start, env),
-        `call $assert_not_none`,
         ...codeGenValue(expr.offset, env),
         `call $load`
       ]
   }
 }
 
-function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
+function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
   switch (val.tag) {
     case "num":
       return ["(i32.const " + val.value + ")"];
@@ -251,7 +250,7 @@ function codeGenBinOp(op : BinOp) : string {
   }
 }
 
-function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
+function codeGenInit(init : VarInit<Annotation>, env : GlobalEnv) : Array<string> {
   const value = codeGenValue(init.value, env);
   if (env.locals.has(init.name)) {
     return [...value, `(local.set $${init.name})`]; 
@@ -260,7 +259,7 @@ function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
   }
 }
 
-function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
+function codeGenDef(def : FunDef<Annotation>, env : GlobalEnv) : Array<string> {
   var definedVars : Set<string> = new Set();
   def.inits.forEach(v => definedVars.add(v.name));
   definedVars.add("$last");
@@ -297,7 +296,7 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
     (return))`];
 }
 
-function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
+function codeGenClass(cls : Class<Annotation>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = createMethodName(cls.name, method.name));
   const result = methods.map(method => codeGenDef(method, env));
