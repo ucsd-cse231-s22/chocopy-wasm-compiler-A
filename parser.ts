@@ -528,7 +528,8 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
 }
 
 export function parse(source : string) : Program<null> {
-  const t = parser.parse(source + OpenFunString + FileClassString);
+  source = FileClassString() + OpenFunString() + source;
+  const t = parser.parse(source);
   const str = stringifyTree(t.cursor(), source, 0);
   return traverse(t.cursor(), source);
 }
