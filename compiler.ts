@@ -1,6 +1,7 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
+import { getTypeInfo } from "./memory";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -91,15 +92,13 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
         `call $store`
       ]
       let pre = [`(i32.const 0)`]
-      if (stmt.value.a && stmt.value.a.tag === "class") {
+      if (stmt.value.a && (stmt.value.a.tag === "class" || stmt.value.a.tag === "none")) {
         pre = [
           ...codeGenValue(stmt.start, env),
           `call $ref_lookup`,
           `call $assert_not_none`,
           ...codeGenValue(stmt.offset, env),
-          `(i32.mul (i32.const 4))`, // offset is in 4 byte units
-          `(i32.add)`,
-          `(i32.load)`, // load the ref number referred to by argument ref no. and the offset
+          `(call $load)`, // load the ref number referred to by argument ref no. and the offset
           `(i32.const 0)`,
           `(i32.const -1) (call $traverse_update)`,
           `(i32.mul (i32.const 0))`, // hack to take top value of stack
@@ -114,21 +113,27 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
 
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
-      if (stmt.value.a && stmt.value.a.tag === "class") { // if the assignment is object assignment
+      if (stmt.value.a && (stmt.value.a.tag === "class" || stmt.value.a.tag === "none") && (stmt.value.tag !== "alloc")) { // if the assignment is object assignment
         valStmts.push(`(i32.const 0)`, `(i32.const 1)`, `(call $traverse_update)`) // update the count of the object on the RHS
-      }
-      if (env.locals.has(stmt.name)) {
-        return [`(local.get $${stmt.name})`, // update the count of the object on the LHS
-        `(i32.const 0)`,
-        `(i32.const -1)`, 
-        `(call $traverse_update)`,
-        `(local.set $${stmt.name})`].concat(valStmts).concat([`(local.set $${stmt.name})`]); 
+        if (env.locals.has(stmt.name)) {
+          return [`(local.get $${stmt.name})`, // update the count of the object on the LHS
+          `(i32.const 0)`,
+          `(i32.const -1)`, 
+          `(call $traverse_update)`,
+          `(local.set $${stmt.name})`].concat(valStmts).concat([`(local.set $${stmt.name})`]); 
+        } else {
+          return [`(global.get $${stmt.name})`,
+          `(i32.const 0)`,
+          `(i32.const -1)`,
+          `(call $traverse_update)`,
+          `(global.set $${stmt.name})`].concat(valStmts).concat([`(global.set $${stmt.name})`]); 
+        }
       } else {
-        return [`(global.get $${stmt.name})`,
-        `(i32.const 0)`,
-        `(i32.const -1)`,
-        `(call $traverse_update)`,
-        `(global.set $${stmt.name})`].concat(valStmts).concat([`(global.set $${stmt.name})`]); 
+        if (env.locals.has(stmt.name)) {
+          return valStmts.concat([`(local.set $${stmt.name})`]); 
+        } else {
+          return valStmts.concat([`(global.set $${stmt.name})`]); 
+        }
       }
 
     case "return":
@@ -214,10 +219,12 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       ];
 
     case "alloc":
+      let fields = [...env.classes.get(expr.a && expr.a.tag === "class" && expr.a.name).values()];
       return [
         ...codeGenValue(expr.amount, env),
-        `call $alloc`,
-        `call $mem_gen_ref`
+        `(i32.const ${getTypeInfo(fields.map(f => f[1]))})`,
+        `(i32.const ${fields.length})`,
+        `call $alloc`
       ];
     case "load":
       return [

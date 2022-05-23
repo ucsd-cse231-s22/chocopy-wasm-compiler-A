@@ -1,4 +1,6 @@
 import { Template } from "webpack";
+import { Type } from "./ast";
+import { Value } from "./ir";
 
 export type memAddr = number;
 export type ref = number;
@@ -27,7 +29,6 @@ export const sizeOffset = 3;
 export const typeOffset =  2;
 export const amountOffset = 1;
 export const dataOffset = 4;
-export const METADATA_AMT : number = 4;
 
 // mapping for reference number to actual address
 // this allows the memory management module to move memory blocks around
@@ -94,7 +95,7 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { //
 
         for (let i = 0; i < size; i++) {
             if ((types & (1 << i)) !== 0) {
-                for (let a = 0; a < (amt - METADATA_AMT) / size; a++) {
+                for (let a = 0; a < amt / size; a++) {
                     let temp = memHeap[addr + dataOffset + size*a + i];
                     if (temp !== 0 && !explored.has(temp)) { // 0 is None
                         travQueue.push(temp); 
@@ -112,9 +113,24 @@ export function addScope() {
 }
 
 export function removeScope() {
-    activeStack[activeStack.length - 1].forEach(r => traverseUpdate(r, -1, -1));
+    activeStack[activeStack.length - 1].forEach(r => traverseUpdate(r, 0, -1));
     activeStack.pop();
 }
+
+export function getTypeInfo(fields: Value<Type>[]): number {
+    const binArr : number[] = fields.map(f => {
+        if (f.tag  === "none") {
+          return 1;
+        }
+        return 0;
+      });
+
+    if (binArr.length === 0) {
+        return 0;
+    }
+    return parseInt(binArr.reverse().join(""), 2);
+}
+
 
 //debug function for tests
 export function debugId(id: number, offset: number) { // id should be of type int and the first field in the object
@@ -125,5 +141,4 @@ export function debugId(id: number, offset: number) { // id should be of type in
     }
     throw new Error(`no such id: ${id}`);
 }
-
 
