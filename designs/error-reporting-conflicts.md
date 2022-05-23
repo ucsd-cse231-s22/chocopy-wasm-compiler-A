@@ -1,12 +1,3 @@
-Describe in a few sentences why your feature and that feature don’t really interact much. Give an example of a program that showcases your feature and theirs without interacting, and justify why it’s representative (that is, why there isn’t some other interesting interaction between your features)
-
-OR
-
-
-Identify a place where your features overlap and will need more implementation to make them work together. This might be an opportunity for cool new stuff, or something that’s broken.
-1. Describe it with a representatitve test case/scenario. This could be a Python program that will have an issue and crash the compiler because the two features were combined, or a novel combination of features that need good behavior. It could also be a UI interaction, a reason libraries won’t work well together, etc.
-2. Describe what changes you think are needed to make these features work together: What should the new expected output be? What new additions to the compiler are needed to make them work together? Does their design need to change a bit, or does yours? How? Treat this like the first
-
 ## Bignums
 Our implementation for reporting static and runtime errors should not interfere with the Bignums feature. From a high-level, the Bignums implementation extends the current compiler to support large values, whereas the implementation for our feature records source code and location information to the AST. Their implementation does not modify the ast or the parsing process, which is the main place to which our changes have been added. 
 
@@ -157,8 +148,9 @@ TypeError: binary operator `<` should take type `int` on both sides, got `bool` 
 ```
 
 ## Front-end user interface
-- No new feature overlap observed. We already coordinated on how line / col numbers could be reported to them for static errors. We need to further coordinate on how runtime errors could be reported similarly, though
-- TODO: example? maybe not?
+The only place that our implementation might overlap with the front-end team's is the calculation and reporting of error source locations. The front-end team mentioned that they would like to use such information that we calculated to highlight the source code errors inside the editor. We have already coordinated with the front-end team by providing them with an API so that they could get line / col info when a static error occurs. The changes have already been merged to the main repository and now accessible to all teams. We still need to work on building a similar API for runtime errors so that the similar information could be outputed to the front-end team.
+
+Frankly, we don't think it's possible to provide an example of how our features overlap / not overlap without having a running version of the UI, especially when some critical features remain unavailable / WIP according to the team's design documentation. We hoped to find screenshots in their design doc but there didn't seem to be any by the time we checked.
 
 ## Generics and polymorphism
 
