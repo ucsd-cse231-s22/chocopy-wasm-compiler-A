@@ -280,7 +280,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       return {a: NONE, tag:stmt.tag, cond: tCond, body: tBody};
     case "for":
       const tListExpr = tcExpr(env, locals, stmt.iterable);
-      if (tListExpr.a.tag !== "list")
+      if (tListExpr.a.tag !== "list" && tListExpr.a !== STR)
         throw new TypeCheckError("Cannot iterate over type of " + tListExpr.a.tag)
       var nameTyp;
       if (locals.vars.has(stmt.name)) {
@@ -290,8 +290,10 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       } else {
         throw new TypeCheckError("Not a variable: " + stmt.name);
       }
-      if(!isAssignable(env, tListExpr.a.elementtype, nameTyp))
+      if(tListExpr.a.tag === "list" && !isAssignable(env, tListExpr.a.elementtype, nameTyp))
         throw new TypeCheckError("Expected type "+nameTyp+"; got type "+tListExpr.a.elementtype);
+      if(tListExpr.a === STR && !isAssignable(env, tListExpr.a, nameTyp))
+        throw new TypeCheckError("Expected type "+nameTyp+"; got type "+tListExpr.a)
       const tForBody = tcBlock(env, locals, stmt.body);
       return {a: NONE, tag: stmt.tag, name: stmt.name, iterable: tListExpr, body: tForBody};
     case "pass":

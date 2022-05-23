@@ -3,6 +3,7 @@ import { BinOp, Type, UniOp } from "./ast"
 import {BOOL, NONE, NUM, STR} from "./utils";
 
 export type GlobalEnv = {
+  strings: Map<string, string>;
   globals: Map<string, boolean>;
   classes: Map<string, [Map<string, [number, Value<Type>]>, Map<string, number>, string]>;
   locals: Set<string>;
@@ -13,6 +14,7 @@ export type GlobalEnv = {
 }
 
 export const emptyEnv : GlobalEnv = {
+  strings: new Map(),
   globals: new Map(),
   classes: new Map(),
   locals: new Set(),
@@ -46,6 +48,7 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   definedVars.add("$selector");
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
+  const globalStrNames : Array<string> = Array.from(env.strings.values());
   const globalNames = ast.inits.map(init => init.name);
   console.log(ast.inits, globalNames);
   const funs : Array<string> = [];
@@ -55,6 +58,8 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
   const allFuns = funs.concat(classes).join("\n\n");
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
+  var stringInits = Array.from(env.strings.keys()).map(v => codeGenStringLiteral(env.strings, v));
+  stringInits = [].concat(...stringInits);
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
   withDefines.labels = ast.body.map(block => block.label);
   var bodyCommands = "(local.set $$selector (i32.const 0))\n"
@@ -73,7 +78,7 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   bodyCommands += ") ;; end $loop"
 
   // const commandGroups = ast.stmts.map((stmt) => codeGenStmt(stmt, withDefines));
-  const allCommands = [...localDefines, ...inits, bodyCommands];
+  const allCommands = [...localDefines, ...stringInits, ...inits, bodyCommands];
   withDefines.locals.clear();
 
   const methods : Array<string> = ast.classes.map(cls => codeGenMethod(cls, withDefines)).flat();
@@ -83,7 +88,7 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   ${methods.join("\n")}
   `
   return {
-    globals: globalNames,
+    globals: [...globalStrNames, ...globalNames],
     functions: allFuns,
     mainSource: allCommands.join("\n"),
     newEnv: withDefines,
@@ -233,14 +238,13 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       }
 
     case "str-index":
-      // TODO: second load-store change to copy
       return [
         `(call $alloc (i32.const 2))`,
         `(local.set $$last)`,
         `(call $store (local.get $$last) (i32.const 0) (i32.const 1))`,
         `(local.get $$last)`,
         `(i32.const 1)`,
-        ...codeGenValue(expr.start, env),
+        ...codeGenValue(expr.start, env), // no alloc here
         ...codeGenValue(expr.offset, env),
         `(i32.add (i32.const 1))`,
         `(call $load)`,
@@ -255,6 +259,27 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
   }
 }
 
+function codeGenStringLiteral(strings : Map<string, string>, val : string) : Array<string> {
+  let res = [
+    `(call $alloc (i32.const ${val.length + 1}))`,
+    `(global.set $${strings.get(val)})`,
+    `(global.get $${strings.get(val)})`,
+    `(i32.const 0)`,
+    `(i32.const ${val.length})`,
+    `(call $store)`
+  ];
+  for (let i = 1; i <= val.length; i++) {
+    res = [
+      ...res,
+      `(global.get $${strings.get(val)})`,
+      `(i32.const ${i})`,
+      `(i32.const ${val.charCodeAt(i - 1)})`,
+      `(call $store)`
+    ]
+  }
+  return res;
+}
+
 function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
   switch (val.tag) {
     case "num":
@@ -264,25 +289,11 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
     case "bool":
       return [`(i32.const ${Number(val.value)})`];
     case "str":
-      let res = [
-        `(call $alloc (i32.const ${val.value.length + 1}))`,
-        `(local.set $$last)`,
-        `(local.get $$last)`,
-        `(i32.const 0)`,
-        `(i32.const ${val.value.length})`,
-        `(call $store)`
-      ];
-      for (let i = 1; i <= val.value.length; i++) {
-        res = [
-          ...res,
-          `(local.get $$last)`,
-          `(i32.const ${i})`,
-          `(i32.const ${val.value.charCodeAt(i - 1)})`,
-          `(call $store)`
-        ]
+      if (env.strings.has(val.value)) {
+        return [`(global.get $${env.strings.get(val.value)})`];
+      } else {
+        throw new Error("Compiler's cursed, go home");
       }
-      res.push(`(local.get $$last)`);
-      return res;
     case "none":
       return [`(i32.const 0)`];
     case "id":
