@@ -272,7 +272,9 @@ In this week, we nearly fix all the leftover of week 7.
 2. Index, concatenation and comparison for strings are implemented.
 3. We change and encapsulate the code when we want to print a string. Now, it is not hard-coded in compiler.ts.
 4. We add supports for escape sequences: \\", \\\\, \n and \t.
+5. All tests are written inside function or class in string.test.ts.
 
 New feature:
 1. We might add string slicing like **a = "abcd"[0:2]**.
 2. Supports for more escape sequences.
+3. Add string duplication like **s = "a" * 3**.
