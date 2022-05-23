@@ -437,3 +437,8 @@ Traceback:
 
 ActualError: some error on line 6 col 1
 ```
+
+## Milestone 2 plans (week 9 and onward)
+1. Our first priority is to get our existing implementation working for incoming new features of the compiler. We expect the main changes / refactoring to take place in `ast.ts` and `parse.ts` for source information recording, `type-checking.ts` for formatting static errors, and `lower.ts` for runtime errors. 
+2. Once the existing error reporting mechanism applies to all new features, we'll try to address all the remaining work mentioned in `Future Work` above, the type errors first and then the runtime errors.
+3. Finally, if we have any additional time, we'll figure out a design and implementation for drawing squiggly lines that involve multiple lines of source code, and fill in the "possible explanation" section of the error messages (the string following the squiggly lines).
