@@ -1,7 +1,7 @@
 
 import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, ClassIndex } from './ast';
-import { NUM, BOOL, NONE, EMPTY, CLASS, LIST } from './utils';
+import { NUM, BOOL, NONE, STR, EMPTY, CLASS, LIST } from './utils';
 import { emptyEnv } from './compiler';
 import { BlockList } from 'net';
 import { IncomingMessage } from 'http';

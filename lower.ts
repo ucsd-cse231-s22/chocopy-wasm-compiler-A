@@ -2,7 +2,6 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
-import { table } from 'console';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
