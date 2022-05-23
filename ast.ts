@@ -39,18 +39,8 @@ export type Expr<A> =
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
-  | {  a?: A, tag: "construct", name: string, arguments: Array<Expr<A>> }
-  // ast for list-comp
-  | {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Expr<A>, iterable_cond?: Expr<A>, body?: Array<Stmt<A>> }
-
-  // Possible Typechecks here ::
-  // 1. iterable.a.tag = list
-  // 2. cond is optional and cond.a.tag = bool and cond.tag = "if"
-  // 3. elem.tag = id
-
-  // [a (left) for b (elem) in C (iterable) if cond (optional)]
-  // [ 2*8, 6<7, 9+0,9, none] = [16, true, 9, 9, none]
-  // The reason we feel items in list-construct should be Expressions is because they can be anything as shown above
+  | {  a?: A, tag: "construct", name: string}
+  | {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Expr<A>}
 
 export type Literal = 
     { tag: "num", value: number }

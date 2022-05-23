@@ -150,6 +150,11 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       }
 
     case "builtin1":
+      if (expr.a.tag === "class"){
+        const argStmts = codeGenValue(expr.arg, env);
+        var callName = "print_num";
+        return argStmts.concat([`(call $${callName})`]);
+      }
       const argTyp = expr.a;
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;

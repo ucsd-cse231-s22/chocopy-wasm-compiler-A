@@ -57,8 +57,10 @@ async function debug() {
       return c
   a:Range=None
   b:Range=None
+  i:int=0
   a=Range().new(0,5)
   b=[i for i in a if i!=2]
+  print(b)
   `
   var ast_lz = parser.parse(source);
   // console.log(stringifyTree(ast_lz.cursor(), source, 0));
