@@ -28,7 +28,7 @@ class Range(object):
 a:Range=None
 m: int = 0
 a=Range().new(10,20,2)
-print([m for m in a])`, ['10', '12', '14', '16', '18']
+[m for m in a]`, ['10', '12', '14', '16', '18']
     );
 
 
@@ -161,7 +161,7 @@ a:Range=None
 m: int = 0
 j:int=2
 a=Range().new(5,7)
-print([j for m in a])`, ['2', '2']
+[j for m in a]`, ['2', '2']
     );
 
     assertPrint("simple comprehension output with only max range", `
@@ -187,7 +187,7 @@ a:Range=None
 j: int = 7
 m: int = 0
 a=Range().new(5)
-print([j for m in a])`, ['7', '7', '7', '7', '7']
+[j for m in a]`, ['7', '7', '7', '7', '7']
     );
 
     assertPrint("simple comprehension output with bool values", `
@@ -215,7 +215,7 @@ a:Range=None
 m: int = 0
 j:bool=True
 a=Range().new(1,5)
-print([j for m in a])`, ['True', 'True', 'True', 'True',]
+[j for m in a]`, ['True', 'True', 'True', 'True',]
     );
 
     assertPrint("simple comprehension output with expr values", `
@@ -243,7 +243,7 @@ a:Range=None
 m: int = 0
 j:int=5
 a=Range().new(1,5)
-print([j*2 for m in a])`, ['10', '10', '10', '10',]
+[j*2 for m in a]`, ['10', '10', '10', '10',]
     );
 
     assertPrint("simple comprehension output using iterable class methods", `
@@ -376,7 +376,7 @@ a:Range=None
 j: int = 5
 m: int = 0
 a=Range().new(5)
-print([f(j) for m in a])`, ['25', '25', '25', '25', '25']
+[f(j) for m in a]`, ['25', '25', '25', '25', '25']
     );
 
     assertPrint("simple comprehension output with function call using counter variable as expr values", `
@@ -402,7 +402,7 @@ a:Range=None
 j: int = 5
 m: int = 0
 a=Range().new(5)
-print([f(m) for m in a])`, ['0', '5', '10', '15', '20']
+[f(m) for m in a]`, ['0', '5', '10', '15', '20']
     );
 
     assertPrint("Two comprehension expressions", `
@@ -430,9 +430,9 @@ a:Range=None
 m: int = 0
 j:int=2
 a=Range().new(5,7)
-print([m for m in a])
+[m for m in a]
 a=a.new(10,15)
-print([m for m in a])`, ['5', '6', '10', '11', '12', '13', '14']
+[m for m in a]`, ['5', '6', '10', '11', '12', '13', '14']
     );
 
     assertPrint("simple function calls 1", `
