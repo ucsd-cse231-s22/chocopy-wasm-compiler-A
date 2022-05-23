@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import {NUM, STRING} from "../utils";
+import { importObjectErrors } from "../errors";
 
 enum Type { Num, Bool, None, String }
 
@@ -29,11 +29,11 @@ function print(typ: Type, arg: any): any {
   return arg;
 }
 
-function assert_not_none(arg: any) : any {
-  if (arg === 0)
-    throw new Error("RUNTIME ERROR: cannot perform operation on none");
-  return arg;
-}
+// function assert_not_none(arg: any) : any {
+//   if (arg === 0)
+//     throw new Error("RUNTIME ERROR: cannot perform operation on none");
+//   return arg;
+// }
 
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
@@ -51,7 +51,7 @@ export const importObject : any = {
     // the compiler easier, we define print so it logs to a string object.
     //  We can then examine output to see what would have been printed in the
     //  console.
-    assert_not_none: (arg: any) => assert_not_none(arg),
+    // assert_not_none: (arg: any) => assert_not_none(arg),
     print: (arg: any) => print(Type.Num, arg),
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
@@ -61,6 +61,7 @@ export const importObject : any = {
     max: Math.max,
     pow: Math.pow,
   },
+  errors: importObjectErrors,
 
   output: "",
 };
