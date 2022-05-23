@@ -4,25 +4,31 @@ import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 describe("List Comprehension Tests", () => {
 
     assertPrint("simple comprehension output with step", `
-class range(object):
-    curr: int = 0
-    min: int = 0
-    max: int = 10
-    step:int = 1
-    def __init__(self: range, min: int, max: int, step:int):
-        self.curr = min
-        self.min = min
-        self.max = max
-        self.step = step
-    def next(self: range) -> int:
-        c: int = 0
-        c = self.curr
-        self.curr = self.curr + self.step
+class Range(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    step:int=1
+    def __init__(self:Range):
+        pass
+    def new(self:Range,min:int,max:int,step:int)->Range:
+        self.max=max
+        self.min=min
+        self.curr=min
+        self.step=step
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
+        c:int=0
+        c=self.curr
+        self.curr=self.curr+self.step
         return c
-    def hasNext(self: range) -> bool:
-        return self.curr < self.max
-j:int=3
-print([k for k in range(10,20,2)])`, ['10', '12', '14', '16', '18']
+
+a:Range=None
+m: int = 0
+a=Range().new(10,20,2)
+print([m for m in a])`, ['10', '12', '14', '16', '18']
     );
 
 
@@ -131,188 +137,275 @@ k:int=10
 `);
 
     assertPrint("simple comprehension output with min and max range", `
-class range(object):
-    curr: int = 0
-    min: int = 0
-    max: int = 10
-    def __init__(self: range, min: int, max: int):
-        self.curr = min
-        self.min = min
-        self.max = max
-    def next(self: range) -> int:
-        c: int = 0
-        c = self.curr
-        self.curr = self.curr + 1
+class Range(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,min:int,max:int)->Range:
+        self.max=max
+        self.min=min
+        self.curr=min
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
+        c:int=0
+        c=self.curr
+        self.curr=self.curr+1
         return c
-    def hasNext(self: range) -> bool:
-        return self.curr < self.max
-j: int = 2
-print([j for a in range(5,7)])`, ['2', '2']
+def f(x:int)->int:
+    return x*5
+a:Range=None
+m: int = 0
+j:int=2
+a=Range().new(5,7)
+print([j for m in a])`, ['2', '2']
     );
 
     assertPrint("simple comprehension output with only max range", `
-class range(object):
-    curr: int = 0
-    min: int = 0
-    max: int = 10
-    def __init__(self: range, min: int, max: int):
-        self.curr = min
-        self.min = min
-        self.max = max
-    def next(self: range) -> int:
-        c: int = 0
-        c = self.curr
-        self.curr = self.curr + 1
+class Range(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,max:int)->Range:
+        self.max=max
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
+        c:int=0
+        c=self.curr
+        self.curr=self.curr+1
         return c
-    def hasNext(self: range) -> bool:
-        return self.curr < self.max
+def f(x:int)->int:
+    return x*5
+a:Range=None
 j: int = 7
-print([j for b in range(5)])`, ['7', '7', '7', '7', '7']
+m: int = 0
+a=Range().new(5)
+print([j for m in a])`, ['7', '7', '7', '7', '7']
     );
 
     assertPrint("simple comprehension output with bool values", `
-class range(object):
-    curr:int=0
+class Range(object):
     min:int=0
-    max:int=10
-    def __init__(self:range, min:int, max:int):
-        self.curr=min
-        self.min=min
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,min:int,max:int)->Range:
         self.max=max
-    def next(self:range)->int:
+        self.min=min
+        self.curr=min
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
         c:int=0
         c=self.curr
         self.curr=self.curr+1
         return c
-    def hasNext(self:range)->bool:
-        return self.curr<self.max
+def f(x:int)->int:
+    return x*5
+a:Range=None
+m: int = 0
 j:bool=True
-[j for c in range(1,5)]`, ['True', 'True', 'True', 'True',]
+a=Range().new(1,5)
+print([j for m in a])`, ['True', 'True', 'True', 'True',]
     );
 
     assertPrint("simple comprehension output with expr values", `
-class range(object):
-    curr:int=0
+class Range(object):
     min:int=0
-    max:int=10
-    def __init__(self:range, min:int, max:int):
-        self.curr=min
-        self.min=min
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,min:int,max:int)->Range:
         self.max=max
-    def next(self:range)->int:
+        self.min=min
+        self.curr=min
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
         c:int=0
         c=self.curr
         self.curr=self.curr+1
         return c
-    def hasNext(self:range)->bool:
-        return self.curr<self.max
+def f(x:int)->int:
+    return x*5
+a:Range=None
+m: int = 0
 j:int=5
-print([j*2 for d in range(1,5)])`, ['10', '10', '10', '10',]
+a=Range().new(1,5)
+print([j*2 for m in a])`, ['10', '10', '10', '10',]
     );
 
     assertPrint("simple comprehension output using iterable class methods", `
-class range(object):
-    curr:int=0
+class Range(object):
     min:int=0
-    max:int=10
-    def __init__(self:range, min:int, max:int):
-        self.curr=min
-        self.min=min
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,min:int,max:int)->Range:
         self.max=max
-    def next(self:range)->int:
+        self.min=min
+        self.curr=min
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
         c:int=0
         c=self.curr
         self.curr=self.curr+1
         return c
-    def hasNext(self:range)->bool:
-        return self.curr<self.max
-j:int=5
-[e for e in range(1,5)]`, ['1', '2', '3', '4']
+def f(x:int)->int:
+    return x*5
+a:Range=None
+m: int = 0
+a=Range().new(1,5)
+[m for m in a]`, ['1', '2', '3', '4']
     );
 
     assertPrint("simple comprehension output using iterable class methods and expr values", `
-class range(object):
-    curr:int=0
+class Range(object):
     min:int=0
-    max:int=10
-    def __init__(self:range, min:int, max:int):
-        self.curr=min
-        self.min=min
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,min:int,max:int)->Range:
         self.max=max
-    def next(self:range)->int:
+        self.min=min
+        self.curr=min
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
         c:int=0
         c=self.curr
         self.curr=self.curr+1
         return c
-    def hasNext(self:range)->bool:
-        return self.curr<self.max
-j:int=5
-[f*3 for f in range(1,5)]`, ['3', '6', '9', '12']
+def f(x:int)->int:
+    return x*5
+a:Range=None
+m: int = 0
+a=Range().new(1,5)
+[m*3 for m in a]`, ['3', '6', '9', '12']
     );
 
     assertPrint("simple comprehension output with if condition", `
-class range(object):
-    curr:int=0
+class Range(object):
     min:int=0
-    max:int=10
-    def __init__(self:range, min:int, max:int):
-        self.curr=min
-        self.min=min
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,min:int,max:int)->Range:
         self.max=max
-    def next(self:range)->int:
+        self.min=min
+        self.curr=min
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
         c:int=0
         c=self.curr
         self.curr=self.curr+1
         return c
-    def hasNext(self:range)->bool:
-        return self.curr<self.max
-j:int=5
-[g for g in range(1,5) if g!= 3]`, ['1', '2', '4']
+def f(x:int)->int:
+    return x*5
+a:Range=None
+m: int = 0
+a=Range().new(1,5)
+[m for m in a if m!=3]`, ['1', '2', '4']
     );
 
     assertPrint("simple comprehension output with bool binop expr values and if condition", `
-class range(object):
-    curr:int=0
+class Range(object):
     min:int=0
-    max:int=10
-    def __init__(self:range, min:int, max:int):
-        self.curr=min
-        self.min=min
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,max:int)->Range:
         self.max=max
-    def next(self:range)->int:
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
         c:int=0
         c=self.curr
         self.curr=self.curr+1
         return c
-    def hasNext(self:range)->bool:
-        return self.curr<self.max
-j:int=3
-[j<i for i in range(6) if i>2]`, ['False', 'True', 'True']
+def f(x:int)->int:
+    return x*5
+a:Range=None
+j: int = 3
+m: int = 0
+a=Range().new(6)
+[j<m for m in a if m>2]`, ['False', 'True', 'True']
     );
 
     assertPrint("simple comprehension output with function call as expr values", `
-class range(object):
-    curr:int=0
+class Range(object):
     min:int=0
-    max:int=10
-    def __init__(self:range, min:int, max:int):
-        self.curr=min
-        self.min=min
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,max:int)->Range:
         self.max=max
-    def next(self:range)->int:
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
         c:int=0
         c=self.curr
         self.curr=self.curr+1
         return c
-    def hasNext(self:range)->bool:
-        return self.curr<self.max
 def f(x:int)->int:
     return x*5
+a:Range=None
 j: int = 5
-print([f(j) for l in range(5)])`, ['25', '25', '25', '25', '25']
+m: int = 0
+a=Range().new(5)
+print([f(j) for m in a])`, ['25', '25', '25', '25', '25']
     );
 
-    assertPrint("test", `
+    assertPrint("simple comprehension output with function call using counter variable as expr values", `
+class Range(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,max:int)->Range:
+        self.max=max
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
+        c:int=0
+        c=self.curr
+        self.curr=self.curr+1
+        return c
+def f(x:int)->int:
+    return x*5
+a:Range=None
+j: int = 5
+m: int = 0
+a=Range().new(5)
+print([f(m) for m in a])`, ['0', '5', '10', '15', '20']
+    );
+
+    assertPrint("Two comprehension expressions", `
 class Range(object):
     min:int=0
     max:int=0
@@ -320,8 +413,8 @@ class Range(object):
     def __init__(self:Range):
         pass
     def new(self:Range,min:int,max:int)->Range:
-        self.min=min
         self.max=max
+        self.min=min
         self.curr=min
         return self
     def hasNext(self:Range)->bool:
@@ -331,25 +424,26 @@ class Range(object):
         c=self.curr
         self.curr=self.curr+1
         return c
+def f(x:int)->int:
+    return x*5
 a:Range=None
-b:Range=None
-i:int=0
-j:int=25
-a=Range().new(0,5)
-b=[j for i in a if i!=2]`, ['25', '25', '25', '25']
+m: int = 0
+j:int=2
+a=Range().new(5,7)
+print([m for m in a])
+a=a.new(10,15)
+print([m for m in a])`, ['5', '6', '10', '11', '12', '13', '14']
     );
 
-    assertPrint("test", `
+    assertPrint("simple function calls 1", `
 class Range(object):
     min:int=0
     max:int=0
     curr:int=0
     def __init__(self:Range):
         pass
-    def new(self:Range,min:int,max:int)->Range:
-        self.min=min
+    def new(self:Range,max:int)->Range:
         self.max=max
-        self.curr=min
         return self
     def hasNext(self:Range)->bool:
         return self.curr<self.max
@@ -358,13 +452,39 @@ class Range(object):
         c=self.curr
         self.curr=self.curr+1
         return c
-a:Range=None
-b:Range=None
-i:int=0
-j:int=25
-a=Range().new(0,5)
-b=[j for i in a if i!=2]`, ['25', '25', '25', '25']
+def f():
+    a:Range=None
+    m: int = 0
+    a=Range().new(5)
+    [m for m in a]
+f()`, ['0', '1', '2', '3', '4']
     );
+
+    assertPrint("simple function calls 2", `
+class Range(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,max:int)->Range:
+        self.max=max
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
+        c:int=0
+        c=self.curr
+        self.curr=self.curr+1
+        return c
+def f(j:int):
+    a:Range=None
+    m: int = 0
+    a=Range().new(5)
+    [j*5 for m in a]
+f(10)`, ['0', '1', '2', '3', '4']
+    );
+
 
     assertPrint("test", `
 class Range(object):
