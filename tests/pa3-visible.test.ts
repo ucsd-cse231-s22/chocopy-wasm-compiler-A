@@ -33,6 +33,7 @@ print(x)` , [`5`]);
     `
 class C(object):
   x : int = 123
+
 c : C = None
 c = C()
 print(c.x) `,
@@ -60,6 +61,7 @@ class C(object):
     return self.x
   def setX(self: C, x: int):
     self.x = x
+
 c : C = None
 c = C()
 print(c.getX())
@@ -71,6 +73,7 @@ print(c.getX())`, [`123`, `42`]);
 class C(object):
   x : int = 1
   y : int = 2
+
 class D(object):
   y : int = 3
   x : int = 4
@@ -85,8 +88,10 @@ print(d.x)`, [`1`, `4`]);
 `
 class C(object):
   x : int = 1
+
 c1 : C = None
 c2 : C = None
+
 c1 = C()
 c2 = c1
 c1.x = 123
@@ -103,6 +108,7 @@ class C(object):
     return self
   def clear(self: C) -> C:
     return self.new(123)
+
 C().new(42).clear()`, ["123", "42", "42", "123"])
   // 12
   assertFail("no-fields-for-none", `
@@ -159,6 +165,7 @@ class C(object):
   x : int = 1
   def clear(self: C) -> C:
     return None
+
 c : C = None
 c = C().clear()
 c`, CLASS("C"));
