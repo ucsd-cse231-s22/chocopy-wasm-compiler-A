@@ -47,5 +47,9 @@ Since we can not run some test results with npm test, we run it in the browser a
 During working on this project, we find a bug in the type-check.ts. When typechecking the arguments of a function call, the old (untyped, in the red box) argument is return instead of the typed one (yellow box). We fixed the code and include this modification in the pull request.
 ![Alt text](./typecheck_bug.png?raw=true "Title")
 
-## Week 8 - Goal
+## Week 8 - Goal 
+1. The goal for this week is to incorporate string into our FileSystem. Afer reading the design documents of string, we will change our design of file system to the one below.
+```
+
+```
 
