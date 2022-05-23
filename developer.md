@@ -15,6 +15,7 @@ Here are some developer convention for us
   # Write commit message and merge conflict here
   git push
   ```
+- Code Review: Normally PLZ PLZ PLZ DO NOT directly develop on main branch (which is 2022 in our repo). Develop on your branch and create pull request & assign reviewers. After all the teammates reviewed the codes, we can merge it.
 
 - CI / CD: I've already put a hook on our github. When we run ```git push``` we'll automatically run ```npm run test``` first and if there's any error we'll stop the push.
 

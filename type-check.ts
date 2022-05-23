@@ -105,6 +105,10 @@ export function isListObject(t: Type) : boolean {
   return t.tag === "list" || t.tag === "empty";
 }
 
+export function iterable(t: Type) : boolean {
+  return isListObject(t) || t.tag === "str";
+}
+
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type) : boolean {
   return (
     equalType(t1, t2) ||
@@ -360,7 +364,7 @@ export function tcInit(env: GlobalTypeEnv, init : VarInit<null>) : VarInit<Type>
   if (isAssignable(env, valTyp, init.type)) {
     return {...init, a: NONE};
   } else {
-    throw new TypeCheckError("Expected type `" + init.type + "`; got type `" + valTyp + "`");
+    throw new TypeCheckError("Expected type `" + init.type.tag + "`; got type `" + valTyp.tag + "`");
   }
 }
 
@@ -460,6 +464,8 @@ function tcIfReturn(ifStmt : Stmt<Type>) : Boolean {
 
 export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<null>) : Stmt<Type> {
   switch(stmt.tag) {
+    case "comment":
+      return { a: NONE, tag: "comment" }
     case "assign":
       const tValExpr = tcExpr(env, locals, stmt.value);
       var nameTyp;
@@ -507,6 +513,17 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
         throw new TypeCheckError("expected return type `" + (locals.expectedRet as any).tag + "`; got type `" + (tRet.a as any).tag + "`");
       locals.actualRet = tRet.a;
       return {a: tRet.a, tag: stmt.tag, value:tRet};
+    case "for":
+      var tIterVar = tcExpr(env, locals, stmt.itvar);
+      var tIterable = tcExpr(env, locals, stmt.iterable);
+      if (!iterable(tIterable.a))
+        throw new TypeCheckError(`not iterable type ${tIterable.a.tag}`);
+      if (tIterable.a.tag === "str" && tIterVar.a.tag !== "str")
+        throw new TypeCheckError(`iterative var should be str, get ${tIterVar.a.tag} instead`);
+      if (tIterable.a.tag === "list" && !equalType(tIterable.a.elem, tIterVar.a))
+        throw new TypeCheckError(`iterative var should be ${tIterable.a.elem.tag}, get ${tIterVar.a.tag} instead`);
+      const tfBody = tcBlock(env, locals, stmt.body);
+      return {...stmt, a: NONE, itvar: tIterVar, iterable: tIterable, body: tfBody};
     case "while":
       var tCond = tcExpr(env, locals, stmt.cond);
       const tBody = tcBlock(env, locals, stmt.body);
@@ -542,7 +559,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       switch(expr.op) {
         case BinOp.Plus:
           if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
-          else if (tLeft.a.tag === "list" && equalType(tRight.a, tLeft.a)) { return {a: LIST(tLeft.a.elem), ...tBin}; }
+          else if (isListObject(tLeft.a) && equalType(tRight.a, tLeft.a)) {
+            return {a: (tLeft.a.tag !== "empty") ? tLeft.a : tRight.a, ...tBin, op: BinOp.IterPlus};
+          } else if (equalType(tLeft.a, STR) && equalType(tRight.a, STR)) { return {a: STR, ...tBin, op: BinOp.IterPlus}; }
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Minus:
         case BinOp.Mul:
@@ -570,6 +589,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           if(!isMemoryObject(tLeft.a) || !isMemoryObject(tRight.a))
             throw new TypeCheckError("is operands must be objects in memory");
           return {a: BOOL, ...tBin};
+        default:
+          throw new TypeCheckError(`Unknown Binary op ${expr.op}`)
       }
     case "uniop":
       const tExpr = tcExpr(env, locals, expr.expr);
@@ -596,7 +617,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         return {...expr, a: tArg.a, arg: tArg};
       } else if (expr.name === "len") {
         const tArg = tcExpr(env, locals, expr.arg);
-        if (isListObject(tArg.a)) {
+        if (iterable(tArg.a)) {
           return {...expr, a: NUM, arg: tArg}
         } else {
           throw new TypeError("Function call type mismatch: " + expr.name);
@@ -672,10 +693,14 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       }
     case "access":
       var tObj = tcExpr(env, locals, expr.obj);
-      if (tObj.a.tag === "list") {
+      if (isListObject(tObj.a)) {
         var tInd = tcExpr(env, locals, expr.ind);
         if (!equalType(tInd.a, NUM)) throw new TypeCheckError(`cannot access with index type ${tInd.a.tag}`);
-        return {...expr, a: tObj.a.elem, obj: tObj, ind: tInd};
+        return {...expr, a: tObj.a.tag === "list" ? tObj.a.elem : EMPTY, obj: tObj, ind: tInd};
+      } else if (tObj.a.tag === "str") {
+        var tInd = tcExpr(env, locals, expr.ind);
+        if (!equalType(tInd.a, NUM)) throw new TypeCheckError(`cannot access with index type ${tInd.a.tag}`);
+        return {...expr, a: STR, obj: tObj, ind: tInd};
       } else {
         throw new TypeCheckError(`cannot access type ${tObj.a.tag}`);
       }
@@ -730,5 +755,6 @@ export function tcLiteral(literal : Literal) {
         case "bool": return BOOL;
         case "num": return NUM;
         case "none": return NONE;
+        case "str": return STR;
     }
 }

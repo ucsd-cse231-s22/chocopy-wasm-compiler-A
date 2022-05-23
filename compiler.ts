@@ -217,12 +217,28 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       const argTyp = expr.a;
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
-      if (expr.name === "print" && argTyp === NUM) {
-        callName = "print_num";
-      } else if (expr.name === "print" && argTyp === BOOL) {
-        callName = "print_bool";
-      } else if (expr.name === "print" && argTyp === NONE) {
-        callName = "print_none";
+      if (expr.name === "print") {
+        switch (argTyp.tag) {
+          case "number": {
+            callName = "print_num";
+            break;
+          }
+          case "bool": {
+            callName = "print_bool";
+            break;
+          }
+          case "str": {
+            callName = "print_str";
+            break;
+          }
+          case "none": {
+            callName = "print_none";
+            break;
+          }
+          default: {
+            callName = "rte_printarg";
+          }
+        }
       }
       return argStmts.concat([`(call $${callName})`]);
 
@@ -260,11 +276,8 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         return [
           ...codeGenValue(expr.start, env),
           `call $assert_not_none`,
-          `(local.set $$last)`,
-          `(local.get $$last)`,
-          `(local.get $$last)`,
-          `(i32.const 0)`, // for offset
-          `call $load`,
+          `call $dup`,
+          `call $len`,
           ...codeGenValue(expr.offset, env),
           `call $assert_valid_access`,
           `(i32.const 1)`,
@@ -309,6 +322,13 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       return [`(i32.const ${Number(val.value)})`];
     case "none":
       return [`(i32.const 0)`];
+    case "str":
+      const strVal : Array<string> = [`(i32.const ${val.value.length + 1})`, `call $alloc`,
+        `call $dup`, `(i32.const 0)`, `(i32.const ${val.value.length})`, `call $store`];
+      for (let i = 0; i < val.value.length; i++) {
+        strVal.push(`call $dup`, `(i32.const ${i + 1})`, `i32.const ${val.value.charCodeAt(i)}`, `call $store`);
+      }
+      return strVal;
     case "id":
       if (env.locals.has(val.name)) {
         return [`(local.get $${val.name})`];
@@ -322,6 +342,8 @@ function codeGenBinOp(op : BinOp) : string {
   switch(op) {
     case BinOp.Plus:
       return "(i32.add)"
+    case BinOp.IterPlus:
+      return "call $concat"
     case BinOp.Minus:
       return "(i32.sub)"
     case BinOp.Mul:

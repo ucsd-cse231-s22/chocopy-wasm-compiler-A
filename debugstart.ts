@@ -7,9 +7,8 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-a:[int] = None
-a = [1,2,3,4,5]
-a[-4]`
+"hello"[0]
+`
   const ast = parse(source);
   console.log(JSON.stringify(ast, null, 4));
   
