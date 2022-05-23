@@ -15,7 +15,7 @@ assertMemState("classes-from-object", `
     x = Rat()
   `, [
     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 1], // 1 reference in the program where object id is 123
+    [123, refNumOffset, 1], // 1 reference at the end of the program where object id is 123
     [123, dataOffset + 1, 1], // x.y = 1
     [123, sizeOffset, 2], // size is stored in 4-byte units
     [123, typeOffset, 0]]); // all types are values or non-references
@@ -35,7 +35,7 @@ assertMemState("multiple-references", `
     z = y
     `, [
     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 3], // 1 reference in the program where object id is 123
+    [123, refNumOffset, 3], // 3 references at the end of the program where object id is 123
     [123, dataOffset + 1, 1], // x.y = 1
     [123, sizeOffset, 2], // size is stored in 4-byte units
     [123, typeOffset, 0]]); // all types are values or non-references
@@ -53,7 +53,7 @@ assertMemState("removing-references", `
     y = None
     `, [
     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 1], // 1 reference in the program where object id is 123
+    [123, refNumOffset, 1], // 1 reference at the end of the program where object id is 123
     [123, dataOffset + 1, 1], // x.y = 1
     [123, sizeOffset, 2], // size is stored in 4-byte units
     [123, typeOffset, 0]]); // all types are values or non-references
@@ -75,7 +75,7 @@ assertMemState("remove-references-out-of-scope", `
     x.someFunc()
     `, [
     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 1], // 1 reference in the program where object id is 123
+    [123, refNumOffset, 1], // 1 reference at the end of the program where object id is 123
     [123, dataOffset + 1, 100], // x.y = 100
     [123, sizeOffset, 2], // size is stored in 4-byte units
     [123, typeOffset, 0]]); // all types are values or non-references
@@ -97,7 +97,7 @@ assertMemState("created-in-non-local-scope", `
     x = someFunc()
     `, [
     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 1], // 1 reference in the program where object id is 123
+    [123, refNumOffset, 1], // 1 reference at the end of the program where object id is 123
     [123, dataOffset + 1, 100], // x.y = 100
     [123, sizeOffset, 2], // size is stored in 4-byte units
     [123, typeOffset, 0]]); // all types are values or non-references
@@ -115,7 +115,7 @@ assertMemState("access-not-assignment", `
     print(x.y)
     `, [
     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 1], // 1 reference in the program where object id is 123
+    [123, refNumOffset, 1], // 1 reference at the end of the program where object id is 123
     [123, dataOffset + 1, 1], // x.y = 100
     [123, sizeOffset, 2], // size is stored in 4-byte units
     [123, typeOffset, 0]]); // all types are values or non-references
@@ -139,10 +139,10 @@ assertMemState("objects-as-fields", `
     y = x.add(456)
     `, [
     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 1], // 1 reference in the program where object id is 123
-    [456, refNumOffset, 2], // 2 reference in the program where object id is 456
-    [123, typeOffset, 2]
-    ]); // all types are values or non-references
+    [123, refNumOffset, 1], // 1 reference at the end of the program where object id is 123
+    [456, refNumOffset, 2], // 2 reference at the end of the program where object id is 456
+    [123, typeOffset, 2] // first field is a value, the next is a reference 
+    ]);
 
 assertMemState("anon-object-deletion", `
     class Link(object):
@@ -160,9 +160,9 @@ assertMemState("anon-object-deletion", `
     x = None
     `, [
     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 0], // 0 references in the program where object id is 123
-    [456, refNumOffset, 0], // 0 references in the program where object id is 456
-    ]); // all types are values or non-references
+    [123, refNumOffset, 0], // 0 references at the end of the program where object id is 123
+    [456, refNumOffset, 0], // 0 references at the end of the program where object id is 456
+    ]);
 
 assertMemState("simple-cycle", `
     class Link(object):
@@ -179,9 +179,9 @@ assertMemState("simple-cycle", `
     y.next = x
     `, [
     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 2], // 2 references in the program where object id is 123
-    [456, refNumOffset, 2], // 2 references in the program where object id is 456
-    ]); // all types are values or non-references
+    [123, refNumOffset, 2], // 2 references at the end of the program where object id is 123
+    [456, refNumOffset, 2], // 2 references at the end of the program where object id is 456
+    ]); 
 
 assertMemState("simple-cycle-deletion", `
     class Link(object):
@@ -200,9 +200,8 @@ assertMemState("simple-cycle-deletion", `
     x = None
     `, [
     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 1], // 1 references in the program where object id is 123
-    [456, refNumOffset, 1], // 1 references in the program where object id is 456
-    ]); // all types are values or non-references
-
+    [123, refNumOffset, 1], // 1 references at the end of the program where object id is 123
+    [456, refNumOffset, 1], // 1 references at the end of the program where object id is 456
+    ]);
 });
 
