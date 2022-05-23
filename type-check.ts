@@ -397,8 +397,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
 				loc.vars.set(expr.elem.name, NUM);
 				const elem = {...expr.elem, a: NUM};
 				const left = tcExpr(env, loc, expr.left);
-				const cond = tcExpr(env, loc, expr.cond);
-				if (cond.a.tag !== "bool")
+        var cond;
+        if (expr.cond)
+				  cond = tcExpr(env, loc, expr.cond);
+				if (cond && cond.a.tag !== "bool")
 					throw new Error("TYPE ERROR: comprehension if condition must return bool")
 				return {...expr, left, elem, cond, iterable, a: CLASS(iterable.a.name)};
 			}

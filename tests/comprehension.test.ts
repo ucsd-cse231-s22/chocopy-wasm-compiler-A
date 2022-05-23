@@ -312,4 +312,85 @@ j: int = 5
 print([f(j) for l in range(5)])`, ['25', '25', '25', '25', '25']
     );
 
+    assertPrint("test", `
+class Range(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,min:int,max:int)->Range:
+        self.min=min
+        self.max=max
+        self.curr=min
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
+        c:int=0
+        c=self.curr
+        self.curr=self.curr+1
+        return c
+a:Range=None
+b:Range=None
+i:int=0
+j:int=25
+a=Range().new(0,5)
+b=[j for i in a if i!=2]`, ['25', '25', '25', '25']
+    );
+
+    assertPrint("test", `
+class Range(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,min:int,max:int)->Range:
+        self.min=min
+        self.max=max
+        self.curr=min
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
+        c:int=0
+        c=self.curr
+        self.curr=self.curr+1
+        return c
+a:Range=None
+b:Range=None
+i:int=0
+j:int=25
+a=Range().new(0,5)
+b=[j for i in a if i!=2]`, ['25', '25', '25', '25']
+    );
+
+    assertPrint("test", `
+class Range(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def new(self:Range,min:int,max:int)->Range:
+        self.min=min
+        self.max=max
+        self.curr=min
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
+        c:int=0
+        c=self.curr
+        self.curr=self.curr+1
+        return c
+a:Range=None
+b:Range=None
+i:int=0
+j:int=25
+a=Range().new(0,5)
+b=[j for i in a if i!=2]`, ['25', '25', '25', '25']
+    );
+
 });

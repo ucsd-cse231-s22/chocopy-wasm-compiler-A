@@ -21,9 +21,9 @@ function generateName(base : string) : string {
 //   const name = generateName(base);
 //   return [name, {tag: "label", a: a, name: name}];
 // }
-
+var blocks : Array<IR.BasicBlock<Type>> = [];
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
-    var blocks : Array<IR.BasicBlock<Type>> = [];
+    // var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     var inits = flattenStmts(p.stmts, blocks, env);
@@ -90,9 +90,103 @@ function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Typ
   return inits;
 }
 
+function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<Type>>) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Expr<Type>] {
+  // console.log("list comp in ir", e, "----------------");
+  var compStartLbl = generateName("$compstart");
+  var compbodyLbl = generateName("$compbody");
+  var compEndLbl = generateName("$compend");
+  var listAddLbl = generateName("$listadd");
+  // var newListName = generateName("$newList");
+  var localenv = env;
+  localenv.labels.push(compStartLbl,compbodyLbl,compEndLbl,listAddLbl);
+
+  // start
+  blocks.push({  a: e.a, label: compStartLbl, stmts: [] })
+  // a.hasNext() call
+  var hasNextCall : AST.Expr<AST.Type> = {tag:"method-call", obj:e.iterable, method:"hasNext", arguments:[], a:BOOL};
+  var [cinits, cstmts, cexpr] = flattenExprToVal(hasNextCall, localenv);
+  pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: compbodyLbl, els: compEndLbl });
+  // console.log(cinits, cstmts, cexpr);
+
+  // body
+  blocks.push({  a: e.a, label: compbodyLbl, stmts: [] })
+  // assign a.next() to elem
+  var nextCall : AST.Expr<AST.Type> = {tag:"method-call", obj:e.iterable, method:"next", arguments:[], a:NUM};
+  var elem = "";
+  if(e.elem.tag == "id")
+    elem = e.elem.name;
+  var nextAssign : AST.Stmt<AST.Type>[] = [{tag:"assign",name:elem, value: nextCall,a:NUM }];
+  var bodyinits = flattenStmts(nextAssign, blocks, localenv);
+  
+  // cond
+  if (e.cond){
+    var [dinits, dstmts, dexpr] = flattenExprToVal(e.cond, localenv);
+    pushStmtsToLastBlock(blocks, ...dstmts, { tag: "ifjmp", cond: dexpr, thn: listAddLbl, els: compStartLbl });
+    // console.log("dinits", dinits, "dstmts", dstmts, "dexpr", dexpr);
+  } else {
+    pushStmtsToLastBlock(blocks, {tag:"jmp", lbl: listAddLbl});
+  }
+  
+  // list add
+  blocks.push({  a: e.a, label: listAddLbl, stmts: [] })
+  // do left expr
+  var [binits, bstmts, bexpr] = flattenExprToVal(e.left, localenv);
+  bodyinits.concat(binits);
+  // console.log("binits", binits, "bstmts", bstmts, "bexpr", bexpr, "bodyinits", bodyinits);
+  
+  // display (NEED TO ADD TO ARRAY)
+  var displayExpr : AST.Expr<AST.Type> = {tag:"builtin1", name:"print", arg:e.left, a:NUM};
+  var disp: AST.Stmt<AST.Type> = {tag:"expr", expr: displayExpr, a:NUM};
+  // var [einits, estmts, eexpr] = flattenExprToVal(displayExpr, localenv);
+  var body = flattenStmt(disp, blocks, localenv);
+  bodyinits.concat(body);
+  // console.log("einits", einits, "estmts", estmts, "eexpr", eexpr);
+  pushStmtsToLastBlock(blocks, ...bstmts, {tag:"jmp", lbl: compStartLbl});
+
+  // end
+  blocks.push({  a: e.a, label: compEndLbl, stmts: [] })
+  // var makeList : AST.Expr<AST.Type> = {tag:"construct-list", items , a:e.a};
+  // var [finits, fstmts, fexpr] = flattenExprToVal(makeList, localenv);
+  // pushStmtsToLastBlock(blocks, ...fstmts);
+
+  blocks.forEach(b=>{
+    console.log(b.label, b.stmts);
+  })
+  // console.log(items.length);
+  if (e.cond)
+    return [[...cinits, ...bodyinits, ...body, ...dinits, ...binits]
+      , [...cstmts, ...dstmts, ...bstmts]
+      , {
+        a: NUM,
+        tag: "value",
+        value: {
+          a: NUM,
+          tag: "id",
+          name: elem
+        },
+      }]
+  else
+    return [[...cinits, ...bodyinits, ...body, ...binits]
+      , [...cstmts, ...bstmts]
+      , {
+        a: NUM,
+        tag: "value",
+        value: {
+          a: NUM,
+          tag: "id",
+          name: elem
+        },
+      }]
+}
+
 function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
   switch(s.tag) {
     case "assign":
+      if (s.value.tag === "list-comp"){
+        var [a,b,c] = flattenListComp(s.value, env, blocks);
+        blocks[blocks.length - 1].stmts.push(...b, { a: s.a, tag: "assign", name: s.name, value: c});
+        return a
+      }
       var [valinits, valstmts, vale] = flattenExprToExpr(s.value, env);
       blocks[blocks.length - 1].stmts.push(...valstmts, { a: s.a, tag: "assign", name: s.name, value: vale});
       return valinits
@@ -114,6 +208,11 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
     // ]];
   
     case "expr":
+      if (s.expr.tag === "list-comp"){
+        var [a,b,c] = flattenListComp(s.expr, env, blocks);
+        blocks[blocks.length - 1].stmts.push(...b, { a: s.a, tag: "expr", expr: c});
+        return a
+      }
       var [inits, stmts, e] = flattenExprToExpr(s.expr, env);
       blocks[blocks.length - 1].stmts.push(
         ...stmts, {tag: "expr", a: s.a, expr: e }
@@ -200,77 +299,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
 function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Expr<Type>] {
   switch(e.tag) {
     case "list-comp":
-      var blocks : Array<IR.BasicBlock<Type>> = [];
-      // var items : Array<AST.Expr<Type>> = [];
-      console.log("list comp in ir", e, "----------------");
-      var compStartLbl = generateName("$compstart");
-      var compbodyLbl = generateName("$compbody");
-      var compEndLbl = generateName("$compend");
-      var listAddLbl = generateName("$listadd");
-      // var newListName = generateName("$newList");
-      var localenv = env;
-      localenv.labels.push(compStartLbl,compbodyLbl,compEndLbl,listAddLbl);
-
-      // start
-      blocks.push({  a: e.a, label: compStartLbl, stmts: [] })
-      // a.hasNext() call
-      var hasNextCall : AST.Expr<AST.Type> = {tag:"method-call", obj:e.iterable, method:"hasNext", arguments:[], a:BOOL};
-      var [cinits, cstmts, cexpr] = flattenExprToVal(hasNextCall, localenv);
-      pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: compbodyLbl, els: compEndLbl });
-      // console.log(cinits, cstmts, cexpr);
-
-      // body
-      blocks.push({  a: e.a, label: compbodyLbl, stmts: [] })
-      // assign a.next() to elem
-      var nextCall : AST.Expr<AST.Type> = {tag:"method-call", obj:e.iterable, method:"next", arguments:[], a:NUM};
-      var elem = "";
-      if(e.elem.tag == "id")
-        elem = e.elem.name;
-      var nextAssign : AST.Stmt<AST.Type>[] = [{tag:"assign",name:elem, value: nextCall,a:NUM }];
-      var bodyinits = flattenStmts(nextAssign, blocks, localenv);
-      
-      // cond
-      var [dinits, dstmts, dexpr] = flattenExprToVal(e.cond, env);
-      pushStmtsToLastBlock(blocks, ...dstmts, { tag: "ifjmp", cond: dexpr, thn: listAddLbl, els: compStartLbl });
-      // console.log("dinits", dinits, "dstmts", dstmts, "dexpr", dexpr);
-      
-      // list add
-      blocks.push({  a: e.a, label: listAddLbl, stmts: [] })
-      // do left expr
-      var [binits, bstmts, bexpr] = flattenExprToVal(e.left, localenv);
-      bodyinits.concat(binits);
-      // console.log("binits", binits, "bstmts", bstmts, "bexpr", bexpr, "bodyinits", bodyinits);
-      
-      // display (NEED TO ADD TO ARRAY)
-      var displayExpr : AST.Expr<AST.Type> = {tag:"builtin1", name:"print", arg:e.left, a:NUM};
-      var disp: AST.Stmt<AST.Type> = {tag:"expr", expr: displayExpr, a:NUM};
-      // var [einits, estmts, eexpr] = flattenExprToVal(displayExpr, localenv);
-      var body = flattenStmt(disp, blocks, localenv);
-      bodyinits.concat(body);
-      // console.log("einits", einits, "estmts", estmts, "eexpr", eexpr);
-      pushStmtsToLastBlock(blocks, ...bstmts, {tag:"jmp", lbl: compStartLbl});
-
-      // end
-      blocks.push({  a: e.a, label: compEndLbl, stmts: [] })
-      // var makeList : AST.Expr<AST.Type> = {tag:"construct-list", items , a:e.a};
-      // var [finits, fstmts, fexpr] = flattenExprToVal(makeList, localenv);
-      // pushStmtsToLastBlock(blocks, ...fstmts);
-
-      blocks.forEach(b=>{
-        console.log(b.label, b.stmts);
-      })
-      // console.log(items.length);
-      return [[...cinits, ...bodyinits, ...dinits, ...binits]
-        , [...cstmts, ...dstmts, ...bstmts]
-        , {
-          a: NUM,
-          tag: "value",
-          value: {
-            a: NUM,
-            tag: "id",
-            name: elem
-          },
-        }]
+      return flattenListComp(e, env, blocks);
     case "uniop":
       var [inits, stmts, val] = flattenExprToVal(e.expr, env);
       return [inits, stmts, {
