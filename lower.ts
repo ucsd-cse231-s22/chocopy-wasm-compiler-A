@@ -2,18 +2,8 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
-import { METADATA_AMT } from './memory';
 
 const nameCounters : Map<string, number> = new Map();
-
-
-function generateBitString(binArr: number[]) : number {
-  if (binArr.length === 0) {
-    return 0;
-  }
-  return parseInt(binArr.reverse().join(""), 2)
-}
-
 function generateName(base : string) : string {
   if(nameCounters.has(base)) {
     var cur = nameCounters.get(base);
@@ -138,7 +128,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var [ninits, nstmts, nval] = flattenExprToVal(s.value, env);
       if(s.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
       const classdata = env.classes.get(s.obj.a.name);
-      const offset : IR.Value<Type> = { tag: "wasmint", value: classdata.get(s.field)[0] + METADATA_AMT };
+      const offset : IR.Value<Type> = { tag: "wasmint", value: classdata.get(s.field)[0] };
       pushStmtsToLastBlock(blocks,
         ...ostmts, ...nstmts, {
           tag: "store",
@@ -256,7 +246,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       }
       const className = objTyp.name;
       const checkObj : IR.Stmt<Type> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [objval]}}
-      const callMethod : IR.Expr<Type> = {a: e.a, tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
+      const callMethod : IR.Expr<Type> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
@@ -271,63 +261,34 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       return [oinits, ostmts, {
         tag: "load",
         start: oval,
-        offset: { tag: "wasmint", value: (offset + METADATA_AMT) }}];
+        offset: { tag: "wasmint", value: offset }}];
     }
     case "construct":
       const classdata = env.classes.get(e.name);
-      const fields = [...classdata.values()];
+      const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: (METADATA_AMT + fields.length) } };
-      
-      // Metadata Generation
-      const fieldTypesArray : number[] = fields.map(f => {
-        const fieldType : IR.Value<Type> = f[1]
-        if (fieldType.tag  === "none") {
-          return 1;
-        }
-        return 0;
-      });
-
-      const fieldTypesBitString : number = generateBitString(fieldTypesArray);
-
-      let metadataStore : IR.Stmt<Type>[] = Array(METADATA_AMT)
-      const metadataVals : IR.Value<Type>[] = [
-        { tag: "wasmint", value: 0 },
-        alloc.amount,
-        { tag: "wasmint", value: fieldTypesBitString },
-        { tag: "wasmint", value: fields.length }
-      ]
-
-      for ( let i = 0; i < METADATA_AMT; i++ ) {
-        metadataStore[i] = {
-          tag: "store",
-          start: { tag: "id", name: newName },
-          offset: { tag: "wasmint", value: i },
-          value: metadataVals[i]
-        }
-      }
-
+      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
       const assigns : IR.Stmt<Type>[] = fields.map(f => {
-        const [index, value] = f;
+        const [_, [index, value]] = f;
         return {
           tag: "store",
           start: { tag: "id", name: newName },
-          offset: { tag: "wasmint", value: (index + METADATA_AMT) },
+          offset: { tag: "wasmint", value: index },
           value: value
         }
       });
 
       return [
         [ { name: newName, type: e.a, value: { tag: "none" } }],
-        [ { tag: "assign", name: newName, value: alloc }, ...metadataStore, ...assigns,
+        [ { tag: "assign", name: newName, value: alloc }, ...assigns,
           { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
       ];
     case "id":
-      return [[], [], {a: e.a, tag: "value", value: { ...e }} ];
+      return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
-      return [[], [], {a: e.a, tag: "value", value: literalToVal(e.value) } ];
+      return [[], [], {tag: "value", value: literalToVal(e.value) } ];
   }
 }
 
