@@ -10,3 +10,7 @@ For code generation, the high-level implementation is to iterate every element i
 
 ## Milestone 1
 During this week, we implemented most functions in our previous design except handling list and tuple in the right part and the element marked with `*`, which depended on other teams' work. Additionally, we added support for `range` by making it an iterator, which had not been metioned in our previous design. We mainly changed ast.ts, parser.ts, type-check.ts, and lower.ts. All this code is runnable and testable. We added new tests in a separated file called destructure.test.ts. You can run them by executing `npm run test-desdestructure`.
+
+
+## Milestone 2
+In next milestone, we plan to support the format like `l[0] = 1` for assignment of elements of list and tuple. Also we would support `*` in destructure assignment. Finally, we need to adjust our current implementation to be compatiable with the new error report system.
