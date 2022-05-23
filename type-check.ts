@@ -177,6 +177,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       } else if (env.globals.has(stmt.name)) {
         nameTyp = env.globals.get(stmt.name);
       } else {
+        console.log("1",locals.vars,env.globals);
         throw new TypeCheckError("Unbound id: " + stmt.name);
       }
       if(!isAssignable(env, tValExpr.a, nameTyp)) 
@@ -282,6 +283,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else if (env.globals.has(expr.name)) {
         return {a: env.globals.get(expr.name), ...expr};
       } else {
+        console.log("1",locals.vars);
         throw new TypeCheckError("Unbound id: " + expr.name);
       }
     case "builtin1":
@@ -392,7 +394,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
 			if (!classData[1].has("next") || !classData[1].has("hasNext"))
 				throw new Error("Class of the instance must have next() and hasNext() methods");
 			// need to create a local env for elem to be inside comprehension only
-			var loc = emptyLocalTypeEnv();
+			var loc = locals;
 			if (expr.elem.tag === "id"){
 				loc.vars.set(expr.elem.name, NUM);
 				const elem = {...expr.elem, a: NUM};

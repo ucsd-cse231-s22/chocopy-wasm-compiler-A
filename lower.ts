@@ -149,9 +149,9 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<Ty
   // var [finits, fstmts, fexpr] = flattenExprToVal(makeList, localenv);
   // pushStmtsToLastBlock(blocks, ...fstmts);
 
-  blocks.forEach(b=>{
-    console.log(b.label, b.stmts);
-  })
+  // blocks.forEach(b=>{
+  //   console.log(b.label, b.stmts);
+  // })
   // console.log(items.length);
   if (e.cond)
     return [[...cinits, ...bodyinits, ...body, ...dinits, ...binits]
