@@ -33,7 +33,7 @@ Output: ```['1', '2', '3', '4']```
 Output: ```['3', '6', '9', '12']```
 
 7. simple comprehension output with if condition
-```print([g for g in range(1,5)])```
+```print([g for g in range(1,5) if g!= 3])```
 Output: ```['1', '2', '4']```
 
 8. simple comprehension output with bool binop expr values and if condition
@@ -43,51 +43,107 @@ Output: ```['False', 'False', 'True']```
 
 9. simple comprehension output with function call as expr values
 ```def f(x:int)->int: return x*5```
+```print([f(l) for l in range(5)])```
+Output: ```['0', '5', '10', '15', '20']```
+
+10. simple comprehension output with function call using counter variable as expr values
+```def f(x:int)->int: return x*5```
 ```j: int = 5```
 ```print([f(j) for l in range(5)])```
 Output: ```['25', '25', '25', '25', '25]```
 
-10. simple comprehension output with step
+11. Two comprehension expressions
+```print([m for m in range(5,6)])```
+```print([m for m in range(10,15)])```
+Output: ```['5', '6', '10', '11', '12', '13', '14']```
+
+12. simple function calls 1
+```def f():```
+```    a:Range=None```
+```    m: int = 0```
+```    a=Range().new(5)```
+```   [m for m in a]```
+```f()```
+Output: ```['0', '1', '2', '3', '4']```
+
+13. simple function calls 2
+```def f(j:int):```
+```    a:Range=None```
+```    m: int = 0```
+```    a=Range().new(5)```
+```   [j*5 for m in a]```
+```f(10)```
+Output: ```['50', '50', '50', '50', '50']```
+
+14. simple comprehension output with step
 ```print([k for k in range(10,20,2)])```
 Output: ```['10', '12', '14', '16', '18']```
 
-11. invalid expression in comprehension
+15. invalid expression in comprehension
 ```print([j for a in range(1,5) if a!=1])```
 Output: ```Error: j is undefined```
 
-12. invalid range in comprehension
+16. invalid range in comprehension
 ```j: int = 2```
 ```print([j for a in range(2,1)])```
 Output: ```Error```
 
-13. only if condition allowed in comprehension
+17. only if condition allowed in comprehension
 ```j: int = 2```
 ```print([j for a in range(1,5) for a!=1])```
 Output: ```Error```
 
-14. invalid condition in comprehension
+18. invalid condition in comprehension
 ```j: int = 2```
 ```print([j for a in range(1,5) if a+2])```
 Output: ```Error```
 
-15. invalid iterable in comprehension
+19. invalid iterable in comprehension
 ```j: int = 2```
 ```k: int = 3```
 ```print([j for a in k if a!=2])```
 Output: ```Error```
 
-One of the test cases that does not work yet is the following:
-```print([[j for j in range(3)] for i in range(3)])```
+Test cases that does not work yet is the following:
 
-## Some implementation details and issues:
+1. ```print([[j for j in range(3)] for i in range(3)])```
+2. 
+```
+ a : List = None
+a = [i for i in range(5,10)]
+print(a)
+```
+In case of the second test case, we skipped it because as suggested by proffesor, we plan on using the implementation by the lists team. For this week, we only worked on iterables using the range class.
 
-following points needed:
+## Limitation so far (plan on fixing in week 8)
 
-usage of ranged class
+1. We made an assumption that the list comprehension expressions will only be used globally, and not locally inside any function. (UPDATE: This has been fixed)
+2. The explicit range class inside each of our test cases has a class member as curr. If we have an expression as [a for a in range(10)], then we assign a to range.curr (curr refers to the current element in the iteration). However, we are assigning a as a global variable, instead of giving it a local scope(ie, scope of variable a should only be within the comprehension). Because of this, every time we want to use a different comprehension expression, we are using a new counter variable.
 
-type-check and lower file implementations (and limitations?)
 
-changes to ast?
+## Workflow Details:
+
+Since, we have not yet collaborated with the lists group, we are only printing the elements of the list (constructed by the comprehension expression). We plan to collaborate with the lists team in the upcoming week, and display the lists in the proper format. For example:
+
+```print([1 for a in range(1,5)])``` gives the following output instead of ```[1,1,1,1,1]```::
+```
+1
+1
+1
+1
+1
+```
+We have added two new fields to the ast structure for list-comp: iterable_cond? and body. iterable condition checks if range.hasNext() returns true or not. body stores the following statements:: 1. print the current element, 2. call the next method. (UPDATE: The extra fields are no longer needed).
+
+In the lower.ts file, we have converted the ast structure into an array of basic blocks. 
+
+Also, as of this week, we are explicitly adding a range class in our test cases, but we would remove this as part of our next milestones. 
+
+## Important Notes on Test Cases:
+
+1. As of now, we are able to pass the test cases individually one at a time. We are getting WASM errors while trying to run all the test cases together. We plan to fix this in our next milestone.
+2. The test cases are more detailed in the comprehension.test.ts file. In order to see how our current code is performing, please refer to the mentioned file.
+
 
 
 
