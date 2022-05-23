@@ -52,11 +52,10 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
     newGlobals.set(v.name, true);
   });
 
-  var methodOffset = 0;
-
   prog.classes.forEach(cls => {
     const classFields = new Map();
     const classMethods = new Map();
+    var overridenMethods = 0;
     // TODO: update to support multiple inheritance
     var offset : number  = 0;
     if (cls.super[0] !== "object") { 
@@ -65,26 +64,28 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
       });
     }
 
-    cls.methods.filter(m => m.name !== "__init__").forEach((method, index) => {
+    var superClassMethodsCount = 0;
+    if (cls.super[0] !== "object") {
+      superClassMethodsCount = newClasses.get(cls.super[0])[3];
+    }
 
-      var methodIndex = methodOffset + index;
-      var isOverriden = false;
+    cls.methods.forEach((method, index) => {
+
+      var methodClassOffset = superClassMethodsCount + index - overridenMethods;
+
       if (cls.super[0] !== "object" ){
         newClasses.get(cls.super[0])[1].forEach((value, key) => {
           if (key === method.name) {
-            methodIndex = value;
-            isOverriden = true;
+            overridenMethods += 1;
+            methodClassOffset = value;
           }
         })
       }
-
-      if (!isOverriden) { methodOffset+=1;}
-
-      classMethods.set(method.name, methodIndex)
+      classMethods.set(method.name, methodClassOffset)
     })
 
     cls.fields.forEach((field, i) => classFields.set(field.name, [offset + i, field.value]));
-    newClasses.set(cls.name, [classFields, classMethods, cls.super]);
+    newClasses.set(cls.name, [classFields, classMethods, cls.super, superClassMethodsCount+classMethods.size - overridenMethods]);
   });
   return {
     globals: newGlobals,
