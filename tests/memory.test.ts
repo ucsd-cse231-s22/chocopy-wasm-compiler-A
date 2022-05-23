@@ -204,42 +204,6 @@ assertMemState("simple-cycle-deletion", `
     [456, refNumOffset, 1], // 1 references in the program where object id is 456
     ]); // all types are values or non-references
 
-    // TODO global
-    // TODOO inheritance
-assertMemState("simple-inherited-field", `
-    class List(object):
-        id: int = 0
-
-        def __init__(self: Link):
-            self.id = 123
-
-    class Link(List):
-        next: Link = None
-
-        def __init__(self: Link):
-            super().__init__()
-
-        def add(l: Link) -> Link:
-            l.next = Link()
-            l.id = 456
-            return l.next
-
-    x: Link = None
-    y: Link = None
-    x = Link()
-    x.id = 123
-    y = Link()
-    y.id = 456
-    x.next = y
-    y.next = x
-
-    x = None
-    `, [
-    // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 1], // 1 references in the program where object id is 123
-    [456, refNumOffset, 1], // 1 references in the program where object id is 456
-    ]); // all types are values or non-references
-
 assertMemState("less-simple-cycle", `
     class Link(object):
         id: int = 0
@@ -326,6 +290,105 @@ assertMemState("less-simple-cycle-complete-deletion", `
     [123, refNumOffset, 2], // 2 references in the program where object id is 123
     [456, refNumOffset, 0], // 0 references in the program where object id is 456
     [789, refNumOffset, 2], // 2 references in the program where object id is 789
+    ]); // all types are values or non-references
+
+assertMemState("simple-inherited-reference", `
+    class Link(Object):
+        id: int = 0
+        next: Link = None
+
+        def addB(l: Link, val: int) -> BLink:
+            m: Link = None
+            m = BLink()
+            m.id = val
+            l.next = m
+            return m
+
+    class ALink(Link):
+        def __init__(self: ALink):
+            super().__init__()
+
+    class BLink(Link):
+        other_id: int = 0
+
+        def __init__(self: BLink):
+            super().__init__()
+
+    x: Link = None
+    y: Link = None
+    x = ALink()
+    x.id = 123
+    y = x.addB(456)
+    `, [
+    // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
+    [123, refNumOffset, 1], // 1 references in the program where object id is 123
+    [456, refNumOffset, 2], // 2 references in the program where object id is 456
+    ]); // all types are values or non-references
+
+assertMemState("simple-global-reference", `
+    class Link(object):
+        id: int = 0
+
+        def assign_global(self: Link):
+            global global_link
+            global_link = self
+
+    global_link: Link = None
+    x: Link = None
+    x = Link()
+    x.id = 123
+    x.assign_global()
+    `, [
+    // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
+    [123, refNumOffset, 2], // 2 references in the program where object id is 123
+    ]); // all types are values or non-references
+
+assertMemState("simple-global-reference-deletion", `
+    class Link(object):
+        id: int = 0
+        next: Link = None
+
+        def assign_global(self: Link):
+            global global_link
+            global_link = self
+
+    global_link: Link = None
+    x: Link = None
+    x = Link()
+    x.id = 123
+    x.next = Link()
+    x.next.id = 456
+    x.assign_global()
+    x = None
+    global_link = None
+    `, [
+    // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
+    [123, refNumOffset, 0], // 0 references in the program where object id is 123
+    [456, refNumOffset, 0], // 0 references in the program where object id is 456
+    ]); // all types are values or non-references
+
+assertMemState("simple-global-reference-reassign", `
+    class Link(object):
+        id: int = 0
+        next: Link = None
+
+        def assign_global(self: Link):
+            global global_link
+            global_link = self
+
+    global_link: Link = None
+    x: Link = None
+    x = Link()
+    x.id = 123
+    x.assign_global()
+    x.next = Link()
+    x.next.id = 456
+    x.next.assign_global()
+    x = None
+    `, [
+    // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
+    [123, refNumOffset, 0], // 0 references in the program where object id is 123
+    [456, refNumOffset, 1], // 1 references in the program where object id is 456
     ]); // all types are values or non-references
 
 });
