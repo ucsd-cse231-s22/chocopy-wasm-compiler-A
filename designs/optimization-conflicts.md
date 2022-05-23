@@ -168,7 +168,7 @@ We won't be optimizaing anything here and hence the program would remain the sam
 
 ## Inheritance
 
-Constant propagation and folding have been implemented at the IR level and hence, only changes within the IR structures can interact (or break the existing implementation of constant propagation and folding). One of the changes are that an additional expression type has been added with type `call_indirect` where the function called is identified by an index in the vtable (this can also tend to conflict with the `call_indirect` implementation from first class functions). Constant propagationa and folding has not been implemented for expressions of type `call_indirect`, but to support the same in this case, the only change to be added to the compiler is to fold and propagate each of the arguments as is done for other call expressions. 
+Constant propagation and folding have been implemented at the IR level and hence, only changes within the IR structures can interact (or break the existing implementation of constant propagation and folding). One of the changes are that an additional expression type has been added with type `call_indirect` where the function called is identified by an index in the vtable (this can also tend to conflict with the `call_indirect` implementation from first class functions). Constant propagation and folding has not been implemented for expressions of type `call_indirect`, but to support the same in this case, the only change to be added to the compiler is to fold and propagate each of the arguments as is done for other call expressions. 
 
 The other change at the IR level within `class` type is adding the list of super classes inherited by the class as an array of strings. This is something that should not break the existing implementation of constant propagation and folding through classes (as there is nothing to be propagated/folded through the list of super classes of a class).
 
@@ -271,7 +271,7 @@ print(b[2]) // Not propagated as b[2] is 'nac'
 ```
 
 ## Memory management
-
+Since the memory management team hasn't made any changes at the IR level, we won't be probably having conflicts. Also, the optimizations like constant folding and propogations would work as intended too. We may consider optimizations in memory management level in next milestone due to which there may be some conflicts in future. Currently we are only folding number and booleans. In future we may incorporate the folding of objects too.
 
 
 
