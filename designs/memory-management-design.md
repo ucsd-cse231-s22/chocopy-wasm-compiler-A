@@ -280,16 +280,13 @@ Performing defragmentation for the heap will move objects around in the heap. Si
 
 We were able to pass all the tests which we had described last week. The node traversal and the scoping were the most intereresting this week and `Tests 9`, `Test 10`, `Test 4` and `Test 5` are a good representation of the cases we have accounted for. Our tests are present in the `memory.test.ts` file. We had to add a function to `asserts.test.ts` to support testing for memory management functions.
 
-Originally we has planned to do the bulk of our changes at the IR level but we ended up implementing code to add metadata by constructing IR objects. We found that doing so reduced the compexity of our implementation.
 
-We had to make some changes in `compiler.ts` to support some of the memory management functionality. However, this does not break the originial implementation in any way. 
+We had to make changes in `compiler.ts` to support the memory management functionality. However, this does not break the originial implementation in any way.
 
-We abstracted out the functionality for memory management in `memory.ts`.
-
-We were a bit unclear at the start of Week 1 as to how we would differentiate between references and values, this part is implemented in `lower.ts`.
+We abstracted out the functionality for memory management in `memory.ts`. The load and store for metadata is handled in `memory.wat`.
 
 We also added another field to denote the total amount of data allocated in bytes, since without this we would not have been able to know how many objects we stored in a contiguous fashion at a given memory location. This allows the array list group to request any amount of data. Note that the `Data` field in the memory metadata diagram denotes the maximum memory which can be allocated by one object. We can however allocate any amount of such objects in a contiguous manner.
 
-We had a bit of a trouble in figuring out how to check if the reference counts that we collect are indeed correct since we don't have access to the variable names. For testing we added a field called `id` to each object which stores a unique identifier for an object. The reference counts and other metadata was tested using this field as an identifier.
+We had a bit of a trouble in figuring out how to check if the reference counts that we collect are indeed correct since we don't have access to the variable names. For testing we added a field called `id` to each object which stores a unique identifier for an object. The reference counts and other metadata was tested using this field as an identifier. Ids also allow us to write more complex tests without worrying about objects being moved in the memory by the garbage colection functionality we will implement.
 
 
