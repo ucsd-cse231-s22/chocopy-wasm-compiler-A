@@ -1,7 +1,9 @@
 import {BasicREPL} from './repl';
-import { Type, Value } from './ast';
-import { defaultTypeEnv } from './type-check';
+import { Type, Value, Annotation } from './ast';
+import { defaultTypeEnv, TypeCheckError } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
+import { importObjectErrors } from './errors';
+
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -24,18 +26,11 @@ function print(typ: Type, arg : number) : any {
   return arg;
 }
 
-function assert_not_none(arg: any) : any {
-  if (arg === 0)
-    throw new Error("RUNTIME ERROR: cannot perform operation on none");
-  return arg;
-}
-
-function check_index_out_of_bounds(index: number, length: number) {
-  if(index < 0 || index >= length) {
-    throw new Error(`RUNTIME ERROR: index out of bounds`);
-  }
-  return index;
-}
+// function assert_not_none(arg: any) : any {
+//   if (arg === 0)
+//     throw new Error("RUNTIME ERROR: cannot perform operation on none");
+//   return arg;
+// }
 
 function webStart() {
   document.addEventListener("DOMContentLoaded", async function() {
@@ -51,8 +46,7 @@ function webStart() {
 
     var importObject = {
       imports: {
-        check_index_out_of_bounds: (index: number, length: number) => check_index_out_of_bounds(index, length),
-        assert_not_none: (arg: any) => assert_not_none(arg),
+        // assert_not_none: (arg: any) => assert_not_none(arg),
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),
@@ -61,13 +55,14 @@ function webStart() {
         max: Math.max,
         pow: Math.pow
       },
+      errors: importObjectErrors,
       libmemory: memoryModule.instance.exports,
       memory_values: memory,
       js: {memory: memory}
     };
     var repl = new BasicREPL(importObject);
 
-    function renderResult(result : Value) : void {
+    function renderResult(result : Value<Annotation>) : void {
       if(result === undefined) { console.log("skip"); return; }
       if (result.tag === "none") return;
       const elt = document.createElement("pre");
@@ -87,6 +82,12 @@ function webStart() {
     }
 
     function renderError(result : any) : void {
+      // only `TypeCheckError` has `getA` and `getErrMsg`
+      if (result instanceof TypeCheckError) {
+        console.log(result.getA()); // could be undefined if no Annotation information is passed to the constructor of TypeCheckError
+        console.log(result.getErrMsg());
+      }
+
       const elt = document.createElement("pre");
       document.getElementById("output").appendChild(elt);
       elt.setAttribute("style", "color: red");

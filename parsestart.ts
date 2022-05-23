@@ -19,8 +19,6 @@ import { parse } from "./parser";
 // x = x + 2
 // `);
 
-var result = parse(`
-[1,a][x]
-`);
+var result = parse(`x: int = 0`)
 
 console.log(JSON.stringify(result, null, 4));
