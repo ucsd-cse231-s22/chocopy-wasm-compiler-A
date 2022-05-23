@@ -12,15 +12,7 @@ class C(object):
       return 0
     else:
       return`
-  // var source = `
-  // class C(object):
-  //   def __init__(self:C, other:D):
-  //     pass
-  
-  // x:C = None
-  // x = C()`
-const ast = parse(source);
-// console.log(ast);
+  const ast = parse(source);
   
   const repl = new BasicREPL(await addLibs());
   const result = repl.run(source).then(result => {
