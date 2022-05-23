@@ -22,6 +22,14 @@ function print(typ: Type, arg: any): any {
   return arg;
 }
 
+function eq_str(left: number, right: number): number {
+  const leftLen = new Uint32Array(importObject.memory_values.buffer, left, 1)[0];
+  const leftStr = String.fromCharCode.apply(null, new Uint32Array(importObject.memory_values.buffer, left + 4, leftLen));
+  const rightLen = new Uint32Array(importObject.memory_values.buffer, right, 1)[0];
+  const rightStr = String.fromCharCode.apply(null, new Uint32Array(importObject.memory_values.buffer, right + 4, rightLen));
+  return (leftStr === rightStr) ? 1 : 0;
+}
+
 function len_list(arg:any, listlen: any):any{
   return listlen;
 }
@@ -74,6 +82,7 @@ export const importObject : any = {
     print_none: (arg: number) => print(Type.None, arg),
     len_list: (arg: number, listlen:number) => len_list(arg, listlen),
     len_str: (arg: number) => len(Type.Str, arg),
+    eq_str: (left: number, right: number) => eq_str(left, right),
     abs: Math.abs,
     min: Math.min,
     max: Math.max,
