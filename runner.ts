@@ -7,9 +7,15 @@ import wabt from 'wabt';
 import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
+<<<<<<< HEAD
 import { Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS, STRING } from "./utils";
+=======
+import { Annotation, Program, Type, Value } from './ast';
+import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
+>>>>>>> 58673df10f007ba2dfd86168cc222155479a04a5
 import { lowerProgram } from './lower';
+import { wasmErrorImports } from './errors';
 
 export type Config = {
   importObject: any;
@@ -43,7 +49,7 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 }
 
 
-export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
+export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
 
@@ -79,12 +85,13 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
 
 
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
-export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
+export async function run(source : string, config: Config) : Promise<[Value<Annotation>, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
+  config.importObject.errors.src = source; // for error reporting
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
-  const progTyp = tprogram.a;
+  const progTyp = tprogram.a.type;
   var returnType = "";
   var returnExpr = "";
   // const lastExpr = parsed.stmts[parsed.stmts.length - 1]
@@ -113,7 +120,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
 
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
-    (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
+    ${wasmErrorImports}
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))

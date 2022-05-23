@@ -1,5 +1,18 @@
 // import { TypeCheckError } from "./type-check";
 
+export type Annotation = {
+  type?: Type,
+  fromLoc?: Location, // include
+  endLoc?: Location, // exclude
+  eolLoc: Location, // loc of the next line break
+  src?: string
+}
+export type Location = {
+  row: number,
+  col: number,
+  srcIdx: number,
+}
+
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
 export type Type =
   | {tag: "str"}
@@ -11,11 +24,11 @@ export type Type =
 
 export type Parameter<A> = { name: string, type: Type }
 
-export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
+export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>>}
 
 export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
 
-export type VarInit<A> = { a?: A, name: string, type: Type, value: Literal }
+export type VarInit<A> = { a?: A, name: string, type: Type, value: Literal<A> }
 
 export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, ret: Type, inits: Array<VarInit<A>>, body: Array<Stmt<A>> }
 
@@ -30,7 +43,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
 
 export type Expr<A> =
-    {  a?: A, tag: "literal", value: Literal }
+    {  a?: A, tag: "literal", value: Literal<A> }
   | {  a?: A, tag: "id", name: string }
   | {  a?: A, tag: "binop", op: BinOp, left: Expr<A>, right: Expr<A>}
   | {  a?: A, tag: "uniop", op: UniOp, expr: Expr<A> }
@@ -43,18 +56,44 @@ export type Expr<A> =
   | {  a?: A, tag: "construct", name: string }
   | {  a?: A, tag: "str-concat",left: Expr<A>, right: Expr<A>}
 
-  
-export type Literal = 
-  | { tag: "str", value: string[], length: number}
-  | { tag: "num", value: number }
-  | { tag: "bool", value: boolean }
-  | { tag: "none" }
+  // add annotation for reporting row/col in errors
+export type Literal<A> = 
+  | {  a?: A, tag: "str", value: string[], length: number}
+  | {  a?: A, tag: "num", value: number }
+  | {  a?: A, tag: "bool", value: boolean }
+  | {  a?: A, tag: "none" }
+
 
 // TODO: should we split up arithmetic ops from bool ops?
 export enum BinOp { Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};
 
 export enum UniOp { Neg, Not };
 
-export type Value =
-    Literal
-  | { tag: "object", name: string, address: number}
+type Op = BinOp | UniOp;
+
+
+export function stringifyOp(op: Op): string {
+  switch (op) {
+    case BinOp.Plus: return "+";
+    case BinOp.Minus: return "-";
+    case BinOp.Mul: return "*";
+    case BinOp.IDiv: return "//";
+    case BinOp.Mod: return "%";
+    case BinOp.Eq: return "==";
+    case BinOp.Neq: return "!=";
+    case BinOp.Lte: return "<=";
+    case BinOp.Gte: return ">=";
+    case BinOp.Lt: return "<";
+    case BinOp.Gt: return ">";
+    case BinOp.Is: return "is";
+    case BinOp.And: return "and";
+    case BinOp.Or: return "or";
+    case UniOp.Neg: return "-";
+    case UniOp.Not: return "not";
+    default: throw new Error("undefined op");
+  }
+}
+
+export type Value<A> =
+    Literal<A>
+  | { a?: A, tag: "object", name: string, address: number}
