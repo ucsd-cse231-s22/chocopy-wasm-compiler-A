@@ -177,7 +177,6 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       } else if (env.globals.has(stmt.name)) {
         nameTyp = env.globals.get(stmt.name);
       } else {
-        console.log("1",locals.vars,env.globals);
         throw new TypeCheckError("Unbound id: " + stmt.name);
       }
       if(!isAssignable(env, tValExpr.a, nameTyp)) 
@@ -283,7 +282,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else if (env.globals.has(expr.name)) {
         return {a: env.globals.get(expr.name), ...expr};
       } else {
-        console.log("1",locals.vars);
         throw new TypeCheckError("Unbound id: " + expr.name);
       }
     case "builtin1":
@@ -324,8 +322,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           const [initArgs, initRet] = methods.get("__init__");
           if (expr.arguments.length !== initArgs.length - 1)
             throw new TypeCheckError("__init__ didn't receive the correct number of arguments from the constructor");
-          if (initRet !== NONE) 
-            if (initRet !== NONE) 
           if (initRet !== NONE) 
             throw new TypeCheckError("__init__  must have a void return type");
           return tConstruct;
