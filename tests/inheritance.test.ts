@@ -187,130 +187,106 @@ print(b.add())
     assertPrint("change-order", `
 class A(object):
 	a : int = 3
-
-	def get_a(self: A) -> int: 
+	def f1(self: A) -> int: 
 		return self.a
-	def get_a_minus_1(self: A) -> int:
-		return self.a - 1
+	def f2(self: A) -> int:
+		return self.a+1
 
 class B(A):
 	b : int = 2
-
-	def get_a_minus_1(self: B) -> int: 
-		return self.a - 1
-	def get_a(self: B) -> int:
+	def f2(self: B) -> int: 
+		return self.a+1
+	def f1(self: B) -> int:
 		return self.a
 
 b : B = None 
 b = B()
-print(b.get_a_minus_1())
-`, [`2`]);
-    assertPrint("constructor", `
+print(b.f2())
+`, ["4"]);
+    assertPrint("with-explicit-constructor", `
 class A(object):
 	a : int = 1
-
 	def __init__(self: A):
 		self.a = 2
-	def get_a(self: A) -> int:
+	def f1(self: A) -> int:
 		return self.a
 
 class B(A):
 	b : int = 3
-	
 	def __init__(self: B):
 		self.b = 4
-	def get_a(self: A) -> int:
+	def f1(self: A) -> int:
 		return self.a
-	def get_b(self: B) -> int: 
+	def f2(self: B) -> int: 
 		return self.b
 		
 b : B = None
 b = B()
-print(b.get_a())
-print(b.get_b())
-`, [`1`,`4`]);
-    assertTCFail("method-doesnt-exist-in-any-class", `
+print(b.f1())
+print(b.f2())
+`, ["1", "4"]);
+    assertTCFail("none-exist-method-in-inheritance-tree", `
 class A(object):
 	a : int = 1
-
 	def __init__(self: A): pass
-		
-	def get_a(self: A) -> int:
+	def f1(self: A) -> int:
 		return self.a
 
 class B(A):
 	b : int = 3
-	
 	def __init__(self: B): pass
-		
-	def get_b(self: B) -> int: 
+	def f2(self: B) -> int: 
 		return self.b
 		
 b : B = None
 b = B()
-print(b.get_c())
+print(b.f3())
 `);
-    assertTCFail("redefined-field-in-subclass", `
+    assertTCFail("redefined-field", `
 class A(object):
-	a : int = 1
-
-	def __init__(self: A): pass
-		
-	def get_a(self: A) -> int:
+	a : int = 1	
+	def f(self: A) -> int:
 		return self.a
 
 class B(A):
 	a : int = 3
-	
-	def __init__(self: B): pass
-		
-	def get_b(self: B) -> int: 
-		return self.b
 		
 b : B = None
 b = B()
-print(b.get_b())
+print(b.f())
 `);
-    assertTCFail("superclass-doesnt-exist", `
+    assertTCFail("none-exist-superclass", `
 class A(object):
 	a : int = 1
-
 	def __init__(self: A): pass
-		
-	def get_a(self: A) -> int:
+	def fa(self: A) -> int:
 		return self.a
 
 class B(C):
-	b : int = 3
-	
-	def __init__(self: B): pass
-		
-	def get_b(self: B) -> int: 
+	b : int = 2
+	def __init__(self: B): pass	
+	def fb(self: B) -> int: 
 		return self.b
 		
 b : B = None
 b = B()
-print(b.get_c())
+print(b.fb())
 `);
-    assertTCFail("subclass-type-initializing-superclass-object", `
+    assertTCFail("assign-super-class-object-to-subclass", `
 class A(object):
 	a : int = 1
-
 	def __init__(self: A): pass
-		
-	def get_a(self: A) -> int:
+	def fa(self: A) -> int:
 		return self.a
 
 class B(A):
-	b : int = 3
-	
-	def __init__(self: B): pass
-		
-	def get_b(self: B) -> int: 
+	b : int = 2
+	def __init__(self: B): pass	
+	def fb(self: B) -> int: 
 		return self.b
 		
 b : B = None
 b = A()
-print(b.get_c())
+print(b.fb())
 `);
 });
