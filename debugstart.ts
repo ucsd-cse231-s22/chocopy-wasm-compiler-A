@@ -6,10 +6,13 @@ import {run} from './tests/helpers.test';
 // entry point for debugging
 async function debug() {
   var source = `
-f:File = None
-f = open(0)
-f.read()
-f.close()`
+def open(addr: int, mode:int) -> File:
+  f: File = None
+  fd: int = 0
+  fd = buildin_open(addr, mode)
+  f = File()
+  f.fd = fd
+  return f`
   
   const repl = new BasicREPL(await addLibs());
   

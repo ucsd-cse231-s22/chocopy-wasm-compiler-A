@@ -32,9 +32,9 @@ export function FileClassString(): string  {
         fd: int = 0
         def __init__(self:File):
             pass
-        def read(self:File, byte_num:int):
+        def read(self:File, byte_num:int) -> int:
             return buildin_read(self.fd, byte_num)
-        def write(self:File, c:int):
+        def write(self:File, c:int) -> int:
             return buildin_write(self.fd, c)
         def seek(self:File, pos:int):
             buildin_seek(self.fd,pos)
@@ -125,7 +125,7 @@ export const OpenFun: FunDef<null> = {
 
 export function OpenFunString(): string {
     return `
-    def open(addr: num, mode:num) : File:
+    def open(addr: int, mode:int) -> File:
         f: File = None
         fd: int = 0
         fd = buildin_open(addr, mode)
