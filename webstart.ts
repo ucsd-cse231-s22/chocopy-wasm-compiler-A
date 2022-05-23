@@ -27,6 +27,14 @@ function print(memory: WebAssembly.Memory, typ: Type, arg : number) : any {
   return arg;
 }
 
+function eq_str(memory: WebAssembly.Memory, left: number, right: number): number {
+  const leftLen = new Uint32Array(memory.buffer, left, 1)[0];
+  const leftStr = String.fromCharCode.apply(null, new Uint32Array(memory.buffer, left + 4, leftLen));
+  const rightLen = new Uint32Array(memory.buffer, right, 1)[0];
+  const rightStr = String.fromCharCode.apply(null, new Uint32Array(memory.buffer, right + 4, rightLen));
+  return (leftStr === rightStr) ? 1 : 0;
+}
+
 function len(memory: WebAssembly.Memory, typ: Type, arg: any): Number {
   switch (typ.tag) {
     case "str":
@@ -76,6 +84,7 @@ function webStart() {
         len: (arg: any) => len(memory, STR, arg),
         len_str: (arg: number) => len(memory, STR, arg),
         len_list: (arg: number, listlen: number) => len_list(arg, listlen),
+        eq_str: (left: number, right: number) => eq_str(memory, left, right),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
