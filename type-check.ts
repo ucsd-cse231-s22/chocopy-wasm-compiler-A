@@ -287,7 +287,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
               return{a:{ ...expr.a, type:STRING},tag:"str-concat",left:tLeft,right:tRight};
           }
           if(equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: NUM } }}
-          else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
+          else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
+            expr.a); }
         case BinOp.Minus:
         case BinOp.Mul:
         case BinOp.IDiv:
