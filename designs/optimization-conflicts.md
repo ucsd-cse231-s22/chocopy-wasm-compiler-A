@@ -85,14 +85,43 @@ Hence, with constant folding there will be changes required to deal with float v
 
 
 ## For loops/iterators
+<ul>
+<li> We shouldn't be having conflicts with the for loops/iterators team in terms of code conflicts since the files they changed were lower.ts(not changed by us), ast.ts(we changed this but not conflicting), parser.ts(not changed by us), type-check.ts(not changed by us). 
+<li> We need not make any changes to our implementation of constant folding since the changes made by for loops team is mainly in the code structure for for blocks in that inserting ifjmp and jmp instructions in appropriate places. We would be stll correctly constant folding inspte of addition of those instructions.
+<li> We also need not make any changes to our implementation of constant propogation as well as we have tested the compiler with ifjmp and jmp instructions(even nested if instructions). Constant propogation would work as intended since for loops is essentially adding jump instructions, continue and break add jmp instructions too.
 
+Consider the program given by For loop team in their test:
+```
+cls:Range = None
+i:int = 0
+cls = Range().new(1, 4)
 
+for i in cls:
+   print(i)
+   i = 10 
+   print(i)
+```
+Our optimization would convert this program into:
 
+```
+cls:Range = None
+i:int = 0
+cls = Range().new(1, 4)
 
+for i in cls:
+   print(i)
+   i = 10 
+   print(10)
+```
 
+For the above program, i is constant propogated inside the for loop. But the outside 'i' isn't propogated in the first print statement inside the for block.
+</ul>
 
 ## Front-end user interface
+<ul>
+<li> We won't be having any conflicts with the Frond-end team's codebase. The main changes they made were to the index.html and webstart.ts. The constant folding and propogation optimizations would work as intended since front-end changes are tangential to us.
 
+</ul>
 
 
 
@@ -106,14 +135,21 @@ Hence, with constant folding there will be changes required to deal with float v
 
 
 ## I/O, files
+We wouldn't be having any conflicts with I/O team. The main common file(s) that we have changes with them is runner.ts. Our changes in this file does not intersect with them. Rest of the functionality of optimizations would work the same since there is no intersection betweeen optimization and file I/O.
 
-
-
-
+Consider the program given by I/O team in their tests:
+```
+f:File = None
+f = open(0, 0)
+f.write()
+f.close()
+```
+We won't be optimizaing anything here and hence the program would remain the same.
 
 
 
 ## Inheritance
+
 
 
 
