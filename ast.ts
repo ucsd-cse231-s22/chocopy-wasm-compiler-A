@@ -15,9 +15,9 @@ export type Parameter<A> = { name: string, type: Type }
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>>, table?: Array<ClassIndex<A>> }
 
-export type ClassIndex<A> = {a?: A, classname: string, fields: Array<string>, methods: Array<string>}
+export type ClassIndex<A> = {a?: A, classname: string, fields: Array<string>, methods: Array<string>, methodClass: Array<string>, methodType: Array<string>, methodParam: Array<[number, boolean]>, children: Array<ClassIndex<A>> }
 
-export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, parents?: string[]}
+export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, parent?: string}
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Literal }
 

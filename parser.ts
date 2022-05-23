@@ -488,7 +488,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
     name: className,
     fields,
     methods,
-    parents: [parent]
+    parent: parent
   };
 }
 
@@ -573,7 +573,7 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
 export function parse(source : string) : Program<null> {
   const t = parser.parse(source).cursor();
   const str = stringifyTree(t, source, 0);
-  console.log(str);
-  console.log(t);
+  // console.log(str);
+  // console.log(t);
   return traverse(t, source);
 }

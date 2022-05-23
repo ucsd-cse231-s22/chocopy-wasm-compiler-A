@@ -53,7 +53,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   });
   prog.classes.forEach(cls => {
     const classFields = new Map();
-    cls.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
+    cls.fields.forEach((field, i) => classFields.set(field.name, [i+1, field.value]));
     newClasses.set(cls.name, classFields);
   });
   return {
@@ -70,9 +70,10 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
+  console.log(tprogram);
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
-  console.log(irprogram)
+  console.log(irprogram);
   const progTyp = tprogram.a;
   var returnType = "";
   var returnExpr = "";
