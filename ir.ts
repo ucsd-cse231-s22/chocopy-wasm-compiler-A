@@ -1,12 +1,14 @@
 import {Type, BinOp, UniOp, Parameter} from './ast';
 
-export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, body: Array<BasicBlock<A>> }
+export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, body: Array<BasicBlock<A>>, table?: Array<ClassIndex<A>> }
+
+export type ClassIndex<A> = {a?: A, classname: string, fields: Array<string>, methods: Array<string>, methodClass: Array<string>, methodType: Array<string>, methodParam: Array<[number, boolean]>, children: Array<ClassIndex<A>> }
 
 export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Value<A> }
 
-export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, ret: Type, inits: Array<VarInit<A>>, body: Array<BasicBlock<A>> }
+export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, ret: Type, inits: Array<VarInit<A>>, body: Array<BasicBlock<A>>, class?: string }
 
 export type BasicBlock<A> = 
 | {  a?: A, label: string, stmts: Array<Stmt<A>> }
@@ -27,6 +29,7 @@ export type Expr<A> =
   | {  a?: A, tag: "builtin1", name: string, arg: Value<A> }
   | {  a?: A, tag: "builtin2", name: string, left: Value<A>, right: Value<A>}
   | {  a?: A, tag: "call", name: string, arguments: Array<Value<A>> } 
+  | {  a?: A, tag: "methodcall", name: string, arguments: Array<Value<A>>, class: string }
   | {  a?: A, tag: "alloc", amount: Value<A> }
   | {  a?: A, tag: "load", start: Value<A>, offset: Value<A>, list: boolean }
 

@@ -1,5 +1,5 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
-import { BinOp, Type, UniOp } from "./ast"
+import { BinOp, ClassIndex, Type, UniOp } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
@@ -25,12 +25,67 @@ type CompileResult = {
   newEnv: GlobalEnv
 };
 
+var inheritanceTable: Array<ClassIndex<Type>> = [];
+
 export function makeLocals(locals: Set<string>) : Array<string> {
   const localDefines : Array<string> = [];
   locals.forEach(v => {
     localDefines.push(`(local $${v} i32)`);
   });
   return localDefines;
+}
+
+function getTypeList(inheritance: Array<ClassIndex<Type>>, index: number) : Array<string> {
+  let result: Array<string> = [];
+  for (let i = 0; i < inheritance.length; i ++) {
+    for (let j = index; j < inheritance[i].methods.length; j ++) {
+      let newval = `(type ${inheritance[i].methodType[j]} (func`;
+      let param = '';
+      let ret = ' (result i32)';
+      if (inheritance[i].methodParam[j][0] > 0) {
+        param = ' (param ';
+        for (let k = 0; k < inheritance[i].methodParam[j][0]; k ++) 
+          param = param + 'i32 ';
+        param = param + ')';
+      }
+      // }
+      // if (inheritance[i].methodParam[j][1]) {
+      //   ret = ' (result i32)';
+      // }
+      newval = newval + param + ret + '))';
+      result.push(newval);
+    }
+    result = result.concat(getTypeList(inheritance[i].children, inheritance[i].methods.length));
+  }
+
+  return result;
+}
+
+function getFunList(tree: ClassIndex<Type>) : [Array<string>, number] {
+  let result = tree.methods.map(methodname => `$${tree.methodClass[tree.methods.indexOf(methodname)]}$${methodname}`);
+  let num = tree.methods.length;
+  tree.children.forEach(child => {
+    let [l, n] = getFunList(child);
+    num += n;
+    result = result.concat(l);
+  })
+  return [result, num];
+}
+
+function getTableList(inheritance: Array<ClassIndex<Type>>) : Array<string> {
+  let result: Array<string> = [];
+  let num = 0;
+  let t = `(table `;
+  let elem = [`(elem (i32.const 0) `];
+  for (let i = 0; i < inheritance.length; i ++) {
+    let [l, n] = getFunList(inheritance[i]);
+    num += n;
+    elem = elem.concat(l);
+  }
+  t += `${num} funcref)`;
+  elem.push(')');
+  result = [t, elem.join(" ")];
+  return result;
 }
 
 export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
@@ -44,6 +99,15 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const globalNames = ast.inits.map(init => init.name);
   console.log(ast.inits, globalNames);
   const funs : Array<string> = [];
+  const typelist: Array<string> = getTypeList(ast.table, 0);
+  const tablelist: Array<string> = getTableList(ast.table);
+  inheritanceTable = ast.table;
+  typelist.forEach(t => {
+    funs.push(t);
+  })
+  tablelist.forEach(l => {
+    funs.push(l);
+  })
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
@@ -188,6 +252,13 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
 
+    case "methodcall":
+      var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      valStmts = valStmts.concat(codeGenValue(expr.arguments[0], env));
+      valStmts.push(`i32.load`);
+      valStmts.push(`(i32.add (i32.const ${getIndex(expr.name, expr.class, inheritanceTable)}))`);
+      valStmts.push(`(call_indirect (type ${getType(expr.name, expr.class, inheritanceTable)}))`);
+      return valStmts;
     case "alloc":
       return [
         ...codeGenValue(expr.amount, env),
@@ -215,6 +286,30 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         ]
       }
   }
+}
+
+function getIndex(methodname: string, classname: string, tree: Array<ClassIndex<Type>>) : number {
+  for (let i = 0; i < tree.length; i ++) {
+    if (tree[i].classname === classname) {
+      return tree[i].methods.indexOf(methodname);
+    }
+    let x = getIndex(methodname, classname, tree[i].children);
+    if (x !== -1)
+      return x;
+  }
+  return -1;
+}
+
+function getType(methodname: string, classname: string, tree: Array<ClassIndex<Type>>) : string {
+  for (let i = 0; i < tree.length; i ++) {
+    if (tree[i].classname === classname) {
+      return tree[i].methodType[tree[i].methods.indexOf(methodname)];
+    }
+    let x = getType(methodname, classname, tree[i].children);
+    if (x !== "NOT FOUND")
+      return x;
+  }
+  return "NOT FOUND";
 }
 
 function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
@@ -326,6 +421,6 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
 function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = `${cls.name}$${method.name}`);
-  const result = methods.map(method => codeGenDef(method, env));
+  const result = methods.map(method => method.class === cls.name ? codeGenDef(method, env) : []);
   return result.flat();
   }

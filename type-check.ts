@@ -1,8 +1,10 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
+import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, ClassIndex } from './ast';
 import { NUM, BOOL, NONE, STR, EMPTY, CLASS, LIST } from './utils';
 import { emptyEnv } from './compiler';
+import { BlockList } from 'net';
+import { IncomingMessage } from 'http';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends Error {
@@ -19,8 +21,16 @@ export class TypeCheckError extends Error {
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>,
+  inheritance: ClassIndex<null>
 }
+
+// export type Inheritance = {
+//   classname: string,
+//   fields: Array<string>,
+//   methods: Array<[string, number, number]>,
+//   children: Array<Inheritance>
+// }
 
 export type LocalTypeEnv = {
   vars: Map<string, Type>,
@@ -40,13 +50,27 @@ export const defaultTypeEnv = {
   globals: new Map(),
   functions: defaultGlobalFunctions,
   classes: new Map(),
+  inheritance: emptyInheritance()
 };
+
+export function emptyInheritance() : ClassIndex<null> {
+  return {
+    classname: "object",
+    fields: [],
+    methods: [],
+    methodType: [],
+    methodClass: [],
+    methodParam: [],
+    children: []
+  }
+}
 
 export function emptyGlobalTypeEnv() : GlobalTypeEnv {
   return {
     globals: new Map(),
     functions: new Map(),
-    classes: new Map()
+    classes: new Map(),
+    inheritance: emptyInheritance()
   };
 }
 
@@ -89,6 +113,7 @@ export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type) : boolean {
   return (
     equalType(t1, t2) ||
     (t1.tag === "none" && (t2.tag === "class" || t2.tag === "list" )) ||
+    (t1.tag === "class" && t2.tag === "class" && inheritanceHasChild(env.inheritance, t2.name, t1.name)) ||
     (t1.tag === "empty" && t2.tag === "list")
   );
 }
@@ -101,20 +126,209 @@ export function join(env : GlobalTypeEnv, t1 : Type, t2 : Type) : Type {
   return NONE
 }
 
+// export function inheritanceFlat(classes: ClassIndex<null>[]) : Array<ClassIndex<null>> {
+//   var result : Array<ClassIndex<null>> = [];
+//   classes.forEach(inClass => {
+//     result.push({
+//       classname: inClass.classname,
+//       fields: inClass.fields,
+//       methods: inClass.methods,
+//       methodParam: inClass.methodParam,
+//       children: inClass.children
+//     });
+//     result = result.concat(inheritanceFlat(inClass.children));
+//   });
+//   return result;
+// }
+
+export function inheritanceHas(tree: ClassIndex<null>, classname: string) : ClassIndex<null> {
+  if (tree.classname === classname) {
+    return tree;
+  }
+
+  var result = null;
+  tree.children.forEach(child => {
+    var t = inheritanceHas(child, classname);
+    if (t !== null)
+      result = t;
+  })
+
+  return result;
+}
+
+export function inheritanceHasChild(tree: ClassIndex<null>, parent: string, child: string) : boolean {
+  var result = false;
+  tree.children.forEach(inClass => {
+    var tem = inheritanceHas(inClass, parent);
+    if (tem !== null) {
+      if (inheritanceHas(tem, child) !== null) {
+        result = true;
+      }
+    }
+  })
+  return result;
+}
+
+export function inheritanceUpdate(originalNodes: Array<ClassIndex<null>>, newclass: Class<null>) : Array<ClassIndex<null>> {
+  var result : Array<ClassIndex<null>> = [];
+  originalNodes.forEach(parent => {
+    if (parent.classname === newclass.parent) {
+      var children = parent.children.map(x => x);
+      var fields = parent.fields.map(x => x);
+      var methods = parent.methods.map(x => x);
+      var methodType = parent.methodType.map(x => x);
+      var methodParam = parent.methodParam.map(x => x);
+      var methodClass = parent.methodClass.map(x => x);
+      newclass.fields.forEach(field => {
+        if (fields.includes(field.name)) {
+          throw new TypeCheckError("cannot redefine attribute:" + field.name);
+        } else {
+          fields.push(field.name);
+        }
+      })
+      newclass.methods.forEach(method => {
+        if (!methods.includes(method.name)) {
+          methods.push(method.name);
+          methodClass.push(newclass.name);
+          methodType.push(`$${newclass.name}$${method.name}$type`)
+          methodParam.push([method.parameters.length, method.ret.tag !== "none"]);
+        }
+        else {
+          methodClass[methods.indexOf(method.name)] = newclass.name;
+        }
+      })
+      children.push({
+        classname: newclass.name,
+        fields,
+        methods,
+        methodClass,
+        methodType,
+        methodParam,
+        children: []
+      })
+      result.push({
+        classname: parent.classname,
+        fields: parent.fields,
+        methods: parent.methods,
+        methodClass: parent.methodClass,
+        methodType: parent.methodType,
+        methodParam: parent.methodParam,
+        children: children
+      })
+    } else {
+      result.push({
+        classname: parent.classname,
+        fields: parent.fields,
+        methods: parent.methods,
+        methodClass: parent.methodClass,
+        methodType: parent.methodType,
+        methodParam: parent.methodParam,
+        children: inheritanceUpdate(parent.children, newclass)
+      })
+    }
+  })
+
+  return result;
+}
+
 export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : GlobalTypeEnv {
   const newGlobs = new Map(env.globals);
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
+  const newInheritance = emptyInheritance();
+  const temp = new Map();
+  temp.set("object", [[], new Map(), new Map()]); // parents list, fields, method-class
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
   program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
-  program.classes.forEach(cls => {
-    const fields = new Map();
-    const methods = new Map();
-    cls.fields.forEach(field => fields.set(field.name, field.type));
-    cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
-    newClasses.set(cls.name, [fields, methods]);
-  });
-  return { globals: newGlobs, functions: newFuns, classes: newClasses };
+  // program.classes.forEach(cls => {
+  //   const fields = new Map();
+  //   const methods = new Map();
+  //   cls.fields.forEach(field => fields.set(field.name, field.type));
+  //   cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
+  //   newClasses.set(cls.name, [fields, methods]);
+  // });
+  var classCount = 0;
+  var iterCount = 0;
+  var numClass = program.classes.length;
+  var visitedClasses = new Map<string, string>();
+  visitedClasses.set("object", '');
+  while (true) {
+    program.classes.forEach(cls => {
+      if (!visitedClasses.has(cls.name) && visitedClasses.has(cls.parent)) {
+        visitedClasses.set(cls.name, cls.parent)
+        var currFields = new Map();
+        var currMethods = new Map();
+        var methodClass = new Map(); // <method name, class name>
+        var fieldexist = new Map(); // <field name, field>
+        cls.fields.forEach(field => {
+          currFields.set(field.name, field.type)
+          fieldexist.set(field.name, field)
+        });
+        cls.methods.forEach(method => {
+          currMethods.set(method.name, [method.parameters.map(p => p.type), method.ret]);
+          methodClass.set(method.name, cls.name);
+        });
+        var parentFields = new Map();
+        var parentMethods = new Map();
+        if (cls.parent !== "object") {
+          [parentFields, parentMethods] = newClasses.get(cls.parent);
+        }
+        var [_, fieldCla, methodCla] = temp.get(cls.parent);
+        for (const entry of parentFields) {
+          if (currFields.has(entry[0])) {
+            throw new TypeCheckError("cannot redefine attribute:" + entry[0]);
+          }
+          cls.fields.push(fieldCla.get(entry[0]));
+          fieldexist.set(entry[0], fieldCla.get(entry[0]));
+          currFields.set(entry[0], entry[1]);
+        }
+        for (const entry of parentMethods) {
+          if (currMethods.has(entry[0])){
+            if (!checkParams(currMethods.get(entry[0]), entry[1])) {
+              throw new TypeCheckError("different param type of inherited method " + entry[0] + " in class " + cls.name)
+            }
+          } else {
+            cls.methods.push({name: entry[0], parameters: [], ret: {tag: "none"}, inits: [], body: [], class: methodCla.get(entry[0])})
+            methodClass.set(entry[0], methodCla.get(entry[0]));
+            currMethods.set(entry[0], entry[1]);
+          }
+        }
+        newClasses.set(cls.name, [currFields, currMethods])
+        temp.set(cls.name, [visitedClasses.get(cls.name), fieldexist, methodClass])
+        classCount ++;
+        if (cls.parent === "object") {
+          newInheritance.children.push({
+            classname: cls.name,
+            fields: cls.fields.map(field => field.name),
+            methods: cls.methods.map(method => method.name),
+            methodClass: cls.methods.map(method => cls.name),
+            methodType: cls.methods.map(method => `$${cls.name}$${method.name}$type`),
+            methodParam: cls.methods.map(method => [method.parameters.length, method.ret.tag !== "none"]),
+            children: []
+          })
+        } else {
+          newInheritance.children = inheritanceUpdate(newInheritance.children, cls);
+        }
+        
+      }
+    })
+    if (classCount === numClass)
+      break;
+    iterCount ++;
+    if (iterCount > numClass)
+      throw new TypeCheckError("there are classes inherited from unknown classes");
+  }
+  return { globals: newGlobs, functions: newFuns, classes: newClasses, inheritance: newInheritance };
+}
+
+export function checkParams(method : [Array<Type>, Type], parentMethod : [Array<Type>, Type]) : boolean {
+  if (method[0].length !== parentMethod[0].length || !equalType(method[1], parentMethod[1]))
+    return false;
+  for (let i = 1; i < method[0].length; i ++) {
+    if (!equalType(method[0][i], parentMethod[0][i]))
+      return false;
+  }
+  return true;
 }
 
 export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type>, GlobalTypeEnv] {
@@ -139,7 +353,9 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   for (let name of locals.vars.keys()) {
     newEnv.globals.set(name, locals.vars.get(name));
   }
-  const aprogram = {a: lastTyp, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody};
+  const table = newEnv.inheritance.children;
+
+  const aprogram = {a: lastTyp, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody, table};
   return [aprogram, newEnv];
 }
 
@@ -174,7 +390,7 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
     !equalType(init.parameters[0].type, CLASS(cls.name)) ||
     init.ret !== NONE)
     throw new TypeCheckError("Cannot override __init__ type signature");
-  return {a: NONE, name: cls.name, fields: tFields, methods: tMethods};
+  return {a: NONE, name: cls.name, fields: tFields, methods: tMethods, parent: cls.parent};
 }
 
 export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Array<Stmt<null>>) : Array<Stmt<Type>> {
@@ -516,6 +732,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
               methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a, argTyp))) {
                 return {...expr, a: methodRet, obj: tObj, arguments: tArgs};
               } else {
+                console.log(methodArgs[2]);
+                console.log(realArgs[2].a);
+                console.log(isAssignable(env, realArgs[2].a, methodArgs[2]));
                throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}` );
               }
           } else {
