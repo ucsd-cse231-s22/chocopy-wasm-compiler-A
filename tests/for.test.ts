@@ -49,6 +49,12 @@ c : str = "x"
 for c in s:
     print(c)`, ["a","b","c"]
     );
+    assertPrint("for-iterate-raw-string",
+        `
+c : str = "x"
+for c in "hello":
+    print(c)`, ["h","e","l","l","o"]
+    );
     assertTCFail("for-mismatch-id-list-type", `
 x : str = "a"
 for x in [1,2,3,4,5]:
