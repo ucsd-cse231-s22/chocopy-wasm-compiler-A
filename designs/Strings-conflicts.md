@@ -20,8 +20,7 @@
 
     Expected output:
     ```Python
-    abcd
-    abcde
+    abcd abcde
     ```
 
     The extended print() should work for strings. It should be easy to implement by calling our print_str function in wasm code. Besides, we would like to have a general len() function to get the length of strings, lists, or sets. We have noticed that list is also stroed with its length on top of its memory. The general len() function could take in the address of strings, lists, or sets and return the value on top of this address.
@@ -29,19 +28,90 @@
 
 3. Closures/first class/anonymous functions
 
+    ```Python
+    def outer(name):
+      def inner():
+        print(name)
+      inner()
+    # call the enclosing function
+    outer('abc')
+    ```
+
+    Expected output:
+    ```Python
+    abc
+    ```
+
+    We think this feature does not interact much with ours, because this feature is on the level of functions and does not require using strings.
+
+    This is the basic example of closure. This example includes closures and calls print(string) function. From the view of this print, it just receives a string type value as an input and prints it out.
 
 4. Comprehensions
 
+    ```Python
+    j: int = 7
+    print([j for b in range(5)])
+    ```
+
+    Expected output:
+    ```Python
+    [7, 7, 7, 7, 7]
+    ```
+
+   This feature does not interact much with ours, because this feature can only apply to list, instead of strings. 
 
 
 5. Destructuring assignment
 
+    ```Python
+    def f() -> int:
+      a = "abcde"
+      v1, v2, v3, v4, v5 = a
+      return v1 + v2 + v3 + v4 + v5
+    f()
+    ```
 
+   Expected output:
+    ```Python
+    abcde
+    ```
+
+   This feature may interact with ours, because the right-hand side of destructuring assignment should be an iterable value and string is iterable.
+
+    The length of the string should be equal to the number of variables to be destructured. Otherwise, it will throw an error. To implement this, their group can get the length from the parser, because we have saved the length as an attribute. Then, the process is similar to create several strings, which has been implemented by us.
 
 6. Error reporting
 
+    ```Python
+    print("a"+1)
+    ```
+
+   Expected output:
+    ```Python
+    Error: TYPE ERROR: Binary operator `+` expects type "number" on both sides, got "str" and "number" on line 1 at col 7 print("a"+1)
+    ```
+
+   This case shows the error message when we are processing a string.
+
+    This feature may interact with ours, because there are many errors we will throw during parsing and compiling. But we don't need to feel confused about it because we can directly use the way of throwing errors implemented by this group.
 
 7. Fancy calling conventions
+
+    ```Python
+    def f(x:str = "abc"):
+      print(x)
+    
+    
+    s: str = "def"
+    f(s)
+    ```
+
+   Expected output:
+    ```Python
+    def
+    ```
+
+   There is no interaction with our feature, because this is on the level of a function and has no relationship with string. In this case, string only acts as a common variable.
 
 
 8. for loops/iterators
@@ -91,14 +161,32 @@
 
 10. Generics and polymorphism
 
+    ```Python
+    T = TypeVar('T')
+    class Box(Generic[T]):
+      pass
+    b: Box[str] = None
+    b = Box()
+    ```
+
+    There might be no interaction with our feature. String just plays a role of a primitive type and can be used in generics. But we don't need to change anything.
+    
 
 
 11. I/O, files
 
+    ```Python
+    File.read("D://workspace")
+    ```
+
+    The interaction occurs when we use string as the address of the input. We have made some constraints on the format of strings. Therefore, to correctly input the address, the address should use escape characters. Such as using "\\" instead of "\". But in implementation, there might be nothing we have to pay attention to.
+
+    Apart from that, after reading a file, we will need to save the file in the form of a string. For the input that contains backslashes, we may need to take action to deal with them, because the original file won't automatically convert a character to an escape character.
 
 
 12. Inheritance
 
+    There is no interaction with our feature, because it is on the level of function. We don't need to change anything related to string.
 
 
 13. Lists
