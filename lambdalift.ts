@@ -122,13 +122,14 @@ function createEnv(): LocalFuncEnv{
     return {funnamestack, funparamsstack, visiblefuncs};
 }
 
-function getNonLocalsInExpr(e: Expr<Type>, env: Set<string>, res: Set<Expr<Type>>) {
+function getNonLocalsInExpr(e: Expr<Type>, env: Set<string>, res: [Set<string>, Set<Expr<Type>>]) {
     switch (e.tag){
         case "literal":
             return;
         case "id":
-            if (!env.has(e.name)) {
-                res.add(e);
+            if (!env.has(e.name) && !res[0].has(e.name)) {
+                res[0].add(e.name);
+                res[1].add(e);
             }
             return;
         case "binop":
@@ -178,7 +179,7 @@ function getNonLocalsInExpr(e: Expr<Type>, env: Set<string>, res: Set<Expr<Type>
     }
 }
 
-function getNonLocalsInStmt(s: Stmt<Type>, env: Set<string>, res: Set<Expr<Type>>) {
+function getNonLocalsInStmt(s: Stmt<Type>, env: Set<string>, res: [Set<string>, Set<Expr<Type>>]) {
     switch (s.tag){
         case "assign":
             getNonLocalsInExpr(s.value, env, res);
@@ -225,7 +226,7 @@ function getNonLocalsInStmt(s: Stmt<Type>, env: Set<string>, res: Set<Expr<Type>
 }
 
 export function getNonLocalsInFunBody(fun : FunDef<Type>) : Set<Expr<Type>> {
-    var res : Set<Expr<null>> = new Set();
+    var res : [Set<string>, Set<Expr<Type>>] = [new Set(), new Set()];
     var env : Set<string> = new Set();
     fun.parameters.forEach(p => {
         env.add(p.name);
@@ -238,5 +239,5 @@ export function getNonLocalsInFunBody(fun : FunDef<Type>) : Set<Expr<Type>> {
         getNonLocalsInStmt(s, env, res);
     });
 
-    return res;
+    return res[1];
 }
