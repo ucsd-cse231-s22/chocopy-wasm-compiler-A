@@ -8,15 +8,23 @@ async function debug() {
   var source = `
 def f(x : int) -> int:
   def g(y : int) -> int:
-    def gg(z: int) -> int:
-      return z
-    return gg(x) + gg(y)
-  def h(z: int) -> int:
-    return x + z + 1
-  return g(10) + h(7)
+    return y+1
+  return g(x) + g(7)
 
-print(f(6))
-`
+print(f(10))`
+  
+//   `
+// def f(x : int) -> int:
+//   def g(y : int) -> int:
+//     def gg(z: int) -> int:
+//       return z
+//     return gg(x) + gg(y)
+//   def h(z: int) -> int:
+//     return x + z + 1
+//   return g(10) + h(7)
+
+// print(f(6))
+// `
 //   var source = `
 // def f() -> int:
 //   x : int = 0

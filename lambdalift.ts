@@ -44,7 +44,7 @@ function lambdalift_helper(fun: FunDef<null>,
     fun.body.forEach(s => {
         funcbody.push(changeCallinStmt(s, env));
     })
-    var funcparams = fun.parameters.concat(env.funparamsstack.flat());
+    var funcparams = env.funparamsstack.flat();
     
     for(var i=0; i<fun.funs.length; i++){
         lambdalift_helper(fun.funs[i], env, flattenedfun, generatedclasses);
