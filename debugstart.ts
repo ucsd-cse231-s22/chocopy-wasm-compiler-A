@@ -5,14 +5,19 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 
 // entry point for debugging
 async function debug() {
-  var source = `
+  var source =
+    `
 def f(x : int) -> int:
   def g(y : int) -> int:
-    x = x+1
-    return y+x
-  return g(x) + g(7)
+    def gg(z: int) -> int:
+      return z
+    return h(x) + h(y)
+  def h(z: int) -> int:
+    return x + z + 1
+  return g(10) + h(7)
 
-print(f(10))`
+print(f(6))
+`
   
 //   `
 // def f(x : int) -> int:

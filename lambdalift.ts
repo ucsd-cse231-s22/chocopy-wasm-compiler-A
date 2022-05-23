@@ -1,12 +1,22 @@
 import { idText } from 'typescript';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Parameter, Program, FunDef, VarInit, Class } from './ast';
 import {NUM, BOOL, NONE, CLASS, STR} from './utils';
+import {emptyLocalTypeEnv} from "./type-check";
 
 export type LocalFuncEnv = {
+    funnonlocalsdic: Map<string, Array<Parameter<Type>>>;
     funnamestack: Array<string>;
     funparamsstack: Array<Array<Parameter<Type>>>;
-    visiblefuncs: Array<string>;
+    visiblefuncs: [Array<string>, Array<string>];
   }
+
+function getNonLocalsDicInFun(fun: FunDef<Type>, res: Map<string, Array<Parameter<Type>>>) {
+    fun.funs.forEach(f => {
+        getNonLocalsDicInFun(f, res);
+    });
+
+    res.set(fun.name, Array.from(getNonLocalsInFunBody(fun)).map(e => <Parameter<Type>>{name: (e as any).name, type: e.a}));
+}
 
 export function liftprogram(prog: Program<Type>): Program<Type>{
     var funs: Array<FunDef<Type>> = [];
@@ -15,6 +25,9 @@ export function liftprogram(prog: Program<Type>): Program<Type>{
     prog.funs.forEach(f => {
         var flattenedfun;
         var generatedclasses;
+
+        getNonLocalsDicInFun(f, env.funnonlocalsdic);
+
         [flattenedfun, generatedclasses] = lambdalift(f, env);
         funs.push(...flattenedfun);
         classes.push(...generatedclasses);
@@ -26,16 +39,17 @@ export function liftprogram(prog: Program<Type>): Program<Type>{
 export function lambdalift(fun: FunDef<Type>, env: LocalFuncEnv): [Array<FunDef<Type>>, Array<Class<Type>>]{
     var flattenedfun: Array<FunDef<Type>> = [];
     var generatedclasses: Array<Class<Type>> = [];
-    lambdalift_helper(fun, env, flattenedfun, generatedclasses);
+    lambdalift_helper(undefined, fun, env, flattenedfun, generatedclasses);
     return [flattenedfun, generatedclasses];
 }
 
-function lambdalift_helper(fun: FunDef<Type>, 
-                           env: LocalFuncEnv, 
-                           flattenedfun: FunDef<Type>[], 
-                           generatedclasses: Class<Type>[])
-{
-    env.visiblefuncs = fun.funs.map(f=> f.name);
+function lambdalift_helper(preFun: FunDef<Type>, fun: FunDef<Type>, env: LocalFuncEnv, flattenedfun: FunDef<Type>[], generatedclasses: Class<Type>[]) {
+    if (preFun !== undefined) {
+        preFun.funs.forEach(f => {
+            env.visiblefuncs[0].push(f.name);
+        })
+    }
+    env.visiblefuncs[1] = fun.funs.map(f => f.name);
 
     env.funnamestack.push(fun.name);
     env.funparamsstack.push(fun.parameters);
@@ -47,7 +61,7 @@ function lambdalift_helper(fun: FunDef<Type>,
     var funcparams = Array.from(getNonLocalsInFunBody(fun)).map(e => <Parameter<Type>>{name: (e as any).name, type: e.a}).concat(fun.parameters);
 
     for(var i=0; i<fun.funs.length; i++){
-        lambdalift_helper(fun.funs[i], env, flattenedfun, generatedclasses);
+        lambdalift_helper(fun, fun.funs[i], env, flattenedfun, generatedclasses);
     }
     env.funnamestack.pop();
     env.funparamsstack.pop();
@@ -97,15 +111,15 @@ function changeCallinExpr(e: Expr<Type>, env: LocalFuncEnv): Expr<Type>{
         case "call":
             var newname;
             var newargs: Array<Expr<Type>> = [];
-            var found = env.visiblefuncs.find(element => element === e.name);
-            if(found){
-                newname = env.funnamestack.join("$") + "$" + e.name; 
-            }
-            else{
-                newname = e.name;
+            if(env.visiblefuncs[1].find(element => element === e.name)) {
+                newname = env.funnamestack.join("$") + "$" + e.name;
+            } else if (env.visiblefuncs[0].find(element => element === e.name)) {
+                newname = env.funnamestack.slice(0, env.funnamestack.length - 1).join("$") + "$" + e.name;
+            } else {
+                return e;
             }
             // also need to change arg lists.
-            env.funparamsstack.flat().forEach(p=> {
+            env.funnonlocalsdic.get(e.name).flat().forEach(p=> {
                 newargs.push({tag: "id", name: p.name});
             })
             newargs = newargs.concat(e.arguments);
@@ -116,10 +130,11 @@ function changeCallinExpr(e: Expr<Type>, env: LocalFuncEnv): Expr<Type>{
 }
 
 function createEnv(): LocalFuncEnv{
+    var funnonlocalsdic: Map<string, Array<Parameter<Type>>> = new Map();
     var funnamestack:Array<string> = [];
     var funparamsstack:Array<Array<Parameter<Type>>> = [];
-    var visiblefuncs:Array<string> = [];
-    return {funnamestack, funparamsstack, visiblefuncs};
+    var visiblefuncs:[Array<string>, Array<string>] = [[],[]];
+    return {funnonlocalsdic, funnamestack, funparamsstack, visiblefuncs};
 }
 
 function getNonLocalsInExpr(e: Expr<Type>, env: Set<string>, res: [Set<string>, Set<Expr<Type>>]) {
