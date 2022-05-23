@@ -3,10 +3,10 @@ import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("string test", () => {
   // 1
-  assertPrint("basic-string",
+assertPrint("basic-string",
 `
 aString: str = "Hello"
-print(aString)       
+print(aString)
 `, ["Hello"]);
 assertPrint("string-concat",
 `
@@ -22,5 +22,15 @@ assertPrint("string-index",
 `
 aString: str = "Hello"
 print(aString[1])
-`, ["e"])
+`, ["e"]);
+assertPrint("string-cmp",
+`
+a:str = "123"
+b:str = "321"
+print(a == b)
+print(a[0] == b[2])
+print(a[0] != b[2])
+print(a[0] != b[0])
+print(("10"[0]+"20"[0]+"30"[0]) == a)
+`, ["False", "True", "False", "True", "True"]);
 });

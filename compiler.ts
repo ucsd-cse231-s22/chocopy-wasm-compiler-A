@@ -165,7 +165,7 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
-      if (expr.a === STR) {
+      if (expr.left.a === STR) {
         return codeGenBinOpStr(expr.op, lhsStmts, rhsStmts);
       } else {
         return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
@@ -346,13 +346,16 @@ function StoreConcatStr(lhsStmts: string[], rhsStmts: string[]) : string[] {
 function codeGenBinOpStr(op : BinOp, lhsStmts : string[], rhsStmts : string[]) : string[] {
   switch (op) {
     case BinOp.Plus:
-      // TODO: fix string literal concat
       return [
         ...AllocConcatStr(lhsStmts, rhsStmts),
         `(local.set $$last)`,
         ...StoreConcatStr(lhsStmts, rhsStmts),
         `(local.get $$last)`
       ];
+    case BinOp.Eq:
+      return [...lhsStmts, ...rhsStmts, `(call $eq_str)`];
+    case BinOp.Neq:
+      return [...lhsStmts, ...rhsStmts, `(call $eq_str)`, `(i32.const 0)`, `(i32.eq)`];
     default:
       throw new Error(`Unsupported string operation: ${op}`);
   }
