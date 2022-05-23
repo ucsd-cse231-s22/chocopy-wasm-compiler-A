@@ -53,10 +53,9 @@ At this point, I am not exactly sure about the value with tag `...`, as the desi
 
 ## Closures/first class/anonymous functions
 
+As mentioned previously, optimization primarily interacts with the IR. And for implementation for first class functions the primary change is that, they have an additional expression which calls a function identified by an expression. To support this, we would need to additionally fold the `fn` attribute of the expression of type additionally `call_indirect` and to also fold each of the arguments as we do for other call expressions.
 
-
-
-
+In the current scenario, we do not support optimizations which involve first class functions and the steps required to support constant propagation and folding with first class functions are described above. (No specific program, as constant propagation and folding has not been implemented for first class functions at this stage)
 
 ## Comprehensions
 
@@ -124,6 +123,26 @@ At this point, I am not exactly sure about the value with tag `...`, as the desi
 
 ## Inheritance
 
+Constant propagation and folding have been implemented at the IR level and hence, only changes within the IR structures can interact (or break the existing implementation of constant propagation and folding). One of the changes are that an additional expression type has been added with type `call_indirect` where the function called is identified by an index in the vtable (this can also tend to conflict with the `call_indirect` implementation from first class functions). Constant propagationa and folding has not been implemented for expressions of type `call_indirect`, but to support the same in this case, the only change to be added to the compiler is to fold and propagate each of the arguments as is done for other call expressions. 
+
+The other change at the IR level within `class` type is adding the list of super classes inherited by the class as an array of strings. This is something that should not break the existing implementation of constant propagation and folding through classes (as there is nothing to be propagated/folded through the list of super classes of a class).
+
+Consider the example program:
+```
+class Rat(Object):
+    def f(self: Rat, c: int) -> int:
+        return 2
+class Int(Rat):
+    def f(self: Int, c: int) -> int:
+        return 3
+
+a: Int = None
+b: int = 3
+a = Int()
+a.f(b)
+```
+
+Here, the function reference invoked is resolved at runtime using the vtable, and the function reference will be resolved at runtime using the vtable and at the IR level, it is implemented using the expression type `call_indirect` which does not support constant propagation and folding at this stage (and steps to add support for this is described above).v
 
 
 
