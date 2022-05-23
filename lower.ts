@@ -23,7 +23,7 @@ function generateName(base : string) : string {
 // }
 var blocks : Array<IR.BasicBlock<Type>> = [];
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
-    // var blocks : Array<IR.BasicBlock<Type>> = [];
+    blocks = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     var inits = flattenStmts(p.stmts, blocks, env);
@@ -115,7 +115,7 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<Ty
   var elem = "";
   if(e.elem.tag == "id")
     elem = e.elem.name;
-  var nextAssign : AST.Stmt<AST.Type>[] = [{tag:"assign",name:elem, value: nextCall,a:NUM }];
+  var nextAssign : AST.Stmt<AST.Type>[] = [{tag:"assign",name:elem, value: nextCall,a:NONE }];
   var bodyinits = flattenStmts(nextAssign, blocks, localenv);
   
   // cond
@@ -135,8 +135,8 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<Ty
   // console.log("binits", binits, "bstmts", bstmts, "bexpr", bexpr, "bodyinits", bodyinits);
   
   // display (NEED TO ADD TO ARRAY)
-  var displayExpr : AST.Expr<AST.Type> = {tag:"builtin1", name:"print", arg:e.left, a:NUM};
-  var disp: AST.Stmt<AST.Type> = {tag:"expr", expr: displayExpr, a:NUM};
+  var displayExpr : AST.Expr<AST.Type> = {tag:"builtin1", name:"print", arg:e.left, a:e.left.a};
+  var disp: AST.Stmt<AST.Type> = {tag:"expr", expr: displayExpr, a:NONE};
   // var [einits, estmts, eexpr] = flattenExprToVal(displayExpr, localenv);
   var body = flattenStmt(disp, blocks, localenv);
   bodyinits.concat(body);
@@ -157,7 +157,7 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<Ty
     return [[...cinits, ...bodyinits, ...body, ...dinits, ...binits]
       , [...cstmts, ...dstmts, ...bstmts]
       , {
-        a: NUM,
+        a: e.a,
         tag: "value",
         value: {
           a: NUM,
@@ -169,7 +169,7 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<Ty
     return [[...cinits, ...bodyinits, ...body, ...binits]
       , [...cstmts, ...bstmts]
       , {
-        a: NUM,
+        a: e.a,
         tag: "value",
         value: {
           a: NUM,
