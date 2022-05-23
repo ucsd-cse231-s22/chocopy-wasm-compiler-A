@@ -1,19 +1,27 @@
 import { parse } from "./parser";
 import { BasicREPL } from "./repl";
 import { importObject, addLibs  } from "./tests/import-object.test";
-import {emptyGlobalTypeEnv, tc} from "./type-check"
+
 
 // entry point for debugging
 async function debug() {
-  var source =   
-  `
-  def f(x:int, y:int = 5, z:int = True):
-    print(x)
-    print(y)
-    print(z)
-  `
-  const ast = parse(source);
-  const tx_res = tc(emptyGlobalTypeEnv(), ast)
+  var source = `
+class C(object):
+  def f(self: C) -> int:
+    if True:
+      return 0
+    else:
+      return`
+  // var source = `
+  // class C(object):
+  //   def __init__(self:C, other:D):
+  //     pass
+  
+  // x:C = None
+  // x = C()`
+const ast = parse(source);
+// console.log(ast);
+  
   const repl = new BasicREPL(await addLibs());
   const result = repl.run(source).then(result => {
     console.log(result);    
@@ -21,4 +29,3 @@ async function debug() {
 }
 
 debug();
-
