@@ -23,17 +23,14 @@ export function PyBool(b: boolean): Value<Annotation> {
   return { tag: "bool", value: b };
 }
 
-<<<<<<< HEAD
-export function PyString(s: string): Value {
+export function PyString(s: string): Value<Annotation> {
   const a = []
   a.push(s)
   return { tag: "str", value: a, length: s.length};
 }
 
-export function PyObj(name: string, address: number): Value {
-=======
+
 export function PyObj(name: string, address: number): Value<Annotation> {
->>>>>>> 58673df10f007ba2dfd86168cc222155479a04a5
   if (address === 0) return PyNone();
   else return { tag: "object", name, address };
 }

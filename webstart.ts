@@ -1,15 +1,8 @@
 import {BasicREPL} from './repl';
-<<<<<<< HEAD
-import { Type, Value } from './ast';
-import { defaultTypeEnv } from './type-check';
-import {NUM, BOOL, NONE, STRING} from './utils';
-=======
 import { Type, Value, Annotation } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
+import { NUM, BOOL, NONE,STRING } from './utils';
 import { importObjectErrors } from './errors';
-
->>>>>>> 58673df10f007ba2dfd86168cc222155479a04a5
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {

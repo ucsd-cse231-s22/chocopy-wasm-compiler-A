@@ -28,9 +28,9 @@ export function lowerProgram(p : AST.Program<Annotation>, env : GlobalEnv) : IR.
     var blocks : Array<IR.BasicBlock<Annotation>> = [];
     var firstBlock : IR.BasicBlock<Annotation> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
-    var inits = flattenStmts(p.stmts, blocks, env);
+    var inits:IR.VarInit<AST.Annotation>[] = flattenStmts(p.stmts, blocks, env);
     inits = [...inits, ...lowerVarInits(p.inits, env, blocks)];
-    var classes:IR.Class<AST.Type>[] = lowerClasses(inits,p.classes, env,blocks)
+    var classes:IR.Class<AST.Annotation>[] = lowerClasses(inits,p.classes, env,blocks)
     return {
         a: p.a,
         funs: lowerFunDefs(p.funs, env),
@@ -52,11 +52,11 @@ function lowerFunDef(f : AST.FunDef<Annotation>, env : GlobalEnv) : IR.FunDef<An
     return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env,blocks)], body: blocks}
 }
 
-function lowerVarInits(inits: Array<AST.VarInit<Annotation>>, env: GlobalEnv,  blocks?: Array<IR.BasicBlock<Type>>) : Array<IR.VarInit<Annotation>> {
+function lowerVarInits(inits: Array<AST.VarInit<Annotation>>, env: GlobalEnv,  blocks?: Array<IR.BasicBlock<Annotation>>) : Array<IR.VarInit<Annotation>> {
     return inits.map(i => lowerVarInit(i, env, blocks));
 }
 
-function lowerVarInit(init: AST.VarInit<Annotation>, env: GlobalEnv, blocks?: Array<IR.BasicBlock<Type>>) : IR.VarInit<Annotation> {
+function lowerVarInit(init: AST.VarInit<Annotation>, env: GlobalEnv, blocks?: Array<IR.BasicBlock<Annotation>>) : IR.VarInit<Annotation> {
     if (init.value.tag == "str"){
       // new function here
       return lowerStringInits(init, blocks);
@@ -68,8 +68,7 @@ function lowerVarInit(init: AST.VarInit<Annotation>, env: GlobalEnv, blocks?: Ar
     }
 }
 
-<<<<<<< HEAD
-function lowerStringInits(init: AST.VarInit<Type>,blocks: Array<IR.BasicBlock<Annotation>>):IR.VarInit<Annotation> {
+function lowerStringInits(init: AST.VarInit<Annotation>,blocks: Array<IR.BasicBlock<Annotation>>):IR.VarInit<Annotation> {
   var lit = init.value;
   if (lit.tag == "str") {
     let v = lit;
@@ -80,7 +79,7 @@ function lowerStringInits(init: AST.VarInit<Type>,blocks: Array<IR.BasicBlock<An
       tag: "store",
       start: {tag: "id", name: init.name},
       offset: {tag:"wasmint", value: 0},
-      value: {a:{type:NUM} , tag:"wasmint", value:strLength}
+      value: {a:{...lit.a,type: NUM} , tag:"wasmint", value:strLength}
     });
     const strArr = parseString(v.value)
     for (var i=1; i<=strLength;i++){
@@ -89,10 +88,10 @@ function lowerStringInits(init: AST.VarInit<Type>,blocks: Array<IR.BasicBlock<An
         tag: "store",
         start: {tag: "id", name: init.name},
         offset: {tag:"wasmint", value: i},
-        value: {a:NUM , tag:"wasmint", value:ascii}
+        value: {a:{...lit.a,type: NUM} , tag:"wasmint", value:ascii}
       });
     }
-    var valinits: IR.VarInit<Annotation> = { name: init.name, type: init.a, value: { tag: "none" } }
+    var valinits: IR.VarInit<Annotation> = { name: init.name, type: init.a.type, value: { tag: "none" } }
     var valstmts:Array<IR.Stmt<Annotation>> = 
       [ { tag: "assign", name: init.name, value: alloc_string }, ...assigns_string,
       ];
@@ -103,47 +102,41 @@ function lowerStringInits(init: AST.VarInit<Type>,blocks: Array<IR.BasicBlock<An
 
 }
 
-function lowerClassVarInits(global_inits:IR.VarInit<AST.Type>[],cls: AST.Class<Type>,inits: Array<AST.VarInit<Type>>, env: GlobalEnv, blocks?: Array<IR.BasicBlock<Type>>) : Array<IR.VarInit<Type>> {
+function lowerClassVarInits(global_inits:IR.VarInit<AST.Annotation>[],cls: AST.Class<Annotation>,inits: Array<AST.VarInit<Annotation>>, env: GlobalEnv, blocks?: Array<IR.BasicBlock<Annotation>>) : Array<IR.VarInit<Annotation>> {
 
   //return inits.map(i => lowerClassVarInit(global_inits,cls,i, env,blocks));
   return inits.map(i => tmpVarInit(global_inits,cls,i, env,blocks));
 }
 
-function tmpVarInit(global_inits:IR.VarInit<AST.Type>[],cls: AST.Class<Type>,init: AST.VarInit<Type>, env: GlobalEnv,blocks: Array<IR.BasicBlock<Type>>) : IR.VarInit<Type> {
+function tmpVarInit(global_inits:IR.VarInit<AST.Annotation>[],cls: AST.Class<Annotation>,init: AST.VarInit<Annotation>, env: GlobalEnv,blocks: Array<IR.BasicBlock<Annotation>>) : IR.VarInit<Annotation> {
   return {
     ...init,
     value: literalToVal(init.value)
 }
 }
 
-function lowerClassVarInit(global_inits:IR.VarInit<AST.Type>[],cls: AST.Class<Type>,init: AST.VarInit<Type>, env: GlobalEnv,blocks: Array<IR.BasicBlock<Type>>) : IR.VarInit<Type> {
-if (init.value.tag == "str"){
-  // new function here
-  init.name = cls.name + "$" + init.name;
-  global_inits.unshift({ name: init.name, type: init.a, value: { tag: "none" }});
-  return lowerStringInits(init, blocks);
-}  
+// function lowerClassVarInit(global_inits:IR.VarInit<AST.Annotation>[],cls: AST.Class<Annotation>,init: AST.VarInit<Annotation>, env: GlobalEnv,blocks: Array<IR.BasicBlock<Annotation>>) : IR.VarInit<Annotation> {
+// if (init.value.tag == "str"){
+//   // new function here
+//   init.name = cls.name + "$" + init.name;
+//   global_inits.unshift({ name: init.name, type: init.a.type, value: { tag: "none" }});
+//   return lowerStringInits(init, blocks);
+// }  
 
-return {
-      ...init,
-      value: literalToVal(init.value)
-  }
-}
+// return {
+//       ...init,
+//       value: literalToVal(init.value)
+//   }
+// }
 
 
 
-function lowerClasses(inits:IR.VarInit<AST.Type>[],classes: Array<AST.Class<Type>>, env : GlobalEnv, blocks: Array<IR.BasicBlock<Type>>) : Array<IR.Class<Type>> {
+function lowerClasses(inits:IR.VarInit<AST.Annotation>[],classes: Array<AST.Class<Annotation>>, env : GlobalEnv, blocks: Array<IR.BasicBlock<Annotation>>) : Array<IR.Class<Annotation>> {
     return classes.map(c => lowerClass(inits,c, env, blocks));
 }
 
-function lowerClass(inits:IR.VarInit<AST.Type>[],cls: AST.Class<Type>, env : GlobalEnv,blocks:Array<IR.BasicBlock<Type>>) : IR.Class<Type> {
-=======
-function lowerClasses(classes: Array<AST.Class<Annotation>>, env : GlobalEnv) : Array<IR.Class<Annotation>> {
-    return classes.map(c => lowerClass(c, env));
-}
+function lowerClass(inits:IR.VarInit<Annotation>[],cls: AST.Class<Annotation>, env : GlobalEnv,blocks:Array<IR.BasicBlock<Annotation>>) : IR.Class<Annotation> {
 
-function lowerClass(cls: AST.Class<Annotation>, env : GlobalEnv) : IR.Class<Annotation> {
->>>>>>> 58673df10f007ba2dfd86168cc222155479a04a5
     return {
         ...cls,
         fields: lowerClassVarInits(inits,cls,cls.fields, env,blocks),
@@ -292,29 +285,29 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
       //load the legnth of left
-      const load_left_length: IR.Expr<Type> = {
+      const load_left_length: IR.Expr<Annotation> = {
         tag: "load",
         start: lval,
         offset: { tag: "wasmint", value: 0 }
       };
       //load the length of right
-      const load_right_length: IR.Expr<Type> = {
+      const load_right_length: IR.Expr<Annotation> = {
         tag: "load",
         start: rval,
         offset: { tag: "wasmint", value: 0 }
       };
 
-      const alloc_index_string_length : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: 1 } };
+      const alloc_index_string_length : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: 1 } };
       const newIndexStrName = generateName("newStr");
       const Randomname = generateName("Random");
-      var initsArray: Array<IR.VarInit<Type>> = [];
-      var strConcatstmts: IR.Stmt<AST.Type>[] = [];
+      var initsArray: Array<IR.VarInit<Annotation>> = [];
+      var strConcatstmts: IR.Stmt<AST.Annotation>[] = [];
       initsArray.push({ name: newIndexStrName, type: STRING, value: { tag: "none" } });
       initsArray.push({ name: Randomname, type: STRING, value: { tag: "none" } });
 
       strConcatstmts.push({ tag: "assign", name: newIndexStrName, value: alloc_index_string_length });
       //TODO: store the length of A + B into the newIndexStrName
-      const getLength: IR.Expr<Type>  = {  a:STRING, tag: "getLength", addr1: lval, addr2:rval};
+      const getLength: IR.Expr<Annotation>  = {  a:{...e.a, type:STRING}, tag: "getLength", addr1: lval, addr2:rval};
       strConcatstmts.push({
         tag: "store_str",
         start: {tag: "id", name: newIndexStrName},
@@ -322,27 +315,27 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
         value: getLength
       });
 
-      const alloc_left_string : IR.Expr<Type> = { tag: "alloc_expr", amount: load_left_length };
-      const alloc_right_string : IR.Expr<Type> = { tag: "alloc_expr", amount: load_right_length };
+      const alloc_left_string : IR.Expr<Annotation> = { tag: "alloc_expr", amount: load_left_length };
+      const alloc_right_string : IR.Expr<Annotation> = { tag: "alloc_expr", amount: load_right_length };
 
       //we need to alloc lengthA to randomname
       strConcatstmts.push({ tag: "assign", name: Randomname, value: alloc_left_string });
       //TODO: store each character of A into the Randomname
       strConcatstmts.push({
-        a: STRING,
+        //a: STRING,
         tag: "duplicate_str",
         source: lval,
-        dest: {  a: STRING, tag: "id", name: Randomname }
+        dest: {  a: {...e.a,type:STRING}, tag: "id", name: Randomname }
       });
       
       //we need to alloc lengthB to randomname
       strConcatstmts.push({ tag: "assign", name: Randomname, value: alloc_right_string });
       //TODO: store each character of B into the Randomname
       strConcatstmts.push({
-        a: STRING,
+        a: {...e.a, type:STRING},
         tag: "duplicate_str",
         source: rval,
-        dest: {  a: STRING, tag: "id", name: Randomname }
+        dest: {  a: {...e.a,type:STRING}, tag: "id", name: Randomname }
       });
       return [[...initsArray,...linits,...rinits],
         [...lstmts,...rstmts,...strConcatstmts],
@@ -428,19 +421,19 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
         var index_offset: number = 0;
         if (indexval.tag == "num") 
         index_offset = Number(indexval.value) + 1
-        const loadStmt:IR.Expr<Type> = {
+        const loadStmt:IR.Expr<Annotation> = {
           tag: "load",
           start: indexoval,
           offset: { tag: "wasmint", value: index_offset }
         };
-        const alloc_index_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: 2 } };
-        var assigns_index_string : IR.Stmt<Type>[] = [];
+        const alloc_index_string : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: 2 } };
+        var assigns_index_string : IR.Stmt<Annotation>[] = [];
         const newIndexStrName = generateName("newStr"); 
         assigns_index_string.push({
           tag: "store",
           start: {tag: "id", name: newIndexStrName},
           offset: {tag:"wasmint", value: 0},
-          value: {a:NUM , tag:"wasmint", value:1}
+          value: {a:{...e.a,type:NUM} , tag:"wasmint", value:1}
         });
           assigns_index_string.push({
             tag: "store_str",
@@ -461,20 +454,15 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-<<<<<<< HEAD
       const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
       const newassigns: IR.Stmt<Annotation>[] = [];
-      const strassigns: IR.Stmt<Annotation>[] = []; // For string memory allocation and store
-      var initsArray: Array<IR.VarInit<Type>> = [];
+      var initsArray: Array<IR.VarInit<Annotation>> = [];
       initsArray.push({ name: newName, type: e.a.type, value: { tag: "none" } });
       fields.forEach( f=>{
-=======
-      const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
-      const assigns : IR.Stmt<Annotation>[] = fields.map(f => {
->>>>>>> 58673df10f007ba2dfd86168cc222155479a04a5
+
         const [_, [index, value]] = f;
         if (value.tag != "str"){
-          var storestmt:IR.Stmt<Type> = {
+          var storestmt:IR.Stmt<Annotation> = {
             tag: "store",
             start: { tag: "id", name: newName },
             offset: { tag: "wasmint", value: index },
@@ -485,7 +473,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
           const strLength = value.value.length;
           //newassigns.push({ tag: "assign", name: newName, value: str_alloc });
           //Push string address into the memory
-          const get_address: IR.Expr<Type> = {tag: "alloc",amount: { tag: "wasmint", value: 0 }}
+          const get_address: IR.Expr<Annotation> = {tag: "alloc",amount: { tag: "wasmint", value: 0 }}
           newassigns.push({
             tag: "store_str",
             start: {tag: "id", name: newName},
@@ -493,16 +481,16 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
             value: get_address
           });
           let v = value;
-          const alloc_string : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: strLength + 1 } };
+          const alloc_string : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: strLength + 1 } };
           //var assigns_string : IR.Stmt<Type>[] = [];
           const newStrName1 = generateName("newStr"); 
-          initsArray.push({ name: newStrName1, type: e.a, value: { tag: "none" } });
+          initsArray.push({ name: newStrName1, type: e.a.type, value: { tag: "none" } });
           newassigns.push({ tag: "assign", name: newStrName1, value: alloc_string })
           newassigns.push({
             tag: "store",
             start: {tag: "id", name: newStrName1},
             offset: {tag:"wasmint", value: 0},
-            value: {a:NUM , tag:"wasmint", value:strLength}
+            value: {a:{...e.a,type:NUM} , tag:"wasmint", value:strLength}
           });
           const strArr = parseString(v.value)
           for (var i=1; i<=strLength;i++){
@@ -511,7 +499,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
               tag: "store",
               start: {tag: "id", name: newStrName1},
               offset: {tag:"wasmint", value: i},
-              value: {a:NUM , tag:"wasmint", value:ascii}
+              value: {a:{...e.a,type:NUM} , tag:"wasmint", value:ascii}
             });
           }
         }
@@ -538,15 +526,10 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       // });
 
       return [
-<<<<<<< HEAD
         //[ { name: newName, type: e.a, value: { tag: "none" } }],
         initsArray,
         [ //{ tag: "assign", name: newName, value: alloc }, ...assigns,
         { tag: "assign", name: newName, value: alloc }, ...newassigns,
-=======
-        [ { name: newName, type: e.a.type, value: { tag: "none" } }],
-        [ { tag: "assign", name: newName, value: alloc }, ...assigns,
->>>>>>> 58673df10f007ba2dfd86168cc222155479a04a5
           { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
@@ -585,7 +568,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
           tag: "store",
           start: {tag: "id", name: newStrName},
           offset: {tag:"wasmint", value: 0},
-          value: {a:NUM , tag:"wasmint", value:strLength}
+          value: {a:{...e.a,type:NUM} , tag:"wasmint", value:strLength}
         });
         const strArr = parseString(v.value)
         for (var i=1; i<=strLength;i++){
@@ -594,7 +577,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
             tag: "store",
             start: {tag: "id", name: newStrName},
             offset: {tag:"wasmint", value: i},
-            value: {a:NUM , tag:"wasmint", value:ascii}
+            value: {a:{...e.a,type:NUM} , tag:"wasmint", value:ascii}
           });
         }
         return [

@@ -7,13 +7,8 @@ import wabt from 'wabt';
 import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
-<<<<<<< HEAD
-import { Program, Type, Value } from './ast';
-import { PyValue, NONE, BOOL, NUM, CLASS, STRING } from "./utils";
-=======
 import { Annotation, Program, Type, Value } from './ast';
-import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
->>>>>>> 58673df10f007ba2dfd86168cc222155479a04a5
+import { PyValue, NONE, BOOL, NUM, CLASS,STRING } from "./utils";
 import { lowerProgram } from './lower';
 import { wasmErrorImports } from './errors';
 
