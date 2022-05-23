@@ -1,5 +1,7 @@
 # Memory management
 
+# Milestone 1
+
 ## Updated Tests
 ### 1. Classes inherited from `object`
 
@@ -292,4 +294,23 @@ We also added another field to denote the total amount of data allocated in byte
 
 We had a bit of a trouble in figuring out how to check if the reference counts that we collect are indeed correct since we don't have access to the variable names. For testing we added a field called `id` to each object which stores a unique identifier for an object. The reference counts and other metadata was tested using this field as an identifier.
 
+# Milestone 2
+
+## Features
+### Deleting objects and defragmentation
+We currently only track the reference counts of the objects and know when an objects has 0 references. We have to add object deletion and defragmentation so that the space allocated to the *to be deleted* objects can be reclaimed. This will be done by shifting the rest of the objects in the memory and updating the reference -> address mapping. The garbage collection will be deferred to some other time. We plan to determine when this process should happen based on a threshold on the number of references which can be reassigned and also on the total remaining memory. These checks will be performed on an `alloc` call, which in a way is an implicit call to the garbage collector.
+
+### Integration with the Closures/Inheritance/BigInts/Lists group
+We noticed that group needs additional metadata in the heap in addition to the object data. We plan to use the newer alloc function as suggested by Prof.Politz
+```javascript
+| { tag: "alloc", amount: Value<A>, fixed: boolean[], rest: boolean }
+```
+This would remove the dependency on where metadata is placed for various datatypes and for the memory management group.
+
+### Integration with error reporting
+We need to use the error types defined by the error reporting group and use their newer `Annotation` type. 
+Note: If the newer `alloc` is implemented then we would not have to rely on inferring the class field types ourselves from the `type` field in annotation, instead this information would be given by the `fixed` field in the newer alloc. 
+
+### Porting to WASM
+We plan to port as much functionality as we can from JS in `memory.ts` to WASM in `memory.wat`. We believe this should speed up the memory management functionality by a bit. We plan to do this after making sure our functionality works correctly on the JS implementation.
 
