@@ -303,7 +303,7 @@ We currently only track the reference counts of the objects and know when an obj
 ### Integration with the Closures/Inheritance/BigInts/Lists group
 We noticed that group needs additional metadata in the heap in addition to the object data. We plan to use the newer alloc function as suggested by Prof.Politz
 ```javascript
-| { tag: "alloc", amount: Value<A>, fixed: boolean[], rest: boolean }
+| { tag: "alloc", amount: Value<A>, fixed?: boolean[], rest?: boolean }
 ```
 This would remove the dependency on where metadata is placed for various datatypes and for the memory management group.
 
