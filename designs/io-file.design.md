@@ -46,6 +46,41 @@ Since we can not run some test results with npm test, we run it in the browser a
 ### Bug 
 During working on this project, we find a bug in the type-check.ts. When typechecking the arguments of a function call, the old (untyped, in the red box) argument is return instead of the typed one (yellow box). We fixed the code and include this modification in the pull request.
 ![Alt text](./typecheck_bug.png?raw=true "Title")
+ 
+## Week 9 - Goal 
+1. The goal for this week is to incorporate string into our FileSystem. Afer reading the design documents of string, we will change our design of file system in the Python side to the one below.
+```
+class File:
+        fd: int = 0
+        def __init__(self:File):
+            pass
+        def read(self:File, byte_num:int):
+            # initialize a string s with byte_num
+            # this part will be complicated might need to change
+            # how we compile this function
+            return buildin_read(self.fd, s)
+        def write(self:File, s:str):
+            return buildin_write(self.fd, s)
+        def seek(self:File, pos:int):
+            buildin_seek(self.fd, pos)
+        def close(self:File):
+            buildin_close(self.fd)
+def open(filePath: str, mode:num) : File:
+        f: File = None
+        fd: int = 0
+        fd = buildin_open(filePath, mode)
+        f = File()
+        f.fd = fd
+        return f
+```
+As for the helper functoin in JS, we will change them to the ones below.
+```
+open(filePathAddr: number, mode: number): number
+read(fd: number, s: number): number
+write(fd: number, s: number): number
+close(fd: number)
+seek(fd: number, pos: number)
+```
 
-## Week 8 - Goal
+Since we cannot automatically test the file system now (we can only test the file system until typeCheck), if we finish the work earlier, we are thinking of spending more time seeing how to enable the testing of the file system with mocha.
 
