@@ -25,7 +25,7 @@ export type Stmt<A> =
 export type Expr<A> =
   | {  a?: A, tag: "value", value: Value<A> }
   | {  a?: A, tag: "binop", op: BinOp, left: Value<A>, right: Value<A>}
-  | {  a?: A, tag: "str_compare", left:Value<A>, right: Value<A> }
+  | {  a?: A, tag: "str_compare", op: Value<A>, left:Value<A>, right: Value<A> } // op: 0 for inequal and 1 for equal
   | {  a?: A, tag: "uniop", op: UniOp, expr: Value<A> }
   | {  a?: A, tag: "builtin1", name: string, arg: Value<A> }
   | {  a?: A, tag: "builtin2", name: string, left: Value<A>, right: Value<A>}

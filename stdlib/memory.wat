@@ -102,6 +102,7 @@
         (local.set $$res (i32.const 1))
       )
     )
+    
     (local.get $$res)
   )
 )
