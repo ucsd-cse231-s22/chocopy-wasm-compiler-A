@@ -121,3 +121,122 @@ function createEnv(): LocalFuncEnv{
     var visiblefuncs:Array<string> = [];
     return {funnamestack, funparamsstack, visiblefuncs};
 }
+
+function getNonLocalsInExpr(e: Expr<null>, env: Set<string>, res: Set<Expr<null>>) {
+    switch (e.tag){
+        case "literal":
+            return;
+        case "id":
+            if (!env.has(e.name)) {
+                res.add(e);
+            }
+            return;
+        case "binop":
+            getNonLocalsInExpr(e.left, env, res);
+            getNonLocalsInExpr(e.right, env, res);
+            return;
+        case "uniop":
+            getNonLocalsInExpr(e.expr, env, res);
+            return;
+        case "builtin1":
+            getNonLocalsInExpr(e.arg, env, res);
+            return;
+        case "builtin2":
+            getNonLocalsInExpr(e.left, env, res);
+            getNonLocalsInExpr(e.right, env, res);
+            return;
+        case "call":
+            e.arguments.forEach(e => {
+                getNonLocalsInExpr(e, env, res);
+            });
+            return;
+        case "lookup":
+            getNonLocalsInExpr(e.obj, env, res);
+            return;
+        case "index":
+            getNonLocalsInExpr(e.obj, env, res);
+            getNonLocalsInExpr(e.index, env, res);
+            return;
+        case "method-call":
+            getNonLocalsInExpr(e.obj, env, res);
+            e.arguments.forEach(e => {
+                getNonLocalsInExpr(e, env, res);
+            });
+            return;
+        case "construct":
+            return;
+        case "list-obj":
+            e.entries.forEach(e => {
+                getNonLocalsInExpr(e, env, res);
+            });
+            return;
+        case "list-length":
+            getNonLocalsInExpr(e.list, env, res);
+            return;
+        default:
+            return;
+    }
+}
+
+function getNonLocalsInStmt(s: Stmt<null>, env: Set<string>, res: Set<Expr<null>>) {
+    switch (s.tag){
+        case "assign":
+            getNonLocalsInExpr(s.value, env, res);
+            return;
+        case "return":
+            getNonLocalsInExpr(s.value, env, res);
+            return;
+        case "expr":
+            getNonLocalsInExpr(s.expr, env, res);
+            return;
+        case "field-assign":
+            getNonLocalsInExpr(s.obj, env, res);
+            getNonLocalsInExpr(s.value, env, res);
+            return;
+        case "index-assign":
+            getNonLocalsInExpr(s.list, env, res);
+            getNonLocalsInExpr(s.index, env, res);
+            getNonLocalsInExpr(s.value, env, res);
+            return;
+        case "if":
+            getNonLocalsInExpr(s.cond, env, res);
+            s.thn.forEach(s => {
+                getNonLocalsInStmt(s, env, res);
+            });
+            s.els.forEach(s => {
+                getNonLocalsInStmt(s, env, res);
+            });
+            return;
+        case "while":
+            getNonLocalsInExpr(s.cond, env, res);
+            s.body.forEach(s => {
+                getNonLocalsInStmt(s, env, res);
+            });
+            return;
+        case "for":
+            getNonLocalsInExpr(s.iterable, env, res);
+            s.body.forEach(s => {
+                getNonLocalsInStmt(s, env, res);
+            });
+            return;
+        default:
+            return;
+    }
+}
+
+export function getNonLocalsInFunBody(fun : FunDef<null>) : Set<Expr<null>> {
+    var res : Set<Expr<null>> = new Set();
+    var env : Set<string> = new Set();
+    fun.parameters.forEach(p => {
+        env.add(p.name);
+    });
+    fun.inits.forEach(v => {
+        env.add(v.name);
+    });
+
+    fun.body.forEach(s => {
+        getNonLocalsInStmt(s, env, res);
+    });
+
+    return res;
+}
