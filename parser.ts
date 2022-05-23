@@ -63,7 +63,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
           obj: callExpr.obj,
           method: callExpr.field,
           arguments: args,
-	        kwarguments: kwargs,
+          kwarguments: kwargs,
         }
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
