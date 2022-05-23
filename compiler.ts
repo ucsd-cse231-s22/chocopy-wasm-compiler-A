@@ -187,10 +187,11 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
     case "call_indirect":
       var valStmts : Array<string> = codeGenExpr(expr.fn, env);
       var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      const methodOffsetCode = codeGenValue(expr.methodOffset, env).join("");
       return [
         ...fnStmts, 
         ...valStmts, 
-        `(i32.add (i32.const ${expr.methodOffset}))`,
+        `(i32.add ${methodOffsetCode})`,
         `(call_indirect (type $type$${expr.name}))`
       ];
 

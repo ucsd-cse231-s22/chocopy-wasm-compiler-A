@@ -280,7 +280,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       }
       const className = getMethodClassName(objTyp.name, e.method, env);
       const zeroOffset: IR.Value<Type> = { tag: "wasmint", value: 0 };
-      const methodOffset = env.classes.get(className)[1].get(e.method);
+      const methodOffset : IR.Value<Type> =  { tag: "num", value: BigInt(env.classes.get(className)[1].get(e.method)) }
       const checkObj : IR.Stmt<Type> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [objval]}}
       const callMethod : IR.Expr<Type> = { tag: "call_indirect", fn: { tag: "load", start: objval, offset: zeroOffset}, arguments: [objval, ...argvals], name: `${className}$${e.method}`, methodOffset: methodOffset }
       return [
@@ -330,7 +330,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         fn: { tag: "value", value : { tag: "wasmint", value: env.classIndexes.get(e.name)[0] }}, 
         arguments: [{ a: e.a, tag: "id", name: newName }], 
         name: `${e.name}$__init__`, 
-        methodOffset: env.classes.get(e.name)[1].get("__init__") 
+        methodOffset: { tag: "num", value: BigInt(env.classes.get(e.name)[1].get("__init__")) }
       };
 
       return [
