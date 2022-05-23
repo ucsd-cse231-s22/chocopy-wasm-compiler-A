@@ -239,7 +239,7 @@ b = [1,2,3]
 print(b[0])
 ```
 
-However, to optimize in those cases, they will have to deal with values stored on the memory. In addition, indices used to access elements in the list may be propogated from other functions, which makes the work harder.
+However, to optimize in those cases, they will have to deal with values stored in the memory. In addition, indices used to access elements in the list may be propogated from other functions, which makes the work harder.
 
 Because their implementation is very general and solves the optimization problem at a high-level (with scopes and variable tags), if they implement a general memory constant propogation scheme for any data strctures stored on the heap, our implementation should be easily portable under that scheme.
 
