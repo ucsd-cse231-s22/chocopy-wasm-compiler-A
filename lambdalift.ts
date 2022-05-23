@@ -44,8 +44,8 @@ function lambdalift_helper(fun: FunDef<Type>,
     fun.body.forEach(s => {
         funcbody.push(changeCallinStmt(s, env));
     })
-    var funcparams = env.funparamsstack.flat();
-    
+    var funcparams = Array.from(getNonLocalsInFunBody(fun)).map(e => <Parameter<Type>>{name: (e as any).name, type: e.a}).concat(fun.parameters);
+
     for(var i=0; i<fun.funs.length; i++){
         lambdalift_helper(fun.funs[i], env, flattenedfun, generatedclasses);
     }
@@ -122,7 +122,7 @@ function createEnv(): LocalFuncEnv{
     return {funnamestack, funparamsstack, visiblefuncs};
 }
 
-function getNonLocalsInExpr(e: Expr<null>, env: Set<string>, res: Set<Expr<null>>) {
+function getNonLocalsInExpr(e: Expr<Type>, env: Set<string>, res: Set<Expr<Type>>) {
     switch (e.tag){
         case "literal":
             return;
@@ -178,7 +178,7 @@ function getNonLocalsInExpr(e: Expr<null>, env: Set<string>, res: Set<Expr<null>
     }
 }
 
-function getNonLocalsInStmt(s: Stmt<null>, env: Set<string>, res: Set<Expr<null>>) {
+function getNonLocalsInStmt(s: Stmt<Type>, env: Set<string>, res: Set<Expr<Type>>) {
     switch (s.tag){
         case "assign":
             getNonLocalsInExpr(s.value, env, res);
@@ -224,7 +224,7 @@ function getNonLocalsInStmt(s: Stmt<null>, env: Set<string>, res: Set<Expr<null>
     }
 }
 
-export function getNonLocalsInFunBody(fun : FunDef<null>) : Set<Expr<null>> {
+export function getNonLocalsInFunBody(fun : FunDef<Type>) : Set<Expr<Type>> {
     var res : Set<Expr<null>> = new Set();
     var env : Set<string> = new Set();
     fun.parameters.forEach(p => {
