@@ -8,7 +8,7 @@ Please take a close look! Thanks!
 
 \********************************************
 ### Compiler A: string 
-This feature has overlap with our feature. Our I/O team needs string to represent the `file name` and `mode` as input. We also need the string team supports us a functionality to allocate an empty string with specific capacity to store what we read back into the memory.
+This feature has overlap with our feature. Our I/O team needs string to represent the `file name` and `mode` as input. According to their implementation, we will write a function to allocate an empty string with specific capacity to store what we read back into the memory.
 ```python
 f:File = None
 f = open("test.txt", "w")
@@ -25,7 +25,7 @@ This feature will not interact with our feature. For something like read() and w
 
 ### Compiler A: Built-in libraries   
 This will not overlap with our feature. This group implements `import` statement, but `io` is builtin and do not need to be imported. 
-The only concern here is that open() as a free function may be able to add into the builtin functions. However, we need to have more communications with the Built-in groups and see if this is necessary.
+The only concern here is that open() as a free function may be able to add into the builtin functions. However, we need to have more communications with the Built-in groups and to make sure that they know this `open` function has been implemented to avoid redundant work.
 
 ```python
 f:File = None
