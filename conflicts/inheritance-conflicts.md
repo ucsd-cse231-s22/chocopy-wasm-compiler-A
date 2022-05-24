@@ -44,6 +44,29 @@ For this team's PR, we do not see any conflicting changes as these built-in meth
 
 ### 3. Closures/first class/anonymous functions
 
+There are two major overlaps with the closures feature with inheritance. First, is in the typechecking module for the isAssignable() method. In order to support 'Callable', the closures team has added checks to the 'isSubType()' method. However, we are also using the same method to check for isSubclass() relationship. We have discussed an approach with the closures team last week so that the same method can be used by both teams by adding another 'or' clause with the isSubclass() method in 'isAssignable()'. This makes the tests mutually exclusive with respect to this check.
+
+The second overlap is in the code generation module, specifically in the 'call_indirect' clause. It had been pointed out to us that as different subclasses will have their methods at different indices, the 'index' property in ir.ts should be of Value type and not a number. We referred to Closure team's ir.ts and have updated our definition of call_indirect so that it works well for both closures and inheritance. It looks like this now:
+
+{ a?: A, tag: "call_indirect", fn: Expr<A>, name: string, methodOffset: Value<A>, arguments: Array<Value<A>> }
+
+E.g.:
+
+    class A(object):
+        def add(self, a: int, b: int) -> int:
+            return a + b
+        
+        def call_add(self):
+            add_ref: Callable[[int, int], int] = None
+            add_ref = self.add
+            print(add_ref(5, 8))
+    
+    class B(A):
+        pass
+    
+    b : B = None
+    b = B()
+    b.call_add()  # prints 13
 
 
 ### 4. Comprehensions
@@ -97,14 +120,12 @@ We have handled subclass type checking so this will work fine. We do not see any
 
 ### 11. I/O, files
 
-### 12. Inheritance
+### 12. Lists
 
-### 13. Lists
+### 13. Memory management
 
-### 14. Memory management
+### 14. Optimization
 
-### 15. Optimization
+### 15. Sets and/or tuples and/or dictionaries
 
-### 16. Sets and/or tuples and/or dictionaries
-
-### 17. Strings
+### 16. Strings

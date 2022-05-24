@@ -241,9 +241,86 @@ The focus for this milestone is to support inherited fields and non-overridden f
 
  Adding 2 and 3 i.e the class start index in the vtable & class-method pair offset would help us determine the the correct location of a class's method in the vtable.
 
+</br>
 
+# Week 8 Updates
+
+We were able to pass all the test cases we had committed to in week 7. Below we have listed out changes and the design decisions for each file.
+
+ ### AST
+
+   1. As expected we only had a single change in the AST i.e to add a super field to the class structure. We have it as an array currently as we might plan to support multiple inheritance if time permits. 
+
+	export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, super: Array<string>}
+
+### Parser
+
+   1. While parsing a class we added the code to traverse the superclass arguments. This is similar to traversing the parameters of a function. We then add it to the super field of the class.
+
+### Type checker
+
+1. We updated the type checker environment to store information about the super classes of each class. So now the environment stores information about fields, methods and super class types.
+
+		classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<string>]>
+
+ 2. Added a new function to check if a class is a subclass of another class. Also, included a call to this function in isSubtype.
+
+ 3. Raise error if subclasses redefined superclass fields
+
+ 4. Defined a new function augmentInheritance to type check if superclass exists.
+
+ 5. Defined new functions to get super class fields, super class methods, super class names.
+
+ 6. Updated field-assign and lookup to check if field exists in super classes of a class and not only the current class's fields.
+
+ 7. Updated method call to check if the method exists in super classes of a class and not only the current class's methods.
+
+
+### IR
+
+   1. Added super field to the class structure.
+
+	export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, super: Array<string>}
+
+   2. Added call indirect as an expression.
+
+	{  a?: A, tag: "call_indirect", fn: Expr<A>, name: string, methodOffset: Value<A>, arguments: Array<Value<A>> } 
+
+### Runner
+
+   1. In augmentEnv function we calculate the offsets for the fields taking into account the super class fields. We first calculate the base offset by finding the number of fields in the super classes. Then we find the offset for the current class fields by adding the base offset and the field number in the current class.
+
+   2. In augmentEnv function we also calculate the method offsets for each class with respect to the base offset for that class in the vtable. If the method is an overridden method we make it's offset the same as the super class method else we increment a counter and assign that as an offset to the method.
+
+   3. Add compiled vtable in the final WAT.
+
+### Lower
+
+   1. We first generate the vtable array using the function generateVtable. The offsets calculated in the runner file help to create and map out the vtable.
+
+   2. We define two new functions, first, getClassFieldOffet which fetches the offset for the passed field and class taking into account searching in the super class fields. Second, getMethodClassName which takes as input the method name and class name and fetches the class which defined the method (this involves searching the super class methods).
+
+   3. Updated field-assign and lookup to use getClassFieldOffet to fetch field offset.
+
+   4. Updated method-call to use call indirect instead of call. Method offset is calculated with the help of the offsets stored in the environment.
+
+   5. Updated construct to use call indirect instead of call. The Constructor also stores the base offset for the current class object at the first memory location. Also, we allocate space for all the fields including super class fields.
+
+### Compiler
+
+  1. Added vtable and classIndexes (stores the starting and ending index of the class's methods in the vtable) in the environment.
+
+  2. Added vtable in the compiled result.
+
+  3. Added code generation for call indirect.
+
+  4. Added code generation for class method definitions.
+
+  5. Added code generation for generating table in WAT.
+
+	
+</br>
 # Milestone 2
-
 </br>
 
 ## Features:
