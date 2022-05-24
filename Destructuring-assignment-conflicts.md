@@ -160,6 +160,32 @@ a1, a2, a3, a4 = l
 In this example, if the optimizer module can figure out that the variable `l` is a list that doesn't change since declaration. The optimzation can directly assign `a1`, `a2`, `a3`, `a4` with the plain constants without going through the iterator in our implementation.
 
 ## Sets and/or tuples and/or dictionaries
+Our feature can have many interactions with tuples.
 
+First, we need an iterface to get the corresponding iterator from a tuple object, so that we can use the `next()` and `hasNext()` methods to do the destructuring assignment.
+For example:
+
+```Python
+a1: int = 0
+a2: int = 0
+a3: int = 0
+a4: int = 0
+t: tuple = (1, 2, 3, 4)
+a1, a2, a3, a4 = t
+```
+
+To handle a desturcturing assignment like this. Our two teams shoud agree on such an interface, so that we can call, say `t.iter()` to get an iterator object.
+
+Our feature doesn't iteract with sets and dictionaries much because we don't support destructing assignment of sets and dictionaries.
 
 ## Strings
+Our feature doesn't iteract with strings much because there is no char type and we don't support destructing assignment of strings in our design.
+
+For example:
+```Python
+a1: int = 0
+a2: int = 0
+a1, a2 = "ab"
+```
+
+In this example, the type checker will find the assignment invalid and throw an error.
