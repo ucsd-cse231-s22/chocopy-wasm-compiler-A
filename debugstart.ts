@@ -1,6 +1,6 @@
 import { parse } from "./parser";
 import { BasicREPL } from "./repl";
-import { importObject, addLibs  } from "./tests/import-object.test";
+import { addLibs  } from "./tests/import-object.test";
 
 
 // entry point for debugging
@@ -12,7 +12,16 @@ class C(object):
       return 0
     else:
       return`
-  const ast = parse(source);
+  // var source = `
+  // class C(object):
+  //   def __init__(self:C, other:D):
+  //     pass
+  
+  // x:C = None
+  // x = C()`
+const ast = parse(source);
+// console.log(ast);
+  
   const repl = new BasicREPL(await addLibs());
   const result = repl.run(source).then(result => {
     console.log(result);    
