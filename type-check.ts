@@ -438,7 +438,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
 
         if(argTypes.length === expr.arguments.length &&
-           tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
+           tArgs.every((tArg, i) => isAssignable(env, tArg.a, argTypes[i]))) {
              return {...expr, a: retType, arguments: expr.arguments};
            } else {
             throw new TypeError("Function call type mismatch: " + expr.name);
