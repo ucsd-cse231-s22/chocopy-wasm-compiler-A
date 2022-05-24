@@ -11,7 +11,7 @@ import "codemirror/addon/lint/lint";
 import "codemirror/addon/scroll/simplescrollbars";
 import "./style.scss";
 
-import { autocompleteHint, populateAutoCompleteSrc } from "./autocomplete";
+import { autocompleteHint } from "./autocomplete";
 import { default_keywords, default_functions } from "./const";
 
 
@@ -160,8 +160,6 @@ function webStart() {
     function initCodeMirror() {
 
       let isClassMethod = false;
-      let classMethodList: string[] = [];
-      let defList: string[] = [];
 
       const userCode = document.getElementById("user-code") as HTMLTextAreaElement;
       const editorBox = CodeMirror.fromTextArea(userCode, {
@@ -192,7 +190,7 @@ function webStart() {
           isClassMethod = true;
           editor.showHint({
             hint: () =>
-              autocompleteHint(editor, classMethodList, function (e: any, cur: any) {
+              autocompleteHint(editor, [], function (e: any, cur: any) {
                 return e.getTokenAt(cur);
               }),
           });
@@ -202,7 +200,7 @@ function webStart() {
             hint: () =>
               autocompleteHint(
                 editor,
-                default_keywords.concat(default_functions).concat(defList),
+                default_keywords.concat(default_functions),
                 function (e: any, cur: any) {
                   return e.getTokenAt(cur);
                 }
@@ -216,21 +214,6 @@ function webStart() {
           //reset isClassMethod variable based on enter or space or backspace
           case "Enter":
             isClassMethod = false;
-            //compile code in background to get populate environment for autocomplete
-            var importObject = {
-              imports: {
-                print: print,
-                abs: Math.abs,
-                min: Math.min,
-                max: Math.max,
-                pow: Math.pow,
-              },
-            };
-            const repl = new BasicREPL(importObject);
-            const source = document.getElementById("user-code") as HTMLTextAreaElement;
-            repl.run(source.value).then((r) => {
-              [defList, classMethodList] = populateAutoCompleteSrc(repl);
-            });
             return;
           case "Space":
             isClassMethod = false;
