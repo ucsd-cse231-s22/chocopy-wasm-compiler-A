@@ -1,0 +1,61 @@
+image: docker.rongyi.io/eng/docker/ubuntu-web-deploy:r145.50.0
+
+default:
+  tags:
+    - docker
+
+.general:
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+
+stages:
+  - build
+  - test
+
+cache:
+  paths:
+    - node_modules/
+
+before_script:
+  - |
+    if [[ $CI_RUNNER_TAGS =~ "gfw" ]]; then
+      echo "We're inside GFW, working around with mirrors!"
+      npm config set registry http://registry.npm.taobao.org
+      npm config set strict-ssl false
+      npm get registry
+      yarn config set registry https://registry.npm.taobao.org/
+      yarn config get registry
+    fi
+
+# Stage: Build
+
+build:
+  extends: .general
+  stage: build
+  needs: []
+  script:
+    - yarn --version
+    - node -v
+    - yarn install
+    - yarn build-web
+    - make
+  artifacts:
+    paths:
+      - ./build
+    expire_in: 1 day
+
+
+# Stage: Test
+
+test:mocha:
+  needs: []
+  extends: .general
+  stage: test
+  allow_failure: true
+  script:
+    - npm install
+    - make
+    - npm run test
