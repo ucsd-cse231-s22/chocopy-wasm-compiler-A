@@ -1,5 +1,5 @@
 import { Template } from "webpack";
-import { Type } from "./ast";
+import { Annotation, Type } from "./ast";
 import { Value } from "./ir";
 
 export type memAddr = number;
@@ -117,7 +117,7 @@ export function removeScope() {
     activeStack.pop();
 }
 
-export function getTypeInfo(fields: Value<Type>[]): number {
+export function getTypeInfo(fields: Value<Annotation>[]): number {
     const binArr : number[] = fields.map(f => {
         if (f.tag  === "none") {
           return 1;

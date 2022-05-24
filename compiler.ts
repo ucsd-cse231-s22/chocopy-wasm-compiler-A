@@ -86,17 +86,15 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
         ...codeGenValue(stmt.start, env),
         `(i32.add)`,
         `call $ref_lookup`,
-        `call $assert_not_none`,
         ...codeGenValue(stmt.offset, env),
         ...codeGenValue(stmt.value, env),
         `call $store`
       ]
       let pre = [`(i32.const 0)`]
-      if (stmt.value.a && (stmt.value.a.type.tag === "class" || stmt.value.a.type.tag === "none")) {
+      if (stmt.value.a && stmt.value.a.type && (stmt.value.a.type.tag === "class" || stmt.value.a.type.tag === "none")) {
         pre = [
           ...codeGenValue(stmt.start, env),
           `call $ref_lookup`,
-          `call $assert_not_none`,
           ...codeGenValue(stmt.offset, env),
           `(call $load)`, // load the ref number referred to by argument ref no. and the offset
           `(i32.const 0)`,
@@ -113,7 +111,7 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
 
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
-      if (stmt.value.a && (stmt.value.a.type.tag === "class" || stmt.value.a.type.tag === "none") && (stmt.value.tag !== "alloc")) { // if the assignment is object assignment
+      if (stmt.value.a && stmt.value.a.type && (stmt.value.a.type.tag === "class" || stmt.value.a.type.tag === "none") && (stmt.value.tag !== "alloc")) { // if the assignment is object assignment
         valStmts.push(`(i32.const 0)`, `(i32.const 1)`, `(call $traverse_update)`) // update the count of the object on the RHS
         if (env.locals.has(stmt.name)) {
           return [`(local.get $${stmt.name})`, // update the count of the object on the LHS
@@ -219,7 +217,7 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       ];
 
     case "alloc":
-      let fields = [...env.classes.get(expr.a && expr.a.type.tag === "class" && expr.a.type.name).values()];
+      let fields = [...env.classes.get(expr.a && expr.a.type && expr.a.type.tag === "class" && expr.a.type.name).values()];
       return [
         ...codeGenValue(expr.amount, env),
         `(i32.const ${getTypeInfo(fields.map(f => f[1]))})`,
@@ -229,7 +227,6 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
     case "load":
       return [
         ...codeGenValue(expr.start, env),
-        `call $assert_not_none`,
         `call $ref_lookup`,
         ...codeGenValue(expr.offset, env),
         `call $load`
