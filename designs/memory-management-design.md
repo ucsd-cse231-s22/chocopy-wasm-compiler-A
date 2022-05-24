@@ -419,9 +419,9 @@ class Link(Object):
     id: int = 0
     next: Link = None
 
-    def addB(l: Link, val: int) -> BLink:
+    def add(l: Link, val: int) -> BLink:
         m: Link = None
-        m = BLink()
+        m = Link()
         m.id = val
         l.next = m
         return m
@@ -429,18 +429,19 @@ class Link(Object):
 class ALink(Link):
     def __init__(self: ALink):
         super().__init__()
-
-class BLink(Link):
-    other_id: int = 0
-
-    def __init__(self: BLink):
-        super().__init__()
+    def add(l: Link, val: int) -> BLink:
+        m: Link = None
+        m = ALink()
+        m.id = val
+        l.next = m
+        print("hello from Alink")
+        return m
 
 x: Link = None
 y: Link = None
 x = ALink()
 x.id = 123
-y = x.addB(456)
+y = x.add(456)
 ```
 **Expected:**
 Let `o` be the object referred to by variable `x` <br>
@@ -450,7 +451,9 @@ assert number of references of o is 1
 assert type of fields in o is [value, pointer]
 assert number of references of p is 2
 assert type of fields in p is [value, pointer]
+assert prints "hello from Alink"
 ```
+
 
 ### 5. Simple Global Reference
 **Case:**
@@ -508,7 +511,7 @@ assert type of fields in p is [value, pointer]
 
 ### 7. Simple Global Reference Reassignment
 **Case:**
-```
+```python
 class Link(object):
     id: int = 0
     next: Link = None
@@ -537,6 +540,65 @@ assert number of references of p is 1
 assert type of fields in p is [value, pointer]
 ```
 
+### 9. Garbage collection for out of scope objects
+```python
+class Rat(object):
+    id: int = 123
+    y: int = 0
+    def __init__(self: Rat):
+        self.y = 1
+    def someFunc(self: Rat):
+        r: Rat = None
+        r = Rat()
+
+    x: Rat = None
+    y: Rat = None
+    x = Rat()
+    x.someFunc()
+```
+**Expected:**
+Total memeory consumed after garbage collection is equal to that required by only 1 object.
+
+### 9. Garbage collection in a loop
+```
+class Link(object):
+    val: int = 0
+a: Rat = None
+while True:
+    a = Rat()
+    a = None
+```
+**Expected:**
+The program does not crash with out of memory error
+
+### 10. Integration with Lists
+```
+a: [int] = [1,2,3,4]
+b: [int] = [4, 6, 7]
+a = a + b
+a = None
+b = None
+```
+**Expected**
+Total memory allocated after garbage collection is equal to 0.
+
+### 11. self assignment is not garbage collected
+```python
+class Rat(object):
+    id: int = 123
+    y: int = 0
+    def __init__(self: Rat):
+        self.y = 1
+
+a = Rat()
+a = a 
+```
+**Expected**
+Running garbage collection does not reclaim memory of the object denoted by `a`
+
+
+The tests defined in milestone 1 will be revised to also check is the amount of memeory allocated is correct after garbage collection routine is run.
+
 ## Features
 ### Deleting objects and defragmentation
 We currently only track the reference counts of the objects and know when an object has 0 references. We have to add object deletion and defragmentation so that the space allocated to the *to be deleted* objects can be reclaimed. This will be done by shifting the rest of the objects in the memory and updating the reference -> address mapping. The garbage collection functionality will be deferred to some other time. We plan to determine when this process should happen based on a threshold on the number of references which can be reassigned and also on the total remaining memory. These checks will be performed on an `alloc` call, which in a way is an implicit call to the garbage collector.
@@ -554,4 +616,3 @@ Note: If the newer `alloc` is implemented, then we would not have to rely on inf
 
 ### Porting to WASM
 We plan to port as much functionality as we can from JS in `memory.ts` to WASM in `memory.wat`. We believe this should speed up the memory management functionality by a bit. We plan to do this after making sure our functionality works correctly on the JS implementation.
-
