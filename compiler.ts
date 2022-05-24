@@ -200,11 +200,6 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
         ...codeGenValue(expr.amount, env),
         `call $alloc`
       ];
-    case "alloc_expr":
-      return [
-        ...codeGenExpr(expr.amount, env),
-        `call $alloc`
-      ];
     case "load":
       return [
         ...codeGenValue(expr.start, env),

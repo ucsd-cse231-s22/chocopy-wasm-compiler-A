@@ -300,16 +300,27 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       const alloc_index_string_length : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: 1 } };
       const newIndexStrName = generateName("newStr");
       const newStringLengthVar = generateName("newStrLength");
+      const newStringLengthVar2 = generateName("newStrLength");
+      const newStringLengthVar3 = generateName("newStrLength");
+
       const Randomname = generateName("Random");
       var initsArray: Array<IR.VarInit<Annotation>> = [];
       var strConcatstmts: IR.Stmt<AST.Annotation>[] = [];
       initsArray.push({ name: newIndexStrName, type: STRING, value: { tag: "none" } });
       initsArray.push({ name: newStringLengthVar, type:  NUM, value: { tag: "wasmint", value: 0 } });
+      initsArray.push({ name: newStringLengthVar2, type:  NUM, value: { tag: "wasmint", value: 0 } });
+      initsArray.push({ name: newStringLengthVar3, type:  NUM, value: { tag: "wasmint", value: 0 } });
+
       initsArray.push({ name: Randomname, type: STRING, value: { tag: "none" } });
       const getLength: IR.Expr<Annotation>  = {  a:{...e.a, type:NUM}, tag: "getLength", addr1: lval, addr2:rval};
 
+
       strConcatstmts.push({ tag: "assign", name: newIndexStrName, value: alloc_index_string_length });
       strConcatstmts.push({ tag: "assign", name: newStringLengthVar, value: getLength });
+      strConcatstmts.push({ tag: "assign", name: newStringLengthVar2, value: load_left_length });
+      strConcatstmts.push({ tag: "assign", name: newStringLengthVar3, value: load_right_length });
+      const alloc_left_string : IR.Expr<Annotation> = { tag: "alloc", amount: { a: {...e.a,type:NUM}, tag: "id", name: newStringLengthVar2 } };
+      const alloc_right_string : IR.Expr<Annotation> = { tag: "alloc", amount: { a: {...e.a,type:NUM}, tag: "id", name: newStringLengthVar3 } };
       //TODO: store the length of A + B into the newIndexStrName
       strConcatstmts.push({
         tag: "store",
@@ -318,8 +329,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
         value: { a: {...e.a,type:NUM}, tag: "id", name: newStringLengthVar }
       });
 
-      const alloc_left_string : IR.Expr<Annotation> = { tag: "alloc_expr", amount: load_left_length };
-      const alloc_right_string : IR.Expr<Annotation> = { tag: "alloc_expr", amount: load_right_length };
+
 
       //we need to alloc lengthA to randomname
       strConcatstmts.push({ tag: "assign", name: Randomname, value: alloc_left_string });
