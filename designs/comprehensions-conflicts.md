@@ -48,6 +48,21 @@ a:bool=True
 b:Range=None
 a,b=False,[i for i in Range.new(0,2)]
 ```
+We will need some changes on our end to make the below test case pass:
+
+```
+a = [1,2,3,4]
+b = [5,6,7,8]
+[(i,j) for i,j in zip(a,b)]
+[(1, 5), (2, 6), (3, 7), (4, 8)]
+```
+
+1. We will need to reuse the code present in lower.ts so that destructuring is enabled within a comprehension expression.
+2. The code present in type-check, ast and ir should have no conflict with our changes.
+
+Design Decisions (Doubts/Collaborations):
+
+- Need to discuss with the lists team, destructuring team and the built in libraries team (for use of zip)
 
 ### Compiler A: Error reporting
 
@@ -65,7 +80,16 @@ print([f(i) for i in Range.new(0,2)])
 
 ### Compiler A: for loops/iterators
 
-???
+The comprehension based changes in lower.ts is kind of similar to the for loop changes, as comprehension is similar to a for loop. Since, we have our own implementation, we do not have any conflicts with the for loop changes. The following is an example of a program, where both our changes coexist:
+
+```
+cls:Range = None
+i:int = 0
+cls = Range().new(3, 6)
+for i in cls:
+    print(i)
+[i for i in cls]
+```
 
 ### Compiler A: Front-end user interface
 
@@ -73,7 +97,7 @@ Our work is independent of this team's work. Once we store our comprehensions in
 
 ### Compiler A: Generics and polymorphism
 
-???
+This should not have any conflicts with comprehension changes.
 
 ### Compiler A: I/O, files
 
