@@ -49,7 +49,6 @@ export type Literal =
   | { tag: "bool", value: boolean }
   | { tag: "none" }
 
-
 // TODO: should we split up arithmetic ops from bool ops?
 export enum BinOp { Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};
 

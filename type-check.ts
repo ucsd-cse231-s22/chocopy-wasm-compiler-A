@@ -222,7 +222,6 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
         throw new TypeCheckError("values require an object");
       if (!env.classes.has(tValObject.a.name)) 
         throw new TypeCheckError("values on an unknown class");
-      
       const [__, methods] = env.classes.get(tValObject.a.name);
       if(!(methods.has("hasnext")) || methods.get("hasnext")[1].tag != BOOL.tag)
         throw new TypeCheckError("iterable class must have hasnext method with boolean return type");
@@ -230,11 +229,8 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
         throw new TypeCheckError("iterable class must have next method with same return type as iterator");
       if(!(methods.has("reset")) || methods.get("reset")[1].tag != NONE.tag)
         throw new TypeCheckError("iterable class must have reset method with none return type");
-
       const tforBody = tcBlock(env, locals, stmt.body);
-
       return {a:tIterator, tag: stmt.tag, iterator:stmt.iterator, values: tValObject, body: tforBody }
-
     case "field-assign":
       var tObj = tcExpr(env, locals, stmt.obj);
       const tVal = tcExpr(env, locals, stmt.value);
@@ -418,9 +414,9 @@ export function tcLiteral(literal : Literal) {
 // function to return the type of iterator in for-loop. Finds the string in globals/locals and returns its type
 // Will be extended to include tuples etc in later commits
 export function tcIterator(env : GlobalTypeEnv, locals : LocalTypeEnv, iterator: string): Type{
-   if (locals.vars.has(iterator))
-    return locals.vars.get(iterator) 
-   else if (env.globals.has(iterator))
-      return env.globals.get(iterator)
-    throw new TypeCheckError(`Undefined iterator`)
+  if (locals.vars.has(iterator))
+   return locals.vars.get(iterator) 
+  else if (env.globals.has(iterator))
+     return env.globals.get(iterator)
+   throw new TypeCheckError(`Undefined iterator`)
 }

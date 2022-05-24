@@ -181,10 +181,10 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var whileStartLbl = generateName("$whilestart");
       var whilebodyLbl = generateName("$whilebody");
       var whileEndLbl = generateName("$whileend");
-     
+
       //pushing labels to utilize them for continue and break statements
       env.labels.push(whileStartLbl,whilebodyLbl,whileEndLbl)
-
+      
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: whileStartLbl })
       blocks.push({  a: s.a, label: whileStartLbl, stmts: [] })
       var [cinits, cstmts, cexpr] = flattenExprToVal(s.cond, env);
@@ -216,10 +216,10 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var resetCall : AST.Expr<AST.Type> =  {tag:"method-call", obj:s.values, method:"reset", arguments:[], a:NONE}
       var resetStmt : AST.Stmt<AST.Type>[] = [{ tag: "expr", expr: resetCall , a:NONE }]
       flattenStmts(resetStmt, blocks, localenv); 
-
+      
       pushStmtsToLastBlock(blocks, {tag:"jmp", lbl: forStartLbl })
       blocks.push({  a: s.a, label: forStartLbl, stmts: [] })
-  
+      
       var hasnextCall : AST.Expr<AST.Type> = {tag:"method-call", obj:s.values, method:"hasnext", arguments:[], a:BOOL}
       var nextCall : AST.Expr<AST.Type> = {tag:"method-call", obj:s.values, method:"next", arguments:[], a:s.a}
       
@@ -239,7 +239,6 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       return [...cinits, ...bodyinits]
   }
 }
-
 
 function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Expr<Type>] {
   switch(e.tag) {
@@ -363,6 +362,3 @@ function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarIn
 function pushStmtsToLastBlock(blocks: Array<IR.BasicBlock<Type>>, ...stmts: Array<IR.Stmt<Type>>) {
   blocks[blocks.length - 1].stmts.push(...stmts);
 }
-
-
-
