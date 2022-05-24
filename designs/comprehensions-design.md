@@ -1,5 +1,40 @@
 # Comprehensions Team Design Doc
 
+## Week 8 Milestones:
+
+1. store comprehensions in a variable of type list (use code by lists team)
+```A: List = None```
+```A = [j for a in range(5,7)]```
+
+2. extend comprehension expresion to use lists (use code by lists team)
+```A: List = None```
+```A = [j for a in [1,2,3,4]]```
+
+```A: List = None```
+```B: [int] = [1,2,3,4]```
+```A = [j for a in B]```
+
+3. extend comprehension expresion to use string (use code by string team)
+```A: List = None```
+```A = [j for a in "compilers"]```
+
+4. extend comprehension expresion to use sets (use code by sets team)
+```A: List = None```
+```A = [j for a in {1,2,2,3,3,4,4,5}]```
+
+5. extend comprehension expresion to use tuples (use code by sets team)
+```A: List = None```
+```A = [j for a in (1,2,3,3,4,4,5)]```
+
+6. extend comprehension expresion to use dictionaries (use code by sets team)
+```A: List = None```
+```courses = {"cse 250A":"fall 2021","cse 231":"spring 2022"}```
+```A = [i for i in courses]```
+
+7. nested comprehension expresseions
+```A: List = None```
+```A = [[j for j in i] for i in [[1,2,3],[2,3,4],[3,4,5]]]```
+
 ## Week 7:
 ### Test cases implemented and passed:
 All test cases were written in the tests/comprehension.test.ts file. Upon running this file, 15/15 teste cases passed. The following are the test cases that pass and produce the required output:
@@ -118,7 +153,7 @@ In case of the second test case, we skipped it because as suggested by proffesor
 ## Limitation so far (plan on fixing in week 8)
 
 1. We made an assumption that the list comprehension expressions will only be used globally, and not locally inside any function. (UPDATE: This has been fixed)
-2. The explicit range class inside each of our test cases has a class member as curr. If we have an expression as [a for a in range(10)], then we assign a to range.curr (curr refers to the current element in the iteration). However, we are assigning a as a global variable, instead of giving it a local scope(ie, scope of variable a should only be within the comprehension). Because of this, every time we want to use a different comprehension expression, we are using a new counter variable.
+2. The explicit range class inside each of our test cases has a class member as curr. If we have an expression as [a for a in range(10)], then we assign a to range.curr (curr refers to the current element in the iteration). However, we are assigning a as a global variable, instead of giving it a local scope(ie, scope of variable a should only be within the comprehension). Because of this, every time we want to use a different comprehension expression, we are using a new counter variable. (UPDATE: This has been fixed)
 
 
 ## Workflow Details:
@@ -141,8 +176,7 @@ Also, as of this week, we are explicitly adding a range class in our test cases,
 
 ## Important Notes on Test Cases:
 
-1. As of now, we are able to pass the test cases individually one at a time. We are getting WASM errors while trying to run all the test cases together. We plan to fix this in our next milestone.
-2. The test cases are more detailed in the comprehension.test.ts file. In order to see how our current code is performing, please refer to the mentioned file.
+1. The test cases are more detailed in the comprehension.test.ts file. In order to see how our current code is performing, please refer to the mentioned file.
 
 
 
