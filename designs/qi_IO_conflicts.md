@@ -1,3 +1,16 @@
+### Compiler A: Bignums 
+This feature has overlap with our feature. Our I/O team needs string to represent the `file name` and `mode` as input. We also need the string team supports us a functionality to allocate an empty string with specific capacity to store what we read back into the memory.
+```python
+f:File = None
+f = open("test.txt", "w")
+print(f.read(n)) 
+```
+
+```python
+def read(n) -> string:
+    s = allocString(n)
+    __builtinRead__(fd, s, n)
+```
 ### Compiler A: Bignums    
 This feature will not interact with our feature. For something like read() and write(), a bignum could be bigger than the whole memory size. 
 
