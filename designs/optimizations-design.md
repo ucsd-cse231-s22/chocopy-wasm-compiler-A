@@ -228,3 +228,13 @@ These can be actual code diffs in the PR or written in your design.md.
 A description of the value representation and memory layout for any new runtime 
 values you will add. These should be described in design.md rather than implemented 
 directly.
+
+
+## Next steps
+Currently, we have implemented all features (constant propagation and folding which was described in the first week milestone).
+
+We will try and implement the following features by the next milestone:
+- Dead code elimination
+- Copy Propagation
+- Structured control flow
+- Adding string/list support to constant folding and propagation
