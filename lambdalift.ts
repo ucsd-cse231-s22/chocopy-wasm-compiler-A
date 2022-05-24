@@ -3,19 +3,21 @@ import { Stmt, Expr, Type, UniOp, BinOp, Literal, Parameter, Program, FunDef, Va
 import {NUM, BOOL, NONE, CLASS, STR} from './utils';
 import {emptyLocalTypeEnv} from "./type-check";
 
+var namecount = 0;
 export type LocalFuncEnv = {
     funnonlocalsdic: Map<string, Array<Parameter<Type>>>;
+    funlocals: Set<string>;
     funnamestack: Array<string>;
-    funparamsstack: Array<Array<Parameter<Type>>>;
     visiblefuncs: [Array<string>, Array<string>];
+    classesneeded: Map<string, Type>;
   }
 
-function getNonLocalsDicInFun(fun: FunDef<Type>, res: Map<string, Array<Parameter<Type>>>) {
+function getNonLocalsDicInFun(fun: FunDef<Type>, env: LocalFuncEnv) {
     fun.funs.forEach(f => {
-        getNonLocalsDicInFun(f, res);
+        getNonLocalsDicInFun(f, env);
     });
 
-    res.set(fun.name, Array.from(getNonLocalsInFunBody(fun)).map(e => <Parameter<Type>>{name: (e as any).name, type: e.a}));
+    env.funnonlocalsdic.set(fun.name, Array.from(getNonLocalsInFunBody(fun, env)).map(e => <Parameter<Type>>{name: (e as any).name, type: e.a}));
 }
 
 export function liftprogram(prog: Program<Type>): Program<Type>{
@@ -26,7 +28,7 @@ export function liftprogram(prog: Program<Type>): Program<Type>{
         var flattenedfun;
         var generatedclasses;
 
-        getNonLocalsDicInFun(f, env.funnonlocalsdic);
+        getNonLocalsDicInFun(f, env);
 
         [flattenedfun, generatedclasses] = lambdalift(f, env);
         funs.push(...flattenedfun);
@@ -44,27 +46,30 @@ export function lambdalift(fun: FunDef<Type>, env: LocalFuncEnv): [Array<FunDef<
 }
 
 function lambdalift_helper(preFun: FunDef<Type>, fun: FunDef<Type>, env: LocalFuncEnv, flattenedfun: FunDef<Type>[], generatedclasses: Class<Type>[]) {
+    env.visiblefuncs[0] = [];  // sibling nodes, including itself.
+    env.visiblefuncs[1] = [];  // children nodes.
     if (preFun !== undefined) {
         preFun.funs.forEach(f => {
             env.visiblefuncs[0].push(f.name);
         })
     }
+    else{
+        env.visiblefuncs[0].push(fun.name);
+    }
     env.visiblefuncs[1] = fun.funs.map(f => f.name);
 
     env.funnamestack.push(fun.name);
-    env.funparamsstack.push(fun.parameters);
     var funcname = env.funnamestack.join("$");
     var funcbody:Array<Stmt<Type>> = [];
     fun.body.forEach(s => {
         funcbody.push(changeCallinStmt(s, env));
     })
-    var funcparams = Array.from(getNonLocalsInFunBody(fun)).map(e => <Parameter<Type>>{name: (e as any).name, type: e.a}).concat(fun.parameters);
+    var funcparams = Array.from(getNonLocalsInFunBody(fun, env)).map(e => <Parameter<Type>>{name: (e as any).name, type: e.a}).concat(fun.parameters);
 
     for(var i=0; i<fun.funs.length; i++){
         lambdalift_helper(fun, fun.funs[i], env, flattenedfun, generatedclasses);
     }
     env.funnamestack.pop();
-    env.funparamsstack.pop();
 
     flattenedfun.push({ ...fun, name: funcname, parameters: funcparams, funs: [], body: funcbody});
 }
@@ -131,108 +136,116 @@ function changeCallinExpr(e: Expr<Type>, env: LocalFuncEnv): Expr<Type>{
 
 function createEnv(): LocalFuncEnv{
     var funnonlocalsdic: Map<string, Array<Parameter<Type>>> = new Map();
+    var funlocals: Set<string> = new Set();
     var funnamestack:Array<string> = [];
-    var funparamsstack:Array<Array<Parameter<Type>>> = [];
     var visiblefuncs:[Array<string>, Array<string>] = [[],[]];
-    return {funnonlocalsdic, funnamestack, funparamsstack, visiblefuncs};
+    var classesneeded: Map<string, Type> = new Map();
+    return {funnonlocalsdic, funlocals, funnamestack, visiblefuncs, classesneeded};
 }
 
-function getNonLocalsInExpr(e: Expr<Type>, env: Set<string>, res: [Set<string>, Set<Expr<Type>>]) {
+function getNonLocalsInExpr(e: Expr<Type>, explicit_nonlocals: Array<string>, env: LocalFuncEnv, res: [Set<string>, Set<Expr<Type>>]): Expr<Type>{
     switch (e.tag){
         case "literal":
             return;
         case "id":
-            if (!env.has(e.name) && !res[0].has(e.name)) {
+            if (!env.funlocals.has(e.name) && !res[0].has(e.name)) {
                 res[0].add(e.name);
                 res[1].add(e);
             }
-            return;
+            if(explicit_nonlocals.find(name => name===e.name)){
+                var classname = "Ref"+namecount;
+                namecount++;
+                return {  a: e.a, tag: "lookup", obj: {  a: {tag: "class", name: classname}, tag: "id", name: e.name }, field: "value" };
+            }
+            else{
+                return e;
+            }
         case "binop":
-            getNonLocalsInExpr(e.left, env, res);
-            getNonLocalsInExpr(e.right, env, res);
-            return;
+            var left = getNonLocalsInExpr(e.left, explicit_nonlocals, env, res);
+            var right = getNonLocalsInExpr(e.right, explicit_nonlocals, env, res);
+            return {...e, left:left, right:right};
         case "uniop":
-            getNonLocalsInExpr(e.expr, env, res);
+            getNonLocalsInExpr(e.expr, explicit_nonlocals, env, res);
             return;
         case "builtin1":
-            getNonLocalsInExpr(e.arg, env, res);
+            getNonLocalsInExpr(e.arg, explicit_nonlocals, env, res);
             return;
         case "builtin2":
-            getNonLocalsInExpr(e.left, env, res);
-            getNonLocalsInExpr(e.right, env, res);
+            getNonLocalsInExpr(e.left, explicit_nonlocals, env, res);
+            getNonLocalsInExpr(e.right, explicit_nonlocals, env, res);
             return;
         case "call":
             e.arguments.forEach(e => {
-                getNonLocalsInExpr(e, env, res);
+                getNonLocalsInExpr(e, explicit_nonlocals, env, res);
             });
             return;
         case "lookup":
-            getNonLocalsInExpr(e.obj, env, res);
+            getNonLocalsInExpr(e.obj, explicit_nonlocals, env, res);
             return;
         case "index":
-            getNonLocalsInExpr(e.obj, env, res);
-            getNonLocalsInExpr(e.index, env, res);
+            getNonLocalsInExpr(e.obj, explicit_nonlocals, env, res);
+            getNonLocalsInExpr(e.index, explicit_nonlocals, env, res);
             return;
         case "method-call":
-            getNonLocalsInExpr(e.obj, env, res);
+            getNonLocalsInExpr(e.obj, explicit_nonlocals, env, res);
             e.arguments.forEach(e => {
-                getNonLocalsInExpr(e, env, res);
+                getNonLocalsInExpr(e, explicit_nonlocals, env, res);
             });
             return;
         case "construct":
             return;
         case "list-obj":
             e.entries.forEach(e => {
-                getNonLocalsInExpr(e, env, res);
+                getNonLocalsInExpr(e, explicit_nonlocals, env, res);
             });
             return;
         case "list-length":
-            getNonLocalsInExpr(e.list, env, res);
+            getNonLocalsInExpr(e.list, explicit_nonlocals, env, res);
             return;
         default:
             return;
     }
 }
 
-function getNonLocalsInStmt(s: Stmt<Type>, env: Set<string>, res: [Set<string>, Set<Expr<Type>>]) {
+function getNonLocalsInStmt(s: Stmt<Type>, explicit_nonlocals: Array<string>, env: LocalFuncEnv, res: [Set<string>, Set<Expr<Type>>]) {
     switch (s.tag){
         case "assign":
-            getNonLocalsInExpr(s.value, env, res);
+            getNonLocalsInExpr(s.value, explicit_nonlocals, env, res);
             return;
         case "return":
-            getNonLocalsInExpr(s.value, env, res);
+            getNonLocalsInExpr(s.value, explicit_nonlocals, env, res);
             return;
         case "expr":
-            getNonLocalsInExpr(s.expr, env, res);
+            getNonLocalsInExpr(s.expr, explicit_nonlocals, env, res);
             return;
         case "field-assign":
-            getNonLocalsInExpr(s.obj, env, res);
-            getNonLocalsInExpr(s.value, env, res);
+            getNonLocalsInExpr(s.obj, explicit_nonlocals, env, res);
+            getNonLocalsInExpr(s.value, explicit_nonlocals, env, res);
             return;
         case "index-assign":
-            getNonLocalsInExpr(s.list, env, res);
-            getNonLocalsInExpr(s.index, env, res);
-            getNonLocalsInExpr(s.value, env, res);
+            getNonLocalsInExpr(s.list, explicit_nonlocals, env, res);
+            getNonLocalsInExpr(s.index, explicit_nonlocals, env, res);
+            getNonLocalsInExpr(s.value, explicit_nonlocals, env, res);
             return;
         case "if":
-            getNonLocalsInExpr(s.cond, env, res);
+            getNonLocalsInExpr(s.cond, explicit_nonlocals, env, res);
             s.thn.forEach(s => {
-                getNonLocalsInStmt(s, env, res);
+                getNonLocalsInStmt(s, explicit_nonlocals, env, res);
             });
             s.els.forEach(s => {
-                getNonLocalsInStmt(s, env, res);
+                getNonLocalsInStmt(s, explicit_nonlocals, env, res);
             });
             return;
         case "while":
-            getNonLocalsInExpr(s.cond, env, res);
+            getNonLocalsInExpr(s.cond, explicit_nonlocals, env, res);
             s.body.forEach(s => {
-                getNonLocalsInStmt(s, env, res);
+                getNonLocalsInStmt(s, explicit_nonlocals, env, res);
             });
             return;
         case "for":
-            getNonLocalsInExpr(s.iterable, env, res);
+            getNonLocalsInExpr(s.iterable, explicit_nonlocals, env, res);
             s.body.forEach(s => {
-                getNonLocalsInStmt(s, env, res);
+                getNonLocalsInStmt(s, explicit_nonlocals, env, res);
             });
             return;
         default:
@@ -240,18 +253,19 @@ function getNonLocalsInStmt(s: Stmt<Type>, env: Set<string>, res: [Set<string>, 
     }
 }
 
-export function getNonLocalsInFunBody(fun : FunDef<Type>) : Set<Expr<Type>> {
+export function getNonLocalsInFunBody(fun : FunDef<Type>, env: LocalFuncEnv) : Set<Expr<Type>> {
     var res : [Set<string>, Set<Expr<Type>>] = [new Set(), new Set()];
-    var env : Set<string> = new Set();
+    env.funlocals = new Set();
     fun.parameters.forEach(p => {
-        env.add(p.name);
+        env.funlocals.add(p.name);
     });
     fun.inits.forEach(v => {
-        env.add(v.name);
+        env.funlocals.add(v.name);
     });
-
+    
+    var explicit_nonlocals = fun.nonlocals;
     fun.body.forEach(s => {
-        getNonLocalsInStmt(s, env, res);
+        getNonLocalsInStmt(s, explicit_nonlocals, env, res);
     });
 
     return res[1];

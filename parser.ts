@@ -366,7 +366,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
     case "ForStatement":
       c.firstChild(); // Focus on for
       c.nextSibling(); // Focus on variable name
-      let name = s.substring(c.from, c.to);
+      var name = s.substring(c.from, c.to);
       c.nextSibling(); // Focus on in / ','
       c.nextSibling(); // Focus on iterable expression
       var iter = traverseExpr(c, s);
@@ -381,6 +381,12 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       return { tag: "for", name: name, iterable: iter, body: body}
     case "PassStatement":
       return { tag: "pass" }
+    // case "ScopeStatement":
+    //   c.firstChild();
+    //   c.nextSibling();
+    //   var name = s.substring(c.from, c.to);
+    //   c.parent();
+    //   return { tag: "nonlocal", name: name}
     default:
       throw new Error("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to));
   }
@@ -467,6 +473,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   var inits = [];
   var body = [];
   var funs = [];
+  var nonlocals = [];
   
   var hasChild = c.nextSibling();
 
@@ -474,6 +481,9 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
     if (isVarInit(c, s)) {
       inits.push(traverseVarInit(c, s));
     } 
+    else if(isScopeDecl(c,s)){
+      nonlocals.push(traverseScopeDecl(c, s));
+    }
     else if(isFunDef(c,s)){
       funs.push(traverseFunDef(c,s));
     }
@@ -493,7 +503,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   c.parent();      // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
   c.parent();      // Pop to FunctionDefinition
-  return { name, parameters, ret, inits, funs, body }
+  return { name, parameters, ret, inits, funs, body, nonlocals: nonlocals}
 }
 
 
@@ -529,6 +539,14 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   };
 }
 
+export function traverseScopeDecl(c: TreeCursor, s: string): string{
+  c.firstChild();
+  c.nextSibling();
+  var name: string = s.substring(c.from, c.to);
+  c.parent();
+  return name;
+}
+
 export function traverseDefs(c : TreeCursor, s : string) : [Array<VarInit<null>>, Array<FunDef<null>>, Array<Class<null>>] {
   const inits : Array<VarInit<null>> = [];
   const funs : Array<FunDef<null>> = [];
@@ -557,7 +575,8 @@ export function isVarInit(c : TreeCursor, s : string) : Boolean {
     const isVar = c.type.name as any === "TypeDef";
     c.parent();
     return isVar;  
-  } else {
+  } 
+  else {
     return false;
   }
 }
@@ -568,6 +587,10 @@ export function isFunDef(c : TreeCursor, s : string) : Boolean {
 
 export function isClassDef(c : TreeCursor, s : string) : Boolean {
   return c.type.name === "ClassDefinition";
+}
+
+export function isScopeDecl(c: TreeCursor, s: string) : Boolean{
+  return c.type.name === "ScopeStatement"
 }
 
 export function traverse(c : TreeCursor, s : string) : Program<null> {
