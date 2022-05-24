@@ -10,6 +10,7 @@
     "build": "tsc debugstart.ts  --downlevelIteration --esModuleInterop --moduleResolution node --outDir debugger/",
     "start": "node debugger/debugstart.js",
     "prestart": "npm run build",
+    "parse": "ts-node parsestart.ts",
     "dev": "npx webpack serve --mode=development"
   },
   "author": "",

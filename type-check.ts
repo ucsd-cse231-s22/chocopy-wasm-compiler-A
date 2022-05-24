@@ -1,6 +1,6 @@
 
 import { Annotation, BinOp, Class, Expr, FunDef, Literal, Location, Program, Stmt, stringifyOp, Type, UniOp, VarInit } from './ast';
-import { BOOL, CLASS, NONE, NUM } from './utils';
+import { BOOL, CLASS, NONE, NUM, LIST } from './utils';
 import { fullSrcLine, drawSquiggly } from './errors';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
@@ -43,17 +43,17 @@ export class TypeCheckError extends Error {
 }
 
 export type GlobalTypeEnv = {
-  globals: Map<string, Type>,
-  functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>
-}
+  globals: Map<string, Type>;
+  functions: Map<string, [Array<Type>, Type]>;
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>;
+};
 
 export type LocalTypeEnv = {
-  vars: Map<string, Type>,
-  expectedRet: Type,
-  actualRet: Type,
-  topLevel: Boolean
-}
+  vars: Map<string, Type>;
+  expectedRet: Type;
+  actualRet: Type;
+  topLevel: Boolean;
+};
 
 const defaultGlobalFunctions = new Map();
 defaultGlobalFunctions.set("abs", [[NUM], NUM]);
@@ -61,6 +61,7 @@ defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
+defaultGlobalFunctions.set("len", [[LIST(NUM)], NUM]);
 
 export const defaultTypeEnv = {
   globals: new Map(),
@@ -72,7 +73,7 @@ export function emptyGlobalTypeEnv(): GlobalTypeEnv {
   return {
     globals: new Map(),
     functions: new Map(),
-    classes: new Map()
+    classes: new Map(),
   };
 }
 
@@ -81,14 +82,17 @@ export function emptyLocalTypeEnv(): LocalTypeEnv {
     vars: new Map(),
     expectedRet: NONE,
     actualRet: NONE,
-    topLevel: true
+    topLevel: true,
   };
 }
 
-export function equalType(t1: Type, t2: Type) {
+export function equalType(t1: Type, t2: Type): boolean {
   return (
     t1 === t2 ||
-    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
+    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
+    (t1.tag === "list" && t2.tag === "list" && equalType(t1.itemType, t2.itemType)) ||
+    (t1.tag === "empty" && t2.tag === "list") ||
+    (t1.tag === "list" && t2.tag === "empty")
   );
 }
 
@@ -97,7 +101,7 @@ export function isNoneOrClass(t: Type) {
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class"
+  return equalType(t1, t2) || (t1.tag === "none" && t2.tag === "class") || (t1.tag === "none" && t2.tag === "list") || (t1.tag === "empty" && t2.tag === "list");
 }
 
 export function isAssignable(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
@@ -112,13 +116,20 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
   const newGlobs = new Map(env.globals);
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
-  program.inits.forEach(init => newGlobs.set(init.name, init.type));
-  program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
-  program.classes.forEach(cls => {
+  program.inits.forEach((init) => newGlobs.set(init.name, init.type));
+  program.funs.forEach((fun) =>
+    newFuns.set(fun.name, [fun.parameters.map((p) => p.type), fun.ret])
+  );
+  program.classes.forEach((cls) => {
     const fields = new Map();
     const methods = new Map();
-    cls.fields.forEach(field => fields.set(field.name, field.type));
-    cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
+    cls.fields.forEach((field) => fields.set(field.name, field.type));
+    cls.methods.forEach((method) =>
+      methods.set(method.name, [
+        method.parameters.map((p) => p.type),
+        method.ret,
+      ])
+    );
     newClasses.set(cls.name, [fields, methods]);
   });
   return { globals: newGlobs, functions: newFuns, classes: newClasses };
@@ -261,6 +272,19 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
         throw new TypeCheckError(SRC, `field \`${stmt.field}\` expected type: ${JSON.stringify(fields.get(stmt.field).tag)}, got value of type ${JSON.stringify(tVal.a.type.tag)}`,
           tVal.a);
       return { ...stmt, a: { ...stmt.a, type: NONE }, obj: tObj, value: tVal };
+    case "index-assign":
+      const tList = tcExpr(env, locals, stmt.obj, SRC)
+      if (tList.a.type.tag !== "list")
+        throw new TypeCheckError("index assignments require an list");
+      const tIndex = tcExpr(env, locals, stmt.index, SRC);
+      if (tIndex.a.type.tag !== "number")
+        throw new TypeCheckError(`index is of non-integer type \'${tIndex.a.type.tag}\'`);
+      const tValue = tcExpr(env, locals, stmt.value, SRC);
+      const expectType = tList.a.type.itemType;
+      if (!isAssignable(env, expectType, tValue.a.type))
+        throw new TypeCheckError("Non-assignable types");
+
+      return {a: { ...stmt.a, type: NONE }, tag: stmt.tag, obj: tList, index: tIndex, value: tValue}
   }
 }
 
@@ -274,6 +298,21 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       const tBin = { ...expr, left: tLeft, right: tRight };
       switch (expr.op) {
         case BinOp.Plus:
+          // List concatenation
+          if(tLeft.a.type.tag === "empty" || tLeft.a.type.tag === "list" || tRight.a.type.tag === "empty" || tRight.a.type.tag === "list") {
+            if(tLeft.a.type.tag === "empty") {
+              if(tRight.a.type.tag === "empty") return {...expr, a: tLeft.a};
+              else return {...expr, a: tRight.a};
+            } else if(tRight.a.type.tag === "empty") {
+              return {...expr, a: tLeft.a};
+            } else if(equalType(tLeft.a.type, tRight.a.type)) {
+              return {...expr, a: tLeft.a};
+            } else {
+              var leftType = tLeft.a.type.tag === "list"? tLeft.a.type.tag + "[" + tLeft.a.type.itemType + "]": tLeft.a.type.tag;
+              var rightType = tRight.a.type.tag === "list"? tRight.a.type.tag + "[" + tRight.a.type.itemType + "]": tRight.a.type.tag;
+              throw new TypeCheckError(`Cannot concatenate ${rightType} to ${leftType}`);
+            }
+          }
         case BinOp.Minus:
         case BinOp.Mul:
         case BinOp.IDiv:
@@ -383,7 +422,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
 
         if (argTypes.length === expr.arguments.length &&
-          tArgs.every((tArg, i) => tArg.a.type === argTypes[i])) {
+          tArgs.every((tArg, i) => isAssignable(env, tArg.a.type, argTypes[i]))) {
           return { ...expr, a: { ...expr.a, type: retType }, arguments: expr.arguments };
         } else {
           const tArgsStr = tArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
@@ -409,6 +448,42 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         }
       } else {
         throw new TypeCheckError(SRC, `field lookups require an object of type "class", got ${JSON.stringify(tObj.a.type.tag)}`, expr.a);
+      }
+    case "index":
+      var tObj = tcExpr(env, locals, expr.obj, SRC);
+      if(tObj.a.type.tag === "empty") {
+        return { ...expr, a: tObj.a};
+      } else if(tObj.a.type.tag === "list") {
+        var tIndex = tcExpr(env, locals, expr.index, SRC);
+        if(tIndex.a.type !== NUM) {
+          throw new TypeCheckError(`index is of non-integer type \'${tIndex.a.type.tag}\'`);
+        }
+        return { ...expr, a: {...tObj.a, type: tObj.a.type.itemType}};
+      } else {
+        // For other features that use index
+        throw new TypeCheckError(`unsupported index operation`);
+      }
+    case "slice":
+      var tObj = tcExpr(env, locals, expr.obj, SRC);
+      if(tObj.a.type.tag == "list") {
+        var tStart = undefined;
+        var tEnd = undefined;
+        if(expr.index_s !== undefined) {
+          tStart = tcExpr(env, locals, expr.index_s, SRC);
+          if(tStart.a.type !== NUM)
+            throw new TypeCheckError(`index is of non-integer type \'${tStart.a.type.tag}\'`);
+        }
+        if(expr.index_e !== undefined) {
+          tEnd = tcExpr(env, locals, expr.index_e, SRC);
+          if(tEnd.a.type !== NUM)
+            throw new TypeCheckError(`index is of non-integer type \'${tEnd.a.type.tag}\'`);
+        }
+        return { ...expr, a: tObj.a, index_s: tStart, index_e: tEnd };
+      } else if(tObj.a.type.tag === "empty") {
+        return { ...expr, a: {...expr.a, type: {tag: "empty"}} };
+      } else {
+        // For other features that use slice syntax
+        throw new TypeCheckError(`unsupported slice operation`);
       }
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj, SRC);
@@ -438,14 +513,28 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       } else {
         throw new TypeCheckError(SRC, `method calls require an object of type "class", got ${JSON.stringify(tObj.a.type.tag)}`, expr.a);
       }
+    case "construct-list":
+      const tItems = expr.items.map((item) => tcExpr(env, locals, item, SRC));
+      // Get first non-empty type
+      const listType = tItems.find((item) => item.a.type.tag !== "empty");
+      if(tItems.length > 0) {
+        if(listType === undefined) {
+          return { ...expr, a: {...expr.a, type: {tag: "list", itemType: {tag: "empty"}}}, items: tItems };
+        } else if(tItems.every((item) => isAssignable(env, listType.a.type, item.a.type))) {
+          return { ...expr, a: {...expr.a, type: {tag: "list", itemType: listType.a.type}}, items: tItems };
+        } else {
+          throw new TypeCheckError(`List constructor type mismatch` + JSON.stringify(listType) + JSON.stringify(tItems));
+        }
+      }
+      return { ...expr, a: {...expr.a, type: {tag: "empty"}}, items: tItems };
     default: throw new TypeCheckError(SRC, `unimplemented type checking for expr: ${expr}`, expr.a);
+    }
   }
-}
-
-export function tcLiteral(literal: Literal<Annotation>) {
-  switch (literal.tag) {
-    case "bool": return BOOL;
-    case "num": return NUM;
-    case "none": return NONE;
+  
+  export function tcLiteral(literal: Literal<Annotation>) {
+    switch (literal.tag) {
+      case "bool": return BOOL;
+      case "num": return NUM;
+      case "none": return NONE;
+    }
   }
-}

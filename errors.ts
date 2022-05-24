@@ -93,6 +93,15 @@ function assert_not_zero(arg: any, reNum: any) : any {
     return arg;
 }
 
+function check_index(index: number, length: number, reNum: any) {
+    if(index < 0 || index >= length) {
+        const re = getRE(reNum);
+        re.prepare();
+        throw re;
+    }
+    return index;
+}
+
 
 /********** Divide by Zero Error ***********/
 export const DivideByZeroNote = "cannot divide by zero"
@@ -126,15 +135,31 @@ export function flattenAssertNotNone(a: Annotation, oval:IR.Value<AST.Annotation
     return { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [oval, posArg]}}
 }
 
+/******* Index Out of Bounds Error *******/
+export const IndexOutOfBoundsNote = "index out of bounds"
+export class IndexOutOfBoundsError extends RuntimeError {
+    note: string = IndexOutOfBoundsNote;
+}
+
+export const check_index_out_of_bounds = check_index;
+
+export function flattenIndexOutOfBounds(a: Annotation, indexVal:IR.Value<AST.Annotation>, lenVal:IR.Value<AST.Annotation>): IR.Stmt<AST.Annotation> {
+    const error = new IndexOutOfBoundsError(importObjectErrors.src, a);
+    const reNum = registerRE(error);
+    const posArg = flattenWasmInt(reNum);
+    return { tag: "expr", expr: { tag: "call", name: `check_index_out_of_bounds`, arguments: [indexVal, lenVal, posArg]}}
+}
 
 /******* WASM Imports *******/
 export const importObjectErrors : any = {
     src: "",         // For reporting source code in runtime errors.  
     assert_not_none, 
     divide_by_zero,
+    check_index_out_of_bounds,
 }
 
 export const wasmErrorImports : string = `
     (func $assert_not_none (import "errors" "assert_not_none") (param i32) (param i32) (result i32))
     (func $divide_by_zero (import "errors" "divide_by_zero")  (param i32) (param i32) (result i32))
+    (func $check_index_out_of_bounds (import "errors" "check_index_out_of_bounds") (param i32 i32 i32) (result i32))
 `
