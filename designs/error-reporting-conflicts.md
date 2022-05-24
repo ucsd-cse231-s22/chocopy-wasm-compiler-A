@@ -281,7 +281,77 @@ MemoryError: maximum references allocated in internal code
 ```
 
 ## Optimization
+Most functionality won't interfere. Special care should be taken when doing with the following.
+1. Switching from `Type` to `Annotation` for the `a` fields.
+
+There don't seem to be any interaction between error reporting and optimization. Errors are put in `IR` before optimization happens. 
+
+An improvement that can be put in place is to skip runtime index range checks. For example, this python code
+```python
+# Some previous code that guarantees 0 <= x < 3
+a: [int] = None
+a = [0,1,2]
+print(a[x])
+```
+will be ammended with a range check for the indexing operation
+```python
+# Some previous code that guarantees 0 <= x < 3
+a: [int] = None
+a = [0,1,2]
+check_range(a, x)
+print(a[x])
+```
+Functions calls are usually not pure. Thus, even if the compiler knows `a[x]` is not out of bounds, it still need to retain `check_range()` in the code since it is a function. We can move the checking behaviour from TS into `IR` so that the compiler can optimize. The new python code ammended with range check is:
+```python
+# Some previous code that guarantees 0 <= x < 3
+a: [int] = None
+a = [0,1,2]
+if x < 0 or x >= 3:
+  raise RangeOutofBoundsError
+print(a[x])
+```
+And it can be optimized into:
+```python
+# Some previous code that guarantees 0 <= x < 3
+a: [int] = None
+a = [0,1,2]
+print(a[x])
+```
 
 ## Sets and/or tuples and/or dictionaries
+Most functionality won't interfere. Special care should be taken when doing with the following.
+1. Switching from `Type` to `Annotation` for the `a` fields,
+2. Throwing type errors with source and location information.
+3. Convert to the current paradigm when throwing "Element Not Found" Error. 
+
+Either we missed it, or that the type checker ignores the type of `x` in `set.add(x)`. The type of `x` should be checked against `content_type` of the set. Maybe other similar problems exists. 
+
+Two examples of an error involving lists that needs future work:
+```python
+s:dict = {3:4, 4:5, 5:6}
+print(s[6])
+```
+this program should have the following runtime error:
+```
+Traceback:
+  Toplevel, line 2
+
+print(a[6])
+        ^ element not found
+RUNTIME ERROR: element not found in line 3 at col 9
+```
+
+And:
+```python
+s:set = {1}
+s.add(False)
+```
+this program should have the following static error:
+```
+s.add(False)
+      ^^^^^ 
+TypeError: cannot add `bool` to a set of `int`s in line 2 at col 7
+```
 
 ## Strings
+
