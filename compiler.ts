@@ -188,7 +188,7 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
-    case "getLength":
+    case "getLengthSum":
       const addr1 = codeGenValue(expr.addr1,env);
       const addr2 = codeGenValue(expr.addr2,env);
       return [...addr1,

@@ -312,7 +312,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       initsArray.push({ name: newStringLengthVar3, type:  NUM, value: { tag: "wasmint", value: 0 } });
 
       initsArray.push({ name: Randomname, type: STRING, value: { tag: "none" } });
-      const getLength: IR.Expr<Annotation>  = {  a:{...e.a, type:NUM}, tag: "getLength", addr1: lval, addr2:rval};
+      const getLength: IR.Expr<Annotation>  = {  a:{...e.a, type:NUM}, tag: "getLengthSum", addr1: lval, addr2:rval};
 
 
       strConcatstmts.push({ tag: "assign", name: newIndexStrName, value: alloc_index_string_length });
