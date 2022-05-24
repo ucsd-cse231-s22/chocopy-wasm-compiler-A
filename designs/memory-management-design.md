@@ -296,12 +296,253 @@ We had a bit of a trouble in figuring out how to check if the reference counts t
 
 # Milestone 2
 
+## New Tests
+### 1. Doubly-Linked Less Simple Cycle
+**Case:**
+```
+class Link(object):
+    id: int = 0
+    next: Link = None
+    prev: Link = None
+
+x: Link = None
+y: Link = None
+z: Link = None
+x = Link()
+x.id = 123
+y = Link()
+y.id = 456
+z = Link()
+z.id = 789
+x.next = y
+y.next = z
+z.next = x
+x.prev = z
+y.prev = x
+z.prev = y
+```
+**Expected:**
+Let `o` be the object referred to by variable `x` <br>
+Let `p` be the object referred to by variable `y` <br>
+Let `q` be the object referred to by variable `z` 
+```
+assert number of references of o is 3
+assert type of fields in o is [value, pointer]
+assert number of references of p is 3
+assert type of fields in p is [value, pointer]
+assert number of references of q is 3
+assert type of fields in q is [value, pointer]
+```
+
+### 2. Doubly-Linked Less Simple Cycle Deletion
+**Case:**
+```
+class Link(object):
+    id: int = 0
+    next: Link = None
+    prev: Link = None
+
+x: Link = None
+y: Link = None
+z: Link = None
+x = Link()
+x.id = 123
+y = Link()
+y.id = 456
+z = Link()
+z.id = 789
+x.next = y
+y.next = z
+z.next = x
+x.prev = z
+y.prev = x
+
+y = None
+```
+**Expected:**
+Let `o` be the object referred to by variable `x` <br>
+Let `p` be the object referred to by variable `y` <br>
+Let `q` be the object referred to by variable `z` 
+```
+assert number of references of o is 3
+assert type of fields in o is [value, pointer]
+assert number of references of p is 2
+assert type of fields in p is [value, pointer]
+assert number of references of q is 3
+assert type of fields in q is [value, pointer]
+```
+
+### 3. Doubly-Linked Less Simple Cycle Complete Deletion
+**Case:**
+```
+class Link(object):
+    id: int = 0
+    next: Link = None
+    prev: Link = None
+
+x: Link = None
+y: Link = None
+z: Link = None
+x = Link()
+x.id = 123
+y = Link()
+y.id = 456
+z = Link()
+z.id = 789
+x.next = y
+y.next = z
+z.next = x
+x.prev = z
+y.prev = x
+
+y = None
+x.next = None
+z.prev = None
+```
+**Expected:**
+Let `o` be the object referred to by variable `x` <br>
+Let `p` be the object referred to by variable `y` <br>
+Let `q` be the object referred to by variable `z` 
+```
+assert number of references of o is 2
+assert type of fields in o is [value, pointer]
+assert number of references of p is 0
+assert type of fields in p is [value, pointer]
+assert number of references of q is 2
+assert type of fields in q is [value, pointer]
+```
+
+### 4. Simple Inherited Reference
+**Case:**
+```
+class Link(Object):
+    id: int = 0
+    next: Link = None
+
+    def addB(l: Link, val: int) -> BLink:
+        m: Link = None
+        m = BLink()
+        m.id = val
+        l.next = m
+        return m
+
+class ALink(Link):
+    def __init__(self: ALink):
+        super().__init__()
+
+class BLink(Link):
+    other_id: int = 0
+
+    def __init__(self: BLink):
+        super().__init__()
+
+x: Link = None
+y: Link = None
+x = ALink()
+x.id = 123
+y = x.addB(456)
+```
+**Expected:**
+Let `o` be the object referred to by variable `x` <br>
+Let `p` be the object referred to by variable `y` 
+```
+assert number of references of o is 1
+assert type of fields in o is [value, pointer]
+assert number of references of p is 2
+assert type of fields in p is [value, pointer]
+```
+
+### 5. Simple Global Reference
+**Case:**
+```
+class Link(object):
+    id: int = 0
+
+    def assign_global(self: Link):
+        global global_link
+        global_link = self
+
+global_link: Link = None
+x: Link = None
+x = Link()
+x.id = 123
+x.assign_global()
+```
+**Expected:**
+Let `o` be the object referred to by variable `x` 
+```
+assert number of references of o is 2
+assert type of fields in o is [value, pointer]
+```
+
+### 6. Simple Global Reference Deletion
+**Case:**
+```
+class Link(object):
+    id: int = 0
+    next: Link = None
+
+    def assign_global(self: Link):
+        global global_link
+        global_link = self
+
+global_link: Link = None
+x: Link = None
+x = Link()
+x.id = 123
+x.next = Link()
+x.next.id = 456
+x.assign_global()
+x = None
+global_link = None
+```
+**Expected:**
+Let `o` be the object referred to by variable `x` <br>
+Let `p` be the object referred to by variable `x.next` 
+```
+assert number of references of o is 0
+assert type of fields in o is [value, pointer]
+assert number of references of p is 0
+assert type of fields in p is [value, pointer]
+```
+
+### 7. Simple Global Reference Reassignment
+**Case:**
+```
+class Link(object):
+    id: int = 0
+    next: Link = None
+
+    def assign_global(self: Link):
+        global global_link
+        global_link = self
+
+global_link: Link = None
+x: Link = None
+x = Link()
+x.id = 123
+x.assign_global()
+x.next = Link()
+x.next.id = 456
+x.next.assign_global()
+x = None
+```
+**Expected:**
+Let `o` be the object referred to by variable `x` <br>
+Let `p` be the object referred to by variable `x.next` 
+```
+assert number of references of o is 0
+assert type of fields in o is [value, pointer]
+assert number of references of p is 1
+assert type of fields in p is [value, pointer]
+```
+
 ## Features
 ### Deleting objects and defragmentation
-We currently only track the reference counts of the objects and know when an objects has 0 references. We have to add object deletion and defragmentation so that the space allocated to the *to be deleted* objects can be reclaimed. This will be done by shifting the rest of the objects in the memory and updating the reference -> address mapping. The garbage collection will be deferred to some other time. We plan to determine when this process should happen based on a threshold on the number of references which can be reassigned and also on the total remaining memory. These checks will be performed on an `alloc` call, which in a way is an implicit call to the garbage collector.
+We currently only track the reference counts of the objects and know when an object has 0 references. We have to add object deletion and defragmentation so that the space allocated to the *to be deleted* objects can be reclaimed. This will be done by shifting the rest of the objects in the memory and updating the reference -> address mapping. The garbage collection functionality will be deferred to some other time. We plan to determine when this process should happen based on a threshold on the number of references which can be reassigned and also on the total remaining memory. These checks will be performed on an `alloc` call, which in a way is an implicit call to the garbage collector.
 
 ### Integration with the Closures/Inheritance/BigInts/Lists group
-We noticed that group needs additional metadata in the heap in addition to the object data. We plan to use the newer alloc function as suggested by Prof.Politz
+We noticed that this group needs additional metadata in the heap in addition to the object data. We plan to use the newer alloc function as suggested by Professor Politz.
 ```javascript
 | { tag: "alloc", amount: Value<A>, fixed?: boolean[], rest?: boolean }
 ```
@@ -309,7 +550,7 @@ This would remove the dependency on where metadata is placed for various datatyp
 
 ### Integration with error reporting
 We need to use the error types defined by the error reporting group and use their newer `Annotation` type. 
-Note: If the newer `alloc` is implemented then we would not have to rely on inferring the class field types ourselves from the `type` field in annotation, instead this information would be given by the `fixed` field in the newer alloc. 
+Note: If the newer `alloc` is implemented, then we would not have to rely on inferring the class field types ourselves from the `type` field in annotation. Instead, this information would be given by the `fixed` field in the newer alloc. 
 
 ### Porting to WASM
 We plan to port as much functionality as we can from JS in `memory.ts` to WASM in `memory.wat`. We believe this should speed up the memory management functionality by a bit. We plan to do this after making sure our functionality works correctly on the JS implementation.
