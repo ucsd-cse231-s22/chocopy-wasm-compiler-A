@@ -25,7 +25,6 @@ export type FunDef<A> = {
     kwarg_idx?: number,
 }
 ```
-
 To pass the keyword arguments, we use an optional attribute `kwarguments` to map the keyword to the value(an expression). In the parser, we will parse the arguments into either `arguments` or `kwarguments`. Then, we set and check the arguments in type checker. Note that, after type checking, the length of `arguments` should be consistent with the length in function definition. And the `kwarguments` would be empty (or `null`) and should not be used after type checking. 
 To deal with parameters with default value, we would like to add an attribute call `value` in `Parameter<A>` to store the default value. It could be any expression at the parsing stage. If there's no specific default value, the attribute will be set to `null`. This can also help us distinguish `None` from no default value.
 To deal with arbitrary arguments and keyword arguments, we would like to add attribute `arbarg_idx` to store the index of the tuple for the arbitrary arguments, and `kwarg_idx` to store the index of the dictionary for the keyword arguments. Since we will see all the arbitrary arguments as a tuple, and all the keyword arguments as a dictionary, we store the indices of them to distinguish them from normal tuple and dict parameters.
@@ -134,6 +133,8 @@ arbitrary arguments and arbitrary keyword arguments
     - Use functions from tuple and dict team to generate WASM
     - :warning: This would be dependent on the tuple and dictionary
 
+:warning: In repo. of group set/tuple/dictionary of compiler A, they haven't implemented tuple and dictionary yet. We can only follow their ast definition to construct tuple expression and dictionary expression. The relevent testing only pass when their functionality complete.
+
 
 ## Testcases
 
@@ -222,29 +223,74 @@ def d()->int:
     return 1
 def f(x : int = d()):
     print(x)
-f()
 ```
+
+
 
 ### Stage 2
 
 Support tuple arguments and keyword arguments.
 (Require tuples and dictionaries to be implemented)
 
+#### Function define args Syntax tests
+
 ```python=
+# order issue #expected SyntaxError
 def f(x : int, **kwargs, *args):
-
-def f(x : int, *args, **kwargs):
-
-f(1)
-f(1,)
-f(1,2,3)
-f(1, y=3)
-f(1, z=5, y=3)
-f(1, z=5, z=3)
-f(1, 2, 3, x=4)
-f(n=3)
-f(1, y=2, 3)
-f(y=1, x=2)
-
-def f(a, *ab, *ac):
+    print(x, args, kwargs)
+    
+# order issue #expected SyntaxError
+def f(**kwargs, *args, x : int):
+    print(x, args, kwargs)
+    
+# order issue #expected SyntaxError
+def f(*args, **kwargs, x : int):
+    print(x, args, kwargs)
+    
+# order issue #expected SyntaxError   
+def f(**kwargs, x : int, *args):
+    print(x, args, kwargs)
+    
+# * error #expected SyntaxError
+def f(x : int, *args, *kwargs):
+    print(x, args, kwargs)
+    
+# * error #expected SyntaxError
+def f(x : int, **args, **kwargs):
+    print(x, args, kwargs)
+    
+# * error #expected SyntaxError
+def f(x : int, **args, **kwargs, **kwargs):
+    print(x, args, kwargs)
+    
+# * error #expected SyntaxError   
+def f(x : int, *args, **kwargs, ***hwargs):
+    print(x, args, kwargs)
 ```
+
+#### Function Call args and kwargs collection
+
+```python= 
+def f(x : int, *args, **kwargs):
+    print(x, args, kwargs)
+
+# 1 func print 1, (), {}
+f(1)
+# 2 func print 1, (2, 3), {}
+f(1, 2, 3)
+# 3 func print 1, (), {'y': 3 }
+f(1, y=3)
+# 4 func print 1, (), {'y': 3, 'z': 5 }
+f(1, z=5, y=3)
+# * error #expected SyntaxError: multiple values
+f(1, z=5, z=3)
+# 5 func print 1, (2, 3), {'x': 4 }
+f(1, 2, 3, x=4)
+# * error # TypeError: missing required positional argument
+f(n=3)
+# * error # SyntaxError: positional argument follows keyword argument
+f(1, y=2, 3)
+# 6 func print 2, (), {'y': 1 }
+f(y=1, x=2)
+```
+
