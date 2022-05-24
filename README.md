@@ -27,3 +27,10 @@ At first, we are stuck on nested function implementation. Specfically, we are no
 + For the inheritance feature, a straightforward extension will be supporting multiple inheritance. ChocoPy does not support multiple inheritance, but python does. I will change the supperclass field in AST.CLASS from a string to a string list. For every logic containing superclass manipulation, I will extend the logic to iterate over all the super classes. The type check will be more complicated. To determine whether a field exists in all super classes, we previously only need to recursively search all the ancestors like a linked list, but in multi-inheritance, we need to search the whole tree like structure. Besides, we also need to figure out the relationship between all super classes to avoid circular inheritance. It can be abstracted as a circle detect problem which can be solved by topology sort.
 
 ### Pick one that you think would be an extremely difficult extension to your compiler – describe why.
+
++ A difficult extention to strings in our compiler would be the String `format()` method in Python. It is difficult because:
+
+  1. the formatted string can not be pre-allocated as string literals; instead, its allocation need to be based on the evaluations of the parameters passed into `format()`.
+  2. `format()` can have a variable number of parameters, which can be either a list of values, a key=value list, or a combination of both.
+  3. the placeholders `{}` in `format()` can be identified using named indexes, numbered indexes, or empty placeholders.
+  4. inside the placeholders there are many formatting types that need to be supported (e.g., `:e`, `:f`, `:x`, etc.).
