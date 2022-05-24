@@ -258,6 +258,3 @@
     i:int=0
     for i in cls:
       print(int(i))
-
-16. Error Reporting
-    Unable to find the pull request of error-reporting team. Anyhelp wo
