@@ -132,7 +132,8 @@ We have handled subclass type checking so this will work fine. We do not see any
 
 ### 14. Memory management
 
-   1. From our understanding of memory management PR, we won’t think we have any conflicts. Except, in lower when a class constructor is called we need to 
+   1. From our understanding of memory management PR, we won’t think we have any conflicts. Except, in lower when a class constructor is called we need to make sure the offset for the class fields is calculated correctly given we now have metadata stored before the object data.
+
 
    2. Example: 
    
