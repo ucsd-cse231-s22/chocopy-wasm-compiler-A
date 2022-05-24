@@ -2,38 +2,50 @@
 
 ## Week 8 Milestones:
 
+We plan on trying to support the below example programs:
+
 1. store comprehensions in a variable of type list (use code by lists team)
-```A: List = None```
-```A = [j for a in range(5,7)]```
+```
+A = [j for a in range(5,7)]
+```
 
-2. extend comprehension expresion to use lists (use code by lists team)
-```A: List = None```
-```A = [j for a in [1,2,3,4]]```
+2. extend comprehension expression to use lists (use code by lists team)
+```
+A = [j for a in [1,2,3,4]]
+```
+```
+B = [1,2,3,4]
+A = [j for a in B]
+```
 
-```A: List = None```
-```B: [int] = [1,2,3,4]```
-```A = [j for a in B]```
+3. extend comprehension expression to use strings (use code by string team)
+```
+A = [j for a in "compilers"]
+```
 
-3. extend comprehension expresion to use string (use code by string team)
-```A: List = None```
-```A = [j for a in "compilers"]```
+4. extend comprehension expression to use sets (use code by sets/tuples/dictionaries team)
+```
+A = [j for a in {1,2,2,3,3,4,4,5}]
+```
 
-4. extend comprehension expresion to use sets (use code by sets team)
-```A: List = None```
-```A = [j for a in {1,2,2,3,3,4,4,5}]```
+5. extend comprehension expression to use tuples (use code by sets/tuples/dictionaries team)
+```
+A = [j for a in (1,2,3,3,4,4,5)]
+```
 
-5. extend comprehension expresion to use tuples (use code by sets team)
-```A: List = None```
-```A = [j for a in (1,2,3,3,4,4,5)]```
+6. extend comprehension expression to use dictionaries (use code by sets/tuples/dictionaries team)
+```
+courses = {"cse 250A":"fall 2021","cse 231":"spring 2022"}
+A = [i for i in courses]
+```
 
-6. extend comprehension expresion to use dictionaries (use code by sets team)
-```A: List = None```
-```courses = {"cse 250A":"fall 2021","cse 231":"spring 2022"}```
-```A = [i for i in courses]```
+7. nested comprehension expressions
+```
+A = [[j for j in Range.new(0,2)] for i in Range.new(0,3)]
+```
 
-7. nested comprehension expresseions
-```A: List = None```
-```A = [[j for j in i] for i in [[1,2,3],[2,3,4],[3,4,5]]]```
+To be able to store comprehensions as lists, we will use add the code from the lists team into our implementation to help contruct and store comprehensions as lists in the memory, instead of our current implementation of just printing them. To support comprehensions for additional data structures, we plan on adding another field in the ast of the list-comp and call it comp-type which would state what kind of list comprehension it contains(set/tuple/dictionary). Any additional merge conflicts that arise due to merging code from PRs from other teams will also be handled in the upcoming week. Also, few additional test cases have been added in the test file which include functions and classes.
+
 
 ## Week 7:
 ### Test cases implemented and passed:
@@ -283,6 +295,3 @@ We also add the following to Expr<A>:
 {  a?: A, tag: "list-construct", items: Array<Expr<A>> } // implemented by the list team. 
 {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Stmt<A> }
 ```
-
-
-

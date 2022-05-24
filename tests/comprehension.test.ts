@@ -2,34 +2,6 @@ import { assertPrint, assertTCFail, assertTC, assertFail } from "./asserts.test"
 
 describe("List Comprehension Tests", () => {
 
-    assertPrint("simple comprehension output with step", `
-class Range(object):
-    min:int=0
-    max:int=0
-    curr:int=0
-    step:int=1
-    def __init__(self:Range):
-        pass
-    def new(self:Range,min:int,max:int,step:int)->Range:
-        self.max=max
-        self.min=min
-        self.curr=min
-        self.step=step
-        return self
-    def hasNext(self:Range)->bool:
-        return self.curr<self.max
-    def next(self:Range)->int:
-        c:int=0
-        c=self.curr
-        self.curr=self.curr+self.step
-        return c
-a:Range=None
-m: int = 0
-a=Range().new(10,20,2)
-[m for m in a]`, ['10', '12', '14', '16', '18']
-    );
-
-
     assertTCFail("invalid expression in comprehension", `
 class range(object):
     curr:int=0
@@ -48,7 +20,6 @@ class range(object):
         return self.curr<self.max
 [j for a in range(1,5) if a!=1]
 `);
-
 
     assertTCFail("invalid range in comprehension", `
 class range(object):
@@ -385,6 +356,33 @@ j: int = 5
 m: int = 0
 a=Range().new(5)
 [f(m) for m in a]`, ['0', '5', '10', '15', '20']
+    );
+
+    assertPrint("simple comprehension output with step", `
+class Range(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    step:int=1
+    def __init__(self:Range):
+        pass
+    def new(self:Range,min:int,max:int,step:int)->Range:
+        self.max=max
+        self.min=min
+        self.curr=min
+        self.step=step
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
+        c:int=0
+        c=self.curr
+        self.curr=self.curr+self.step
+        return c
+a:Range=None
+m: int = 0
+a=Range().new(10,20,2)
+[m for m in a]`, ['10', '12', '14', '16', '18']
     );
 
     assertPrint("Two comprehension expressions", `
