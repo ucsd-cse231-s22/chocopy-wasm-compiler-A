@@ -2,7 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
-import { BOOL } from './utils';
+import { BOOL, NONE } from './utils';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -181,6 +181,9 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var whileStartLbl = generateName("$whilestart");
       var whilebodyLbl = generateName("$whilebody");
       var whileEndLbl = generateName("$whileend");
+     
+      //pushing labels to utilize them for continue and break statements
+      env.labels.push(whileStartLbl,whilebodyLbl,whileEndLbl)
 
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: whileStartLbl })
       blocks.push({  a: s.a, label: whileStartLbl, stmts: [] })
@@ -195,39 +198,48 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
 
       return [...cinits, ...bodyinits]
     case "continue":
-      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl:  env.labels[0]})
+      if(env.labels.length > 2)
+        pushStmtsToLastBlock(blocks, { tag: "jmp", lbl:  env.labels[env.labels.length-3]})
       return []
     case "break":
-      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl:  env.labels[-1]})
+      if(env.labels.length > 0)
+        pushStmtsToLastBlock(blocks, { tag: "jmp", lbl:  env.labels[env.labels.length-1]})
       return []
     case "for":
       var forStartLbl = generateName("$forstart");
       var forbodyLbl = generateName("$forbody");
       var forEndLbl = generateName("$forend");
       var localenv = env
+
       localenv.labels.push(forStartLbl,forbodyLbl,forEndLbl)
-      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl })
+      // reset the values class to the original state at the start of the loop - nested loops use case
+      var resetCall : AST.Expr<AST.Type> =  {tag:"method-call", obj:s.values, method:"reset", arguments:[], a:NONE}
+      var resetStmt : AST.Stmt<AST.Type>[] = [{ tag: "expr", expr: resetCall , a:NONE }]
+      flattenStmts(resetStmt, blocks, localenv); 
+
+      pushStmtsToLastBlock(blocks, {tag:"jmp", lbl: forStartLbl })
       blocks.push({  a: s.a, label: forStartLbl, stmts: [] })
+  
       var hasnextCall : AST.Expr<AST.Type> = {tag:"method-call", obj:s.values, method:"hasnext", arguments:[], a:BOOL}
       var nextCall : AST.Expr<AST.Type> = {tag:"method-call", obj:s.values, method:"next", arguments:[], a:s.a}
-      var iteratorName = "" 
-      if(s.iterator.tag=="id")
-        iteratorName =s.iterator.name
+      
       var [cinits, cstmts, cexpr] = flattenExprToVal(hasnextCall, localenv); 
       pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: forbodyLbl, els: forEndLbl });
-
+    
       blocks.push({  a: s.a, label: forbodyLbl, stmts: [] })
-      var nextAssign : AST.Stmt<AST.Type>[] = [{tag:"assign",name:iteratorName, value: nextCall,a:s.a }]
-      var bodyinits = flattenStmts(nextAssign, blocks, localenv);
-
-      bodyinits.concat(flattenStmts(s.body, blocks, localenv));
+      var nextAssign : AST.Stmt<AST.Type>[] = [{tag:"assign",name:s.iterator, value: nextCall,a:s.a }]
+      
+      flattenStmts(nextAssign, blocks, localenv); // to add wasm code for i = c.next(). has no inits 
+      
+      var bodyinits = flattenStmts(s.body, blocks, localenv)
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl });
-
+    
       blocks.push({  a: s.a, label: forEndLbl, stmts: [] })
-
+    
       return [...cinits, ...bodyinits]
   }
 }
+
 
 function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Expr<Type>] {
   switch(e.tag) {
@@ -351,3 +363,6 @@ function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarIn
 function pushStmtsToLastBlock(blocks: Array<IR.BasicBlock<Type>>, ...stmts: Array<IR.Stmt<Type>>) {
   blocks[blocks.length - 1].stmts.push(...stmts);
 }
+
+
+

@@ -29,7 +29,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
-  | {  a?: A, tag: "for", iterator: Expr<A>, values: Expr<A>, body: Array<Stmt<A>> }
+  | {  a?: A, tag: "for", iterator: string, values: Expr<A>, body: Array<Stmt<A>> }
 
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal }
@@ -48,6 +48,7 @@ export type Literal =
     { tag: "num", value: number }
   | { tag: "bool", value: boolean }
   | { tag: "none" }
+
 
 // TODO: should we split up arithmetic ops from bool ops?
 export enum BinOp { Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};
