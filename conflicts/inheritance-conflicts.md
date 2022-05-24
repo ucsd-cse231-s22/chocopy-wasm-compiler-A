@@ -87,15 +87,77 @@ We have handled subclass type checking so this will work fine. We do not see any
 
 ### 6. Error reporting
 
+We did not find the pull request for the error reporting group here, so we were unable to review this. We did check the testing group and since that is just testing complex cases, we believe there should be no merge conflicts. Logically, the error reporting group should have no merge conflicts with Inheritance either since they are orthogonal.
+
 ### 7. Fancy calling conventions
+Since this feature deals with just function implementations, it can easily be used in the method calls in our classes.
+E.g.:
+
+    class A(object):
+        def print_list(self : A, x: int  = 5):
+            a : List = None
+            
+    a1: A = None
+    a1 = A()
+    a1.print_list()
+ 
+The only change that will automatically happen is the parameter that we use in method calls will automatically have the additional tags that this team implements.
 
 ### 8. for loops/iterators
+Supporting For Loops and iterators would essentially require the group to declare a new iterator class, like Range(). Since this class can be called like any other class, and it does not inherit any class other than object, these changes do not impact any inhertitance features.
+
+E.g.:
+
+    class Range(object):
+      current : int = 0
+      min : int = 0
+      max : int = 0
+      def new(self:Range, min:int, max:int)->Range:
+        self.min = min
+        self.current = min
+        self.max = max
+        return self
+      def next(self:Range)->int:
+        c : int = 0
+        c = self.current
+        self.current = self.current + 1
+        return c
+      def hasnext(self:Range)->bool:
+        return self.current < self.max
+
+
+
+
+    cls:Range = None
+    i:int = 0
+    cls = Range().new(1, 4)
+
+    for i in cls:
+       print(i)
+       continue 
+       print(i)
+
+    i = 20
+    print(i)
+
+We do not see any conflicts with this team''s PR.
 
 ### 9. Front-end user interface
+
 
 ### 10. Generics and polymorphism
 
 ### 11. I/O, files
+The file I/O implementation have no conflicts with the inheritance as the I/O group's functions and enums are completely orthogonal to classes. The I/O group does most of its work in the JS files and exports APIs that can be called in WASM and run this code. As they build their own enums and work generally with function level APIs, their code should be directly compatible with classes.
+
+Eg:
+    f:File = None
+    f = open(0, 3)
+    f.read(1)
+    f.write(1)
+    f.close()
+    (Here, the whole File class and all its functions are imported from their implementation in JS and thus do not interact with inheritance)
+
 
 ### 13. Lists
 
