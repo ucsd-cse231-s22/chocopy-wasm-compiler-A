@@ -49,16 +49,19 @@
 4. Comprehensions
 
     ```Python
-    j: int = 7
-    print([j for b in range(5)])
+    s: str = "abc"
+    print([i for i in s])
     ```
 
     Expected output:
     ```Python
-    [7, 7, 7, 7, 7]
+    ['a', 'b', 'c']
     ```
 
-   This feature does not interact much with ours, because this feature can only apply to list, instead of strings. 
+    This feature will interact with our feature, because the value of comprehension should be iterable and string is iterable. When iterating a string, we can get the length from ast, which has been implemented by us. Then, every time to print a character, it can call out print_str method to print it on the screen.
+
+    We don't need to change anything because, essentially, it is to print every element when iterating a string.
+
 
 
 5. Destructuring assignment
