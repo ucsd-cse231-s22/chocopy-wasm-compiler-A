@@ -87,14 +87,6 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
         ...codeGenValue(stmt.value, env),
         `call $store`
       ]
-    // To handle how to get the address from a allocate expr  
-    case "store_str":
-      return [
-        ...codeGenValue(stmt.start, env),
-        ...codeGenValue(stmt.offset, env),
-        ...codeGenExpr(stmt.value, env),
-        `call $store`
-      ]
     case "duplicate_str":
       return [
         ...codeGenValue(stmt.source, env),
