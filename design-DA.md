@@ -13,4 +13,4 @@ During this week, we implemented most functions in our previous design except ha
 
 
 ## Milestone 2
-In next milestone, we plan to support the format like `l[0] = 1` for assignment of elements of list and tuple. Also we would support `*` in destructure assignment. Finally, we need to adjust our current implementation to be compatiable with the new error report system.
+In next milestone, we plan to support destructuring assignment where the right hand side is a list or set. We should reach an agreement with the related teams on an interface to get the corresponding iterator from the list or set. We will also support bracket expressions in the left hand side, such as `l[0], l[1] = 1, 2` for the assignment of elements of list and tuple. Also, we would support elements marked with `*` in the destructure assignment. Finally, we need to adjust our current implementation to be compatiable with the new error report system.
