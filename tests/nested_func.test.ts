@@ -11,15 +11,17 @@ def f(x : int) -> int:
   return g(x) + g(3)
 print(f(6))`, [`11`]);
 
-// assertPrint("nested-function-nonlocal", 
-//   `
-// def f(x : int) -> int:
-//   def g(y : int) -> int:
-//     nonlocal x
-//     x = x+1
-//     return x
-//   return g(x) + g(x)
-// print(f(6))`, [`15`]);
+assertPrint("nested-function-nonlocal", 
+`
+def f(x : int) -> int:
+  def h(z : int) -> int:
+    nonlocal x
+    x = z+x
+    return x
+  return h(10) + h(7)
+
+print(f(6))
+`, [`39`]);
 
 
 });
