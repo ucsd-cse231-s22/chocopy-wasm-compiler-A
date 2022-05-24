@@ -1,9 +1,8 @@
 import {BasicREPL} from './repl';
 import { Type, Value, Annotation } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
+import { NUM, BOOL, NONE,STRING } from './utils';
 import { importObjectErrors } from './errors';
-
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -11,6 +10,9 @@ function stringify(typ: Type, arg: any) : string {
       return (arg as number).toString();
     case "bool":
       return (arg as boolean)? "True" : "False";
+    // convert from ASCII to Character
+    case "str":
+      return String.fromCharCode(arg as number);
     case "none":
       return "None";
     case "class":
@@ -20,10 +22,24 @@ function stringify(typ: Type, arg: any) : string {
 
 function print(typ: Type, arg : number) : any {
   console.log("Logging from WASM: ", arg);
-  const elt = document.createElement("pre");
-  document.getElementById("output").appendChild(elt);
-  elt.innerText = stringify(typ, arg);
-  return arg;
+  if (typ.tag == "str") {
+    //  start
+    if (arg == 256) {
+      const elt = document.createElement("pre");
+      document.getElementById("output").appendChild(elt);
+    }
+    else {
+      const elt: Element = document.getElementById("output").children[document.getElementById("output").children.length-1]
+      elt.innerHTML += stringify(typ, arg)
+    }
+    return arg;
+  }
+  else {
+    const elt = document.createElement("pre");
+    document.getElementById("output").appendChild(elt);
+    elt.innerText = stringify(typ, arg);
+    return arg;
+  }
 }
 
 // function assert_not_none(arg: any) : any {
@@ -38,10 +54,10 @@ function webStart() {
     // https://github.com/mdn/webassembly-examples/issues/5
 
     const memory = new WebAssembly.Memory({initial:10, maximum:100});
-    const memoryModule = await fetch('memory.wasm').then(response => 
+    const memoryModule = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()
     ).then(bytes => 
-      WebAssembly.instantiate(bytes, { js: { mem: memory } })
+      WebAssembly.instantiate(bytes, { js: { mem: memory }, imports: {print_str: (arg: number) => print(STRING, arg)} })
     );
 
     var importObject = {
@@ -74,6 +90,9 @@ function webStart() {
         case "bool":
           elt.innerHTML = (result.value) ? "True" : "False";
           break;
+        case "str":
+          elt.innerText = result.value[0];
+          break
         case "object":
           elt.innerHTML = `<${result.name} object at ${result.address}`
           break

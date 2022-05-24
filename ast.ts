@@ -15,6 +15,7 @@ export type Location = {
 
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
 export type Type =
+  | {tag: "str"}
   | {tag: "number"}
   | {tag: "bool"}
   | {tag: "none"}
@@ -53,13 +54,15 @@ export type Expr<A> =
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
-
+  | {  a?: A, tag: "str-concat",left: Expr<A>, right: Expr<A>}
 
   // add annotation for reporting row/col in errors
 export type Literal<A> = 
-    { a?: A, tag: "num", value: number }
-  | { a?: A, tag: "bool", value: boolean }
-  | { a?: A, tag: "none" }
+  | {  a?: A, tag: "str", value: string[], length: number}
+  | {  a?: A, tag: "num", value: number }
+  | {  a?: A, tag: "bool", value: boolean }
+  | {  a?: A, tag: "none" }
+
 
 // TODO: should we split up arithmetic ops from bool ops?
 export enum BinOp { Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};

@@ -6,6 +6,8 @@ export function PyValue(typ: Type, result: number): Value<Annotation> {
       return PyInt(result);
     case "bool":
       return PyBool(Boolean(result));
+    case "str":
+      return PyString(String(result));
     case "class":
       return PyObj(typ.name, result);
     case "none":
@@ -21,6 +23,13 @@ export function PyBool(b: boolean): Value<Annotation> {
   return { tag: "bool", value: b };
 }
 
+export function PyString(s: string): Value<Annotation> {
+  const a = []
+  a.push(s)
+  return { tag: "str", value: a, length: s.length};
+}
+
+
 export function PyObj(name: string, address: number): Value<Annotation> {
   if (address === 0) return PyNone();
   else return { tag: "object", name, address };
@@ -33,4 +42,5 @@ export function PyNone(): Value<Annotation> {
 export const NUM : Type = {tag: "number"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
+export const STRING: Type = {tag: "str"}
 export function CLASS(name : string) : Type {return {tag: "class", name}};

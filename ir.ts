@@ -18,22 +18,25 @@ export type Stmt<A> =
   | {  a?: A, tag: "pass" }
   | {  a?: A, tag: "ifjmp", cond: Value<A>, thn: string, els: string }
   | {  a?: A, tag: "jmp", lbl: string }
-
   | { a?: A, tag: "store", start: Value<A>, offset: Value<A>, value: Value<A> } // start should be an id
-
+  | { a?: A, tag: "store_str", start: Value<A>, offset: Value<A>, value: Expr<A> } // start should be an id
+  | { a?: A, tag: "duplicate_str", source: Value<A>, dest: Value<A>}//duplicate the source string into the destination address
+  
 export type Expr<A> =
   | {  a?: A, tag: "value", value: Value<A> }
   | {  a?: A, tag: "binop", op: BinOp, left: Value<A>, right: Value<A>}
+  | {  a?: A, tag: "str_compare", op: Value<A>, left:Value<A>, right: Value<A> } // op: 0 for inequal and 1 for equal
   | {  a?: A, tag: "uniop", op: UniOp, expr: Value<A> }
   | {  a?: A, tag: "builtin1", name: string, arg: Value<A> }
   | {  a?: A, tag: "builtin2", name: string, left: Value<A>, right: Value<A>}
-  | {  a?: A, tag: "call", name: string, arguments: Array<Value<A>> } 
-
+  | {  a?: A, tag: "call", name: string, arguments: Array<Value<A>> }
   | {  a?: A, tag: "alloc", amount: Value<A> }
   | {  a?: A, tag: "load", start: Value<A>, offset: Value<A> }
-
+  | {  a?: A, tag: "alloc_expr", amount: Expr<A> }
+  | {  a?: A, tag: "getLength", addr1: Value<A>, addr2:Value<A>}
 export type Value<A> = 
     { a?: A, tag: "num", value: bigint }
+  | { a?: A, tag: "str", value: string[] }
   | { a?: A, tag: "wasmint", value: number }
   | { a?: A, tag: "bool", value: boolean }
   | { a?: A, tag: "id", name: string }

@@ -1,6 +1,6 @@
 
 import { Annotation, BinOp, Class, Expr, FunDef, Literal, Location, Program, Stmt, stringifyOp, Type, UniOp, VarInit } from './ast';
-import { BOOL, CLASS, NONE, NUM } from './utils';
+import { BOOL, CLASS, NONE, NUM,STRING } from './utils';
 import { fullSrcLine, drawSquiggly } from './errors';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
@@ -61,6 +61,7 @@ defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
+defaultGlobalFunctions.set("len", [[CLASS("object")], NUM]);
 
 export const defaultTypeEnv = {
   globals: new Map(),
@@ -97,7 +98,8 @@ export function isNoneOrClass(t: Type) {
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class"
+  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" || t1.tag == "none" && t2.tag == "str"
+
 }
 
 export function isAssignable(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
@@ -150,6 +152,7 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
   const aprogram = { a: { ...program.a, type: lastTyp }, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody };
   return [aprogram, newEnv];
 }
+
 
 export function tcInit(env: GlobalTypeEnv, init: VarInit<Annotation>, SRC: string): VarInit<Annotation> {
   const valTyp = tcLiteral(init.value);
@@ -264,8 +267,13 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
   }
 }
 
+
 export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Annotation>, SRC: string): Expr<Annotation> {
   switch (expr.tag) {
+    case "index":
+      const typedObj:Expr<Annotation> = tcExpr(env,locals,expr.obj,SRC);
+      const typedIdx:Expr<Annotation> = tcExpr(env,locals,expr.index,SRC);
+      return {  a: typedObj.a, tag: "index", obj: typedObj, index: typedIdx };
     case "literal":
       return { ...expr, a: { ...expr.a, type: tcLiteral(expr.value) } };
     case "binop":
@@ -274,6 +282,13 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       const tBin = { ...expr, left: tLeft, right: tRight };
       switch (expr.op) {
         case BinOp.Plus:
+          if(equalType(tLeft.a.type, STRING) && equalType(tRight.a.type, STRING)){
+              // string concatenation is not a simple BinOp
+              return{a:{ ...expr.a, type:STRING},tag:"str-concat",left:tLeft,right:tRight};
+          }
+          if(equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: NUM } }}
+          else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
+            expr.a); }
         case BinOp.Minus:
         case BinOp.Mul:
         case BinOp.IDiv:
@@ -283,6 +298,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
             expr.a); }
         case BinOp.Eq:
         case BinOp.Neq:
+
           if (tLeft.a.type.tag === "class" || tRight.a.type.tag === "class") throw new TypeCheckError(SRC, "cannot apply operator '==' on class types")
           if (equalType(tLeft.a.type, tRight.a.type)) { return { ...tBin, a: { ...expr.a, type: BOOL } }; }
           else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects the same type on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
@@ -330,6 +346,19 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       // TODO: type check `len` after lists are implemented
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg, SRC);
+        return {...expr, a: tArg.a, arg: tArg};
+      }
+      else if (expr.name === "len") {
+        const tArg = tcExpr(env, locals, expr.arg, SRC);
+        if (tArg.a.type !== STRING) {
+          throw new TypeError("Invalid argument");
+        }
+        return {...expr, a: { ...expr.a, type: NUM }, arg: tArg};
+        }
+      else if(env.functions.has(expr.name)) {
+        const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
+        const tArg = tcExpr(env, locals, expr.arg, SRC);
+
         
         // [lisa] commented out for now because it's failing some hidden test
         // if (tArg.a.type.tag !== "number" && tArg.a.type.tag !== "bool") {
@@ -444,6 +473,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
 
 export function tcLiteral(literal: Literal<Annotation>) {
   switch (literal.tag) {
+    case "str": return STRING;
     case "bool": return BOOL;
     case "num": return NUM;
     case "none": return NONE;

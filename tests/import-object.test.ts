@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { importObjectErrors } from "../errors";
 
-enum Type { Num, Bool, None }
+enum Type { Num, Bool, None, String }
 
 function stringify(typ: Type, arg: any): string {
   switch (typ) {
@@ -11,12 +11,21 @@ function stringify(typ: Type, arg: any): string {
       return (arg as boolean) ? "True" : "False";
     case Type.None:
       return "None";
+    case Type.String:
+      if (arg as number == 256) {
+        return ""
+      }
+      else {
+        return String.fromCharCode(arg as number);
+      }
   }
 }
 
 function print(typ: Type, arg: any): any {
   importObject.output += stringify(typ, arg);
-  importObject.output += "\n";
+  if (typ != Type.String) {
+    importObject.output += "\n";
+  }
   return arg;
 }
 
@@ -29,7 +38,7 @@ function print(typ: Type, arg: any): any {
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
   const memory = new WebAssembly.Memory({initial:10, maximum:100});
-  const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })
+  const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory }, imports: {print_str: (arg: number) => print(Type.String, arg)} })
   importObject.libmemory = memoryModule.instance.exports,
   importObject.memory_values = memory;
   importObject.js = {memory};

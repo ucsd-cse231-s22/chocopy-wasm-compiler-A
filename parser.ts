@@ -1,7 +1,8 @@
+
 import { parser } from "lezer-python";
 import { TreeCursor } from "lezer-tree";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, Annotation, Location } from "./ast";
-import { NUM, BOOL, NONE, CLASS } from "./utils";
+import { NUM, BOOL, NONE, CLASS, STRING } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
 export type ParserEnv = {
@@ -79,6 +80,35 @@ function wrap_locs<T extends Function>(traverser: T, storeSrc: boolean = false):
 export const traverseLiteral = wrap_locs(traverseLiteralHelper);
 export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv): Literal<Annotation> {
   switch (c.type.name) {
+    case "String":
+      const str_ = s.substring(c.from+1,c.to-1);
+      console.log("str_");
+      let charArr = []
+      for (let i = 0; i < str_.length; i++) {
+        if (str_[i] != "\\"){
+          charArr.push(str_[i])
+        }
+        else {
+          i += 1
+          if (i == str_.length-1) {
+            throw new Error("Token Unrecognized" + "\\")
+          }
+          else if (str_[i] != "t" && str_[i] != "n" && str_[i] != "\\" && str_[i] != "\"") {
+            throw new Error("Token Unrecognized" + "\\" + str_[i])
+          }
+          else {
+            charArr.push(str_[i-1] + str_[i])
+            console.log("push")
+            console.log(charArr[charArr.length-1])
+          }
+        }
+      }
+      return{
+        tag: "str",
+        value: charArr,
+        length: charArr.length
+      }
+
     case "Number":
       return {
         tag: "num",
@@ -98,9 +128,11 @@ export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv):
   }
 }
 
+
 export const traverseExpr = wrap_locs(traverseExprHelper);
 export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Expr<Annotation> {
   switch (c.type.name) {
+    case "String":
     case "Number":
     case "Boolean":
     case "None":
@@ -130,8 +162,9 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         }
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
+
         var expr: Expr<Annotation>;
-        if (callName === "print" || callName === "abs") {
+        if (callName === "print" || callName === "abs" || callName == "len") {
           expr = {
             tag: "builtin1",
             name: callName,
@@ -244,8 +277,15 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       }
     case "MemberExpression":
       c.firstChild(); // Focus on object
-      var objExpr = traverseExpr(c, s, env);
-      c.nextSibling(); // Focus on .
+      var objExpr = traverseExpr(c, s,env);
+      c.nextSibling(); // Focus on . or [
+      //Indexing
+      if (s.substring(c.from,c.to) == '['){
+        c.nextSibling();
+        const indexExpr = traverseExpr(c,s,env);
+        c.parent();
+        return {tag: "index", obj:objExpr, index:indexExpr};
+      }
       c.nextSibling(); // Focus on property
       var propName = s.substring(c.from, c.to);
       c.parent();
@@ -407,6 +447,7 @@ export function traverseType(c: TreeCursor, s: string, env: ParserEnv): Type {
   switch (name) {
     case "int": return NUM;
     case "bool": return BOOL;
+    case "str": return STRING;
     default: return CLASS(name);
   }
 }

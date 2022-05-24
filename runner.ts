@@ -8,7 +8,7 @@ import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Annotation, Program, Type, Value } from './ast';
-import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
+import { PyValue, NONE, BOOL, NUM, CLASS,STRING } from "./utils";
 import { lowerProgram } from './lower';
 import { wasmErrorImports } from './errors';
 
@@ -55,6 +55,18 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
   prog.classes.forEach(cls => {
     const classFields = new Map();
     cls.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
+    // var count = 0;
+    // cls.fields.forEach((field, i) => {
+    //   if (field.type != STRING){
+    //   classFields.set(field.name, [count, field.value]);
+    //   count++;
+    //   }else{
+    //     if (field.value.tag !== "str") throw new Error ("ERROR: Unexpected field value");
+    //     var length = field.value.length;
+    //     classFields.set(field.name, [count, field.value]);
+    //     count += length+2; // We need to store adress and length
+    //   }
+    // });
     newClasses.set(cls.name, classFields);
   });
   return {
@@ -114,6 +126,10 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $read_str (import "libmemory" "read_str") (param i32) (result i32))
+    (func $get_Length (import "libmemory" "get_Length") (param i32) (param i32) (result i32))
+    (func $duplicate_str (import "libmemory" "duplicate_str") (param i32) (param i32))
+    (func $str_comparison (import "libmemory" "str_comparison") (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
@@ -124,6 +140,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     )
   )`;
   console.log(wasmSource);
+
   const [result, instance] = await runWat(wasmSource, importObject);
 
   return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance];

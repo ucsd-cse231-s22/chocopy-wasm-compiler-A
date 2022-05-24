@@ -1,6 +1,6 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { Annotation, BinOp, Type, UniOp } from "./ast"
-import { BOOL, NONE, NUM } from "./utils";
+import { BOOL, NONE, NUM, STRING } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -42,7 +42,7 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
-  console.log(ast.inits, globalNames);
+  //console.log(ast.inits, globalNames);
   const funs : Array<string> = [];
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
@@ -86,6 +86,20 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
         ...codeGenValue(stmt.offset, env),
         ...codeGenValue(stmt.value, env),
         `call $store`
+      ]
+    // To handle how to get the address from a allocate expr  
+    case "store_str":
+      return [
+        ...codeGenValue(stmt.start, env),
+        ...codeGenValue(stmt.offset, env),
+        ...codeGenExpr(stmt.value, env),
+        `call $store`
+      ]
+    case "duplicate_str":
+      return [
+        ...codeGenValue(stmt.source, env),
+        ...codeGenValue(stmt.dest, env),
+        `call $duplicate_str`
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
@@ -139,6 +153,10 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+    case "str_compare":
+      const str_lhsStmts = codeGenValue(expr.left, env);
+      const str_rhsStmts = codeGenValue(expr.right, env);
+      return [...str_lhsStmts, ...str_rhsStmts,  `(call $str_comparison)`, ...codeGenValue(expr.op, env), `(i32.eq)` ]
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
@@ -157,9 +175,16 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
         callName = "print_num";
       } else if (expr.name === "print" && argTyp === BOOL) {
         callName = "print_bool";
+      }else if (expr.name === "print" && argTyp === STRING) {
+        callName = "read_str"
       } else if (expr.name === "print" && argTyp === NONE) {
         callName = "print_none";
+      } else if (expr.name === "len" && argTyp === NUM) {
+        var new_argStmts = argStmts.concat(['(i32.const 0)']);
+        callName = "load";
+        return new_argStmts.concat([`(call $${callName})`]);
       }
+      //console.log(argStmts)
       return argStmts.concat([`(call $${callName})`]);
 
     case "builtin2":
@@ -171,10 +196,21 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
-
+    case "getLength":
+      const addr1 = codeGenValue(expr.addr1,env);
+      const addr2 = codeGenValue(expr.addr2,env);
+      return [...addr1,
+        ...addr2,
+        `call $get_Length`
+      ];
     case "alloc":
       return [
         ...codeGenValue(expr.amount, env),
+        `call $alloc`
+      ];
+    case "alloc_expr":
+      return [
+        ...codeGenExpr(expr.amount, env),
         `call $alloc`
       ];
     case "load":
@@ -240,6 +276,7 @@ function codeGenBinOp(op : BinOp) : string {
 
 function codeGenInit(init : VarInit<Annotation>, env : GlobalEnv) : Array<string> {
   const value = codeGenValue(init.value, env);
+  //console.log(value);
   if (env.locals.has(init.name)) {
     return [...value, `(local.set $${init.name})`]; 
   } else {
