@@ -19,6 +19,7 @@
     | -------- | -------- | -------- | -------- | -------- |
 - The sign of the bignum is determined by the sign of the number of digits. With negative number of digits means the bignum is negative.
 
+- Zero is as `None`, which is a reserved address `0`.
 
 
 ## Testcases
