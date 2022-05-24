@@ -2,7 +2,7 @@ import {BasicREPL} from './repl';
 import { Type, Value, Annotation } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
 import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath  } from './utils';
-import { importObjectErrors } from './errors';
+import { assert_not_none, importObjectErrors } from './errors';
 
 
 function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : string {
@@ -48,8 +48,7 @@ function webStart() {
 
     var importObject = {
       imports: {
-<<<<<<< HEAD
-        assert_not_none: (arg: any) => assert_not_none(arg),
+        assert_not_none: (arg1: any, arg2: any) => assert_not_none(arg1, arg2),
         print_num: (arg: number) => print(NUM, arg, memoryModule.instance.exports.load),
         print_bool: (arg: number) => print(BOOL, arg, null),
         print_none: (arg: number) => print(NONE, arg, null),
@@ -68,16 +67,6 @@ function webStart() {
         $gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, memoryModule.instance.exports),
         $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
         $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
-=======
-        // assert_not_none: (arg: any) => assert_not_none(arg),
-        print_num: (arg: number) => print(NUM, arg),
-        print_bool: (arg: number) => print(BOOL, arg),
-        print_none: (arg: number) => print(NONE, arg),
-        abs: Math.abs,
-        min: Math.min,
-        max: Math.max,
-        pow: Math.pow
->>>>>>> 58673df10f007ba2dfd86168cc222155479a04a5
       },
       errors: importObjectErrors,
       libmemory: memoryModule.instance.exports,

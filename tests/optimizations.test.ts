@@ -526,7 +526,7 @@ describe("Optimizations tests", () => {
         `
         def f(b:int)->int:
             a:int = 2
-            return b//a
+            return b*a
         
         f(10)
         `,
@@ -540,14 +540,14 @@ describe("Optimizations tests", () => {
             "endLoc": {
               "row": 8,
               "col": 1,
-              "srcIdx": 106
+              "srcIdx": 105
             },
             "eolLoc": {
               "row": 7,
               "col": 9,
-              "srcIdx": 105
+              "srcIdx": 104
             },
-            "src": "\n        def f(b:int)->int:\n            a:int = 2\n            return b//a\n        \n        f(10)\n        \n",
+            "src": "\n        def f(b:int)->int:\n            a:int = 2\n            return b*a\n        \n        f(10)\n        \n",
             "type": {
               "tag": "number"
             }
@@ -593,19 +593,19 @@ describe("Optimizations tests", () => {
                     },
                     "endLoc": {
                       "row": 4,
-                      "col": 24,
-                      "srcIdx": 73
+                      "col": 23,
+                      "srcIdx": 72
                     },
                     "eolLoc": {
                       "row": 4,
-                      "col": 24,
-                      "srcIdx": 73
+                      "col": 23,
+                      "srcIdx": 72
                     },
                     "type": {
                       "tag": "number"
                     }
                   },
-                  "name": "valname8",
+                  "name": "valname51",
                   "type": {
                     "tag": "number"
                   },
@@ -669,56 +669,19 @@ describe("Optimizations tests", () => {
                     "endLoc": {
                       "row": 6,
                       "col": 1,
-                      "srcIdx": 83
+                      "srcIdx": 82
                     },
                     "eolLoc": {
                       "row": 5,
                       "col": 9,
-                      "srcIdx": 82
+                      "srcIdx": 81
                     },
                     "type": {
                       "tag": "none"
                     }
                   },
-                  "label": "$startFun5",
+                  "label": "$startFun34",
                   "stmts": [
-                    {
-                      "tag": "expr",
-                      "expr": {
-                        "tag": "call",
-                        "name": "divide_by_zero",
-                        "arguments": [
-                          {
-                            "tag": "num",
-                            "value": 2n,
-                            "a": {
-                              "fromLoc": {
-                                "row": 4,
-                                "col": 23,
-                                "srcIdx": 72
-                              },
-                              "endLoc": {
-                                "row": 4,
-                                "col": 24,
-                                "srcIdx": 73
-                              },
-                              "eolLoc": {
-                                "row": 4,
-                                "col": 24,
-                                "srcIdx": 73
-                              },
-                              "type": {
-                                "tag": "number"
-                              }
-                            }
-                          },
-                          {
-                            "tag": "wasmint",
-                            "value": 5
-                          }
-                        ]
-                      }
-                    },
                     {
                       "tag": "assign",
                       "a": {
@@ -729,22 +692,22 @@ describe("Optimizations tests", () => {
                         },
                         "endLoc": {
                           "row": 4,
-                          "col": 24,
-                          "srcIdx": 73
+                          "col": 23,
+                          "srcIdx": 72
                         },
                         "eolLoc": {
                           "row": 4,
-                          "col": 24,
-                          "srcIdx": 73
+                          "col": 23,
+                          "srcIdx": 72
                         },
                         "type": {
                           "tag": "number"
                         }
                       },
-                      "name": "valname8",
+                      "name": "valname51",
                       "value": {
                         "tag": "binop",
-                        "op": 3,
+                        "op": 2,
                         "left": {
                           "tag": "id",
                           "name": "b",
@@ -761,8 +724,8 @@ describe("Optimizations tests", () => {
                             },
                             "eolLoc": {
                               "row": 4,
-                              "col": 24,
-                              "srcIdx": 73
+                              "col": 23,
+                              "srcIdx": 72
                             },
                             "type": {
                               "tag": "number"
@@ -781,13 +744,13 @@ describe("Optimizations tests", () => {
                           },
                           "endLoc": {
                             "row": 4,
-                            "col": 24,
-                            "srcIdx": 73
+                            "col": 23,
+                            "srcIdx": 72
                           },
                           "eolLoc": {
                             "row": 4,
-                            "col": 24,
-                            "srcIdx": 73
+                            "col": 23,
+                            "srcIdx": 72
                           },
                           "type": {
                             "tag": "number"
@@ -805,13 +768,13 @@ describe("Optimizations tests", () => {
                         },
                         "endLoc": {
                           "row": 4,
-                          "col": 24,
-                          "srcIdx": 73
+                          "col": 23,
+                          "srcIdx": 72
                         },
                         "eolLoc": {
                           "row": 4,
-                          "col": 24,
-                          "srcIdx": 73
+                          "col": 23,
+                          "srcIdx": 72
                         },
                         "type": {
                           "tag": "number"
@@ -819,7 +782,7 @@ describe("Optimizations tests", () => {
                       },
                       "value": {
                         "tag": "id",
-                        "name": "valname8",
+                        "name": "valname51",
                         "a": {
                           "fromLoc": {
                             "row": 4,
@@ -828,13 +791,13 @@ describe("Optimizations tests", () => {
                           },
                           "endLoc": {
                             "row": 4,
-                            "col": 24,
-                            "srcIdx": 73
+                            "col": 23,
+                            "srcIdx": 72
                           },
                           "eolLoc": {
                             "row": 4,
-                            "col": 24,
-                            "srcIdx": 73
+                            "col": 23,
+                            "srcIdx": 72
                           },
                           "type": {
                             "tag": "number"
@@ -854,12 +817,12 @@ describe("Optimizations tests", () => {
                 "endLoc": {
                   "row": 6,
                   "col": 1,
-                  "srcIdx": 83
+                  "srcIdx": 82
                 },
                 "eolLoc": {
                   "row": 5,
                   "col": 9,
-                  "srcIdx": 82
+                  "srcIdx": 81
                 },
                 "type": {
                   "tag": "none"
@@ -880,19 +843,19 @@ describe("Optimizations tests", () => {
                 "endLoc": {
                   "row": 8,
                   "col": 1,
-                  "srcIdx": 106
+                  "srcIdx": 105
                 },
                 "eolLoc": {
                   "row": 7,
                   "col": 9,
-                  "srcIdx": 105
+                  "srcIdx": 104
                 },
-                "src": "\n        def f(b:int)->int:\n            a:int = 2\n            return b//a\n        \n        f(10)\n        \n",
+                "src": "\n        def f(b:int)->int:\n            a:int = 2\n            return b*a\n        \n        f(10)\n        \n",
                 "type": {
                   "tag": "number"
                 }
               },
-              "label": "$startProg9",
+              "label": "$startProg40",
               "stmts": [
                 {
                   "tag": "expr",
@@ -900,17 +863,17 @@ describe("Optimizations tests", () => {
                     "fromLoc": {
                       "row": 6,
                       "col": 9,
-                      "srcIdx": 91
+                      "srcIdx": 90
                     },
                     "endLoc": {
                       "row": 6,
                       "col": 14,
-                      "srcIdx": 96
+                      "srcIdx": 95
                     },
                     "eolLoc": {
                       "row": 6,
                       "col": 14,
-                      "srcIdx": 96
+                      "srcIdx": 95
                     },
                     "type": {
                       "tag": "number"
@@ -927,17 +890,17 @@ describe("Optimizations tests", () => {
                           "fromLoc": {
                             "row": 6,
                             "col": 11,
-                            "srcIdx": 93
+                            "srcIdx": 92
                           },
                           "endLoc": {
                             "row": 6,
                             "col": 13,
-                            "srcIdx": 95
+                            "srcIdx": 94
                           },
                           "eolLoc": {
                             "row": 6,
                             "col": 14,
-                            "srcIdx": 96
+                            "srcIdx": 95
                           }
                         }
                       }
@@ -946,17 +909,17 @@ describe("Optimizations tests", () => {
                       "fromLoc": {
                         "row": 6,
                         "col": 9,
-                        "srcIdx": 91
+                        "srcIdx": 90
                       },
                       "endLoc": {
                         "row": 6,
                         "col": 14,
-                        "srcIdx": 96
+                        "srcIdx": 95
                       },
                       "eolLoc": {
                         "row": 6,
                         "col": 14,
-                        "srcIdx": 96
+                        "srcIdx": 95
                       },
                       "type": {
                         "tag": "number"
