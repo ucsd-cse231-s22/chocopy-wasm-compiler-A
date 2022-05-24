@@ -1,7 +1,9 @@
 import {BasicREPL} from './repl';
-import { Type, Value } from './ast';
-import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath } from './utils';
+import { Type, Value, Annotation } from './ast';
+import { defaultTypeEnv, TypeCheckError } from './type-check';
+import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath  } from './utils';
+import { importObjectErrors } from './errors';
+
 
 function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : string {
   switch(typ.tag) {
@@ -26,11 +28,11 @@ function print(typ: Type, arg : number, loader: WebAssembly.ExportValue) : any {
   return arg;
 }
 
-function assert_not_none(arg: any) : any {
-  if (arg === 0)
-    throw new Error("RUNTIME ERROR: cannot perform operation on none");
-  return arg;
-}
+// function assert_not_none(arg: any) : any {
+//   if (arg === 0)
+//     throw new Error("RUNTIME ERROR: cannot perform operation on none");
+//   return arg;
+// }
 
 function webStart() {
   document.addEventListener("DOMContentLoaded", async function() {
@@ -46,6 +48,7 @@ function webStart() {
 
     var importObject = {
       imports: {
+<<<<<<< HEAD
         assert_not_none: (arg: any) => assert_not_none(arg),
         print_num: (arg: number) => print(NUM, arg, memoryModule.instance.exports.load),
         print_bool: (arg: number) => print(BOOL, arg, null),
@@ -65,14 +68,25 @@ function webStart() {
         $gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, memoryModule.instance.exports),
         $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
         $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
+=======
+        // assert_not_none: (arg: any) => assert_not_none(arg),
+        print_num: (arg: number) => print(NUM, arg),
+        print_bool: (arg: number) => print(BOOL, arg),
+        print_none: (arg: number) => print(NONE, arg),
+        abs: Math.abs,
+        min: Math.min,
+        max: Math.max,
+        pow: Math.pow
+>>>>>>> 58673df10f007ba2dfd86168cc222155479a04a5
       },
+      errors: importObjectErrors,
       libmemory: memoryModule.instance.exports,
       memory_values: memory,
       js: {memory: memory}
     };
     var repl = new BasicREPL(importObject);
 
-    function renderResult(result : Value) : void {
+    function renderResult(result : Value<Annotation>) : void {
       if(result === undefined) { console.log("skip"); return; }
       if (result.tag === "none") return;
       const elt = document.createElement("pre");
@@ -92,6 +106,12 @@ function webStart() {
     }
 
     function renderError(result : any) : void {
+      // only `TypeCheckError` has `getA` and `getErrMsg`
+      if (result instanceof TypeCheckError) {
+        console.log(result.getA()); // could be undefined if no Annotation information is passed to the constructor of TypeCheckError
+        console.log(result.getErrMsg());
+      }
+
       const elt = document.createElement("pre");
       document.getElementById("output").appendChild(elt);
       elt.setAttribute("style", "color: red");

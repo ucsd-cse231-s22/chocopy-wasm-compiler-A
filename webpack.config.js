@@ -10,12 +10,17 @@ module.exports = {
       },
     ],
   },
+  devServer: {
+    static: {
+      directory: path.join(__dirname, 'build'),
+    },
+  },
   devtool: 'inline-source-map',
   externals: {
     wabt: 'wabt'
   },
   resolve: {
-    extensions: ['.ts']
+    extensions: ['.ts', '.js']
   },
   output: {
     path: path.resolve(__dirname, "build"),

@@ -1,4 +1,4 @@
-import { Value, Type } from "./ast";
+import { Value, Type, Annotation } from "./ast";
 
 export const bigMath = {
   // https://stackoverflow.com/a/64953280
@@ -81,6 +81,8 @@ export function binop_comp_bignum(args: number[], builtin: Function, libmem: Web
 
 export function load_bignum(addr: number, loader: WebAssembly.ExportValue): bigint {
   const load = loader as CallableFunction;
+  if (addr === 0) 
+    return BigInt(0);
   const numlength = load(addr, 0);
   var bignum : bigint = BigInt(0);
   for (let i = Math.abs(numlength); i > 0; i--) {
@@ -118,6 +120,8 @@ export function save_bignum(bignum: bigint, libmem: WebAssembly.Exports): number
     bignum = bignum >> BigInt(31);
   }
   const numlength = neg? digits.length * -1: digits.length;
+  if (numlength === 0) 
+    return 0;
   const addr = alloc_bignum(numlength, alloc);
   store_bignum(addr, numlength, digits, store);
   return addr;
@@ -135,7 +139,7 @@ export function builtin_bignum(args: number[], builtin: Function, libmem: WebAss
   return save_bignum(rslt, libmem);
 }
 
-export function PyValue(typ: Type, result: number): Value {
+export function PyValue(typ: Type, result: number): Value<Annotation> {
   switch (typ.tag) {
     case "number":
       return PyInt(result);
@@ -148,20 +152,20 @@ export function PyValue(typ: Type, result: number): Value {
   }
 }
 
-export function PyInt(n: number): Value {
+export function PyInt(n: number): Value<Annotation> {
   return { tag: "num", value: n };
 }
 
-export function PyBool(b: boolean): Value {
+export function PyBool(b: boolean): Value<Annotation> {
   return { tag: "bool", value: b };
 }
 
-export function PyObj(name: string, address: number): Value {
+export function PyObj(name: string, address: number): Value<Annotation> {
   if (address === 0) return PyNone();
   else return { tag: "object", name, address };
 }
 
-export function PyNone(): Value {
+export function PyNone(): Value<Annotation> {
   return { tag: "none" };
 }
 
