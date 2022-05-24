@@ -115,7 +115,7 @@ f()
 ```
 Above program is representative as an anonymous object is created and then a property of that object is accessed. This should get converted to appropriate assign calls in the IR. Since this is no different that creating an object and accessing its property without the fancy convention, the changes from both our groups don't interfere.
 
-## for loops/iterators
+## For loops/iterators
 
 There doesn't seem to be any real overlap in the files we're changing so far between our groups as they seem to be changing `ast.ts`, `lower.ts`, and `parser.ts` right now while we're mainly changing `compiler.ts` and `memory.wat`. This may change in the future as they start to implement their for loops end-to-end in `compiler.ts`, however. A case we may need to consider for the for loop team is how to handle object creation within loops. This is something we can already start testing without the implementation of for loops as we have while loops, though.
 
@@ -261,4 +261,22 @@ s.clear()
 
 ### Required changes
 We currently dont depend on how the sets team does their implementation except for they way they allocate stuff on the heap. The current changes would work with our implementation as long as the specify the alloc calls using the newer syntax. This is because the Sets and/or tuples and/or dictionaries teams' implementation specifies the `set` as a value in `ir.ts` and we would not be able to determine the type of data stored in the set. We do feel that the set implemenation can be abstracted away as a class in `ir.ts`, in which case they could keep using the current `alloc` call in `lower.ts`.
+
+## Strings
+
+### Representative test case
+```python
+ class A():
+    s:str = "abc"
+class B():
+    s:str = "def"
+c: A = None
+d: B = None
+c = A()
+d = B()
+print(c.s[0] == d.s[0]) 
+```
+
+### Required changes
+The string group adds a lot of changes to the `compiler.ts` and `lower.ts` which have to do with storing as retrieval of strings. A lot of this functionality can be abstracted away as builtins for a specific class type `String`. `Strings` can be stored int memeory similar to how `Lists` are stored, collection of 4 chars or 32-bits could form an i32. From this the string object could maintain a property for the length so that they can determine the number of *useful* 8-bit chunks. This alternate implementation would have minimal interaction with `compiler.ts` and allows us from having to deal with edge cases specifically for the string type.  
 
