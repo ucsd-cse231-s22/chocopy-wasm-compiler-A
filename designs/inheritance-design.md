@@ -225,6 +225,8 @@
 	
 ## File Changes
 
+The focus for this milestone is to support inherited fields and non-overridden functions amongst classes.
+
 ### type-check.ts
 
   1. Add a new function to check if a class is a sub class of another class.
