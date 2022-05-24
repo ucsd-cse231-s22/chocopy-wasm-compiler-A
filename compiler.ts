@@ -1,7 +1,7 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
-import { setUtilFuns } from "./set-utils";
+import { readFileSync } from "fs";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -49,7 +49,8 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
-  const setFUns : Array<string> = classes.concat(setUtilFuns());
+  const setUtils = readFileSync("stdlib/set.wat", 'utf8');
+  const setFUns : Array<string> = classes.concat(setUtils);
   const allFuns = funs.concat(setFUns).join("\n\n");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
   withDefines.labels = ast.body.map(block => block.label);

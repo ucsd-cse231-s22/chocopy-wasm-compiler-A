@@ -41,7 +41,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       }
     case "CallExpression":
       c.firstChild();
-      // For set method call: len()
+      // set method call len()
       if (s.substring(c.from, c.to) === "len") {
         c.nextSibling(); // Arglist
         let args = traverseArguments(c, s);
@@ -49,7 +49,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         return { tag: "method-call", obj: args[0], method: "size", arguments: []};
       }
       const callExpr = traverseExpr(c, s);
-      // For set() initialization
+      // set() initialization
       if (callExpr.tag === "id" && callExpr.name === "set") {
         c.parent();
         return { tag: "set_expr", contents: []};
@@ -57,7 +57,6 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       c.nextSibling(); // go to arglist
       let args = traverseArguments(c, s);
       c.parent(); // pop CallExpression
-
 
       if (callExpr.tag === "lookup") {
         return {
@@ -140,7 +139,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         case "or":
           op = BinOp.Or;
           break;
-        case "in": // For set method: in
+        case "in": // set - has method
           c.nextSibling();
           const obj = traverseExpr(c, s);
           c.parent();
@@ -203,7 +202,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         name: "self"
       };
     
-    case "SetExpression":
+    case "SetExpression": // set() add/remove/clear/update
       let elements: Array<Expr<any>> = [];
       c.firstChild(); // Focus on "{"
       while (c.nextSibling()) {
@@ -280,6 +279,9 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       c.firstChild(); // go to name
       const target = traverseExpr(c, s);
       c.nextSibling(); // go to equals
+      if (c.type.name === "TypeDef") { // Set Initialization -> go to AssignOp (=)
+          c.nextSibling(); // go to equal
+      }
       c.nextSibling(); // go to value
       var value = traverseExpr(c, s);
       c.parent();
@@ -339,20 +341,21 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       c.nextSibling(); // Focus on : thn
       c.firstChild(); // Focus on :
       var thn = [];
+      var els = [];
       while(c.nextSibling()) {  // Focus on thn stmts
         thn.push(traverseStmt(c,s));
       }
       // console.log("Thn:", thn);
       c.parent();
       
-      c.nextSibling(); // Focus on else
-      c.nextSibling(); // Focus on : els
-      c.firstChild(); // Focus on :
-      var els = [];
-      while(c.nextSibling()) { // Focus on els stmts
-        els.push(traverseStmt(c, s));
+      if (c.nextSibling()) {  // Focus on else
+        c.nextSibling(); // Focus on : els
+        c.firstChild(); // Focus on :
+        while(c.nextSibling()) { // Focus on els stmts
+          els.push(traverseStmt(c, s));
+        }
+        c.parent();  
       }
-      c.parent();
       c.parent();
       return {
         tag: "if",
@@ -427,7 +430,7 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
   }
   c.firstChild(); // go to :
   c.nextSibling(); // go to type
-  if (s.substring(c.from, c.to) === "set") { // set initialization
+  if (s.substring(c.from, c.to) === "set") {
     c.parent();
     c.parent();
     return { name, type: { tag: "set", content_type: {tag: "number"} }, value: { tag: "set"}};
@@ -541,6 +544,15 @@ export function isVarInit(c : TreeCursor, s : string) : Boolean {
     c.nextSibling(); // go to : type
 
     const isVar = c.type.name as any === "TypeDef";
+    // if (isVar === true){
+    //   c.firstChild();
+    //   c.nextSibling();
+    //   if (s.substring(c.from, c.to) === "set") {
+    //     c.parent();
+    //     c.parent();
+    //     return false;}
+    //   c.parent();
+    // }
     c.parent();
     return isVar;  
   } else {

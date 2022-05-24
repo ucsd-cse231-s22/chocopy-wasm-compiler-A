@@ -51,6 +51,19 @@ describe("set-test", ()=>{
   x:set = set()
   x = {3,76,5}
   x`, SET(NUM));
+  assertTC("tc-set-update-iter",`
+  x:set = set()
+  x.update(set(2,12,32))
+  x`, SET(NUM));
+  assertTCFail("tcfail-set-update-noniter",`
+  x:set = set()
+  a:int = 2
+  x.update(a)`);
+  assertFail("fail-remove-non-exist",`
+  x:set = set()
+  x.add(1)
+  x.remove(2)
+  `);
 });
      
 describe("basic-set-functions", ()=>{
@@ -67,45 +80,38 @@ describe("basic-set-functions", ()=>{
 
   assertPrint("set-has",`
   s:set = set()
-  s = {1,2,5}
-  print(s.has(7))
-  print(s.has(2))`,["False","True"]);
+  s = {1,2,12,11}
+  s.remove(12)
+  s.remove(1)
+  print(11 in s)
+  print(12 in s)
+  print(2 in s)
+  print(1 in s)`,["True","False","True","False"]);
 
-  assertPrint("set-in",`
-  s:set = set()
-  s = {1,2,5}
-  print(7 in s)
-  print(1 in s)`,["False","True"]);
-
-  assertPrint("set-remove",`
-  s:set = set()
-  s = {1,2,5,7}
-  s.remove(2)
-  print(len(s))
-  print(2 in s)`,["3","False"]);
-
-  assertFail("set-remove-non-exist",`
+  assertFail("set-remove",`
   s:set = set()
   s = {1,2,5,7}
   s.remove(6)`);
 
   assertPrint("set-clear-has",`
   x:set = set()
-  x = {1,2,3,7}
+  x = {1,3,7}
   x.add(2)
   x.clear()
-  print(len(x))`,["0"]);
-
-  assertPrint("set-clear-has",`
-  x:set = set()
-  x = {1,2,3,7}
-  x.add(2)
-  x.clear()
-  print(x.has(7))`,["False"]);
+  print(x.has(2))
+  `,["False"]);
 
   assertPrint("set-update",`
   x:set = set()
-  x.update({2,3,12,13})
+  x.add(2)
+  x.update({3,12,13})
   print(x.size())`,["4"]);
+
+
+  assertPrint("set-print",`
+  x:set = set()
+  x.add(2)
+  x.update({3,12,13})
+  x.print()`,["2","12","3","13"]);
 
 });
