@@ -131,8 +131,7 @@ for i in range(10):
     c.x = i
 
 ```
-
-This case would most likely be something to handle for the optimization team with some consultation from us. They would have to considder how to handle this creation of objects in the heap and whether they would want to delete each object off of the heap after every iteration as well as how we would want to handle this in the reference counts (whether this one line counts as a single reference or 10 different references due to the loop). In order to make this easier on the for loop team, the optimization team, and our team, it may help for the for loop team to make the number of iterations the loop will have clear as it's passed down to the compiler if possible. The optimization team could also figure out a policy for the garbage collector that will optimize heap space with how variables may be used later in the program.
+This case is representative since it shows object allocation inside a for loop. To our group this just looks like multiple assignment calls and there seems to be no overlap in the files and lines which we edited. 
 
 ## Front-end user interface
 
@@ -154,7 +153,7 @@ There are several possible ways they could print this out in the REPL. They coul
 
 ## Generics and polymorphism
 
-There doesn't seem to be any overlap in the files that we're changing between our groups as their changes are localized in `ast.ts`, `runner.ts`, `parser.ts`, and their own `monomorphizer.ts.` while our changes reside mainly in `compiler.ts` and `memory.wat`. Something our group might need to handle to handle generics would be to figure out how we want to store the type metadata for classes utilizing generics, but as discussed in Slack, the generics team will be giving us the fields, so this should not be hard to handle.
+There doesn't seem to be any overlap in the files that we're changing between our groups as their changes are localized in `ast.ts`, `runner.ts`, `parser.ts`, and their own `monomorphizer.ts.` while our changes reside mainly in `compiler.ts` and `memory.wat`. 
 
 ### Example program
 ```python
@@ -175,9 +174,9 @@ d = C()
 d.x = D()
 d.x.x = 20
 ```
+The above program is representative as it involves creation of objects from inherited generic class. Since, all types are conrete in the IR neither of our groups have to make any changes to support
+our features.
 
-In the above program, there are two cases that would affect how the metadata of an instance of the class C would be stored in the heap. In the first case, we would store C as not having any fields that are references while for the second case, we would need to make sure that the field is stored as a reference so that we know to deallocate that later on in the program. As
-discussed with the generics team
 
 ## I/O, files
 The I/O team has implemented a File library class with methods like read/write/close. Instances of the class would be stored in the heap just like any other object. The only thing field a File object would have is an int called “fd” that locates where to keep reading/writing from in the actual file. Thus, there is not much special interaction between the I/O team and our team, as long as we correctly allocate and deallocate File objects and count their number of references just like any other object type.
