@@ -354,4 +354,36 @@ TypeError: cannot add `bool` to a set of `int`s in line 2 at col 7
 ```
 
 ## Strings
+Most functionality won't interfere. Special care should be taken when doing with the following.
+1. Switching from `Type` to `Annotation` for the `a` fields,
+2. Throwing type errors with source and location information.
+3. Convert to the current paradigm to throw runtime errors. 
 
+
+Two examples of an error involving lists that needs future work:
+
+```python
+a: str = "abcd"
+print(a[5])
+```
+this program should have the following runtime error:
+```
+Traceback:
+  Toplevel, line 2
+
+print(a[5])
+        ^ index out of bounds
+RUNTIME ERROR: index out of bound in line 2 at col 9
+```
+
+And:
+```python
+a: str = "abcd"
+print(a + 0)
+```
+this program should have the following static error:
+```
+print(a + 0)
+      ^^^^^ 
+TypeError: Binary operator `+` expects same type on both sides, got int and bool in line 2 at col 9
+```
