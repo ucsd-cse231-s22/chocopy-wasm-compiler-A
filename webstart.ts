@@ -28,11 +28,11 @@ function print(typ: Type, arg : number, loader: WebAssembly.ExportValue) : any {
   return arg;
 }
 
-// function assert_not_none(arg: any) : any {
-//   if (arg === 0)
-//     throw new Error("RUNTIME ERROR: cannot perform operation on none");
-//   return arg;
-// }
+function assert_not_none(arg: any) : any {
+  if (arg === 0)
+    throw new Error("RUNTIME ERROR: cannot perform operation on none");
+  return arg;
+}
 
 function webStart() {
   document.addEventListener("DOMContentLoaded", async function() {
@@ -48,7 +48,6 @@ function webStart() {
 
     var importObject = {
       imports: {
-<<<<<<< HEAD
         assert_not_none: (arg: any) => assert_not_none(arg),
         print_num: (arg: number) => print(NUM, arg, memoryModule.instance.exports.load),
         print_bool: (arg: number) => print(BOOL, arg, null),
@@ -68,16 +67,6 @@ function webStart() {
         $gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, memoryModule.instance.exports),
         $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
         $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
-=======
-        // assert_not_none: (arg: any) => assert_not_none(arg),
-        print_num: (arg: number) => print(NUM, arg),
-        print_bool: (arg: number) => print(BOOL, arg),
-        print_none: (arg: number) => print(NONE, arg),
-        abs: Math.abs,
-        min: Math.min,
-        max: Math.max,
-        pow: Math.pow
->>>>>>> 58673df10f007ba2dfd86168cc222155479a04a5
       },
       errors: importObjectErrors,
       libmemory: memoryModule.instance.exports,
