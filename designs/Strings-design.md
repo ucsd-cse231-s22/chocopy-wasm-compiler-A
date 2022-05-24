@@ -265,7 +265,7 @@ The most changllenging part of string is that string lies in the level of AST.Li
 For now, we cannot do operations on string if we don't refractor some sturtures. Any other features like len(), string concatenation, string indexing and string comparison is just a combination of them. As for the store part, we managed to store a string into the memory heap. But we add some restrictions on it (Assigning None to a string first). The hard part is that we cannot make modification on the CodeGen, and the expressions and statements that IR offered are limited which will make it significantly complicated to generate the right WASM code by compiler.ts.
 
 
-#Update Week 8:
+# Update Week 8:
 
 In this week, we nearly fix all the leftover of week 7. 
 1. Now we can directly define a string like a:str = "abcd" in body, functions and classses.
