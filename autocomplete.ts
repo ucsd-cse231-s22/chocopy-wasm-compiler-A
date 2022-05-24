@@ -7,9 +7,7 @@ export function populateAutoCompleteSrc(repl: BasicREPL): Array<any> {
     //get variable names for autocomplete
     repl.currentTypeEnv.globals.forEach((val, key) => {
         //don't add functions into variable list
-        // if (val.tag != "callable") {
-        //   defList.push(key);
-        // }
+        defList.push(key);
     });
     //get class names for autocomplete
     repl.currentTypeEnv.classes.forEach((val, key) => {
@@ -85,10 +83,11 @@ function getCompletions(wordList: any, token: any, context: any) {
         var obj = context.pop(),
             base;
 
-        const hasCompletion = ["variable", "property", "builtin", "keyword"];
-        if (obj.type in hasCompletion) {
+        const hasCompleteList: Array<string> = ["variable", "property", "builtin", "keyword"];
+        if (hasCompleteList.indexOf(obj.type) !== -1) {
             base = obj.string;
         }
+
         while (base != null && context.length) base = base[context.pop().string];
         if (base != null) {
             completions = gatherCompletions(wordList, prefix);
