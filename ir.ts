@@ -1,12 +1,18 @@
 import {Type, BinOp, UniOp, Parameter} from './ast';
 
-export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, body: Array<BasicBlock<A>> }
+export type Program<A> = { a?: A, strinits: Array<VarInit<A>>, strstmts: Array<Stmt<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, fundefs: Array<FunDef<A>>, body: Array<BasicBlock<A>> }
 
 export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Value<A> }
 
-export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, ret: Type, inits: Array<VarInit<A>>, body: Array<BasicBlock<A>> }
+export type GlobalDecl<A> = { a?: A, name: string }
+
+export type NonLocalDecl<A> = { a?: A, name: string }
+
+export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, fundefs: Array<FunDef<A>>, 
+  ret: Type, inits: Array<VarInit<A>>, body: Array<BasicBlock<A>>,
+  globaldecls: Array<GlobalDecl<A>>, nonlocaldecls: Array<NonLocalDecl<A>> }
 
 export type BasicBlock<A> = 
 | {  a?: A, label: string, stmts: Array<Stmt<A>> }
@@ -21,6 +27,7 @@ export type Stmt<A> =
 
   | { a?: A, tag: "store", start: Value<A>, offset: Value<A>, value: Value<A> } // start should be an id
   | { a?: A, tag: "for", iterator: string, iterable: Value<A>, body: Array<Stmt<A>> }
+  | { a?: A, tag: "for-str", iterator: string, iterable: Value<A>, body: Array<Stmt<A>> }
   | { a?: A, tag: "list-store", start: Value<A>, offset: Value<A>, value: Value<A> } // start should be an id
 
 export type Expr<A> =
@@ -34,6 +41,8 @@ export type Expr<A> =
   | {  a?: A, tag: "alloc", amount: Value<A> }
   | {  a?: A, tag: "load", start: Value<A>, offset: Value<A> }
   | {  a?: A, tag: "list-load", start: Value<A>, offset: Value<A> }
+  | {  a?: A, tag: "str-load", start: Value<A>, offset: Value<A> }
+  | {  a?: A, tag: "cond-expr", ifobj: Value<A>, elseobj: Value<A>, cond: Value<A> }
 
 export type Value<A> = 
     { a?: A, tag: "num", value: bigint }

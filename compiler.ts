@@ -39,25 +39,29 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const definedVars : Set<string> = new Set(); //getLocals(ast);
   definedVars.add("$last");
   definedVars.add("$selector");
-  definedVars.add("sz1");
-  definedVars.add("sz2");
-  definedVars.add("addr");
-  definedVars.add("index");
-  definedVars.add("index1");
-  definedVars.add("addr1");
-  definedVars.add("addr2");
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
+  ast.strinits.forEach(init => globalNames.push(init.name));
+  globalNames.push("$strload");
+  globalNames.push("$sz1");
+  globalNames.push("$sz2");
+  globalNames.push("$addr");
+  globalNames.push("$index");
+  globalNames.push("$index1");
+  globalNames.push("$addr1");
+  globalNames.push("$addr2");
+  globalNames.push("$condReturn");
   console.log(ast.inits, globalNames);
   const funs : Array<string> = [];
-  ast.funs.forEach(f => {
+  ast.fundefs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
   const allFuns = funs.concat(classes).join("\n\n");
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
+  const strinits = ast.strinits.map(init => codeGenInit(init, withDefines)).flat();
   withDefines.labels = ast.body.map(block => block.label);
   var bodyCommands = "(local.set $$selector (i32.const 0))\n"
   bodyCommands += "(loop $loop\n"
@@ -75,7 +79,11 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   bodyCommands += ") ;; end $loop"
 
   // const commandGroups = ast.stmts.map((stmt) => codeGenStmt(stmt, withDefines));
-  const allCommands = [...localDefines, ...inits, bodyCommands];
+  const allCommands = [...localDefines, 
+    ...strinits,
+    ast.strstmts.map(stmt => codeGenStmt(stmt, withDefines).join('\n')).join('\n'), 
+    ...inits,
+    bodyCommands];
   withDefines.locals.clear();
   return {
     globals: globalNames,
@@ -104,6 +112,10 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
         `call $store`
       ]
     case "assign":
+      console.log("LOCALS: ", env.locals);
+      if (stmt.name === "temp" && !env.locals.has(stmt.name)) {
+        console.log("LOCALS: ", env.locals, env);
+      }
       var valStmts = codeGenExpr(stmt.value, env);
       if (env.locals.has(stmt.name)) {
         return valStmts.concat([`(local.set $${stmt.name})`]); 
@@ -152,29 +164,29 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
       const codeGenStmtStr = stmt.body.map(stmt => codeGenStmt(stmt, env).join("\n")).join("\n");
       return [
         ...codeGenValue(stmt.iterable, env),
-        `(local.set $addr)
-        (local.get $addr)
+        `(global.set $$addr)
+        (global.get $$addr)
         (i32.const 0)
           (call $load)
-          (local.set $sz1)
+          (global.set $$sz1)
           (i32.const 1)
-          (local.set $index)
+          (global.set $$index)
           (
             loop $while
-              (local.get $index)
-              (local.get $sz1)
+              (global.get $$index)
+              (global.get $$sz1)
               (i32.le_s)
             (if
               (then
-                  (local.get $addr)
-                  (local.get $index)
+                  (global.get $$addr)
+                  (global.get $$index)
                   (call $load)
                   ${iteratorStr}
                   ${codeGenStmtStr}
-                  (local.get $index)
+                  (global.get $$index)
                   (i32.const 1)
                   (i32.add)
-                  (local.set $index)
+                  (global.set $$index)
                 br $while
               )
             )
@@ -195,79 +207,81 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       if ((expr.left.a.tag === "list" || expr.left.a.tag === "str") && expr.op === BinOp.Plus) {
         return [
           ...lhsStmts,
-          `(local.set $addr1)`,
+          `(global.set $$addr1)`,
           ...rhsStmts,
-          `(local.set $addr2)
-          (local.get $addr1)
+          `(global.set $$addr2)
+          (global.get $$addr1)
           (i32.const 0)
           (call $load)
-          (local.set $sz1)
-          (local.get $addr2)
+          (global.set $$sz1)
+          (global.get $$addr2)
           (i32.const 0)
           (call $load)
-          (local.set $sz2)
-          (local.get $sz1)
-          (local.get $sz2)
+          (global.set $$sz2)
+          (global.get $$sz1)
+          (i32.const 1)
+          (i32.add)
+          (global.get $$sz2)
           (i32.add)
           (call $alloc)
-          (local.set $addr)
+          (global.set $$addr)
           (i32.const 1)
-          (local.set $index)
+          (global.set $$index)
           (
             loop $while
-              (local.get $index)
-              (local.get $sz1)
+              (global.get $$index)
+              (global.get $$sz1)
               (i32.le_s)
             (if
               (then
-                  (local.get $addr)
-                  (local.get $index)
-                  (local.get $addr1)
-                  (local.get $index)
+                  (global.get $$addr)
+                  (global.get $$index)
+                  (global.get $$addr1)
+                  (global.get $$index)
                   (call $load)
                   (call $store)
-                  (local.get $index)
+                  (global.get $$index)
                   (i32.const 1)
                   (i32.add)
-                  (local.set $index)
+                  (global.set $$index)
                 br $while
               )
             )
           )
-          (local.get $index)
-          (local.set $index1)
+          (global.get $$index)
+          (global.set $$index1)
           (i32.const 1)
-          (local.set $index)
+          (global.set $$index)
           (
             loop $while
-              (local.get $index)
-              (local.get $sz2)
+              (global.get $$index)
+              (global.get $$sz2)
               (i32.le_s)
             (if
               (then
-                  (local.get $addr)
-                  (local.get $index1)
-                  (local.get $addr2)
-                  (local.get $index)
+                  (global.get $$addr)
+                  (global.get $$index1)
+                  (global.get $$addr2)
+                  (global.get $$index)
                   (call $load)
                   (call $store)
-                  (local.get $index)
+                  (global.get $$index)
                   (i32.const 1)
                   (i32.add)
-                  (local.set $index)
-                  (local.get $index1)
+                  (global.set $$index)
+                  (global.get $$index1)
                   (i32.const 1)
                   (i32.add)
-                  (local.set $index1)
+                  (global.set $$index1)
                 br $while
               )
             )
           )
-          (local.get $addr)
-          (local.get $addr)
+          (global.get $$addr)
+          (global.get $$addr)
           (i32.const 0)
-          (local.get $sz1)
-          (local.get $sz2)
+          (global.get $$sz1)
+          (global.get $$sz2)
           (i32.add)
           (call $store)`
         ];
@@ -275,6 +289,26 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       }
       catch {
       }
+      try {
+        if ((expr.left.a.tag === "str") && expr.op === BinOp.Eq) {
+          return [
+            ...lhsStmts,
+            ...rhsStmts,
+            `(call $check_equal_str)`,
+          ]
+        }
+      } catch {}
+      try {
+        if ((expr.left.a.tag === "str") && expr.op === BinOp.Neq) {
+          return [
+            `(i32.const 1)`,
+            ...lhsStmts,
+            ...rhsStmts,
+            `(call $check_equal_str)`,
+            `(i32.sub)`
+          ]
+        }
+      } catch {}
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
 
     case "uniop":
@@ -298,11 +332,7 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         callName = "print_none";
       } else if (expr.name === "print" && argTyp === STR) {
         callName = "print_str";
-      }
-      else if (expr.name === "print_char") {
-        callName = "print_char";
-      }
-      else if (expr.name === "len") {
+      } else if (expr.name === "len") {
         return argStmts.concat([
           `call $assert_not_none`,
           `(i32.const 0)`,
@@ -347,7 +377,56 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
         `(i32.add)`,
         `call $load`
       ];
-
+    case "str-load":
+      return [
+        ...codeGenValue(expr.start, env),
+        `call $assert_not_none`,
+        ...codeGenValue({ tag: "wasmint", value: 0 }, env),
+        `call $load`,
+        ...codeGenValue(expr.offset, env),
+        `call $assert_check_bounds`,
+        `(i32.const 2)`,
+        `call $alloc`,
+        `global.set $$strload`,
+        `global.get $$strload`,
+        `global.get $$strload`,
+        `global.get $$strload`,
+        `(i32.const 0)`,
+        `(i32.const 1)`,
+        `call $store`,
+        `(i32.const 1)`,
+        ...codeGenValue(expr.start, env),
+        ...codeGenValue(expr.offset, env),// add 1
+        `(i32.const 1)`,
+        `(i32.add)`,
+        `call $load`,
+        `call $store`
+      ];
+    case "cond-expr":
+      // return [...codeGenValue(expr.cond, env),
+      // return [ 
+      //   `(if 
+      //     (then
+      //       (i32.const 1)
+      //       (call $print_num)
+      //     ) 
+      //     (else 
+      //       (i32.const 2)
+      //       (call $print_num)
+      //     )
+      // )`];
+      return [...codeGenValue(expr.cond, env),
+        `(if 
+          (then
+            ${codeGenValue(expr.ifobj, env).join("\n")}
+            (global.set $$condReturn)
+          ) 
+          (else 
+            ${codeGenValue(expr.elseobj, env).join("\n")}
+            (global.set $$condReturn)
+          )
+      )
+      (global.get $$condReturn)`];
   }
 }
 
@@ -445,7 +524,7 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
     ${inits}
     ${bodyCommands}
     (i32.const 0)
-    (return))`];
+    (return))`, def.fundefs.map(fun => codeGenDef(fun, env).join("\n")).join("\n")];
 }
 
 function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {

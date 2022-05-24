@@ -27,10 +27,16 @@ function print(typ: Type, arg : number, memory: WebAssembly.Memory) : any {
   return arg;
 }
 
-function print_char(arg : number, memory: WebAssembly.Memory) : any {
-  importObject.output += String.fromCharCode(arg);
-  importObject.output += "\n";
-  return arg;
+function check_equal_str(arg1: number, arg2: number, memory: WebAssembly.Memory) : number {
+  if (arg1 === arg2) return 1;
+  var i32 = new Uint32Array(memory.buffer);
+  var length1 = i32[arg1/4];
+  var length2 = i32[arg2/4];
+  if (length1 !== length2) return 0;
+  for (let idx = 0;idx < length1; idx++) {
+    if (i32[idx+arg1/4+1] !== i32[idx+arg2/4+1]) return 0;
+  }
+  return 1;
 }
 
 function assert_not_none(arg: any) : any {
@@ -67,7 +73,7 @@ export const importObject : any = {
     print_bool: (arg: number) => print(Type.Bool, arg, memory),
     print_none: (arg: number) => print(Type.None, arg, memory),
     print_str: (arg: number) => print(Type.Str, arg, memory),
-    print_char: (arg: number) => print_char(arg, memory),
+    check_equal_str: (arg1: number, arg2: number) => check_equal_str(arg1, arg2, memory),
     abs: Math.abs,
     min: Math.min,
     max: Math.max,

@@ -6,10 +6,12 @@
 import wabt from 'wabt';
 import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
+import * as IR from './ir';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
+import { nested } from './nestedutil';
 
 export type Config = {
   importObject: any;
@@ -73,7 +75,9 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   console.log("PARSED TYPE AST: ", tprogram);
   const globalEnv = augmentEnv(config.env, tprogram);
-  const irprogram = lowerProgram(tprogram, globalEnv);
+  const nprogram = nested(tprogram);
+  console.log("PARSED NESTD AST: ", nprogram);
+  const irprogram = lowerProgram(nprogram, globalEnv);
   console.log("IR AST: ", irprogram);
   const progTyp = tprogram.a;
   var returnType = "";
@@ -110,7 +114,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
     (func $print_str (import "imports" "print_str") (param i32) (result i32))
-    (func $print_char (import "imports" "print_char") (param i32) (result i32))
+    (func $check_equal_str (import "imports" "check_equal_str") (param i32) (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))

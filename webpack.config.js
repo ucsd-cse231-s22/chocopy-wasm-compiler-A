@@ -10,6 +10,11 @@ module.exports = {
       },
     ],
   },
+  devServer: {
+    static: {
+      directory: path.join(__dirname, 'build'),
+    },
+  },
   devtool: 'inline-source-map',
   externals: {
     wabt: 'wabt'
