@@ -23,10 +23,19 @@ export function optimizeValue(val: Value<any>, env: Env): Value<any>{
     return val;
 }
 
+export function checkIfFoldableBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<any>): boolean {
+    if ([BinOp.IDiv, BinOp.Mod].includes(op)){
+        if (!isTagBigInt(leftVal) || !isTagBigInt(rightVal))
+            throw new Error("Compiler Error: Function should be invoked only if the expression can be folded");
+        if (rightVal.value === 0n) return false;
+    }
+    return true;
+}
+
 export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<any>): Value<any>{
     if([BinOp.Plus, BinOp.Minus,BinOp.IDiv,BinOp.Mul, BinOp.Gt, BinOp.Lt, BinOp.Gte, BinOp.Lte, BinOp.Mod].includes(op)){
         if(!isTagBigInt(leftVal) || !isTagBigInt(rightVal))
-            throw new Error("Compiler Error");
+            throw new Error("Compiler Error: Function should be invoked only if the expression can be folded");
         
         switch(op){
             case BinOp.Plus: return {tag: "num", value: leftVal.value + rightVal.value};
@@ -35,9 +44,13 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<an
             
             case BinOp.Mul: return {tag: "num", value: leftVal.value * rightVal.value}
 
-            case BinOp.IDiv: return {tag: "num", value: leftVal.value / rightVal.value}
+            case BinOp.IDiv: {
+                return {tag: "num", value: leftVal.value / rightVal.value}
+            }
             
-            case BinOp.Mod: return {tag: "num", value: leftVal.value % rightVal.value}
+            case BinOp.Mod: {
+                return {tag: "num", value: leftVal.value % rightVal.value}
+            }
             
             case BinOp.Gt: return {tag: "bool", value: leftVal.value > rightVal.value}
             
@@ -50,7 +63,7 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<an
     }
     else if([BinOp.And, BinOp.Or].includes(op)){
         if(!isTagBoolean(leftVal) || !isTagBoolean(rightVal))
-            throw new Error("Compiler Error")
+            throw new Error("Compiler Error: Function should be invoked only if the expression can be folded");
         
         switch(op){
             case BinOp.And: return {tag: "bool", value: leftVal.value && rightVal.value};
@@ -60,11 +73,17 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<an
     }
     else if([BinOp.Eq, BinOp.Neq].includes(op)){
         if(!isTagEqual(leftVal, rightVal) || isTagNone(leftVal) || isTagNone(rightVal) || isTagId(leftVal) || isTagId(rightVal))
-            throw new Error("Compiler Error");
+            throw new Error("Compiler Error: Function should be invoked only if the expression can be folded");
         switch(op){
             case BinOp.Eq: return {tag: "bool", value: leftVal.value === rightVal.value};
 
         }
+    }
+    else{
+        //Is operator handler
+        if (!isTagNone(leftVal) || !isTagNone(rightVal))
+            throw new Error("Compiler Error: Function should be invoked only if the expression can be folded");
+        return {tag: "bool", value: true};
     }
 }
 
@@ -94,7 +113,7 @@ export function optimizeExpression(e: Expr<Type>, env: Env): Expr<Type>{
         case "binop":
             var left = optimizeValue(e.left, env);
             var right = optimizeValue(e.right, env);
-            if (left.tag === "id" || right.tag === "id")
+            if (left.tag === "id" || right.tag === "id" || !checkIfFoldableBinOp(e.op, left, right))
                 return {...e, left: left, right: right};
             var val: Value<any> = evaluateBinOp(e.op, left, right);
             return {tag: "value", value: val};
