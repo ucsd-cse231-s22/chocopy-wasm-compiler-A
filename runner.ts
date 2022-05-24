@@ -10,6 +10,7 @@ import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Annotation, FunDef, Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS, makeWasmFunType } from "./utils";
 import { closureName, lowerProgram } from './lower';
+import { optimizeProgram } from './optimization';
 import { wasmErrorImports } from './errors';
 
 export type Config = {
@@ -86,6 +87,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
+  const optIr = optimizeProgram(irprogram);
   const progTyp = tprogram.a.type;
   var returnType = "";
   var returnExpr = "";
@@ -98,7 +100,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
   } 
   let globalsBefore = config.env.globals;
   // const compiled = compiler.compile(tprogram, config.env);
-  const compiled = compile(irprogram, globalEnv);
+  const compiled = compile(optIr, globalEnv);
 
   const vtable = `(table ${globalEnv.vtableMethods.length} funcref)
     (elem (i32.const 0) ${globalEnv.vtableMethods.map(method => `$${method[0]}`).join(" ")})`;
@@ -138,6 +140,17 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $$add (import "imports" "$add") (param i32) (param i32) (result i32))
+    (func $$sub (import "imports" "$sub") (param i32) (param i32) (result i32))
+    (func $$mul (import "imports" "$mul") (param i32) (param i32) (result i32))
+    (func $$div (import "imports" "$div") (param i32) (param i32) (result i32))
+    (func $$mod (import "imports" "$mod") (param i32) (param i32) (result i32))
+    (func $$eq (import "imports" "$eq") (param i32) (param i32) (result i32))
+    (func $$neq (import "imports" "$neq") (param i32) (param i32) (result i32))
+    (func $$lte (import "imports" "$lte") (param i32) (param i32) (result i32))
+    (func $$gte (import "imports" "$gte") (param i32) (param i32) (result i32))
+    (func $$lt (import "imports" "$lt") (param i32) (param i32) (result i32))
+    (func $$gt (import "imports" "$gt") (param i32) (param i32) (result i32))
     ${types}
     ${globalImports}
     ${globalDecls}

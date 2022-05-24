@@ -1,9 +1,12 @@
-import { run, Config } from "./runner";
+import { run, Config, augmentEnv } from "./runner";
 // import { GlobalEnv } from "./compiler";
 import { GlobalEnv } from "./compiler";
 import { tc, defaultTypeEnv, GlobalTypeEnv } from "./type-check";
+import { Program } from "./ir";
+import { optimizeProgram } from "./optimization";
 import { Value, Type, Annotation } from "./ast";
 import { parse } from "./parser";
+import { lowerProgram } from "./lower";
 
 interface REPL {
   run(source : string) : Promise<any>;
@@ -53,6 +56,19 @@ export class BasicREPL {
     });
     this.importObject.env = currentGlobals;
     return result;
+  }
+  optimize(source: string): [ Program<Annotation>, Program<Annotation> ] {
+    // console.log(stmt);
+    const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions};
+    const parsed = parse(source);
+    const [tprogram, tenv] = tc(config.typeEnv, parsed);
+    const globalEnv = augmentEnv(config.env, tprogram);
+    const irprogram = lowerProgram(tprogram, globalEnv);
+    if(!this.importObject.js) {
+      const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
+      this.importObject.js = { memory: memory };
+    }
+    return [ irprogram, optimizeProgram(irprogram) ];
   }
   tc(source: string): Type {
     const config: Config = { importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions };

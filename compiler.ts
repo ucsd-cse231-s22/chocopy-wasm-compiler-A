@@ -45,6 +45,7 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
   const definedVars : Set<string> = new Set(); //getLocals(ast);
   definedVars.add("$last");
   definedVars.add("$selector");
+  definedVars.add("$scratch"); // for memory allocation
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
@@ -145,13 +146,26 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
-      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)];
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
       switch(expr.op){
         case UniOp.Neg:
-          return [`(i32.const 0)`, ...exprStmts, `(i32.sub)`];
+          // negate bignum length to indicate sign change
+          return [
+            ...exprStmts,
+            `(local.set $$scratch)`, // bignum addr
+            `(local.get $$scratch)`, // store addr
+            `(i32.const 0)`, // store offset
+            `(i32.const 0)`, // 0 - len
+            `(local.get $$scratch)`, // load addr
+            `(i32.const 0)`, // load offset
+            `(call $load)`, // load bignum len
+            `(i32.sub)`, // store val
+            `(call $store)`,
+            `(local.get $$scratch)`
+          ];
         case UniOp.Not:
           return [`(i32.const 0)`, ...exprStmts, `(i32.eq)`];
       }
@@ -201,7 +215,45 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
 function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
   switch (val.tag) {
     case "num":
-      return ["(i32.const " + val.value + ")"];
+      var x = BigInt(val.value) // for division
+      if (x === BigInt(0))
+        return ["(i32.const 0)"]
+      var n = 0
+      var digits : Number[] = []
+      while(x != BigInt(0)) {
+          if (x < 0) {
+            x *= BigInt(-1)
+          }
+          digits.push(Number(x & BigInt(0x7fffffff)))
+          x = x / BigInt(1 << 31) 
+          n = n + 1
+      }
+      n = n + 1 // store (n+1) blocks (n: number of digits)
+
+      var i = 0
+      var return_val : string[] = []
+      
+      return_val.push(`(i32.const ${n})`);
+      return_val.push(`(call $alloc)`);
+      return_val.push(`(local.set $$scratch)`);
+      
+      // store the bignum in (n+1) blocks
+      // store number of blocks in the first block
+      return_val.push(`(local.get $$scratch)`);
+      return_val.push(`(i32.const ${i})`);
+      return_val.push(`(i32.const ${n-1})`);
+      return_val.push(`call $store`); 
+      
+      i = i + 1;
+      // store the digits in the rest of blocks
+      for (i; i < n; i++) {
+        return_val.push(`(local.get $$scratch)`);
+        return_val.push(`(i32.const ${i})`);
+        return_val.push(`(i32.const ${digits[i-1]})`);
+        return_val.push(`call $store`);    
+      }
+      return_val.push(`(local.get $$scratch)`)
+      return return_val;
     case "wasmint":
       return ["(i32.const " + val.value + ")"];
     case "bool":
@@ -220,27 +272,27 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
 function codeGenBinOp(op : BinOp) : string {
   switch(op) {
     case BinOp.Plus:
-      return "(i32.add)"
+      return "(call $$add)"
     case BinOp.Minus:
-      return "(i32.sub)"
+      return "(call $$sub)"
     case BinOp.Mul:
-      return "(i32.mul)"
+      return "(call $$mul)"
     case BinOp.IDiv:
-      return "(i32.div_s)"
+      return "(call $$div)"
     case BinOp.Mod:
-      return "(i32.rem_s)"
+      return "(call $$mod)"
     case BinOp.Eq:
-      return "(i32.eq)"
+      return "(call $$eq)"
     case BinOp.Neq:
-      return "(i32.ne)"
+      return "(call $$neq)"
     case BinOp.Lte:
-      return "(i32.le_s)"
+      return "(call $$lte)"
     case BinOp.Gte:
-      return "(i32.ge_s)"
+      return "(call $$gte)"
     case BinOp.Lt:
-      return "(i32.lt_s)"
+      return "(call $$lt)"
     case BinOp.Gt:
-      return "(i32.gt_s)"
+      return "(call $$gt)"
     case BinOp.Is:
       return "(i32.eq)";
     case BinOp.And:
@@ -264,6 +316,7 @@ function codeGenDef(def : FunDef<Annotation>, env : GlobalEnv) : Array<string> {
   def.inits.forEach(v => definedVars.add(v.name));
   definedVars.add("$last");
   definedVars.add("$selector");
+  definedVars.add("$scratch");
   // def.parameters.forEach(p => definedVars.delete(p.name));
   definedVars.forEach(env.locals.add, env.locals);
   def.parameters.forEach(p => env.locals.add(p.name));
