@@ -1,6 +1,6 @@
 # Possible Conflicts with Comprehensions
 
-* Compiler A: Bignums
+### Compiler A: Bignums
 
 They have modified how bignums are created, calculated and stored in the memory, along with binary and unary operations of bignums. This should not overlap with our list comprehension implementation. Example program of no interaction:
 ```
@@ -15,7 +15,7 @@ i:int=0
 print([c for i in Range.new(0,2)])
 ```
 
-* Compiler A: Built-in libraries
+### Compiler A: Built-in libraries
 
 This team has implemented built-in libraries such as gcd, lcm, float, factorial and handling of import statements. This should not have any conflicts with our comprehensions implementation. Even is these libraries are used, they should be correctly handled by their implementation. Example program:
 ```
@@ -23,7 +23,7 @@ i:int=0
 print([factorial(i) for i in range(1,3)])
 ```
 
-* Compiler A: Closures/first class/anonymous functions
+### Compiler A: Closures/first class/anonymous functions
 
 This team has implemented closures, nested functions and functions like lambda functions. These should have no conflicts with the comprehensions implementation. They should be automatically handled by their implementation itself. Example program:
 ```
@@ -35,11 +35,11 @@ i:int=0
 print([f(2) for i in Range.new(0,2)])
 ```
 
-* Compiler A: Comprehensions
+### Compiler A: Comprehensions
 
 This is our own implementation!
 
-* Compiler A: Destructuring assignment
+### Compiler A: Destructuring assignment
 
 This team has handled destructuring assignment nicely. Once we have actually implemented storing comprehensions as lists, then we can so below tests that should work properly based on their implementation:
 ```
@@ -49,11 +49,11 @@ b:Range=None
 a,b=False,[i for i in Range.new(0,2)]
 ```
 
-* Compiler A: Error reporting
+### Compiler A: Error reporting
 
 This team has handled error reporting by adding Annotations and Location information in the ast.ts file itself. This will cause a **lot of merge conflicts** due to syntax changes in various files. We plan to correct these in the upcoming week. But other than that, no other conflicts should occur with respect to the code compiling and implementation.
 
-* Compiler A: Fancy calling conventions
+### Compiler A: Fancy calling conventions
 
 The fancy calling implementations should not have any conflicts with comprehensions. Example program:
 ```
@@ -63,19 +63,19 @@ i:int=0
 print([f(i) for i in Range.new(0,2)])
 ```
 
-* Compiler A: for loops/iterators
+### Compiler A: for loops/iterators
 
 ???
 
-* Compiler A: Front-end user interface
+### Compiler A: Front-end user interface
 
 Our work is independent of this team's work. Once we store our comprehensions in lists using some code from the lists team, the comprehension result would become a list and the front-end would handle this like normal lists. Thus, no conflicts here.
 
-* Compiler A: Generics and polymorphism
+### Compiler A: Generics and polymorphism
 
 ???
 
-* Compiler A: I/O, files
+### Compiler A: I/O, files
 
 Looking at their PR so far, it does not look like their is much overlap with our implementation here. File read and writes in comprehensions would be handled by their implementation. Example program:
 ```
@@ -88,7 +88,7 @@ print([f.read(1) for i in Range.new(0,2)])
 f.close()
 ```
 
-* Compiler A: Inheritance
+### Compiler A: Inheritance
 
 There should not be any conflicts with their implementation. If there is an object lookup from a subclass in a comprehension, fetching the correct value would be handled by their inheritance implementation. Example program:
 ```
@@ -104,7 +104,7 @@ i:int=0
 print([c.x for i in Range.new(0,2)])
 ```
 
-* Compiler A: Lists
+### Compiler A: Lists
 
 Our implementation should not be affected by the following changes:
 
@@ -143,15 +143,15 @@ Design Decisions (Doubts/Collaborations):
 
 As of now, we are only considering lists to have only integers. We need to collaborate with the lists team and the strings team to have a combination of different data types inside a list. We might also need to talk to the memory management team in case we want to store objects inside a list.
 
-* Compiler A: Memory management
+### Compiler A: Memory management
 
 We do not think that we would be having a lot of conflicts with the changes made by the memory management team. It seems that code related to comprehensions,lists,sets etc would be using the memory management code in the background.  We are using call and alloc from ir.ts and lower.ts that the memory management team has impacted, but there are no such conflicts so far.
 
-* Compiler A: Optimization
+### Compiler A: Optimization
 
 No conflicts here with our comprehensions implementation.
 
-* Compiler A: Sets and/or tuple and/or dictionaries
+### Compiler A: Sets and/or tuple and/or dictionaries
 
 Our implementation should not be affected by the following changes:
 
@@ -196,7 +196,7 @@ Design Decisions (Doubts/Collaborations):
 
 - Need to discuss or rather check if strings are being stored in sets or not.
 
-* Compiler A: Strings
+### Compiler A: Strings
 
 Our implementation should not be affected by the following changes:
 
