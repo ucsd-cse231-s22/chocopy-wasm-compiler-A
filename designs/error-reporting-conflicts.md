@@ -284,7 +284,7 @@ MemoryError: maximum references allocated in internal code
 Most functionality won't interfere. Special care should be taken when doing with the following.
 1. Switching from `Type` to `Annotation` for the `a` fields.
 
-There don't seem to be any interaction between error reporting and optimization. Errors are put in `IR` before optimization happens. 
+There don't seem to be any interaction between error reporting and optimization. Errors are put in `IR` before optimization happens. The optimization procedure also shouldn't throw any errors. 
 
 An improvement that can be put in place is to skip runtime index range checks. For example, this python code
 ```python
