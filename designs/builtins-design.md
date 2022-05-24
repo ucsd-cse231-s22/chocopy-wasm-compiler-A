@@ -199,3 +199,38 @@ from math import gcd
 Ellipsis  # this is an object :)
 ```
 
+---
+
+# Update 5/23
+Here are the features we would like to add at this point in order to have "reasonable" functionality:
+- finish up merging our several branches to get arithmetic operations on floats working
+- type-casting to and from strings, including float('inf') and float('nan')
+- a few more mathlib functions, like `ceil`/`floor`, `isinf`/`isnan`, and maybe some of the constants
+- sum() and prod() would be very nice, but might not be doable in time
+
+And here is a comprehensive test program for the above:
+```
+import math
+
+f : float = 0.0
+e : float = math.e
+res : [float] = []
+s : str = ""
+
+while f < 100:
+  res.append(math.floor(f))
+  s = s + str(math.ceil(f)) + "-"
+  f = math.pow(e,f)
+
+print(s, sum(res))
+```
+This should result in a printed output of `0-1-3-16- 18`, with `res` equal to `[0,1,2,15]`.
+
+
+
+
+
+
+
+
+
