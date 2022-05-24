@@ -115,3 +115,90 @@ f()
 ```
 Above program is representative as an anonymous object is created and then a property of that object is accessed. This should get converted to appropriate assign calls in the IR. Since this is no different that creating an object and accessing its property without the fancy convention, the changes from both our groups don't interfere.
 
+## for loops/iterators
+
+There doesn't seem to be any real overlap in the files we're changing so far between our
+groups as they seem to be changing `ast.ts`, `lower.ts`, and `parser.ts` right now while
+we're mainly changing `compiler.ts` and `memory.wat`. This may change in the future as they
+start to implement their for loops end-to-end in `compiler.ts`, however. A case we may need
+to consider for the for loop team is how to handle object creation within loops. This is
+something we can already start testing without the implementation of for loops as we have
+while loops, though.
+
+### Example program
+``` python
+
+class C(object):
+    x : int = 10
+
+for i in range(10):
+    c : C = None
+    c = C()
+    c.x = i
+
+```
+
+The question for this case would be how we would want to handle this creation of objects in
+the heap and whether we would want to delete each object off of the heap after every
+iteration as well as how we would want to handle this in the reference counts (whether this
+one line counts as a single reference or 10 different references due to the loop). In order to
+make this easier on both parts, it may help for the for loop team to make the number of
+iterations the loop will have clear as it's passed down to the compiler if possible.
+Our team could also just figure out a policy for the garbage collector that will optimize
+heap space with how variables may be used later in the program.
+
+## Front-end user interface
+
+There isn't any real interaction between our features, filewise nor programwise as we seem to
+be on almost opposite ends of the spectrum in terms of level for the compiler. Something the front-end team might want to consider though is how they would want to print out objects in
+the REPL.
+
+### Example program
+```python
+
+class C(object):
+    x : int = 10
+
+c : C = None
+c = C()
+print(c)
+
+```
+
+There are several possible ways they could print this out in the REPL. They could print out
+the object type with the address, which would make the most sense. In this case, we would need
+to make it very accessible for the front-end team to retrieve the addresses. They could also
+print out the object type with the reference number that it holds which should also lead back
+to the address given the reference table. However, this option seems like it might lead to
+some hacky solutions on the front-end side.
+
+## Generics and polymorphism
+
+There doesn't seem to be any overlap in the files that we're changing between our groups as their changes are localized in `ast.ts`, `runner.ts`, `parser.ts`, and their own `monomorphizer.ts.` while our changes reside mainly in `compiler.ts` and `memory.wat`. Something our group might need to handle to handle generics would be to figure out how we want to store the type metadata for classes utilizing generics.
+
+### Example program
+```python
+
+T = TypeVar('T')
+
+class D():
+    x : int = 10
+
+class C(Generic[T]):
+    x : T = __ZERO__
+c : C[int] = None
+c = C()
+c.x = 10
+
+d : C[D] = None
+d = C()
+d.x = D()
+d.x.x = 20
+```
+
+In the above program, there are two cases that would affect how the metadata of an instance
+of the class C would be stored in the heap. In the first case, we would store C as not having
+any fields that are references while for the second case, we would need to make sure that the
+field is stored as a reference so that we know to deallocate that later on in the program. Our
+design might need to change a bit to handle this case when we merge with the generics team as
+we need analyze the fields of a class case-by-case.
