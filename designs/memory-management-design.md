@@ -537,7 +537,7 @@ assert number of references of p is 1
 assert type of fields in p is [value, pointer]
 ```
 
-### 9. Garbage collection for out of scope objects
+### 8. Garbage collection for out of scope objects
 ```python
 class Rat(object):
     id: int = 123
