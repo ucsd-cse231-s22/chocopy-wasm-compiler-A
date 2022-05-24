@@ -5,7 +5,7 @@ a : int = 0
 b : int = 1
 a, b = (1000000000000000, 9999999999999999)
 ```
-In this case, we do not care what exactly is in `()`, but only perform check on whether the contents could be assigned to `a` or `b` respectovely, which would be checked by `isAssignable`. This is representive because we can finish assignment in this style.
+In this case, we do not care what exactly is in `()`, but only perform check on whether the contents could be assigned to `a` or `b` respectively, which would be checked by `isAssignable`. This is representive because we can finish assignment in this style.
 
 ## Built-in libraries
 Our features would not interact much. For example:
@@ -70,20 +70,96 @@ for a, b in (range(1, 3), range(4, 6)):
 In this case, `a` and `b` would format a destructure assignment condition, and our current implementation would handle it correctly with a proper construction of ast node.
 
 ## Front-end user interface
-Basically, we have no interaction with front-end team.
+Our features would might entails supports such as auto-completing, error reporting such as type-mismatch from the front-end team.
+For example:
+```Python
+xx: int = 0
+yy: bool = True
+xx, yy = 1, 2
+```
+The variables xx and yy should have auto-completing suggestions while typing the code. The variable might be highligted with a red underline for the error of type-mismatch.
 
 ## Generics and polymorphism
+Our feature do not interact with Generics and polymorphism much.
+For example:
+```Python
+x: T = None
+y: T = None
+x, y = 1, 2
+```
+In this case, the only thing we need to care about is the type checking can work via `isAssignable`.
 
 ## I/O, files
+Our feature do not interact with I/O much.
+For example:
+```Python
+f1: File = None
+f2: File = None
+f1, f2 = open(...), open(...)
+```
+In this case, the only thing we need to care about is the type checking can work via `isAssignable`.
 
 ## Inheritance
+Our feature do not interact with Inheritance much.
+For example:
+```Python
+class ParentClass(object):
+    ...
+
+class ChildClass(ParentClass):
+    ...
+
+c1: ParentClass = None
+c2: ParentClass = None
+c1, c2 = ChildClass(), ChildClass()
+```
+In this case, the only thing we need to care about is the type checking can work via `isAssignable`.
 
 ## Lists
+Our feature can have many interactions with Lists. 
+
+First, we need an iterface to get the corresponding iterator from a list object, so that we can use the `next()` and `hasNext()` methods to do the destructuring assignment.
+For example:
+```Python
+a1: int = 0
+a2: int = 0
+a3: int = 0
+a4: int = 0
+l: List[int] = [1, 2, 3, 4]
+a1, a2, a3, a4 = l
+```
+To handle a desturcturing assignment like this. Our two teams shoud agree on such an interface, so that we can call, say `l.iter()` to get an iterator object.
+
+Second, if we support assignment of elements marked with `*`, we might also need the slicing feature from lists.
+For example:
+```Python
+a1: int = 0
+a2: List[int] = None
+a3: int = 0
+l: List[int] = [1, 2, 3, 4]
+a1, *a2, a3 = l
+```
+The a2 object will end up having a value l[1: -2].
 
 ## Memory management
+Our feature doesn't iteract with memory management much because our implementation should not be aware of memory allocation or heap management.
 
 ## Optimization
+Our feature can have supporting optimization as below.
+
+For example:
+```Python
+a1: int = 0
+a2: int = 0
+a3: int = 0
+a4: int = 0
+l: List[int] = [1, 2, 3, 4]
+a1, a2, a3, a4 = l
+```
+
+In this example, if the optimizer module can figure out that the variable `l` is a list that doesn't change since declaration. The optimzation can directly assign `a1`, `a2`, `a3`, `a4` with the plain constants without going through the iterator in our implementation.
 
 ## Sets and/or tuples and/or dictionaries
+
 
 ## Strings
