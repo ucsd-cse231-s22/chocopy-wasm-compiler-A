@@ -1,4 +1,8 @@
-# Test Cases - Milestone 1
+# Milestone 1
+
+</br>
+
+## Test Cases
 
 ### 1.  Multilevel Inheritance (without method method overriding)
 
@@ -219,7 +223,7 @@
 	l = Link().new(5, Link().new(13, Empty()))
 	print(l.sum()) # prints 18
 	
-## File Changes - Milestone 1
+## File Changes
 
 ### type-check.ts
 
@@ -236,20 +240,24 @@
  Adding 2 and 3 i.e the class start index in the vtable & class-method pair offset would help us determine the the correct location of a class's method in the vtable.
 
 
-# Features for Milestone 2
-
-## Support overridden methods:
-### In the first milestone, we focused on variations on inherited fields and laid out a structure for our v-tables to support those fields lookups. We also managed to test out some methods that have been inherited. The case that we do not support right now is Dynamic Dispatch. We plan to support this in the next milestone
+# Milestone 2
 
 </br>
 
-## Multiple Inheritance:
-### Along with dynamic dispatch, we plan to finally leverage the Array<string> superclasses that we have defined in our ast.ts and ir.ts to support multiple inheritance. We expect the v-table structure for it to be similar with added pointers to the multiple superclasses, keeping the overall skeleton of the feature to be the same.
+## Features:
+
+### Support overridden methods:
+In the first milestone, we focused on variations on inherited fields and laid out a structure for our v-tables to support those fields lookups. We also managed to test out some methods that have been inherited. The case that we do not support right now is Dynamic Dispatch. We plan to support this in the next milestone
+
+</br>
+
+### Multiple Inheritance:
+Along with dynamic dispatch, we plan to finally leverage the Array<string> superclasses that we have defined in our ast.ts and ir.ts to support multiple inheritance. We expect the v-table structure for it to be similar with added pointers to the multiple superclasses, keeping the overall skeleton of the feature to be the same.
 
 </br>
 </br>
 
-# Test Cases:
+## Test Cases:
 
 ### 1. Dynamic dispatch (Passes):
 
