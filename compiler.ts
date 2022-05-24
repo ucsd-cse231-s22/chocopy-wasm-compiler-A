@@ -145,6 +145,7 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+      
     case "str_compare":
       const str_lhsStmts = codeGenValue(expr.left, env);
       const str_rhsStmts = codeGenValue(expr.right, env);
