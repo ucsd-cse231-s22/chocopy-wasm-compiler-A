@@ -1,6 +1,6 @@
 import { parse } from "./parser";
 import { BasicREPL } from "./repl";
-import { importObject, addLibs  } from "./tests/import-object.test";
+import { addLibs  } from "./tests/import-object.test";
 
 
 // entry point for debugging
@@ -29,4 +29,5 @@ const ast = parse(source);
 }
 
 debug();
+
 
