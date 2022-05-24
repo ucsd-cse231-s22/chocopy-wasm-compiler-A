@@ -230,7 +230,7 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
       return_val.push(`(local.get $$scratch)`);
       return_val.push(`(i32.const ${i})`);
       if (neg)
-      return_val.push(`(i32.const -${n-1})`);
+        return_val.push(`(i32.const -${n-1})`);
       else
         return_val.push(`(i32.const ${n-1})`);
       return_val.push(`call $store`); 
