@@ -35,7 +35,7 @@ export type Expr<A> =
   | {  a?: A, tag: "uniop", op: UniOp, expr: Expr<A> }
   | {  a?: A, tag: "builtin1", name: string, arg: Expr<A> }
   | {  a?: A, tag: "builtin2", name: string, left: Expr<A>, right: Expr<A>}
-  | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>>, kwarguments?: Map<string, Expr<A>> } 
+  | {  a?: A, tag: "call", fn: Expr<A>, arguments: Array<Expr<A>>, kwarguments?: Map<string, Expr<A>> } 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>>, kwarguments?: Map<string, Expr<A>> }
