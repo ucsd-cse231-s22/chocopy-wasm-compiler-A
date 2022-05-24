@@ -2,11 +2,10 @@
 This feature will not interact with our feature. For something like read() and write(), a bignum could be bigger than the whole memory size. 
 
 ### Compiler A: Built-in libraries   
-This will overlap with our feature. This group wants to implement `import` statement, so that our `File` object should live in the `io` module and ready to be imported.
+This will not overlap with our feature. This group implements `import` statement, but `io` is builtin and do not need to be imported. 
+The only concern here is that open() as a free function may be able to add into the builtin functions. However, we need to have more communications with the Built-in groups and see if this is necessary.
 
 ```python
-from io import File
-
 f:File = None
 f = open("test.txt", "w")
 f.write("hello")
