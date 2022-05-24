@@ -110,7 +110,17 @@ We have handled subclass type checking so this will work fine. We do not see any
 
 ### 6. Error reporting
 
-We did not find the pull request for the error reporting group here, so we were unable to review this. We did check the testing group and since that is just testing complex cases, we believe there should be no merge conflicts. Logically, the error reporting group should have no merge conflicts with Inheritance either since they are orthogonal.
+The one error reporting test case that we saw was overriding __init__. We could not find the actual test case in the implementation, so we do not know what exactly it entails. But if the following code throws an error by error reporting:
+   class A(object):
+        a: int = 0
+        def __init__(self):
+                self.a = 1
+                
+   class B(A):
+        def __init__(self):
+                self.a = 2
+                
+According to us, this case should pass, but if it throws an error according to the error reporting group, then this may be a conflict. We will talk to them this week and resolve this.
 
 ### 7. Fancy calling conventions
 Since this feature deals with just function implementations, it can easily be used in the method calls in our classes.
@@ -166,10 +176,52 @@ E.g.:
 We do not see any conflicts with this team''s PR.
 
 ### 9. Front-end user interface
+The front-end group is planning to implement a visualization of classes,  where the structure of the entire class can be printed. For eg:
+                
+       class E(object):
+            a : int = 1
+       class C(object):
+            a : bool = True
+            e : E = None
+            def __init__(self: C):
+               self.e = E()
+            def d(self: C) -> int:
+              return 1
+        c : C = None
+        c = C()
+    // in REPL:
+    >>> c
+        
+    output:
+        {
+            address: 100
+            a: True
+            e: {
+                address: 108
+                a: 1
+            }
+        }
 
-
+We believe this feature should not have any merge conflicts, but we need to explain to them our implementation of classes so that they can use the relevant functions to get the information of the class to print. Once we walk them through our implementation in class this week, this feature should be straightforward to implement for them.
+                
 ### 10. Generics and polymorphism
-
+                
+There are 2 features that have potential conflicts with the Generics and Polymorphism cases: 
+1. The Generics group implements a boxed type Generic[T], which is then assigned to a user defined value at compile time, like int, bool or a class. For this, the generics group uses the isinstance()/ issubtype() calls to check if the type assigned to the generic by the user is actually a valid type, i.e. it has been defined as a class. Thus, we need to expose our class environment/ proper isinstance() calls to ensure that the generics group is properly able to typecheck whether the generic has been assigned to an existing type. For eg:
+    class Rat():
+        pass
+                
+    b: Box[Rat] = Box()
+    b: Box[Rat] = None
+    b = Box()
+                
+2. When supporting inheritance over classes, we need to support the case where a class is a subtype of a generic class. In this case, we will only know the structure of the superclass at compile time. While this should not lead to any problems, since at compile time we know the exact structure of the superclass and thus can do proper memory allocation, there still might be potential conflicts in edge cases. We are working closely with the generics group to go over cases and ensure our implementations are compatible in this sense. An example of this is:
+                
+    class Rat(Box[T]):
+                pass
+ 
+We believe these are the 2 major conflicts we need to address.
+                
 ### 11. I/O, files
 The file I/O implementation have no conflicts with the inheritance as the I/O group's functions and enums are completely orthogonal to classes. The I/O group does most of its work in the JS files and exports APIs that can be called in WASM and run this code. As they build their own enums and work generally with function level APIs, their code should be directly compatible with classes.
 
