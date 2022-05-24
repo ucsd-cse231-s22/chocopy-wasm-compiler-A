@@ -21,21 +21,23 @@ export type Expr<A> =
  | { a?: A, tag: "dict_expr", entries: Array<[Expr<A>, Expr<A>]> }
 ```
 
-Additionally, we add set under the literal of ast.ts which need to be used for the type check of set initialization.
+Additionally, we add set and dict under the literal of ast.ts which need to be used for the type check of set initialization.
 ```
 export type Literal = 
     ……
   | { tag: "set" }
+  | { tag: "dict" }
 ```
 
 In the ir.ts, we add set to the value.
 ```
 export type Value<A> = 
     ……
-  | { a?: A, tag: "set"}
+  | { a?: A, tag: "set" }
+  | { a?: A, tag: "dict" }
 ```
 
-## Implementation and Memory Management
+## Implementation and Memory Management for Set
 The set is hashtable-like. Elements are stored using 10 linked list. Each node of the linked list consists of 4 bytes value and 4 bytes address pointing to the next node. Entries for 10 lists are consecutive on the heap. Once `x = set()` is called, 40 bytes of heap memory is assigned to x, which are 10 linked list entries. 
 
 Add function works as:
@@ -68,7 +70,10 @@ Update function works as:
 2. Iterate all 10 entries of linked lists in B.
 3. For each element stored in B, call A.add(e) to add to A.
 
-## New Functions, Datatypes
+## Implementation and Memory Management for Dict
+Implementation for dict is similar to set implementation except that each node takes 12 bytes. First 4 bytes is the key of the dict element. Then, it takes 4 bytes to store the value. The last 4 bytes are used as pointer similar to set.
+
+## New Functions, Datatypes for Set
 This update will add the "Set" Object to the code base. Currently, it supports following methods:
 ```
 Set.add(x)
@@ -99,106 +104,107 @@ Set.size() - len(Set)
 ```
 No argument needed, returen the number of elements in the set.
 
-# Test Cases
-### 1. Set constructor 1
+# Test Cases for Week 9
+### 1. Dict constructor 1
 Description:
 
-This test case uses the set() function to create a set object. It adds element 3 into the set, and prints the whole set.
+This test case uses the dict() function to create a dict object. It adds pair (3,2) into the dict, and prints the value related to key 3.
 
 program:
 ```
-s:set = set()
-s.add(3)
-print(len(s))
-```
-expected output:
-```
-1
-```
-### 2. Set constructor 2
-Description: 
-
-This test case creates set with {x1,x2,...} statements.
-
-program:
-```
-s:set = set()
-s = {3,5,7}
-print(s)
-```
-expected output:
-```
-{3,5,7}
-```
-### 3. Add duplicate element
-Description:
-
-This test case tries to add duplicate elements into a set, then print the set. The set should ONLY contain 1 element, that is 3.
-
-program:
-```
-s:set = set()
-s.add(3)
-s.add(3)
-print(len(s))
-```
-expected output:
-```
-1
-```
-### 4. Remove element success
-Description:
-
-This test case removes an element that exists in the set.
-
-program:
-```
-s:set = {3,5,7}
-s.remove(7)
-print(len(s))
+s:dict = dict()
+s[3] = 2
+print(s[3])
 ```
 expected output:
 ```
 2
 ```
-### 5. Remove element fail 1
-Description:
-
-This test case tries to remove a non-existent element, an error will be thrown.
-
+### 2. Dict constructor 2
 program:
 ```
-s:set = {3,5,7}
-s.remove(6)
-print(s)
+s:dict = dict()
+s = {3:2}
+print(s[3])
 ```
 expected output:
 ```
-KeyError: 6
+2
 ```
-### 6. Remove element fail 2
+
+### 3. Add element with the same key
 Description:
 
-This test case tries to remove multiple elements at a time, an error will be thrown.
+This test case tries to add elements with the same key into a set, then print the value. The expected value should be the later one added to the dict.
 
 program:
 ```
-s:set = {3,5,7}
-s.remove(3,5)
-print(s)
+s:dict = dict()
+s[3] = 2
+s[3] = 4
+print(s[3])
 ```
 expected output:
 ```
-TypeError: remove() takes exactly one argument (2 given)
+4
 ```
-### 7. Set.clear()
+### 4. Pop element success
 Description:
 
-This test case deletes all elements inside the set and turns it into an empty set().
+This test case removes an element that exists in the dict and return the value of the element.
 
 program:
 ```
-s:set = {3,5,7}
+s:dict = dict()
+s[5] = 4
+print(len(s))
+print(s.pop(5))
+print(len(s))
+```
+expected output:
+```
+1, 4, 0
+```
+### 5. Pop element fail 1
+Description:
+
+This test case tries to remove a non-existent key, an error will be thrown.
+
+program:
+```
+s:dict = dict()
+s[5] = 4
+print(s.pop(7))
+```
+expected output:
+```
+Key Error: 7
+```
+
+### 6. Pop element fail 2
+Description:
+
+This test case tries to pop multiple elements at a time, an error will be thrown.
+
+program:
+```
+s:dict = dict()
+s[5] = 4
+print(s.pop(7,3))
+```
+expected output:
+```
+TypeError: pop() takes exactly one argument (2 given)
+```
+
+### 7. Dict.clear()
+Description:
+
+This test case deletes all elements inside the dict and turns it into an empty dict().
+
+program:
+```
+s:dict = {3:4,4:5,5:6}
 print(len(s))
 s.clear()
 print(len(s))
@@ -208,54 +214,20 @@ expected output:
 3
 0
 ```
-### 8. Set.update()
-Description:
 
-This test case concatenates two sets into one.
-
-program:
-```
-x:set = {1,2,3}
-y:set = {3,5,7}
-x.update(y)
-print(len(x))
-```
-expected output:
-```
-5
-```
-### 9. Set.update() fail
-Description:
-
-This test case tries to update the original set with a non-iterable. The compiler will throw an error.
-
-program:
-```
-x:set = {1,2,3}
-y:int = 1
-x.update(y)
-print(x)
-```
-expected output:
-```
-TypeError: 'int' object is not iterable
-```
 ### 10. in keyword
 Description:
 
-This test case uses 'in' keywords to judge whether an element is in the set.
+This test case uses 'in' keywords to judge whether an key is in the dict.
 
 program:
 ```
-x:set = {1,2,3}
-print(1 in x)
-print(7 in x)
+s:dict = {3:4,4:5,5:6}
+print(3 in s)
+print(8 in s)
 ```
 expected output:
 ```
 True
 False
 ```
-
-# Week7 Implementation
-All passed tests are in "set-dict-tuple.test".
