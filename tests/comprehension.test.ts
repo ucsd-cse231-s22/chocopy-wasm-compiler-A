@@ -1,36 +1,6 @@
 import { assertPrint, assertTCFail, assertTC, assertFail } from "./asserts.test";
-import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("List Comprehension Tests", () => {
-
-    assertPrint("simple comprehension output with step", `
-class Range(object):
-    min:int=0
-    max:int=0
-    curr:int=0
-    step:int=1
-    def __init__(self:Range):
-        pass
-    def new(self:Range,min:int,max:int,step:int)->Range:
-        self.max=max
-        self.min=min
-        self.curr=min
-        self.step=step
-        return self
-    def hasNext(self:Range)->bool:
-        return self.curr<self.max
-    def next(self:Range)->int:
-        c:int=0
-        c=self.curr
-        self.curr=self.curr+self.step
-        return c
-
-a:Range=None
-m: int = 0
-a=Range().new(10,20,2)
-[m for m in a]`, ['10', '12', '14', '16', '18']
-    );
-
 
     assertTCFail("invalid expression in comprehension", `
 class range(object):
@@ -50,7 +20,6 @@ class range(object):
         return self.curr<self.max
 [j for a in range(1,5) if a!=1]
 `);
-
 
     assertTCFail("invalid range in comprehension", `
 class range(object):
@@ -155,8 +124,6 @@ class Range(object):
         c=self.curr
         self.curr=self.curr+1
         return c
-def f(x:int)->int:
-    return x*5
 a:Range=None
 m: int = 0
 j:int=2
@@ -181,8 +148,6 @@ class Range(object):
         c=self.curr
         self.curr=self.curr+1
         return c
-def f(x:int)->int:
-    return x*5
 a:Range=None
 j: int = 7
 m: int = 0
@@ -209,8 +174,6 @@ class Range(object):
         c=self.curr
         self.curr=self.curr+1
         return c
-def f(x:int)->int:
-    return x*5
 a:Range=None
 m: int = 0
 j:bool=True
@@ -237,8 +200,6 @@ class Range(object):
         c=self.curr
         self.curr=self.curr+1
         return c
-def f(x:int)->int:
-    return x*5
 a:Range=None
 m: int = 0
 j:int=5
@@ -265,8 +226,6 @@ class Range(object):
         c=self.curr
         self.curr=self.curr+1
         return c
-def f(x:int)->int:
-    return x*5
 a:Range=None
 m: int = 0
 a=Range().new(1,5)
@@ -292,8 +251,6 @@ class Range(object):
         c=self.curr
         self.curr=self.curr+1
         return c
-def f(x:int)->int:
-    return x*5
 a:Range=None
 m: int = 0
 a=Range().new(1,5)
@@ -319,8 +276,6 @@ class Range(object):
         c=self.curr
         self.curr=self.curr+1
         return c
-def f(x:int)->int:
-    return x*5
 a:Range=None
 m: int = 0
 a=Range().new(1,5)
@@ -344,8 +299,6 @@ class Range(object):
         c=self.curr
         self.curr=self.curr+1
         return c
-def f(x:int)->int:
-    return x*5
 a:Range=None
 j: int = 3
 m: int = 0
@@ -405,6 +358,33 @@ a=Range().new(5)
 [f(m) for m in a]`, ['0', '5', '10', '15', '20']
     );
 
+    assertPrint("simple comprehension output with step", `
+class Range(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    step:int=1
+    def __init__(self:Range):
+        pass
+    def new(self:Range,min:int,max:int,step:int)->Range:
+        self.max=max
+        self.min=min
+        self.curr=min
+        self.step=step
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
+        c:int=0
+        c=self.curr
+        self.curr=self.curr+self.step
+        return c
+a:Range=None
+m: int = 0
+a=Range().new(10,20,2)
+[m for m in a]`, ['10', '12', '14', '16', '18']
+    );
+
     assertPrint("Two comprehension expressions", `
 class Range(object):
     min:int=0
@@ -424,8 +404,6 @@ class Range(object):
         c=self.curr
         self.curr=self.curr+1
         return c
-def f(x:int)->int:
-    return x*5
 a:Range=None
 m: int = 0
 j:int=2
@@ -486,31 +464,48 @@ f(10)`, ['50', '50', '50', '50', '50']
     );
 
 
-    assertPrint("test", `
-class Range(object):
+    assertPrint("simple list comprehension with object of any other class with next and hasNext methods", `
+class ABC(object):
     min:int=0
     max:int=0
     curr:int=0
-    def __init__(self:Range):
+    def __init__(self:ABC):
         pass
-    def new(self:Range,min:int,max:int)->Range:
+    def new(self:ABC,min:int,max:int)->ABC:
         self.min=min
         self.max=max
         self.curr=min
         return self
-    def hasNext(self:Range)->bool:
+    def hasNext(self:ABC)->bool:
         return self.curr<self.max
-    def next(self:Range)->int:
+    def next(self:ABC)->int:
         c:int=0
         c=self.curr
         self.curr=self.curr+1
         return c
-a:Range=None
-b:Range=None
+a:ABC=None
 i:int=0
 j:int=25
-a=Range().new(0,5)
-b=[j for i in a if i!=2]`, ['25', '25', '25', '25']
+a=ABC().new(0,5)
+[j for i in a if i!=2]`, ['25', '25', '25', '25']
     );
+
+    assertTCFail("simple list comprehension with object of any other class without next and hasNext methods", `
+class ABC(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    def __init__(self:ABC):
+        pass
+    def new(self:ABC,min:int,max:int)->ABC:
+        self.min=min
+        self.max=max
+        self.curr=min
+        return self
+a:ABC=None
+i:int=0
+j:int=25
+a=ABC().new(0,5)
+[j for i in a if i!=2]`);
 
 });

@@ -1,5 +1,52 @@
 # Comprehensions Team Design Doc
 
+## Week 8 Milestones:
+
+We plan on trying to support the below example programs:
+
+1. store comprehensions in a variable of type list (use code by lists team)
+```
+A = [j for a in range(5,7)]
+```
+
+2. extend comprehension expression to use lists (use code by lists team)
+```
+A = [j for a in [1,2,3,4]]
+```
+```
+B = [1,2,3,4]
+A = [j for a in B]
+```
+
+3. extend comprehension expression to use strings (use code by string team)
+```
+A = [j for a in "compilers"]
+```
+
+4. extend comprehension expression to use sets (use code by sets/tuples/dictionaries team)
+```
+A = [j for a in {1,2,2,3,3,4,4,5}]
+```
+
+5. extend comprehension expression to use tuples (use code by sets/tuples/dictionaries team)
+```
+A = [j for a in (1,2,3,3,4,4,5)]
+```
+
+6. extend comprehension expression to use dictionaries (use code by sets/tuples/dictionaries team)
+```
+courses = {"cse 250A":"fall 2021","cse 231":"spring 2022"}
+A = [i for i in courses]
+```
+
+7. nested comprehension expressions
+```
+A = [[j for j in Range.new(0,2)] for i in Range.new(0,3)]
+```
+
+To be able to store comprehensions as lists, we will use add the code from the lists team into our implementation to help contruct and store comprehensions as lists in the memory, instead of our current implementation of just printing them. To support comprehensions for additional data structures, we plan on adding another field in the ast of the list-comp and call it comp-type which would state what kind of list comprehension it contains(set/tuple/dictionary). Any additional merge conflicts that arise due to merging code from PRs from other teams will also be handled in the upcoming week. Also, few additional test cases have been added in the test file which include functions and classes.
+
+
 ## Week 7:
 ### Test cases implemented and passed:
 All test cases were written in the tests/comprehension.test.ts file. Upon running this file, 15/15 teste cases passed. The following are the test cases that pass and produce the required output:
@@ -118,7 +165,7 @@ In case of the second test case, we skipped it because as suggested by proffesor
 ## Limitation so far (plan on fixing in week 8)
 
 1. We made an assumption that the list comprehension expressions will only be used globally, and not locally inside any function. (UPDATE: This has been fixed)
-2. The explicit range class inside each of our test cases has a class member as curr. If we have an expression as [a for a in range(10)], then we assign a to range.curr (curr refers to the current element in the iteration). However, we are assigning a as a global variable, instead of giving it a local scope(ie, scope of variable a should only be within the comprehension). Because of this, every time we want to use a different comprehension expression, we are using a new counter variable.
+2. The explicit range class inside each of our test cases has a class member as curr. If we have an expression as [a for a in range(10)], then we assign a to range.curr (curr refers to the current element in the iteration). However, we are assigning a as a global variable, instead of giving it a local scope(ie, scope of variable a should only be within the comprehension). Because of this, every time we want to use a different comprehension expression, we are using a new counter variable. (UPDATE: This has been fixed)
 
 
 ## Workflow Details:
@@ -141,8 +188,7 @@ Also, as of this week, we are explicitly adding a range class in our test cases,
 
 ## Important Notes on Test Cases:
 
-1. As of now, we are able to pass the test cases individually one at a time. We are getting WASM errors while trying to run all the test cases together. We plan to fix this in our next milestone.
-2. The test cases are more detailed in the comprehension.test.ts file. In order to see how our current code is performing, please refer to the mentioned file.
+1. The test cases are more detailed in the comprehension.test.ts file. In order to see how our current code is performing, please refer to the mentioned file.
 
 
 
@@ -249,6 +295,3 @@ We also add the following to Expr<A>:
 {  a?: A, tag: "list-construct", items: Array<Expr<A>> } // implemented by the list team. 
 {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Stmt<A> }
 ```
-
-
-
