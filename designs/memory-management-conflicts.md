@@ -32,7 +32,7 @@ print(x(2, 2))
 ### Required changes
 The implementation of the first-class functions uses a metadata field to infer the ype of the returned value(see `call_indirect` in `compiler.ts`). This requries a metadata field added to the `alloc` call in `lower.ts`. This part breaks functionality with the memory management group since the fields in the object, size of the object and the offest for the field, in case of a list, are inferrred from the class type. A possible solution would be to reach a consensus on the metadata size and placement in the heap, but a better solution as suggested by Prof. Politz would be to use the following convention for alloc
 ```javascript
-| { tag: "alloc", amount: Value<A>, fixed: boolean[], rest: boolean }
+| { tag: "alloc", amount: Value<A>, fixed?: boolean[], rest?: boolean }
 ```
 This would require changes on both our and their end. But these changes would be very isolated in `lower.ts` for the Closures team and in `compiler.ts` for our team.  
 
@@ -115,12 +115,23 @@ f()
 ```
 Above program is representative as an anonymous object is created and then a property of that object is accessed. This should get converted to appropriate assign calls in the IR. Since this is no different that creating an object and accessing its property without the fancy convention, the changes from both our groups don't interfere.
 
-### Compiler A: I/O, files
+## I/O, files
 The I/O team has implemented a File library class with methods like read/write/close. Instances of the class would be stored in the heap just like any other object. The only thing field a File object would have is an int called “fd” that locates where to keep reading/writing from in the actual file. Thus, there is not much special interaction between the I/O team and our team, as long as we correctly allocate and deallocate File objects and count their number of references just like any other object type.
 
-### Compiler A: Inheritance
-The inheritance group has worked on infrastructure for superclass fields and methods. The Class<A> type now has an Array of strings in the ir/ast that remember the names of all superclasses of that class. In order for their code to work with ours, we would need for them to allocate superclass fields as expected: immediately before the subclass fields of the same object in the heap.
+### Example program
+```python
+f:File = None
+f = open(0, 3)
+f.read(1)
+f.write(1)
+f.close()
 ```
+This program is representative since it shows that File objects can be treated as regular objects by the memory management. The data stored in the File object can be represented using the types in IR.
+
+
+## Inheritance
+### Representative test case
+```python
 class Rat(object):
 	x: int = 0
 
@@ -131,14 +142,60 @@ myRat: Rat = None
 myRat = RatSubClass()
 ```
 
-Data of `myRat` in the heap should be allocated in the order: `x`, `y`
-There is a currently a `TODO` in their code for getting superclass fields from the environment, so it seems that this is something that needs to be done. 
+### Required changes
+The inheritance group has worked on infrastructure for superclass fields and methods. The Class<A> type now has an Array of strings in the ir/ast that remember the names of all superclasses of that class. The inheritance group does require an addtional metadata field stored along with the object so that the type of the object can be determined at runtime. Similar to the Closures group, this can be easily handled by using the `fixed` and `rest` fields in the newer alloc call. This requires changes from both our teams since we have not yet added support for the new optional fields added to `alloc`.
 
-### Compiler A: Lists
-The lists team currently writes their code in lower.ts to call `store` for each element in the list. This makes the list dynamically-sized. We have somewhat already accounted for this by allowing multiple objects in the heap (with multiple object data areas) to be allocated per large object, such as lists. These multiple objects can lay in contiguous memory locations and will be kept track of with our “size” metadata field. One issue we may run into is when a list is expanded and needs more space after a different object has been created in the heap blocks immediately after the list object’s heap blocks. This would mean that we would need to allocate a new heap object that is non-contingous with the original list object, perhaps requiring a reference of some sorts to point to the new object. We may have to rethink our design if this issue actually exists, but we will have to discuss it more with each other. 
+```javascript
+| { tag: "alloc", amount: Value<A>, fixed?: boolean[], rest?: boolean }
+```
 
-### Compiler A: Optimization
-The Optimization team has implemented constant folding and propagation. This does not have many interactions with our implementation of memory management and how we compute and set the metadata of every object in the heap. Constant folding can affect computation of values but shouldn’t affect how objects are being allocated. While constant folding and propagation can impact the results of functions, it currently does not even affect methods, inherited methods, or polymorphism since all of those will resolve dynamically (and also don’t have much to do with us).
+## Lists
+### Representative test case
+```python
+def first3(a: [int]):
+    print(len(a))
+    print(a[0])
+    print(a[1])
+    print(a[2])
+first3([1,2,3])
+```
+### Required changes
+The lists team makes changes to `compiler.ts` so as to support the call to get the length of the list using `len`. This breaks compatibility with our implementation since `load` in `compiler.ts` is defined differently to support memory management functionality. A possible resolution is to store the length property as a field in the `List` class and update it whenever there are changes. This implementation would be easily supported using the newer `alloc` syntax.
 
-### Compiler A: Sets and/or tuples and/or dictionaries
-This team currently writes their code in lower.ts to allocate a set of fixed size of 10. Eventually, when they create dynamically sized data structures, we have to think about their structures the same way we think about the list team’s, with the same possible issues with dynamic-sizing. Issues we solve with the list team should also mean that we have solved the same issues for these data structures. 
+
+## Optimization
+The Optimization team has implemented constant folding and propagation. This does not have many interactions with our implementation of memory management and how we compute and set the metadata of every object in the heap. Constant folding can affect computation of values but shouldn’t affect how objects are being allocated. 
+
+### Example progam
+```python
+class Rat(object):
+    val: int = 0
+
+def fun1(a: Rat, b:Rat)->int:
+           return a.val+b.val
+a:Rat = None
+b:Rat = None
+a.val = 10
+b.val = 10
+if True:
+    if False:
+        a.val = fun1(a.val,b.val)
+    if True:
+        b.val = a.val+b.val%a.val+b.val+a.val+b.val+a.val
+print(b.val)
+```
+The above program is repesentative of the fact that as long as the optimizations dont affect interact with the memeory management functionality. It could happen that an optimization might not allocate an object which could be avoided but might only affects the memory mnanagement module tests. This can be easily remedied with testing on no optimizations and does not require any futher changes. 
+
+## Sets and/or tuples and/or dictionaries
+### Representative test case
+```python
+s:set = set()
+s = {1,2,5,7}
+s.remove(2)
+s.update({2,3,12,13})
+s.clear()
+```
+
+### Required changes
+We currently dont depend on how the sets team does their implementation except for they way they allocate stuff on the heap. The current changes would work with our implementation as long as the specify the alloc calls using the newer syntax. This is because the Sets and/or tuples and/or dictionaries teams' implementation specifies the `set` as a value in `ir.ts` and we would not be able to determine the type of data stored in the set. We do feel that the set implemenation can be abstracted away as a class in `ir.ts`, in which case they could keep using the current `alloc` call in `lower.ts`.
+
