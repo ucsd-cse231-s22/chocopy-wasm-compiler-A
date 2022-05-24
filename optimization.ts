@@ -44,13 +44,9 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<an
             
             case BinOp.Mul: return {tag: "num", value: leftVal.value * rightVal.value}
 
-            case BinOp.IDiv: {
-                return {tag: "num", value: leftVal.value / rightVal.value}
-            }
+            case BinOp.IDiv: return {tag: "num", value: leftVal.value / rightVal.value}
             
-            case BinOp.Mod: {
-                return {tag: "num", value: leftVal.value % rightVal.value}
-            }
+            case BinOp.Mod: return {tag: "num", value: leftVal.value % rightVal.value}
             
             case BinOp.Gt: return {tag: "bool", value: leftVal.value > rightVal.value}
             
