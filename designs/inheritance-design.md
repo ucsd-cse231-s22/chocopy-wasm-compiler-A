@@ -325,8 +325,9 @@ We were able to pass all the test cases we had committed to in week 7. Below we 
 
 ## Features:
 
-### Support overridden methods:
-In the first milestone, we focused on variations on inherited fields and laid out a structure for our v-tables to support those fields lookups. We also managed to test out some methods that have been inherited. The case that we do not support right now is Dynamic Dispatch. We plan to support this in the next milestone
+### Integration with other features:
+
+ - Class fields of type lists, sets, strings, etc. 
 
 </br>
 
@@ -338,7 +339,7 @@ Along with dynamic dispatch, we plan to finally leverage the Array<string> super
 
 ## Test Cases:
 
-### 1. Dynamic dispatch (Passes):
+### 1. Dynamic dispatch with function (Passes):
 
     class Pet(object):
         def speak(self):
@@ -364,7 +365,7 @@ Along with dynamic dispatch, we plan to finally leverage the Array<string> super
     speak(dog)  # prints 2
 
 
-### 2. Dynamic dispatch (Throws Error):
+### 2. Dynamic dispatch with function (Throws Error):
 
     class Pet(object):
         def speak(self):
@@ -405,5 +406,88 @@ Along with dynamic dispatch, we plan to finally leverage the Array<string> super
     kitten : Kitten = None
     kitten = Kitten()
     kitten.speak()  # prints 0
+    
+### 4. Multiple Inheritance Field Access (Passes):
+
+	class Pet(object):
+	    y : int = 1
+	    def speak(self):
+		print(0)
+
+	class Cat(object):
+	    x : int = 0
+	    def speak(self):
+		print(1)
+
+	class Kitten(Pet, Cat):
+	    pass
+
+	kitten : Kitten = None
+	kitten = Kitten()
+	kitten.speak()   # prints 0
+	print(kitten.y)  # prints 1
+	print(kitten.x)  # prints 0
+	
+### 5. Inheritance with sets
+
+	class A(object): 
+	    a : int = 1 
+	    s1:set = set()
+	    def __init__(self: A):
+		s1 = {3,5,7}
+	    def get(self: A) -> int: 
+		return self.s1 
+
+	class B(A): 
+	    c : int = 3 
+
+	x : B = None 
+	x = B() 
+	print(x.s1) # prints {3,5,7}
+	x.s1.add(8)
+	print(x.s1) # prints {3,5,8}
+	
+### 6. Inheritance with lists (Passes)
+
+	class A(object): 
+	    a : int = 1 
+	    itemsa: [int] = None
+	    itemsa = [0, 1, 2]
+	    def get(self: A) -> int: 
+		return self.a 
+	class B(A): 
+	    itemsb: [int] = None
+	    itemsb = [3, 4, 5]
+	    c : int = 3 
+
+	x : B = None 
+	x = B() 
+	print(x.itemsa) # prints [0, 1, 2]
+	print(x.itemsb) # prints [3, 4, 5]
+	print(x.c) # prints 3
+	print(x.a) # prints 1
+	
+### 7. Inheritance with Strings (Passes)
+
+	class A(object): 
+	    a : int = 1 
+	    d:  str = “hello A”
+	    def get(self: A) -> int: 
+		return self.a 
+	class B(A): 
+	    b : str = “hello B”
+	    c : int = 3 
+
+	x : B = None 
+	x = B() 
+	print(x.b) # prints hello B
+	print(x.d) # prints hello A
+	print(x.d[0]) # prints h
+	print(x.c) # prints 3
+	print(x.a) # prints 1
+	
+
+    
+    
 
 
