@@ -6,18 +6,14 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # PARTICULAR PURPOSE.
 
 # This program built for i386-apple-darwin11.3.0
- 
-make: *** No rule to make target `all'.  Stop.
 
-
-# Make data base, printed on Mon May 23 14:28:57 2022
+# Make data base, printed on Mon May 23 17:23:14 2022
 
 # Variables
 
 # automatic
 <D = $(patsubst %/,%,$(dir $<))
 # automatic
- 
 ?F = $(notdir $?)
 # environment
 VSCODE_LOG_NATIVE = false
@@ -42,7 +38,7 @@ VSCODE_VERBOSE_LOGGING = true
 # environment
 __CFBundleIdentifier = com.microsoft.VSCode
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /var/folders/hh/9cspm3f51gs23wjz70pl3sv40000gn/T/vscode-ipc-dc1985bd-4b1e-40ff-8c8f-1b382fa9e2f3.sock
+VSCODE_IPC_HOOK_EXTHOST = /var/folders/hh/9cspm3f51gs23wjz70pl3sv40000gn/T/vscode-ipc-d0352739-71e2-4cd6-87d3-cab33d9bfcb1.sock
 # environment
 VSCODE_CWD = /
 # environment
@@ -175,7 +171,6 @@ LANG = C
 # . (device 16777234, inode 26778940): 38 files, no impossibilities.
 # stdlib (device 16777234, inode 26779040): No files, no impossibilities so far.
 
- 
 # 38 files, no impossibilities in 2 directories.
 
 # Implicit Rules
@@ -244,6 +239,8 @@ build/memory.wasm:
 # strcache size: total = 4096 / max = 4096 / min = 4096 / avg = 4096
 # strcache free: total = 4087 / max = 4087 / min = 4087 / avg = 4087
 
-# Finished Make data base on Mon May 23 14:28:57 2022
+# Finished Make data base on Mon May 23 17:23:14 2022
 
  
+make: *** No rule to make target `all'.  Stop.
+
