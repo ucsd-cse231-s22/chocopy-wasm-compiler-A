@@ -1,5 +1,40 @@
 # Comprehensions Team Design Doc
 
+## Week 8 Milestones:
+
+1. store comprehensions in a variable of type list (use code by lists team)
+```A: List = None```
+```A = [j for a in range(5,7)]```
+
+2. extend comprehension expresion to use lists (use code by lists team)
+```A: List = None```
+```A = [j for a in [1,2,3,4]]```
+
+```A: List = None```
+```B: [int] = [1,2,3,4]```
+```A = [j for a in B]```
+
+3. extend comprehension expresion to use string (use code by string team)
+```A: List = None```
+```A = [j for a in "compilers"]```
+
+4. extend comprehension expresion to use sets (use code by sets team)
+```A: List = None```
+```A = [j for a in {1,2,2,3,3,4,4,5}]```
+
+5. extend comprehension expresion to use tuples (use code by sets team)
+```A: List = None```
+```A = [j for a in (1,2,3,3,4,4,5)]```
+
+6. extend comprehension expresion to use dictionaries (use code by sets team)
+```A: List = None```
+```courses = {"cse 250A":"fall 2021","cse 231":"spring 2022"}```
+```A = [i for i in courses]```
+
+7. nested comprehension expresseions
+```A: List = None```
+```A = [[j for j in i] for i in [[1,2,3],[2,3,4],[3,4,5]]]```
+
 ## Week 7:
 ### Test cases implemented and passed:
 All test cases were written in the tests/comprehension.test.ts file. Upon running this file, 15/15 teste cases passed. The following are the test cases that pass and produce the required output:
