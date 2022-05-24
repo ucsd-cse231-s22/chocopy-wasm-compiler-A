@@ -28,6 +28,28 @@ function stringify(typ: Type, arg: any): string {
   }
 }
 
+function makeMarker(msg: any): any {
+  const marker = document.createElement("div");
+  marker.classList.add("error-marker");
+  marker.innerHTML = "&nbsp;";
+
+  const error = document.createElement("div");
+  error.innerHTML = msg;
+  error.classList.add("error-message");
+  marker.appendChild(error);
+
+  return marker;
+}
+
+
+// Simple helper to highlight line given line number
+function highlightLine(actualLineNumber: number, msg: string): void {
+  var ele = document.querySelector(".CodeMirror") as any;
+  var editor = ele.CodeMirror;
+  editor.setGutterMarker(actualLineNumber, "error", makeMarker(msg));
+  editor.addLineClass(actualLineNumber, "background", "line-error");
+}
+
 export function print_class(memory: WebAssembly.Memory, repl: BasicREPL, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number): Array<string> {
 
   var fields_offset_ = repl.currentEnv.classes.get(classname);
@@ -396,7 +418,14 @@ function webStart() {
       const source = document.getElementById("user-code") as HTMLTextAreaElement;
       resetRepl();
       repl.run(source.value).then((r) => { renderResult(r); console.log("run finished") })
-        .catch((e) => { renderError(e); console.log("run failed", e) });;
+        .catch((e) => {
+          renderError(e);
+          //TODO get actual error
+          // const errorline = e?.getA()?.fromLoc?.row;
+          const errorline = 11;
+          highlightLine(errorline, String(e));
+          console.log("run failed", e)
+        });;
     });
     setupRepl();
     setupCodeExample();
