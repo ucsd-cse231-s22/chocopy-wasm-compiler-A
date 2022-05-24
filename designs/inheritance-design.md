@@ -489,7 +489,85 @@ Along with dynamic dispatch, we plan to finally leverage the Array<string> super
 	print(x.a) # prints 1
 	
 
+### 8. Testing Inheritance with For Loops and Continue (Passes)  
     
-    
+	class Range():
+	  current : int = 0
+	  min : int = 0
+	  max : int = 0
+	  def new(self:Range, min:int, max:int)->Range:
+	    self.min = min
+	    self.current = min
+	    self.max = max
+	    return self
+	  def next(self:Range)->int:
+	    c : int = 0
+	    c = self.current
+	    self.current = self.current + 1
+	    return c
+	  def hasnext(self:Range)->bool:
+	    return self.current < self.max
+
+	class NumberIterator(Range):
+	   len: int = 0
+	   
+	   def new(self:NumberIterator, len: int)->NumberIterator:
+	    self.len = len
+	    self.min = 0
+	    self.current = 0
+	    self.max = len
+	    return self
+	   
 
 
+	cls:NumberIterator = None
+	i:int = 0
+	cls = NumberIterator().new(8)
+
+	for i in cls:
+	   print(i)
+	   continue 
+   	   print(i)
+
+### 9. Testing Inheritance with Fancy Calling (Passes)
+	class A():
+	    x = 0
+	    def __init__(self : A, x: int  = 5):
+		self.x = x
+		
+	class B(A):
+	    y = 0
+	    def __init__(self : B, x: int = 8, y: int = 2):
+	        self.y = y
+		self.x = x
+	    
+	a1: A = None
+	a1 = A()
+	a2: B = None
+	a2 = B()
+	print(a1.x) // Should print 5
+	print(a2.x) // SHould print 8
+	print(a2.y) // Should print 2
+	
+### 10. Testing Inheritance with Generics (Passes)  
+	
+    L = TypeVar('L')
+    R = TypeVar('R')
+    
+    class A():
+    	a: int = 5
+	def __init__(self):
+	    pass
+	    
+    class Pair(Generic[L, R], A):
+	left: L = __ZERO__
+	right: R = __ZERO__
+    
+    p1 : Pair[int, int] = None
+    p1 = Pair()
+    p1.left = 10
+    p1.right = 20
+    
+    print(p1.left) // Should print 10
+    print(p1.right) // Should print 20
+    print(p1.a) // Should print 5
