@@ -327,7 +327,9 @@ We were able to pass all the test cases we had committed to in week 7. Below we 
 
 ### Integration with other features:
 
- - Class fields of type lists, sets, strings, etc. 
+ - Class fields of type lists, sets, strings, etc.
+ - Inheritance with generics
+ - Closures/first class/anonymous functions
 
 </br>
 
