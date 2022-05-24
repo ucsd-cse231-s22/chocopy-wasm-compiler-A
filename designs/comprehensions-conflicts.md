@@ -35,6 +35,10 @@ i:int=0
 print([f(2) for i in Range.new(0,2)])
 ```
 
+* Compiler A: Comprehensions
+
+This is our own implementation!
+
 * Compiler A: Destructuring assignment
 
 This team has handled destructuring assignment nicely. Once we have actually implemented storing comprehensions as lists, then we can so below tests that should work properly based on their implementation:
@@ -58,6 +62,10 @@ def f(x:int,y:int=5)->int:
 i:int=0
 print([f(i) for i in Range.new(0,2)])
 ```
+
+* Compiler A: for loops/iterators
+
+???
 
 * Compiler A: Front-end user interface
 
@@ -96,3 +104,138 @@ i:int=0
 print([c.x for i in Range.new(0,2)])
 ```
 
+* Compiler A: Lists
+
+Our implementation should not be affected by the following changes:
+
+- Storing of lists
+- Slicing of lists
+- Individual list member assignments
+
+Example of code where both our changes should co-exist:
+```
+a:[int]=None
+i:int=0
+a=[1]
+a[0]=2
+print(a[0])
+[i for i in Range.new(0,2)]
+```
+Our implementation will be impacted by the lists team in order to execute the following examples:
+For example:
+```
+i:int=0
+a:[int]=[]
+a = [i for i in range(8)]
+```
+```
+i:int=0
+B:[int] = [i for i in [1,2,3]]
+```
+Things we need to add in our implementation:
+
+- As of now, we are not storing the comprehension expression anywhere, we are just printing out each individual element.
+- We want to be able to store comprehensions as list objects. Once we do so, the original list operations (ex: slicing, individual member assignment) will remain unchanged. We plan to reuse the construct list block from lower.ts to store the comprehension expressions as a list.
+- We also want to extend comprehension to more than just range constructs, i.e to lists, sets, tuples and dictionaries. 
+- We also want to print comprehensions in the list format.
+
+Design Decisions (Doubts/Collaborations):
+
+As of now, we are only considering lists to have only integers. We need to collaborate with the lists team and the strings team to have a combination of different data types inside a list. We might also need to talk to the memory management team in case we want to store objects inside a list.
+
+* Compiler A: Memory management
+
+We do not think that we would be having a lot of conflicts with the changes made by the memory management team. It seems that code related to comprehensions,lists,sets etc would be using the memory management code in the background.  We are using call and alloc from ir.ts and lower.ts that the memory management team has impacted, but there are no such conflicts so far.
+
+* Compiler A: Optimization
+
+No conflicts here with our comprehensions implementation.
+
+* Compiler A: Sets and/or tuple and/or dictionaries
+
+Our implementation should not be affected by the following changes:
+
+- Parse a simple set expression
+- Parse a simple tuple expression
+- Parse an empty dictionary
+
+Example of code where both our changes should co-exist:
+```
+i:int=0
+s = {34,True,False}
+[i for i in Range.new(0,2)]
+```
+Our implementation will be impacted by the sets team in order to cover set, tuple and dictionary comprehensions. 
+For example:
+```
+i:int=0
+s = {1,2,5,9,8,8}
+[i for i in s]
+```
+This should output ```[1, 2, 5, 8, 9]```
+```
+i:int=0
+s = (1,2,2,2,3,4,4,5)
+[i for i in s]
+```
+This should output ```[1, 2, 2, 2, 3, 4, 4, 5]```
+```
+i:int=0
+courses = {"cse 250A":"fall 2021","cse 231":"spring 2022"}
+[i for i in courses]
+```
+This should output ```['cse 250A', 'cse 231']```
+
+Things we need to add in our implementation:
+
+- We will need to reuse the set, dict and tuple definitions from ast.ts. As only the set data structure has been implemented in detail, we will only focus on set comprehensions for the next week. In case we have time for more collaboration, we can work on tuple and dictionary comprehensions.
+- Under set-utils.ts, the sets team has added WASM code to load and store sets from memory. We plan to reuse this code in order to load and access individual elements of the set during comprehension expressions.
+- We will be reusing the changes made by the sets team in parser.ts, typecheck.ts and in lower.ts
+
+Design Decisions (Doubts/Collaborations):
+
+- Need to discuss or rather check if strings are being stored in sets or not.
+
+* Compiler A: Strings
+
+Our implementation should not be affected by the following changes:
+
+- String Concatenation
+- String concatenation
+- Printing of strings
+- As of now, I don’t think we are concerned with the implementation of storing strings in memory. We would only need to store each character of the string individually in a list (described below). 
+
+Example of code where both our changes should co-exist:
+```
+i:int=0
+print("abc"+"def")
+[i for i in Range.new(0,2)]
+```
+
+Our implementation will be impacted by the string team in order to cover string comprehensions.
+For example:
+```
+i:int=0
+[i for i in "compilers"]
+```
+This should output ```['c', 'o', 'm', 'p', 'i', 'l', 'e', 'r', 's']```
+
+```
+i:int=0
+str = "compilers"
+[i for i in str[2:]]
+```
+This should output ```['m', 'p', 'i', 'l', 'e', 'r', 's']```
+
+
+Things we need to add in our implementation:
+
+- Use the new string type created in ast
+- Use the lists implementation (which will be discussed in more detail under Compiler A: Lists) to store each character inside a string as separate list elements, according to the above examples. 
+- We would need to use the getLength expression in the ast, in order to traverse through the string.
+- We will be reusing the changes made by the strings team in parser.ts, typecheck.ts and in lower.ts
+- We would need to extend string indexing in order to execute the second example.
+
+Design Decisions (Doubts/Collaborations):
+
+- It might be a good idea to add a new char type to store the individual characters of the string (as seen in the above example), and then add suitable code to store individual characters in memory. Or, we can also store individual characters as strings of length 1, although we would prefer the first option.
