@@ -4,7 +4,7 @@ import * as ERRORS from './errors';
 import { Type, Annotation } from './ast';
 import { GlobalEnv } from './compiler';
 
-const nameCounters : Map<string, number> = new Map();
+let nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
   if(nameCounters.has(base)) {
     var cur = nameCounters.get(base);
@@ -23,6 +23,7 @@ function generateName(base : string) : string {
 // }
 
 export function lowerProgram(p : AST.Program<Annotation>, env : GlobalEnv) : IR.Program<Annotation> {
+    nameCounters = new Map();
     var blocks : Array<IR.BasicBlock<Annotation>> = [];
     var firstBlock : IR.BasicBlock<Annotation> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);

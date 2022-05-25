@@ -118,7 +118,9 @@ export function optimizeExpression(e: Expr<Type>, env: Env): Expr<Type>{
             if (arg.tag === "id")
                 return {...e, expr: arg};
             var val: Value<any> = evaluateUniOp(e.op, arg);
-            return {tag: "value", value: val};
+            return e;
+            // NOTE(joe): had to skip this optimization b/c negative literals for bignums not supported
+            // return {tag: "value", value: val};
         case "builtin1":
             var arg = optimizeValue(e.arg, env);
             return {...e, arg: arg};
