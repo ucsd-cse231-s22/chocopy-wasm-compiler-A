@@ -22,7 +22,40 @@ function generateName(base : string) : string {
 //   return [name, {tag: "label", a: a, name: name}];
 // }
 
+export function generateVtable(p : AST.Program<Annotation>, env : GlobalEnv) {
+  var vtable : Array<string> = [];
+  var classIndexes = new Map(); // stores the start and end index of the class in vtable
+  var methodIndex = 0;
+  p.classes.forEach(cls => {
+    if (cls.super[0]!=="object") {
+      const superClassIndexes = classIndexes.get(cls.super[0])
+      var superClassVtable = vtable.slice(superClassIndexes[0], superClassIndexes[1])
+      cls.methods.forEach(m => {
+        const methodOffset = env.classes.get(cls.name)[1].get(m.name);
+        if (methodOffset >= superClassVtable.length) {
+          superClassVtable.push(`$${cls.name}$${m.name}`)
+        } else {
+          superClassVtable[methodOffset] = `$${cls.name}$${m.name}`;
+        }
+      })
+      classIndexes.set(cls.name, [vtable.length, vtable.length +superClassVtable.length])
+      vtable = [...vtable , ...superClassVtable]
+    } else {
+      // add methods directly and increment methodIndex
+      classIndexes.set(cls.name, [vtable.length, vtable.length + cls.methods.length])
+      cls.methods.forEach(m => {
+        vtable.push(`$${cls.name}$${m.name}`)
+      })
+    }
+  })
+  // add classIndexes & vtable in env
+  env.vtable = vtable;
+  env.classIndexes = classIndexes;
+}
+
+
 export function lowerProgram(p : AST.Program<Annotation>, env : GlobalEnv) : IR.Program<Annotation> {
+    generateVtable(p, env);
     var blocks : Array<IR.BasicBlock<Annotation>> = [];
     var firstBlock : IR.BasicBlock<Annotation> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
@@ -127,9 +160,11 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
     case "field-assign": {
       var [oinits, ostmts, oval] = flattenExprToVal(s.obj, env);
       var [ninits, nstmts, nval] = flattenExprToVal(s.value, env);
+
       if(s.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
       const classdata = env.classes.get(s.obj.a.type.name);
-      const offset : IR.Value<Annotation> = { tag: "wasmint", value: classdata.get(s.field)[0] };
+      const offset : IR.Value<Annotation> = { tag: "wasmint", value: getClassFieldOffet(s.obj.a.type.name, s.field, env) };
+
       pushStmtsToLastBlock(blocks,
         ...ostmts, ...nstmts, {
           tag: "store",
@@ -249,9 +284,12 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       if(objTyp.type.tag !== "class") { // I don't think this error can happen
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.type.tag);
       }
-      const className = objTyp.type.name;
+      const className = getMethodClassName(objTyp.type.name, e.method, env);
+      const zeroOffset: IR.Value<Annotation> = { tag: "wasmint", value: 0 };
+      const methodOffset : IR.Value<Annotation> =  { tag: "num", value: BigInt(env.classes.get(className)[1].get(e.method)) }
       const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, objval);
-      const callMethod : IR.Expr<Annotation> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
+      const callMethod : IR.Expr<Annotation> = { tag: "call_indirect", fn: { tag: "load", start: objval, offset: zeroOffset}, arguments: [objval, ...argvals], name: `${className}$${e.method}`, methodOffset: methodOffset }
+
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
@@ -261,9 +299,10 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
     case "lookup": {
       const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
       if(e.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
-      const classdata = env.classes.get(e.obj.a.type.name);
-      const [offset, _] = classdata.get(e.field);
+      var className = e.obj.a.type.name;
+      var offset = getClassFieldOffet(className, e.field, env);
       const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, oval);
+
       return [oinits, [...ostmts, checkObj], {
         tag: "load",
         start: oval,
@@ -271,23 +310,42 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
     }
     case "construct":
       const classdata = env.classes.get(e.name);
-      const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
+      var fields = [...classdata[0].entries()];
+      var superClass = classdata[2];
+
+      while(superClass[0] !== "object") {
+        const superClassFields = [...env.classes.get(superClass[0])[0].entries()]
+        superClass = [...env.classes.get(superClass[0])[2]]
+        fields = [...superClassFields, ...fields]
+      }
+      
       const assigns : IR.Stmt<Annotation>[] = fields.map(f => {
+
         const [_, [index, value]] = f;
         return {
           tag: "store",
           start: { tag: "id", name: newName },
-          offset: { tag: "wasmint", value: index },
+          offset: { tag: "wasmint", value: index + 1 },
           value: value
         }
       });
 
+      const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1 } }; // + 1 to store class method index in vtable
+      const callCons : IR.Expr<Annotation> = { 
+        tag: "call_indirect", 
+        fn: { tag: "value", value : { tag: "wasmint", value: env.classIndexes.get(e.name)[0] }}, 
+        arguments: [{ a: e.a, tag: "id", name: newName }], 
+        name: `${e.name}$__init__`, 
+        methodOffset: { tag: "num", value: BigInt(env.classes.get(e.name)[1].get("__init__")) }
+      };
+
       return [
         [ { name: newName, type: e.a.type, value: { tag: "none" } }],
-        [ { tag: "assign", name: newName, value: alloc }, ...assigns,
-          { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
+        [ { tag: "assign", name: newName, value: alloc }, 
+          {tag: "store",  start: { tag: "id", name: newName }, offset: { tag: "wasmint", value: 0 }, value: {tag: "num", value: BigInt(env.classIndexes.get(e.name)[0])}}, // store class method offset from vtable
+          ...assigns,
+          {tag: "expr", expr : callCons},
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
       ];
@@ -295,6 +353,25 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       return [[], [], {a: e.a, tag: "value", value: { ...e }} ];
     case "literal":
       return [[], [], {a: e.a, tag: "value", value: literalToVal(e.value) } ];
+  }
+}
+
+function getClassFieldOffet(className: string, fieldName: string, env: GlobalEnv) : number {
+  while (className !== "object") {
+    const classdata = env.classes.get(className);
+    if (classdata[0].has(fieldName)) {
+      return classdata[0].get(fieldName)[0] + 1;  // + 1 to store class method index in vtable
+    }
+    className = classdata[2][0];
+  }
+}
+
+// fetches class name of a method, including searching for method in super classes
+function getMethodClassName(className: string, methodName: string, env: GlobalEnv) : string {
+  if (env.classes.get(className)[1].has(methodName)) {
+    return className
+  } else {
+    return getMethodClassName(env.classes.get(className)[2][0], methodName, env);
   }
 }
 

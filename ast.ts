@@ -25,7 +25,7 @@ export type Parameter<A> = { a?: A, name: string, type: Type }
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>>}
 
-export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
+export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, super: Array<string>}
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Literal<A> }
 

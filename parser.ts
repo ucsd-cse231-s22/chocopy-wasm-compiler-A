@@ -507,10 +507,22 @@ export const traverseClass = wrap_locs(traverseClassHelper);
 export function traverseClassHelper(c: TreeCursor, s: string, env: ParserEnv): Class<Annotation> {
   const fields: Array<VarInit<Annotation>> = [];
   const methods: Array<FunDef<Annotation>> = [];
+  const superClasses : Array<string> = [];
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
   c.nextSibling(); // Focus on arglist/superclass
+  
+  c.firstChild();  // Focuses on open paren
+  c.nextSibling(); // Focuses on a VariableName
+  while(c.type.name !== ")") {
+    let name = s.substring(c.from, c.to);
+    superClasses.push(name);
+    c.nextSibling(); // Focuses on a VariableName
+  }
+  c.parent();  
+
+
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
   while (c.nextSibling()) { // Focuses first field
@@ -531,7 +543,8 @@ export function traverseClassHelper(c: TreeCursor, s: string, env: ParserEnv): C
   return {
     name: className,
     fields,
-    methods
+    methods,
+    super: superClasses
   };
 }
 
