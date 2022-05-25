@@ -17,8 +17,7 @@
   "dependencies": {
     "chai-as-promised": "^7.1.1",
     "chai-exclude": "^2.1.0",
-    "lezer": "^0.13.5",
-    "lezer-python": "^0.13.7",
+    "@lezer/python": "^0.16.0",
     "mochawesome": "^7.1.2",
     "ts-loader": "^8.0.11",
     "ts-node": "^9.1.1",

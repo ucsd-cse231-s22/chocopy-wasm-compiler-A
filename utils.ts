@@ -173,4 +173,13 @@ export const NUM : Type = {tag: "number"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
 export function CLASS(name : string) : Type {return {tag: "class", name}};
+export function CALLABLE(params: Array<Type>, ret: Type) : Type {return {tag: "callable", params, ret}};
 
+export const APPLY : string = "apply";
+export function createMethodName(cls: string, method: string): string{
+  return `${cls}$${method}`;
+}
+
+export function makeWasmFunType(paramNum: number): string {
+  return `$callable${paramNum}param`;
+}

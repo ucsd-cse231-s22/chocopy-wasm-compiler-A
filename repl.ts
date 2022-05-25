@@ -29,9 +29,12 @@ export class BasicREPL {
     this.currentEnv = {
       globals: new Map(),
       classes: new Map(),
+      classIndices: new Map(),
+      functionNames: new Map(),
       locals: new Set(),
       labels: [],
-      offset: 1
+      offset: 1,
+      vtableMethods: []
     };
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";
@@ -43,9 +46,7 @@ export class BasicREPL {
     this.currentTypeEnv = newTypeEnv;
     this.functions += newFunctions;
     const currentGlobals = this.importObject.env || {};
-    console.log(instance);
     Object.keys(instance.instance.exports).forEach(k => {
-      console.log("Consider key ", k);
       const maybeGlobal = instance.instance.exports[k];
       if(maybeGlobal instanceof WebAssembly.Global) {
         currentGlobals[k] = maybeGlobal;
