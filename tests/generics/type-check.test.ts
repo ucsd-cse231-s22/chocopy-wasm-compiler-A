@@ -1,7 +1,7 @@
 import "mocha";
 import { expect } from "chai";
 import {augmentTEnv, emptyGlobalTypeEnv, tc, resolveClassTypeParams} from  '../../type-check';
-import { Program, Type, TypeVar, BinOp } from '../../ast';
+import { Annotation, Program, Type, TypeVar, BinOp } from '../../ast';
 import { NONE, NUM, BOOL, CLASS, TYPEVAR, PyZero, PyNone, PyInt } from '../../utils';
 
 describe('Generics Type-Checker Tests', () => {
@@ -9,16 +9,17 @@ describe('Generics Type-Checker Tests', () => {
     let [tcProgram, tcGlobalEnv] = tc(emptyGlobalTypeEnv(), {
       funs: [], inits: [], classes: [], stmts: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}},
     }); 
 
     expect(tcProgram).to.deep.equal({
       funs: [], inits: [], classes: [], stmts: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [], a: NONE}
+        {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
-      a: NONE,
+      a: {type: NONE, src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}},
     });
     expect(tcGlobalEnv.typevars.get('T')).to.deep.equal(['T']);
   });
@@ -27,28 +28,31 @@ describe('Generics Type-Checker Tests', () => {
     expect(() => tc(emptyGlobalTypeEnv(), {
       funs: [], inits: [], classes: [], stmts: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []},
-        {name: 'T', canonicalName: 'T2', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        {name: 'T', canonicalName: 'T2', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}},
     })).to.throw(); 
   });
 
   it('should resolve type parameter annotations to type variables in a class - 0', () => {
     let env = emptyGlobalTypeEnv(); 
 
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [], inits: [], stmts: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [],
-          typeParams: ['T']
+          typeParams: ['T'],
+          a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
-      ]
+      ],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}},
     };
 
     const newEnv = augmentTEnv(env, program);
@@ -56,9 +60,10 @@ describe('Generics Type-Checker Tests', () => {
     let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
     expect(resolvedCls).to.deep.equal({
       name: 'Box',
-      fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero()}],
+      fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
       methods: [],
       typeParams: ['T'],
+      a: {eolLoc: {row: 0, col: 0, srcIdx: 0}},
     });
 
     const [fieldsTy, methodsTy, _] = newEnv.classes.get('Box');
@@ -68,20 +73,21 @@ describe('Generics Type-Checker Tests', () => {
   it('should resolve type parameter annotations to type variables in a class - 1', () => {
     let env = emptyGlobalTypeEnv(); 
 
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [], inits: [], stmts: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
           fields: [
-            {name: 'x', type: CLASS('T'), value: PyZero()},
-            {name: 'y', type: CLASS('Rat'), value: {tag: "none"}},
+            {name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+            {name: 'y', type: CLASS('Rat'), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
           ],
           methods: [],
-          typeParams: ['T']
+          typeParams: ['T'],
+          a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ]
     };
@@ -92,11 +98,12 @@ describe('Generics Type-Checker Tests', () => {
     expect(resolvedCls).to.deep.equal({
       name: 'Box',
       fields: [
-        {name: 'x', type: TYPEVAR('T'), value: PyZero()},
-        {name: 'y', type: CLASS('Rat'), value: {tag: "none"}},
+        {name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        {name: 'y', type: CLASS('Rat'), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       methods: [],
       typeParams: ['T'],
+      a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
 
 
@@ -108,7 +115,7 @@ describe('Generics Type-Checker Tests', () => {
   it('should resolve type parameter annotations to type variables in a class - 2', () => {
     let env = emptyGlobalTypeEnv(); 
 
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [], inits: [], stmts: [],
       typeVarInits: [
         {name: 'T', canonicalName: 'T', types: []}
@@ -156,10 +163,10 @@ describe('Generics Type-Checker Tests', () => {
     expect(methodsTy.get('get')).to.deep.equal([[CLASS('Box', [TYPEVAR('T')])], TYPEVAR('T')]);
   });
 
-  it('should resolve type parameter annotations to type variables in a class - 2', () => {
+  it('should resolve type parameter annotations to type variables in a class - 3', () => {
     let env = emptyGlobalTypeEnv(); 
 
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [], inits: [], stmts: [],
       typeVarInits: [
         {name: 'T', canonicalName: 'T', types: []}
@@ -216,41 +223,43 @@ describe('Generics Type-Checker Tests', () => {
 
   it('should typecheck generic class with one field and __init__ method', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [], inits: [], stmts: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] }
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T']
+          typeParams: ['T'],
+          a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
-      ]
+      ],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
     expect(tcProgram).to.deep.equal({
-      a: NONE,
       funs: [], inits: [], stmts: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [], a: NONE},
+        {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: NONE}],
+          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: NONE }
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
           ],
           typeParams: ['T'],
-          a: NONE,
+          a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         } 
-      ]
+      ],
+      a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
 
     const [fieldsTy, methodsTy, _] = tcGlobalEnv.classes.get('Box');
@@ -260,22 +269,24 @@ describe('Generics Type-Checker Tests', () => {
 
   it('should throw an error when a generic class uses a type-variable that was not in its parameters', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [], inits: [], stmts: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []},
-        {name: 'U', canonicalName: 'U', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        {name: 'U', canonicalName: 'U', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()},{name: 'y', type: CLASS('U'), value: PyZero()} ],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},{name: 'y', type: CLASS('U'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}} ],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] }
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
           ],
-          typeParams: ['T']
+          typeParams: ['T'],
+          a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
-      ]
+      ],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     expect(() => tc(env, program)).to.throw()
@@ -283,21 +294,23 @@ describe('Generics Type-Checker Tests', () => {
 
   it('should throw an error when a generic class is parameterized by undefined type-variable', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [], inits: [], stmts: [],
       typeVarInits: [
-        {name: 'U', canonicalName: 'U', types: []},
+        {name: 'U', canonicalName: 'U', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
             { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] }
           ],
-          typeParams: ['T']
-        }
-      ]
+          typeParams: ['T'],
+          a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
+        },
+      ],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     expect(() => tc(env, program)).to.throw()
@@ -305,47 +318,50 @@ describe('Generics Type-Checker Tests', () => {
 
   it('should typecheck generic class with one field and a method', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [], inits: [], stmts: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}}
-            ] }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T']
+          typeParams: ['T'],
+          a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
-      ]
+      ],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
     expect(tcProgram).to.deep.equal({
-      a: NONE,
       funs: [], inits: [], stmts: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [], a: NONE},
+        {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: NONE}],
+          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: NONE },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: CLASS('Box', [TYPEVAR('T')])}, field: "x", a: TYPEVAR('T')}, a: TYPEVAR('T')}
-            ], a: NONE }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ],
+            a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
-          a: NONE,
+          a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         } 
-      ]
+      ],
+      a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
 
     const [fieldsTy, methodsTy, _] = tcGlobalEnv.classes.get('Box');
@@ -356,54 +372,56 @@ describe('Generics Type-Checker Tests', () => {
 
   it('should typecheck generic class type annotation', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}}
-            ] }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}}
+            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T']
+          typeParams: ['T'],
+          a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
-        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} },
+        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
-      stmts: []
+      stmts: [],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
     expect(tcProgram).to.deep.equal({
-      a: NONE,
       funs: [], stmts: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [], a: NONE},
+        {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: NONE}],
+          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: NONE },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: CLASS('Box', [TYPEVAR('T')])}, field: "x", a: TYPEVAR('T')}, a: TYPEVAR('T')}
-            ], a: NONE }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
           ],
           typeParams: ['T'],
-          a: NONE,
+          a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}},
         } 
       ],
       inits: [
-        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"},  a: NONE},
+        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
+      a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
 
     const [fieldsTy, methodsTy, _] = tcGlobalEnv.classes.get('Box');
@@ -413,211 +431,33 @@ describe('Generics Type-Checker Tests', () => {
     const globals = tcGlobalEnv.globals.get('b');
     expect(globals).to.deep.equal(CLASS('Box', [NUM]));
   });
-
-  it('should typecheck constrained generic class type annotation', () => {
-    let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
-      funs: [],
-      typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [NUM, BOOL]}
-      ],
-      classes: [
-        {
-          name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
-          methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
-            { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}}
-            ] }
-          ],
-          typeParams: ['T']
-        }
-      ],
-      inits: [
-        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} },
-      ],
-      stmts: []
-    }; 
-
-    let [tcProgram, tcGlobalEnv] = tc(env, program);
-    expect(tcProgram).to.deep.equal({
-      a: NONE,
-      funs: [], stmts: [],
-      typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [NUM, BOOL], a: NONE},
-      ],
-      classes: [
-        {
-          name: 'Box',
-          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: NONE}],
-          methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: NONE },
-            { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: CLASS('Box', [TYPEVAR('T')])}, field: "x", a: TYPEVAR('T')}, a: TYPEVAR('T')}
-            ], a: NONE }
-          ],
-          typeParams: ['T'],
-          a: NONE,
-        } 
-      ],
-      inits: [
-        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"},  a: NONE},
-      ],
-    });
-
-    const [fieldsTy, methodsTy, _] = tcGlobalEnv.classes.get('Box');
-    expect(fieldsTy.get('x')).to.deep.equal(TYPEVAR('T'));
-    expect(methodsTy.get('__init__')).to.deep.equal([[CLASS('Box', [TYPEVAR('T')])], NONE]);
-    expect(methodsTy.get('get')).to.deep.equal([[CLASS('Box', [TYPEVAR('T')])], TYPEVAR('T')]);
-    const globals = tcGlobalEnv.globals.get('b');
-    expect(globals).to.deep.equal(CLASS('Box', [NUM]));
-  });
-
-  /*it('should allow generic field field access based on constrains', () => {
-    let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
-      funs: [],
-      typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [CLASS('A'), CLASS('B')]}
-      ],
-      classes: [
-        {
-          name: 'A',
-          fields: [{name: 'x', type: NUM, value: {tag: "num", value: 0}}],
-          methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('A') }], ret: NONE, inits: [], body: [] },
-          ],
-          typeParams: []
-        },
-        {
-          name: 'B',
-          fields: [{name: 'x', type: NUM, value: {tag: "num", value: 0}}],
-          methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('B') }], ret: NONE, inits: [], body: [] },
-          ],
-          typeParams: []
-        },
-        {
-          name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
-          methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
-            { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NUM, inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}, field: "x"}}
-            ] }
-          ],
-          typeParams: ['T']
-        }
-      ],
-      inits: [],
-      stmts: []
-    }; 
-
-    let [tcProgram, tcGlobalEnv] = tc(env, program);
-    expect(tcProgram).to.deep.equal({
-      a: NONE,
-      funs: [], stmts: [],
-      typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [CLASS('A'), CLASS('B')], a: NONE}
-      ],
-      classes: [
-        {
-          name: 'A',
-          fields: [{name: 'x', type: NUM, value: {tag: "num", value: 0}, a: NONE}],
-          methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('A') }], ret: NONE, inits: [], body: [], a: NONE },
-          ],
-          typeParams: [],
-          a: NONE,
-        },
-        {
-          name: 'B',
-          fields: [{name: 'x', type: NUM, value: {tag: "num", value: 0}, a: NONE}],
-          methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('B') }], ret: NONE, inits: [], body: [], a: NONE },
-          ],
-          typeParams: [],
-          a: NONE,
-        },
-        {
-          name: 'Box',
-          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: NONE}],
-          methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: NONE },
-            { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NUM, inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "lookup", obj: {tag: "id", name: "self", a: CLASS('Box', [TYPEVAR('T')])}, field: "x", a: TYPEVAR('T')}, field: "x", a: NUM}, a: NUM }
-            ], a: NONE }
-          ],
-          typeParams: ['T'],
-          a: NONE,
-        } 
-      ],
-      inits: [
-      ],
-    });
-
-    //const [fieldsTy, methodsTy, _] = tcGlobalEnv.classes.get('Box');
-    //expect(fieldsTy.get('x')).to.deep.equal(TYPEVAR('T'));
-    //expect(methodsTy.get('__init__')).to.deep.equal([[CLASS('Box', [TYPEVAR('T')])], NONE]);
-    //expect(methodsTy.get('get')).to.deep.equal([[CLASS('Box', [TYPEVAR('T')])], TYPEVAR('T')]);
-    //const globals = tcGlobalEnv.globals.get('b');
-    //expect(globals).to.deep.equal(CLASS('Box', [NUM]));
-  });*/
-
-  /*it('should enforce generic class type parameter constraints', () => {
-    let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
-      funs: [],
-      typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [NUM, NONE]}
-      ],
-      classes: [
-        {
-          name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
-          methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
-            { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}}
-            ] }
-          ],
-          typeParams: ['T']
-        }
-      ],
-      inits: [
-        { name: "b", type: CLASS('Box', [BOOL]), value: {tag: "none"} },
-      ],
-      stmts: []
-    }; 
-
-    expect(() => tc(env, program)).to.throw();
-  });*/
 
   it('should enforce generic class type parameter number', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}}
-            ] }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T']
+          typeParams: ['T'],
+          a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
-        { name: "b", type: CLASS('Box', [BOOL, NUM]), value: {tag: "none"} },
+        { name: "b", type: CLASS('Box', [BOOL, NUM]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
-      stmts: []
+      stmts: [],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     expect(() => tc(env, program)).to.throw();
@@ -625,28 +465,28 @@ describe('Generics Type-Checker Tests', () => {
 
   it('should ensure generic class fields are initialized with __ZERO__', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: {tag: 'none'}}],
+          fields: [{name: 'x', type: CLASS('T'), value: {tag: 'none'}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}}
-            ] }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T']
+          typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
-        { name: "b", type: CLASS('Box', [BOOL]), value: {tag: "none"} },
+        { name: "b", type: CLASS('Box', [BOOL]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
-      stmts: []
+      stmts: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     expect(() => tc(env, program)).to.throw();
@@ -654,27 +494,27 @@ describe('Generics Type-Checker Tests', () => {
 
   it('shouldnt allow "is" operator in generic class fields that are unconstrained', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "isNone", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: BOOL, inits: [], body: [
-              {tag: "return", value: {tag: 'binop', op: BinOp.Is, left: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}, right: { tag: "literal", value: {tag: "none"}}}}
-            ] }
+              {tag: "return", value: {tag: 'binop', op: BinOp.Is, left: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, right: { tag: "literal", value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T']
+          typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
       ],
-      stmts: []
+      stmts: [], a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     expect(() => tc(env, program)).to.throw();
@@ -682,59 +522,59 @@ describe('Generics Type-Checker Tests', () => {
 
   it('should typecheck generic class object creation', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}}
-            ] }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T']
+          typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
-        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} },
+        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: []}},
-      ]
+        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+      ],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
     expect(tcProgram).to.deep.equal({
-      a: NONE,
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [], a: NONE},
+        {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: NONE}],
+          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: NONE },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: CLASS('Box', [TYPEVAR('T')])}, field: "x", a: TYPEVAR('T')}, a: TYPEVAR('T')}
-            ], a: NONE }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'],
-          a: NONE,
-        } 
+          typeParams: ['T'], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
+        }
       ],
       inits: [
-        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"},  a: NONE},
+        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: CLASS('Box', [NUM])}, a: NONE},
-      ]
+        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+      ],
+      a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
 
     const [fieldsTy, methodsTy, _] = tcGlobalEnv.classes.get('Box');
@@ -747,63 +587,63 @@ describe('Generics Type-Checker Tests', () => {
 
   it('should typecheck generic class object field assignment', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}}
-            ] }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T']
+          typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
-        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} },
+        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: []}},
-        { tag: "field-assign", obj: {tag: "id", name: "b"}, field: "x", value: {tag: "literal", value: {tag: "num", value: 10}}},
-      ]
+        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "field-assign", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "literal", value: {tag: "num", value: 10}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+      ],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
     expect(tcProgram).to.deep.equal({
-      a: NONE,
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [], a: NONE},
+        {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: NONE}],
+          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: NONE },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: CLASS('Box', [TYPEVAR('T')])}, field: "x", a: TYPEVAR('T')}, a: TYPEVAR('T')}
-            ], a: NONE }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'],
-          a: NONE,
-        } 
+          typeParams: ['T'], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
+        }
       ],
       inits: [
-        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"},  a: NONE},
+        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: CLASS('Box', [NUM])}, a: NONE},
-        { tag: "field-assign", obj: {tag: "id", name: "b", a: CLASS('Box', [NUM])}, field: "x", value: {tag: "literal", value: {tag: "num", value: 10}, a: NUM}, a: NONE},
-      ]
+        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "field-assign", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "literal", value: {tag: "num", value: 10}, a: {type: NUM, eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+      ],
+      a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
-
+    
     const [fieldsTy, methodsTy, _] = tcGlobalEnv.classes.get('Box');
     expect(fieldsTy.get('x')).to.deep.equal(TYPEVAR('T'));
     expect(methodsTy.get('__init__')).to.deep.equal([[CLASS('Box', [TYPEVAR('T')])], NONE]);
@@ -814,63 +654,65 @@ describe('Generics Type-Checker Tests', () => {
 
   it('should typecheck generic class object field lookup', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}}
-            ] }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T']
+          typeParams: ['T'],
+          a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
-        { name: "n", type: NUM, value: {tag: "num", value: 0} },
-        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} },
+        { name: "n", type: NUM, value: {tag: "num", value: 0} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: []}},
-        { tag: "assign", name: "n", value: {tag: "lookup", obj: {tag: "id", name: "b"}, field: "x"}},
-      ]
+        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", name: "n", value: {tag: "lookup", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+      ],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
     expect(tcProgram).to.deep.equal({
-      a: NONE,
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [], a: NONE},
+        {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: NONE}],
+          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: NONE },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: CLASS('Box', [TYPEVAR('T')])}, field: "x", a: TYPEVAR('T')}, a: TYPEVAR('T')}
-            ], a: NONE }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
-          a: NONE,
-        } 
+          a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
+        }
       ],
       inits: [
-        { name: "n", type: NUM, value: {tag: "num", value: 0}, a: NONE},
-        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"},  a: NONE},
+        { name: "n", type: NUM, value: {tag: "num", value: 0} , a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: CLASS('Box', [NUM])}, a: NONE},
-        { tag: "assign", name: "n", value: {tag: "lookup", obj: {tag: "id", name: "b", a: CLASS('Box', [NUM])}, field: "x", a: NUM}, a: NONE},
-      ]
+        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", name: "n", value: {tag: "lookup", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: NUM, eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+      ],
+      a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
 
     const [fieldsTy, methodsTy, _] = tcGlobalEnv.classes.get('Box');
@@ -883,63 +725,63 @@ describe('Generics Type-Checker Tests', () => {
 
   it('should typecheck generic class object method call', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}}
-            ] }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T']
+          typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
-        { name: "n", type: NUM, value: {tag: "num", value: 0} },
-        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} },
+        { name: "n", type: NUM, value: {tag: "num", value: 0}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: []}},
-        { tag: "assign", name: "n", value: {tag: "method-call", obj: {tag: "id", name: "b"}, method: "get", arguments: []}},
-      ]
+        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", name: "n", value: {tag: "method-call", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, method: "get", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+      ],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
     expect(tcProgram).to.deep.equal({
-      a: NONE,
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [], a: NONE},
+        {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: NONE}],
+          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: NONE },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: CLASS('Box', [TYPEVAR('T')])}, field: "x", a: TYPEVAR('T')}, a: TYPEVAR('T')}
-            ], a: NONE }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'],
-          a: NONE,
-        } 
+          typeParams: ['T'], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
+        }
       ],
       inits: [
-        { name: "n", type: NUM, value: {tag: "num", value: 0}, a: NONE},
-        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"},  a: NONE},
+        { name: "n", type: NUM, value: {tag: "num", value: 0}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+        { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: CLASS('Box', [NUM])}, a: NONE},
-        { tag: "assign", name: "n", value: {tag: "method-call", obj: {tag: "id", name: "b", a: CLASS('Box', [NUM])}, method: "get", arguments: [], a: NUM}, a: NONE},
-      ]
+        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", name: "n", value: {tag: "method-call", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, method: "get", arguments: [], a: {type: NUM, eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+      ],
+      a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
 
     const [fieldsTy, methodsTy, _] = tcGlobalEnv.classes.get('Box');
@@ -952,61 +794,63 @@ describe('Generics Type-Checker Tests', () => {
 
   it('should typecheck generic class object field assignment with generic type constructor', () => {
     let env = emptyGlobalTypeEnv();
-    let program: Program<null> = {
+    let program: Program<Annotation> = {
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: []}
+        {name: 'T', canonicalName: 'T', types: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: CLASS('T'), value: PyZero()}],
+          fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self"}, field: "x"}}
-            ] }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T']
+          typeParams: ['T'],
+          a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
-        { name: "b", type: CLASS('Box', [CLASS('Box', [NUM])]), value: {tag: "none"} },
+        { name: "b", type: CLASS('Box', [CLASS('Box', [NUM])]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: []}},
-        { tag: "field-assign", obj: {tag: "id", name: "b"}, field: "x", value: {tag: "call", name: "Box", arguments: []}},
-      ]
+        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "field-assign", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "call", name: "Box", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+      ],
+      a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
     expect(tcProgram).to.deep.equal({
-      a: NONE,
       funs: [],
       typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [], a: NONE},
+        {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
       ],
       classes: [
         {
           name: 'Box',
-          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: NONE}],
+          fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: NONE },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
-              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: CLASS('Box', [TYPEVAR('T')])}, field: "x", a: TYPEVAR('T')}, a: TYPEVAR('T')}
-            ], a: NONE }
+              {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
-          a: NONE,
-        } 
+          a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
+        }
       ],
       inits: [
-        { name: "b", type: CLASS('Box', [CLASS('Box', [NUM])]), value: {tag: "none"}, a: NONE},
+        { name: "b", type: CLASS('Box', [CLASS('Box', [NUM])]), value: {tag: "none"}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: CLASS('Box', [CLASS('Box', [NUM])])}, a: NONE},
-        { tag: "field-assign", obj: {tag: "id", name: "b", a: CLASS('Box', [CLASS('Box', [NUM])])}, field: "x", value: {tag: "construct", name: "Box", a: CLASS('Box', [NUM])}, a: NONE},
-      ]
+        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [CLASS('Box', [NUM])]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "field-assign", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [CLASS('Box', [NUM])]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+      ],
+      a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
 
     const [fieldsTy, methodsTy, _] = tcGlobalEnv.classes.get('Box');
