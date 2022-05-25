@@ -6,4 +6,5 @@ debugger
 cli
 *.sw*
 mochawesome-report
-*lock*
+*.DS_Store
+package-lock.json

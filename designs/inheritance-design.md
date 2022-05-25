@@ -241,9 +241,7 @@ The focus for this milestone is to support inherited fields and non-overridden f
 
  Adding 2 and 3 i.e the class start index in the vtable & class-method pair offset would help us determine the the correct location of a class's method in the vtable.
 
-</br>
-
-# Week 8 Updates
+# Update Week 8
 
 We were able to pass all the test cases we had committed to in week 7. Below we have listed out changes and the design decisions for each file.
 
