@@ -116,7 +116,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
   return { globals: newGlobs, functions: newFuns, classes: newClasses };
 }
 
-export function augmentInheritance(subclassTosuperclass : Map<string, string[]>, newClasses : Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<string>]>, program : Program<Annotation>) {
+export function augmentInheritance(subclassTosuperclass : Map<string, string[]>, newClasses : Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<string>]>, program : Program<null>) {
   for (let entry of Array.from(subclassTosuperclass.entries())) {
     let sub = entry[0];
     let sup = entry[1];
@@ -138,8 +138,7 @@ export function augmentInheritance(subclassTosuperclass : Map<string, string[]>,
   }
 }
 
-export function tc(env : GlobalTypeEnv, program : Program<Annotation>) : [Program<Annotation>, GlobalTypeEnv] {
-  const SRC = program.a.src;
+export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type>, GlobalTypeEnv] {
   const locals = emptyLocalTypeEnv();
   const newEnv = augmentTEnv(env, program);
   const tInits = program.inits.map(init => tcInit(env, init));
@@ -178,16 +177,16 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
   var locals = emptyLocalTypeEnv();
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
-  fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
-  fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init, SRC).type));
-
-  const tBody = tcBlock(env, locals, fun.body, SRC);
+  fun.parameters.forEach(p => locals.vars.set(p.name, p.type)); // TODO: if type checking class, 1st arguement should be of enclosing class
+  fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init).type));
+  
+  const tBody = tcBlock(env, locals, fun.body);
   if (!isAssignable(env, locals.actualRet, locals.expectedRet))
     throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`)
   return {...fun, a: NONE, body: tBody};
 }
 
-export function tcClass(env: GlobalTypeEnv, cls: Class<Annotation>, SRC: string): Class<Annotation> {
+export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
   const tFields : VarInit<Type>[] = []
   tcFields(env, cls, tFields)
 
