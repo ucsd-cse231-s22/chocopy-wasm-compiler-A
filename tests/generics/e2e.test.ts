@@ -200,6 +200,8 @@ describe('e2e tests to check generics', () => {
         node: Node[T] = None
         if self.head is None:
           return None
+        else:
+          pass
 
         node = self.head
         self.head = self.head.next
@@ -211,9 +213,10 @@ describe('e2e tests to check generics', () => {
     l.push(20)
     l.push(30)
     l.push(40)
+    l.pop()
 
     print(l.head.value)
     print(l.head.next.value)
     `
-    assertPrint('Generic Linked List test - 0', prog6, ["40", "30"]);
+    assertPrint('Generic Linked List test - 0', prog6, ["30", "20"]);
 })
