@@ -197,7 +197,6 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       const rightStmts = codeGenValue(expr.right, env);
       return [...leftStmts, ...rightStmts, `(call $${expr.name})`]
 
-    // TODO: add call indirect case, lookup offset based on class and method name
     case "call_indirect":
       var valStmts : Array<string> = codeGenExpr(expr.fn, env);
       var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
