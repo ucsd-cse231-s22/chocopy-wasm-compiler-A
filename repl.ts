@@ -46,9 +46,7 @@ export class BasicREPL {
     this.currentTypeEnv = newTypeEnv;
     this.functions += newFunctions;
     const currentGlobals = this.importObject.env || {};
-    console.log(instance);
     Object.keys(instance.instance.exports).forEach(k => {
-      console.log("Consider key ", k);
       const maybeGlobal = instance.instance.exports[k];
       if(maybeGlobal instanceof WebAssembly.Global) {
         currentGlobals[k] = maybeGlobal;
