@@ -213,8 +213,6 @@ export function tcDef(env: GlobalTypeEnv, fun: FunDef<Annotation>, SRC: string):
 export function tcClass(env: GlobalTypeEnv, cls: Class<Annotation>, SRC: string): Class<Annotation> {
   const tFields : VarInit<Annotation>[] = []
   tcFields(env, cls, tFields, SRC)
-  const superclasses : Array<string> = []
-  getSuperclasses(env, cls.name, superclasses)
   // const tFields = cls.fields.map(field => tcInit(env, field, SRC));
   const tMethods = cls.methods.map(method => tcDef(env, method, SRC));
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
@@ -229,7 +227,7 @@ export function tcClass(env: GlobalTypeEnv, cls: Class<Annotation>, SRC: string)
 
     throw new TypeCheckError(SRC, `__init__ takes 1 parameter \`self\` of the same type of the class \`${cls.name}\` with return type of \`None\`, got ${reason}`, init.a);
   }
-  return { a: { ...cls.a, type: NONE }, name: cls.name, fields: tFields, methods: tMethods, super: superclasses};
+  return { a: { ...cls.a, type: NONE }, name: cls.name, fields: tFields, methods: tMethods, super: cls.super};
 }
 
 
