@@ -1,28 +1,27 @@
 import { parse } from "./parser";
 import { BasicREPL } from "./repl";
-import { importObject, addLibs  } from "./tests/import-object.test";
+import { addLibs  } from "./tests/import-object.test";
 
 
 // entry point for debugging
 async function debug() {
   var source = `
-class Single(object):
-  a : int = 1
-
-  def sum1(self: Single) -> int: 
-    return self.a
-
-class Two(Single):
-  b : int = 2
-
-  def sum2(self: Two) -> int: 
-    return self.a + self.b
-
-l : Two = None 
-l = Two()
-print(l.sum2())`
-console.log()
-  const ast = parse(source);
+class C(object):
+  def f(self: C) -> int:
+    if True:
+      return 0
+    else:
+      return`
+  // var source = `
+  // class C(object):
+  //   def __init__(self:C, other:D):
+  //     pass
+  
+  // x:C = None
+  // x = C()`
+const ast = parse(source);
+// console.log(ast);
+  
   const repl = new BasicREPL(await addLibs());
   const result = repl.run(source).then(result => {
     console.log(result);    
@@ -30,4 +29,5 @@ console.log()
 }
 
 debug();
+
 
