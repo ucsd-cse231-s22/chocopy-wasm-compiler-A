@@ -329,8 +329,6 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
         value: { a: {...e.a,type:NUM}, tag: "id", name: newStringLengthVar }
       });
 
-
-
       //we need to alloc lengthA to randomname
       strConcatstmts.push({ tag: "assign", name: Randomname, value: alloc_left_string });
       //TODO: store each character of A into the Randomname
