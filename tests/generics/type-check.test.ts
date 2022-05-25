@@ -1,6 +1,6 @@
 import "mocha";
 import { expect } from "chai";
-import {addUnconstrainedTEnv, augmentTEnv, emptyGlobalTypeEnv, tc, combineTypeBounds, resolveClassTypeParams, UNCONSTRAINED} from  '../../type-check';
+import {augmentTEnv, emptyGlobalTypeEnv, tc, resolveClassTypeParams} from  '../../type-check';
 import { Program, Type, TypeVar, BinOp } from '../../ast';
 import { NONE, NUM, BOOL, CLASS, TYPEVAR, PyZero, PyNone, PyInt } from '../../utils';
 
@@ -20,7 +20,7 @@ describe('Generics Type-Checker Tests', () => {
       ],
       a: NONE,
     });
-    expect(tcGlobalEnv.typevars.get('T')).to.deep.equal(['T', [], CLASS(UNCONSTRAINED)]);
+    expect(tcGlobalEnv.typevars.get('T')).to.deep.equal(['T']);
   });
 
   it('should throw an error on duplicate type-var identifier', () => {
@@ -31,62 +31,6 @@ describe('Generics Type-Checker Tests', () => {
         {name: 'T', canonicalName: 'T2', types: []}
       ],
     })).to.throw(); 
-  });
-
-  it('should throw an error on type-var undefined class in constraints', () => {
-    expect(() => tc(emptyGlobalTypeEnv(), {
-      funs: [], inits: [], classes: [], stmts: [],
-      typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [NUM, CLASS('Box')]},
-      ],
-    })).to.throw(); 
-  });
-
-  it('should throw an error on type-var single type constraint', () => {
-    expect(() => tc(emptyGlobalTypeEnv(), {
-      funs: [], inits: [], classes: [], stmts: [],
-      typeVarInits: [
-        {name: 'T', canonicalName: 'T', types: [NUM]},
-      ],
-    })).to.throw(); 
-  });
-
-  it('should combine type-bounds for all type-variables - 0', () => {
-    let env = emptyGlobalTypeEnv();
-    env.typevars.set('T', ['T', [NUM], CLASS(UNCONSTRAINED)]);
-    env.typevars.set('U', ['U', [NUM, BOOL], CLASS(UNCONSTRAINED)]);
-
-    const combinedBounds = combineTypeBounds(env, {name: 'Box', fields: [], methods: [], typeParams: ['T', 'U']});
-    expect(combinedBounds.map(m => Array.from(m.entries()))).to.deep.equal([
-      [['T', NUM], ['U', NUM]],
-      [['T', NUM], ['U', BOOL]]
-    ]);
-  });
-
-  it('should combine type-bounds for all type-variables - 1', () => {
-    let env = emptyGlobalTypeEnv();
-    env.typevars.set('T', ['T', [NONE, CLASS('Addable')], CLASS(UNCONSTRAINED)]);
-    env.typevars.set('U', ['U', [NUM, BOOL], CLASS(UNCONSTRAINED)]);
-
-    const combinedBounds = combineTypeBounds(env, {name: 'Box', fields: [], methods: [], typeParams: ['T', 'U']});
-    expect(combinedBounds.map(m => Array.from(m.entries()))).to.deep.equal([
-      [['T', NONE], ['U', NUM]],
-      [['T', NONE], ['U', BOOL]],
-      [['T', CLASS('Addable')], ['U', NUM]],
-      [['T', CLASS('Addable')], ['U', BOOL]],
-    ]);
-  });
-
-  it('should combine type-bounds for all type-variables - 2', () => {
-    let env = emptyGlobalTypeEnv();
-    env.typevars.set('T', ['T', [], CLASS(UNCONSTRAINED)]);
-    env.typevars.set('U', ['U', [NUM, BOOL], CLASS(UNCONSTRAINED)]);
-
-    const combinedBounds = combineTypeBounds(env, {name: 'Box', fields: [], methods: [], typeParams: ['T', 'U']});
-    expect(combinedBounds.map(m => Array.from(m.entries()))).to.deep.equal([
-      [['T', CLASS(UNCONSTRAINED)], ['U', NUM]],
-      [['T', CLASS(UNCONSTRAINED)], ['U', BOOL]],
-    ]);
   });
 
   it('should resolve type parameter annotations to type variables in a class - 0', () => {
@@ -108,7 +52,6 @@ describe('Generics Type-Checker Tests', () => {
     };
 
     const newEnv = augmentTEnv(env, program);
-    addUnconstrainedTEnv(newEnv);
 
     let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
     expect(resolvedCls).to.deep.equal({
@@ -144,7 +87,6 @@ describe('Generics Type-Checker Tests', () => {
     };
 
     const newEnv = augmentTEnv(env, program);
-    addUnconstrainedTEnv(newEnv);
 
     let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
     expect(resolvedCls).to.deep.equal({
@@ -191,7 +133,6 @@ describe('Generics Type-Checker Tests', () => {
     };
 
     const newEnv = augmentTEnv(env, program);
-    addUnconstrainedTEnv(newEnv);
 
     let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
     expect(resolvedCls).to.deep.equal({
@@ -248,7 +189,6 @@ describe('Generics Type-Checker Tests', () => {
     };
 
     const newEnv = augmentTEnv(env, program);
-    addUnconstrainedTEnv(newEnv);
 
     let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
     expect(resolvedCls).to.deep.equal({
@@ -534,7 +474,7 @@ describe('Generics Type-Checker Tests', () => {
     expect(globals).to.deep.equal(CLASS('Box', [NUM]));
   });
 
-  it('should allow generic field field access based on constrains', () => {
+  /*it('should allow generic field field access based on constrains', () => {
     let env = emptyGlobalTypeEnv();
     let program: Program<null> = {
       funs: [],
@@ -623,9 +563,9 @@ describe('Generics Type-Checker Tests', () => {
     //expect(methodsTy.get('get')).to.deep.equal([[CLASS('Box', [TYPEVAR('T')])], TYPEVAR('T')]);
     //const globals = tcGlobalEnv.globals.get('b');
     //expect(globals).to.deep.equal(CLASS('Box', [NUM]));
-  });
+  });*/
 
-  it('should enforce generic class type parameter constraints', () => {
+  /*it('should enforce generic class type parameter constraints', () => {
     let env = emptyGlobalTypeEnv();
     let program: Program<null> = {
       funs: [],
@@ -652,7 +592,7 @@ describe('Generics Type-Checker Tests', () => {
     }; 
 
     expect(() => tc(env, program)).to.throw();
-  });
+  });*/
 
   it('should enforce generic class type parameter number', () => {
     let env = emptyGlobalTypeEnv();

@@ -20,7 +20,7 @@ export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
   classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<string>]>,
-  typevars: Map<string, [string, Array<Type>, Type]>
+  typevars: Map<string, [string]>
 }
 
 export type LocalTypeEnv = {
@@ -29,13 +29,6 @@ export type LocalTypeEnv = {
   actualRet: Type,
   topLevel: Boolean
 }
-
-// A class with the name __UNCONSTRAINED__ is temporarily
-// added to the GlobalTypeEnv classes map. This class is 
-// used to type-check classes with a type-parameter
-// that has no constraints. To emulate this the __UNCONSTRAINED__
-// class has no fields and methods.
-export const UNCONSTRAINED = '__UNCONSTRAINED__';
 
 const defaultGlobalFunctions = new Map();
 defaultGlobalFunctions.set("abs", [[NUM], NUM]);
@@ -83,20 +76,10 @@ function zip<A, B>(l1: Array<A>, l2: Array<B>) : Array<[A, B]> {
 }
 
 export function equalType(env: GlobalTypeEnv, t1: Type, t2: Type) {
-  // If either of t1 or t2 are type-variables, then the actual type
-  // that they are currently instantiated to needs to be fetched from
-  // the environment before comparing the types.
-  if(t1.tag === "typevar") {
-    t1 = env.typevars.get(t1.name)[2];
-  }
-
-  if(t2.tag === "typevar") {
-    t2 = env.typevars.get(t2.name)[2];
-  }
-  
   return (
     t1 === t2 ||
-    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name && equalTypeParams(env, t1.params, t2.params))
+    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name && equalTypeParams(env, t1.params, t2.params)) ||
+    (t1.tag === "typevar" && t2.tag === "typevar" && t1.name === t2.name)
   );
 }
 
@@ -112,47 +95,10 @@ export function equalTypeParams(env: GlobalTypeEnv, params1: Type[], params2: Ty
 }
 
 export function isNoneOrClass(env: GlobalTypeEnv, t: Type) {
-  if(t.tag === "typevar") {
-    // If t is a type-variables, then the actual type
-    // that it is currently instantiated to needs to be fetched from
-    // the environment.
-    t = env.typevars.get(t.name)[2];
-  }
-
-  // TODO: decide if something with type-parameters is considered a class
-  return t.tag === "none" || (t.tag === "class" && t.name !== UNCONSTRAINED);
-}
-
-// Resolve t to its underlying type in based on the environment mapping
-// if required, except when it is the UNCONSTRAINED class type.
-export function getClassType(env: GlobalTypeEnv, t: Type): Type {
-  let newT = {...t};
-  if(t.tag === "typevar") {
-    // If t is a type-variables, then the actual type
-    // that it is currently instantiated to needs to be fetched from
-    // the environment.
-    newT = env.typevars.get(t.name)[2];
-  }
-
-  if(newT.tag === "class" && newT.name === UNCONSTRAINED) {
-    return t;
-  }
-
-  return newT;
+  return t.tag === "none" || t.tag === "class";
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  // If either of t1 or t2 are type-variables, then the actual type
-  // that they are currently instantiated to needs to be fetched from
-  // the environment before comparing the types.
-  if(t1.tag === "typevar") {
-    t1 = env.typevars.get(t1.name)[2];
-  }
-
-  if(t2.tag === "typevar") {
-    t2 = env.typevars.get(t2.name)[2];
-  }
-
   return equalType(env, t1, t2) || t1.tag === "none" && t2.tag === "class" 
 }
 
@@ -197,20 +143,8 @@ export function isValidType(env: GlobalTypeEnv, t: Type) : boolean {
   }
 
   return zip(typeparams, t.params).reduce((isValid, [typevar, typeparam]) => {
-    let [_canonicalName, constraints, _mapping] = env.typevars.get(typevar); 
-
-    return isValid && isValidType(env, typeparam) && satisfiesConstraints(env, typeparam, constraints);
+    return isValid && isValidType(env, typeparam);
   }, true);
-}
-
-function satisfiesConstraints(env: GlobalTypeEnv, t: Type, constraints: Type[]) : boolean {
-  if(constraints.length === 0) {
-    return true;
-  }
-
-  return constraints.reduce((satisfies, constraintType) => {
-    return satisfies || isSubtype(env, t, constraintType); 
-  }, false);
 }
 
 // Populate the instantiated type-parameters of the class type objTy in
@@ -234,7 +168,7 @@ export function specializeFieldType(env: GlobalTypeEnv, objTy: Type, fieldTy: Ty
   let [_fields, _methods, typeparams] = env.classes.get(objTy.name);
 
   // create a mapping from the type-parameter name to the corresponding instantiated type.
-  let map = new Map(zip(typeparams, objTy.params).filter(([_typevar, typeparam]) => typeparam.tag !== "typevar"));
+  let map = new Map(zip(typeparams, objTy.params)); //.filter(([_typevar, typeparam]) => typeparam.tag !== "typevar"));
   return specializeType(map, fieldTy);
 }
 
@@ -255,7 +189,7 @@ export function specializeMethodType(env: GlobalTypeEnv, objTy: Type, [argTypes,
   }
 
   let [_fields, _methods, typeparams] = env.classes.get(objTy.name);
-  let map = new Map(zip(typeparams, objTy.params).filter(([_typevar, typeparam]) => typeparam.tag !== "typevar"));
+  let map = new Map(zip(typeparams, objTy.params));  //.filter(([_typevar, typeparam]) => typeparam.tag !== "typevar"));
 
   let specializedRetType = specializeType(map, retType);
   let specializedArgTypes = argTypes.map(argType => specializeType(map, argType));
@@ -273,12 +207,10 @@ export function specializeType(env: Map<string, Type>, t: Type) : Type {
 
   if(t.tag === "typevar") {
     if(!env.has(t.name)) {
-      // Uninstantiated typevars are left as is. They
-      // will be seperately mapped to concrete types using the global
-      // environment.
+      // Uninstantiated typevars are left as is.
       return t;
     }
-    return specializeType(env, env.get(t.name));
+    return env.get(t.name);
   }
 
   // at this point t has to be a class type
@@ -307,29 +239,14 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
     if(newGlobs.has(tv.name) || newTypevars.has(tv.name) || newClasses.has(tv.name)) {
       throw new TypeCheckError(`Duplicate identifier '${tv.name}' for type-variable`);
     }
-    newTypevars.set(tv.name, [tv.canonicalName, [...tv.types], CLASS(UNCONSTRAINED)]);
+    newTypevars.set(tv.name, [tv.canonicalName]);
   });
   return { globals: newGlobs, functions: newFuns, classes: newClasses, typevars: newTypevars };
-}
-
-// Add the __UNCONSTRAINED__ class to the type-environment
-// so that it is available when type-checking generic classes
-// with type parameters that do not have any constraints.
-export function addUnconstrainedTEnv(env: GlobalTypeEnv) {
-  env.classes.set(UNCONSTRAINED, [new Map(), new Map(), []]);
-}
-
-// Remove the __UNCONSTRAINED__ class from the type-environment
-// after type checking is done. We don't want/have an actual
-// class with that name.
-export function removeUnconstrainedTEnv(env: GlobalTypeEnv) {
-  env.classes.delete(UNCONSTRAINED);
 }
 
 export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type>, GlobalTypeEnv] {
   const locals = emptyLocalTypeEnv();
   const newEnv = augmentTEnv(env, program);
-  addUnconstrainedTEnv(newEnv);
   const tTypeVars = program.typeVarInits.map(tv => tcTypeVars(newEnv, tv));
   const tInits = program.inits.map(init => tcInit(newEnv, init));
   const tDefs = program.funs.map(fun => tcDef(newEnv, fun));
@@ -357,8 +274,6 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   for (let name of locals.vars.keys()) {
     newEnv.globals.set(name, locals.vars.get(name));
   }
-
-  removeUnconstrainedTEnv(newEnv);
 
   const aprogram = {a: lastTyp, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody, typeVarInits: tTypeVars};
   return [aprogram, newEnv];
@@ -403,10 +318,8 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
   return {...fun, a: NONE, body: tBody};
 }
 
-// Generic classes are type-checked by instantiating their type-parameters to every valid
-// combination of most general types based on type-variable constraints and running the type-checker.
-// Type-parameters are instantiated to concrete types based on mappings stored in the global type 
-// environment.
+// Generic classes are type-checked by treating all typevars as completely unconstrained
+// types that we do not know anything about.
 export function tcGenericClass(env: GlobalTypeEnv, cls: Class<null>) : Class<Type> {
   // ensure all type parameters are defined as type variables
   cls.typeParams.forEach(param => {
@@ -415,25 +328,8 @@ export function tcGenericClass(env: GlobalTypeEnv, cls: Class<null>) : Class<Typ
     }
   });
 
-  // combine the bounds for each type parameter.
-  const typeBounds = combineTypeBounds(env, cls);
-
-  let newCls = null;
-
-  // type-check the class for all combination of bounds.
-  typeBounds.forEach((bounds) => {
-    // update type-var mapping in global environment
-    // to reflect the current bounds.
-    bounds.forEach((tvType, tvName) => {
-      let [canonicalName, tvBounds, _] = env.typevars.get(tvName);
-      env.typevars.set(tvName, [canonicalName, tvBounds, tvType]);
-    });
-
-    let tyCls = tcClass(env, cls);
-    newCls = {...tyCls, a: NONE};
-  });
-
-  return newCls;
+  let tyCls = tcClass(env, cls);
+  return {...tyCls, a: NONE};
 }
 
 export function resolveClassTypeParams(env: GlobalTypeEnv, cls: Class<null>) : Class<null> { 
@@ -497,37 +393,6 @@ export function resolveTypeTypeParams(env: string[], type: Type) : [boolean, Typ
   return [true, {...type, params: newParams}];
 }
 
-export function combineTypeBounds(env: GlobalTypeEnv, cls: Class<null>) : Array<Map<string, Type>> {
-  let typeParams = cls.typeParams;
-  let combinedBounds: Array<Map<string, Type>> = typeParams.reduce((combinedBounds, param, i) => {
-    const newCombinedBounds: Array<Map<string, Type>> = [];
-    const [_, bounds] = env.typevars.get(param);  
-    if(bounds.length === 0) {
-      bounds.push(CLASS(UNCONSTRAINED));
-    }
-
-    if(i == 0) {
-      bounds.forEach(bound => {
-        let m: Map<string, Type> = new Map();
-        m.set(param, bound);
-        newCombinedBounds.push(m);
-      });
-    } else {
-      combinedBounds.forEach(cb => {
-        bounds.forEach(bound => {
-          let m: Map<string, Type> = new Map(cb); 
-          m.set(param, bound);
-          newCombinedBounds.push(m);
-        });
-      });
-    }
-
-    return newCombinedBounds;
-  }, []);
-
-  return combinedBounds;
-}
-
 export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
   const tFields = cls.fields.map(field => tcInit(env, field));
   const tMethods = cls.methods.map(method => tcDef(env, method));
@@ -544,21 +409,6 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
 }
 
 export function tcTypeVars(env: GlobalTypeEnv, tv: TypeVar<null>) : TypeVar<Type> {
-  if(tv.types.length === 1) {
-    throw new TypeCheckError(`type-variable should have 0 or at-least 2 constrains`);
-  }
-
-  tv.types.forEach(typeBound => {
-    if(typeBound.tag === "class") {
-      if(!env.classes.has(typeBound.name)) {
-        throw new TypeCheckError(`type-variable with undefined class '${typeBound.name}' in it's bounds`);
-      }
-
-      // TODO: check recrusive reference to type-parameter in bounds
-      
-    } 
-  });
-
   return {...tv, a: NONE};
 }
 
@@ -630,14 +480,13 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       var tObj = tcExpr(env, locals, stmt.obj);
       const tVal = tcExpr(env, locals, stmt.value);
       
-      let tObjType = getClassType(env, tObj.a);
-      if (tObjType.tag !== "class") 
+      if (tObj.a.tag !== "class") 
         throw new TypeCheckError("field assignments require an object");
-      if (!env.classes.has(tObjType.name)) 
+      if (!env.classes.has(tObj.a.name)) 
         throw new TypeCheckError("field assignment on an unknown class");
-      const [fields, _] = env.classes.get(tObjType.name);
+      const [fields, _] = env.classes.get(tObj.a.name);
       if (!fields.has(stmt.field)) 
-        throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObjType.name}`);
+        throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObj.a.name}`);
 
       let fieldTy = specializeFieldType(env, tObj.a, fields.get(stmt.field));
 
@@ -678,6 +527,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Eq:
         case BinOp.Neq:
           if(tLeft.a.tag === "class" || tRight.a.tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")
+          if(tLeft.a.tag === "typevar" || tRight.a.tag === "typevar") throw new TypeCheckError("cannot apply operator '==' on unconstrained type parameters")
           if(equalType(env, tLeft.a, tRight.a)) { return {a: BOOL, ...tBin} ; }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op)}
         case BinOp.Lte:
@@ -773,14 +623,13 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       }
     case "lookup":
       var tObj = tcExpr(env, locals, expr.obj);
-      let tObjType = getClassType(env, tObj.a);
-      if (tObjType.tag === "class") {
-        if (env.classes.has(tObjType.name)) {
-          const [fields, _] = env.classes.get(tObjType.name);
+      if (tObj.a.tag === "class") {
+        if (env.classes.has(tObj.a.name)) {
+          const [fields, _] = env.classes.get(tObj.a.name);
           if (fields.has(expr.field)) {
             return {...expr, a: specializeFieldType(env, tObj.a, fields.get(expr.field)), obj: tObj};
           } else {
-            throw new TypeCheckError(`could not found field ${expr.field} in class ${tObjType.name}`);
+            throw new TypeCheckError(`could not found field ${expr.field} in class ${tObj.a.name}`);
           }
         } else {
           throw new TypeCheckError("field lookup on an unknown class");
@@ -791,10 +640,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj);
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-      let tObjClassTypem = getClassType(env, tObj.a)
-      if (tObjClassTypem.tag === "class") {
-        if (env.classes.has(tObjClassTypem.name)) {
-          const [_, methods] = env.classes.get(tObjClassTypem.name);
+      if (tObj.a.tag === "class") {
+        if (env.classes.has(tObj.a.name)) {
+          const [_, methods] = env.classes.get(tObj.a.name);
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = specializeMethodType(env, tObj.a, methods.get(expr.method));
             const realArgs = [tObj].concat(tArgs);
@@ -805,7 +653,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
                throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}` );
               }
           } else {
-            throw new TypeCheckError(`could not found method ${expr.method} in class ${tObjClassTypem.name}`);
+            throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a.name}`);
           }
         } else {
           throw new TypeCheckError("method call on an unknown class");
