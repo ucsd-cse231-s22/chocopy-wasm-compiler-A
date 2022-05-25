@@ -105,67 +105,6 @@ function assert_not_none(arg: any): any {
   return arg;
 }
 
-function get_code_example(name: string): string {
-  if (name === "basic class") {
-    return "class C:\n" +
-      "    a : int = 1\n" +
-      "    b : int = 2\n" +
-      "c : C = None\n" +
-      "c = C()"
-  } else if (name === "nested class") {
-    return "class E(object):\n" +
-      "    a : int = 1\n" +
-      "class C(object):\n" +
-      "    a : bool = True\n" +
-      "    e : E = None\n" +
-      "    def __init__(self: C):\n" +
-      "        self.e = E()\n" +
-      "    def d(self: C) -> int:\n" +
-      "        return 1\n" +
-      "c : C = None\n" +
-      "c = C()"
-  } else if (name === "cyclic linkedlist class") {
-    return `class C(object):
-  next:C = None
-c1:C = None
-c2:C = None
-c3:C = None
-c1 = C()
-c2 = C()
-c3 = C()
-c1.next = c2
-c2.next = c3
-c3.next = c1
-    `
-  } else if (name === "linkedlist class") {
-    return `class C(object):
-  next:C = None
-c1:C = None
-c2:C = None
-c3:C = None
-c1 = C()
-c2 = C()
-c3 = C()
-c1.next = c2
-c2.next = c3
-    `
-  }
-
-  else if (name === "uninitialized member variable") {
-    return "class E(object):\n" +
-      "    a : int = 1\n" +
-      "\n" +
-      "class C(E):\n" +
-      "    a : int = 2\n" +
-      "    e : E = None\n" +
-      "    def d(self: C) -> int:\n" +
-      "        return 1\n" +
-      "c : C = None\n" +
-      "c = C()"
-  }
-
-  return "";
-}
 // setup codeMirror instance and events
 
 function webStart() {
@@ -339,11 +278,11 @@ function webStart() {
 
     function setupCodeExample() {
       const sel = document.querySelector("#exampleSelect") as HTMLSelectElement;
+      const codeExampleData = require("./codeExample.json");
       console.log('editorBox: ', editorBox);
       sel.addEventListener("change", (e) => {
-        const code = get_code_example(sel.value);
-        if (code !== "") {
-          // const usercode = document.getElementById("user-code") as HTMLTextAreaElement;
+        const code = codeExampleData[sel.value];
+        if (code !== undefined) {
           editorBox.setValue(code);
         }
       })
