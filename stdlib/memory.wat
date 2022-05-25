@@ -116,7 +116,7 @@
     (local.set $i (i32.const 0))
     (local.set $len (i32.load (local.get $addr)))
     (local.set $newlen (i32.mul (local.get $len) (local.get $times)))
-    (local.get $newlen)
+    (i32.add (local.get $newlen) (i32.const 1))
     (call $alloc)
     (local.set $$res)
 
