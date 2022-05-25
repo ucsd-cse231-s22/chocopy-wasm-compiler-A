@@ -7,3 +7,5 @@ cli
 mochawesome-report
 *lock*
 .vscode
+*.DS_Store
+package-lock.json
