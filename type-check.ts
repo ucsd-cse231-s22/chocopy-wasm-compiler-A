@@ -281,6 +281,25 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       return { a: { ...stmt.a, type: NONE }, tag: stmt.tag, cond: tCond, body: tBody };
     case "pass":
       return { a: { ...stmt.a, type: NONE }, tag: stmt.tag };
+    case "break":
+    case "continue":
+      return {a: { ...stmt.a, type: NONE }, tag: stmt.tag};
+    case "for":
+      var tIterator = tcIterator(env, locals, stmt.iterator)
+      var tValObject = tcExpr(env, locals, stmt.values, SRC);
+      if (tValObject.a.type.tag !== "class") 
+        throw new TypeCheckError("values require an object");
+      if (!env.classes.has(tValObject.a.type.name)) 
+        throw new TypeCheckError("values on an unknown class");
+      const [__, methods] = env.classes.get(tValObject.a.type.name);
+      if(!(methods.has("hasnext")) || methods.get("hasnext")[1].tag != BOOL.tag)
+        throw new TypeCheckError("iterable class must have hasnext method with boolean return type");
+      if(!(methods.has("next")) || !equalType(methods.get("next")[1],tIterator))
+        throw new TypeCheckError("iterable class must have next method with same return type as iterator");
+      if(!(methods.has("reset")) || methods.get("reset")[1].tag != NONE.tag)
+        throw new TypeCheckError("iterable class must have reset method with none return type");
+      const tforBody = tcBlock(env, locals, stmt.body, SRC);
+      return {a: {...stmt.a, type: tIterator}, tag: stmt.tag, iterator:stmt.iterator, values: tValObject, body: tforBody }
     case "field-assign":
       var tObj = tcExpr(env, locals, stmt.obj, SRC);
       const tVal = tcExpr(env, locals, stmt.value, SRC);
@@ -499,10 +518,20 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
   }
 }
 
-export function tcLiteral(literal: Literal<Annotation>) {
-  switch (literal.tag) {
-    case "bool": return BOOL;
-    case "num": return NUM;
-    case "none": return NONE;
-  }
+export function tcLiteral(literal : Literal<Annotation>) {
+    switch(literal.tag) {
+        case "bool": return BOOL;
+        case "num": return NUM;
+        case "none": return NONE;
+    }
+}
+
+// function to return the type of iterator in for-loop. Finds the string in globals/locals and returns its type
+// Will be extended to include tuples etc in later commits
+export function tcIterator(env : GlobalTypeEnv, locals : LocalTypeEnv, iterator: string): Type{
+  if (locals.vars.has(iterator))
+   return locals.vars.get(iterator) 
+  else if (env.globals.has(iterator))
+     return env.globals.get(iterator)
+   throw new TypeCheckError(`Undefined iterator`)
 }

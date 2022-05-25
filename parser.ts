@@ -451,6 +451,28 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
       }
     case "PassStatement":
       return { tag: "pass" }
+      case "ContinueStatement":
+        return { tag: "continue" }
+    case "BreakStatement":
+        return { tag: "break" }
+    case "ForStatement":
+      c.firstChild(); // Focus on for
+      c.nextSibling(); // Focus on variablename
+      if(c.type.name!="VariableName")
+       throw new Error("Iterator must be a variable")
+      var iterator = s.substring(c.from, c.to);   // considering iterator as string
+      c.nextSibling(); // Focus on in
+      c.nextSibling(); // Focus on values/list
+      var values = traverseExpr(c, s, env);
+      c.nextSibling(); // Focus on Body
+      var body = [];
+      c.firstChild(); // Focus on :
+      while(c.nextSibling()) {
+        body.push(traverseStmt(c, s, env));
+      }
+      c.parent(); 
+      c.parent();
+      return {tag:"for",iterator,values,body}
     default:
       throw new Error("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to));
   }
