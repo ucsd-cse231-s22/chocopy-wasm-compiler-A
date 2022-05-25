@@ -270,7 +270,7 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
   const locals = emptyLocalTypeEnv();
   const newEnv = augmentTEnv(env, program);
   const tTypeVars = program.typeVarInits.map(tv => tcTypeVars(newEnv, tv, SRC));
-  const tInits = program.inits.map(init => tcInit(env, init, SRC));
+  const tInits = program.inits.map(init => tcInit(newEnv, init, SRC));
   const tDefs = program.funs.map(fun => tcDef(newEnv, fun, SRC));
   const tClasses = program.classes.map(cls => {
     if(cls.typeParams.length === 0) {
