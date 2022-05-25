@@ -6,12 +6,14 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-class C(object):
-  def f(self: C) -> int:
-    if True:
-      return 0
-    else:
-      return`
+  T = TypeVar('T')
+  class Box(Generic[T]):
+    x: T = __ZERO__
+  b1 : Box[int] = None
+  b1 = Box()
+  b1.x = 10
+  print(b1.x)
+  `
   const ast = parse(source);
   
   const repl = new BasicREPL(await addLibs());

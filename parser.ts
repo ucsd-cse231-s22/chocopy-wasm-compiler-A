@@ -412,27 +412,25 @@ export function traverseTypeVarInit(c : TreeCursor, s : string) : TypeVar<null> 
   c.firstChild(); // focus on TypeVar
   c.nextSibling(); // focus on ArgList
 
-  c.firstChild();  // Focuses on open paren
-  const types = [];
-  c.nextSibling(); // Focuses on a String | VariableName
+  c.firstChild();  // Focuses on open parens
+  c.nextSibling(); // Focuses on a String | close parens
   let canonicalName : string = name;
   if (c.type.name === "String") {
     canonicalName = s.substring(c.from + 1, c.to - 1).trim();
-    c.nextSibling(); // Focus on , or )
-    c.nextSibling(); // Focus on VariableName
+    c.nextSibling(); // Focus on or close parens
   }
 
-  while(c.type.name !== ")") {
-    types.push(traverseType(c, s));
-    c.nextSibling(); // Focus on , or )
-    c.nextSibling(); // Move on to next VariableName
+  if (c.type.name !== ")") {
+    throw Error("ParseError : constrained type variables are not supported.");
   }
 
   c.parent(); // go to ArgList
   c.parent(); // go to CallExpression
   c.parent(); // go to AssigmentStatement
 
-  return { name, canonicalName, types };
+  // TODO : Need to delete this once we have removed types from AST
+  const types : Array<Type> = [];
+  return { name, canonicalName, types};
 }
 
 export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
