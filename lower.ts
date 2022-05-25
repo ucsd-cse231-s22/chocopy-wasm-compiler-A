@@ -1,6 +1,7 @@
 import * as AST from './ast';
 import * as IR from './ir';
-import { Type } from './ast';
+import * as ERRORS from './errors';
+import { Type, Annotation } from './ast';
 import { GlobalEnv } from './compiler';
 
 const nameCounters : Map<string, number> = new Map();
@@ -16,12 +17,12 @@ function generateName(base : string) : string {
   }
 }
 
-// function lbl(a: Type, base: string) : [string, IR.Stmt<Type>] {
+// function lbl(a: Type, base: string) : [string, IR.Stmt<Annotation>] {
 //   const name = generateName(base);
 //   return [name, {tag: "label", a: a, name: name}];
 // }
 
-export function generateVtable(p : AST.Program<Type>, env : GlobalEnv) {
+export function generateVtable(p : AST.Program<Annotation>, env : GlobalEnv) {
   var vtable : Array<string> = [];
   var classIndexes = new Map(); // stores the start and end index of the class in vtable
   var methodIndex = 0;
@@ -52,10 +53,11 @@ export function generateVtable(p : AST.Program<Type>, env : GlobalEnv) {
   env.classIndexes = classIndexes;
 }
 
-export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
+
+export function lowerProgram(p : AST.Program<Annotation>, env : GlobalEnv) : IR.Program<Annotation> {
     generateVtable(p, env);
-    var blocks : Array<IR.BasicBlock<Type>> = [];
-    var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
+    var blocks : Array<IR.BasicBlock<Annotation>> = [];
+    var firstBlock : IR.BasicBlock<Annotation> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     var inits = flattenStmts(p.stmts, blocks, env);
     return {
@@ -67,34 +69,34 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
     }
 }
 
-function lowerFunDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv) : Array<IR.FunDef<Type>> {
+function lowerFunDefs(fs : Array<AST.FunDef<Annotation>>, env : GlobalEnv) : Array<IR.FunDef<Annotation>> {
     return fs.map(f => lowerFunDef(f, env)).flat();
 }
 
-function lowerFunDef(f : AST.FunDef<Type>, env : GlobalEnv) : IR.FunDef<Type> {
-  var blocks : Array<IR.BasicBlock<Type>> = [];
-  var firstBlock : IR.BasicBlock<Type> = {  a: f.a, label: generateName("$startFun"), stmts: [] }
+function lowerFunDef(f : AST.FunDef<Annotation>, env : GlobalEnv) : IR.FunDef<Annotation> {
+  var blocks : Array<IR.BasicBlock<Annotation>> = [];
+  var firstBlock : IR.BasicBlock<Annotation> = {  a: f.a, label: generateName("$startFun"), stmts: [] }
   blocks.push(firstBlock);
   var bodyinits = flattenStmts(f.body, blocks, env);
     return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks}
 }
 
-function lowerVarInits(inits: Array<AST.VarInit<Type>>, env: GlobalEnv) : Array<IR.VarInit<Type>> {
+function lowerVarInits(inits: Array<AST.VarInit<Annotation>>, env: GlobalEnv) : Array<IR.VarInit<Annotation>> {
     return inits.map(i => lowerVarInit(i, env));
 }
 
-function lowerVarInit(init: AST.VarInit<Type>, env: GlobalEnv) : IR.VarInit<Type> {
+function lowerVarInit(init: AST.VarInit<Annotation>, env: GlobalEnv) : IR.VarInit<Annotation> {
     return {
         ...init,
         value: literalToVal(init.value)
     }
 }
 
-function lowerClasses(classes: Array<AST.Class<Type>>, env : GlobalEnv) : Array<IR.Class<Type>> {
+function lowerClasses(classes: Array<AST.Class<Annotation>>, env : GlobalEnv) : Array<IR.Class<Annotation>> {
     return classes.map(c => lowerClass(c, env));
 }
 
-function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : IR.Class<Type> {
+function lowerClass(cls: AST.Class<Annotation>, env : GlobalEnv) : IR.Class<Annotation> {
     return {
         ...cls,
         fields: lowerVarInits(cls.fields, env),
@@ -102,10 +104,10 @@ function lowerClass(cls: AST.Class<Type>, env : GlobalEnv) : IR.Class<Type> {
     }
 }
 
-function literalToVal(lit: AST.Literal) : IR.Value<Type> {
+function literalToVal(lit: AST.Literal<Annotation>) : IR.Value<Annotation> {
     switch(lit.tag) {
         case "num":
-            return { ...lit, value: BigInt(lit.value) }
+            return { ...lit, value: BigInt((lit.value).toLocaleString('fullwide', {useGrouping:false})) }
         case "bool":
             return lit
         case "none":
@@ -113,15 +115,15 @@ function literalToVal(lit: AST.Literal) : IR.Value<Type> {
     }
 }
 
-function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
-  var inits: Array<IR.VarInit<Type>> = [];
+function flattenStmts(s : Array<AST.Stmt<Annotation>>, blocks: Array<IR.BasicBlock<Annotation>>, env : GlobalEnv) : Array<IR.VarInit<Annotation>> {
+  var inits: Array<IR.VarInit<Annotation>> = [];
   s.forEach(stmt => {
     inits.push(...flattenStmt(stmt, blocks, env));
   });
   return inits;
 }
 
-function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {
+function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annotation>>, env : GlobalEnv) : Array<IR.VarInit<Annotation>> {
   switch(s.tag) {
     case "assign":
       var [valinits, valstmts, vale] = flattenExprToExpr(s.value, env);
@@ -158,9 +160,11 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
     case "field-assign": {
       var [oinits, ostmts, oval] = flattenExprToVal(s.obj, env);
       var [ninits, nstmts, nval] = flattenExprToVal(s.value, env);
-      if(s.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
-      const classdata = env.classes.get(s.obj.a.name); // TODO: add super class fields
-      const offset : IR.Value<Type> = { tag: "wasmint", value: getClassFieldOffet(s.obj.a.name, s.field, env) };
+
+      if(s.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
+      const classdata = env.classes.get(s.obj.a.type.name);
+      const offset : IR.Value<Annotation> = { tag: "wasmint", value: getClassFieldOffet(s.obj.a.type.name, s.field, env) };
+
       pushStmtsToLastBlock(blocks,
         ...ostmts, ...nstmts, {
           tag: "store",
@@ -183,9 +187,9 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       var thenLbl = generateName("$then")
       var elseLbl = generateName("$else")
       var endLbl = generateName("$end")
-      var endjmp : IR.Stmt<Type> = { tag: "jmp", lbl: endLbl };
+      var endjmp : IR.Stmt<Annotation> = { tag: "jmp", lbl: endLbl };
       var [cinits, cstmts, cexpr] = flattenExprToVal(s.cond, env);
-      var condjmp : IR.Stmt<Type> = { tag: "ifjmp", cond: cexpr, thn: thenLbl, els: elseLbl };
+      var condjmp : IR.Stmt<Annotation> = { tag: "ifjmp", cond: cexpr, thn: thenLbl, els: elseLbl };
       pushStmtsToLastBlock(blocks, ...cstmts, condjmp);
       blocks.push({  a: s.a, label: thenLbl, stmts: [] })
       var theninits = flattenStmts(s.thn, blocks, env);
@@ -228,7 +232,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
   }
 }
 
-function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Expr<Type>] {
+function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<IR.VarInit<Annotation>>, Array<IR.Stmt<Annotation>>, IR.Expr<Annotation>] {
   switch(e.tag) {
     case "uniop":
       var [inits, stmts, val] = flattenExprToVal(e.expr, env);
@@ -239,7 +243,11 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "binop":
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
-      return [[...linits, ...rinits], [...lstmts, ...rstmts], {
+      var checkDenom : Array<IR.Stmt<Annotation>> = [];
+      if (e.op == AST.BinOp.IDiv || e.op == AST.BinOp.Mod) { // check division by zero
+        checkDenom.push(ERRORS.flattenDivideByZero(e.a, rval));
+      }
+      return [[...linits, ...rinits], [...lstmts, ...rstmts, ...checkDenom], {
           ...e,
           left: lval,
           right: rval
@@ -267,22 +275,21 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         }
       ];
     case "method-call": {
-      // TODO: call indirect instead of call
-      // {tag: "indirect_call", name: , class: , args: }
       const [objinits, objstmts, objval] = flattenExprToVal(e.obj, env);
       const argpairs = e.arguments.map(a => flattenExprToVal(a, env));
       const arginits = argpairs.map(cp => cp[0]).flat();
       const argstmts = argpairs.map(cp => cp[1]).flat();
       const argvals = argpairs.map(cp => cp[2]).flat();
       var objTyp = e.obj.a;
-      if(objTyp.tag !== "class") { // I don't think this error can happen
-        throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
+      if(objTyp.type.tag !== "class") { // I don't think this error can happen
+        throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.type.tag);
       }
-      const className = getMethodClassName(objTyp.name, e.method, env);
-      const zeroOffset: IR.Value<Type> = { tag: "wasmint", value: 0 };
-      const methodOffset : IR.Value<Type> =  { tag: "num", value: BigInt(env.classes.get(className)[1].get(e.method)) }
-      const checkObj : IR.Stmt<Type> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [objval]}}
-      const callMethod : IR.Expr<Type> = { tag: "call_indirect", fn: { tag: "load", start: objval, offset: zeroOffset}, arguments: [objval, ...argvals], name: `${className}$${e.method}`, methodOffset: methodOffset }
+      const className = getMethodClassName(objTyp.type.name, e.method, env);
+      const zeroOffset: IR.Value<Annotation> = { tag: "wasmint", value: 0 };
+      const methodOffset : IR.Value<Annotation> =  { tag: "num", value: BigInt(env.classes.get(className)[1].get(e.method)) }
+      const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, objval);
+      const callMethod : IR.Expr<Annotation> = { tag: "call_indirect", fn: { tag: "load", start: objval, offset: zeroOffset}, arguments: [objval, ...argvals], name: `${className}$${e.method}`, methodOffset: methodOffset }
+
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
@@ -291,11 +298,12 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     }
     case "lookup": {
       const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
-      if(e.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
-      // TODO: add super class field support
-      var className = e.obj.a.name;
+      if(e.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
+      var className = e.obj.a.type.name;
       var offset = getClassFieldOffet(className, e.field, env);
-      return [oinits, ostmts, {
+      const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, oval);
+
+      return [oinits, [...ostmts, checkObj], {
         tag: "load",
         start: oval,
         offset: { tag: "wasmint", value: offset }}];
@@ -306,15 +314,14 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       var fields = [...classdata[0].entries()];
       var superClass = classdata[2];
 
-      // TODO: add super class fields
       while(superClass[0] !== "object") {
         const superClassFields = [...env.classes.get(superClass[0])[0].entries()]
         superClass = [...env.classes.get(superClass[0])[2]]
         fields = [...superClassFields, ...fields]
       }
-      // TOOD: add class method offset of vtable
       
-      const assigns : IR.Stmt<Type>[] = fields.map(f => {
+      const assigns : IR.Stmt<Annotation>[] = fields.map(f => {
+
         const [_, [index, value]] = f;
         return {
           tag: "store",
@@ -324,8 +331,8 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         }
       });
 
-      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1 } }; // + 1 to store class method index in vtable
-      const callCons : IR.Expr<Type> = { 
+      const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1 } }; // + 1 to store class method index in vtable
+      const callCons : IR.Expr<Annotation> = { 
         tag: "call_indirect", 
         fn: { tag: "value", value : { tag: "wasmint", value: env.classIndexes.get(e.name)[0] }}, 
         arguments: [{ a: e.a, tag: "id", name: newName }], 
@@ -334,7 +341,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       };
 
       return [
-        [ { name: newName, type: e.a, value: { tag: "none" } }],
+        [ { name: newName, type: e.a.type, value: { tag: "none" } }],
         [ { tag: "assign", name: newName, value: alloc }, 
           {tag: "store",  start: { tag: "id", name: newName }, offset: { tag: "wasmint", value: 0 }, value: {tag: "num", value: BigInt(env.classIndexes.get(e.name)[0])}}, // store class method offset from vtable
           ...assigns,
@@ -343,9 +350,9 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
       ];
     case "id":
-      return [[], [], {tag: "value", value: { ...e }} ];
+      return [[], [], {a: e.a, tag: "value", value: { ...e }} ];
     case "literal":
-      return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+      return [[], [], {a: e.a, tag: "value", value: literalToVal(e.value) } ];
   }
 }
 
@@ -368,14 +375,14 @@ function getMethodClassName(className: string, methodName: string, env: GlobalEn
   }
 }
 
-function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>] {
+function flattenExprToVal(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<IR.VarInit<Annotation>>, Array<IR.Stmt<Annotation>>, IR.Value<Annotation>] {
   var [binits, bstmts, bexpr] = flattenExprToExpr(e, env);
   if(bexpr.tag === "value") {
     return [binits, bstmts, bexpr.value];
   }
   else {
     var newName = generateName("valname");
-    var setNewName : IR.Stmt<Type> = {
+    var setNewName : IR.Stmt<Annotation> = {
       tag: "assign",
       a: e.a,
       name: newName,
@@ -384,13 +391,17 @@ function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarIn
     // TODO: we have to add a new var init for the new variable we're creating here.
     // but what should the default value be?
     return [
-      [...binits, { a: e.a, name: newName, type: e.a, value: { tag: "none" } }],
+      [...binits, { a: e.a, name: newName, type: e.a.type, value: { tag: "none" } }],
       [...bstmts, setNewName],  
       {tag: "id", name: newName, a: e.a}
     ];
   }
 }
 
-function pushStmtsToLastBlock(blocks: Array<IR.BasicBlock<Type>>, ...stmts: Array<IR.Stmt<Type>>) {
+function pushStmtsToLastBlock(blocks: Array<IR.BasicBlock<Annotation>>, ...stmts: Array<IR.Stmt<Annotation>>) {
   blocks[blocks.length - 1].stmts.push(...stmts);
+}
+
+export function flattenWasmInt(val: number): IR.Value<Annotation>{
+  return { tag: "wasmint", value: val }
 }
