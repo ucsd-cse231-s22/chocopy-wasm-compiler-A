@@ -176,4 +176,44 @@ describe('e2e tests to check generics', () => {
     `
 
     assertPrint('Generic Pair class with swap function', prog5, ["10", "True", "True", "10"]);
+
+    const prog6 = `
+    T = TypeVar('T')
+
+    class Node(Generic[T]):
+      value: T = __ZERO__
+      next: Node[T] = None
+
+    class LinkedList(Generic[T]):
+      head: Node[T] = None
+
+      def push(self: LinkedList[T], value: T):
+        node: Node[T] = None
+        
+        node = Node()
+        node.value = value
+        if not (self.head is None):
+          node.next = self.head
+        self.head = node
+
+      def pop(self: LinkedList[T]) -> Node[T]:
+        node: Node[T] = None
+        if self.head is None:
+          return None
+
+        node = self.head
+        self.head = self.head.next
+        return node
+
+    l : LinkedList[int] = None
+    l = LinkedList()
+    l.push(10)
+    l.push(20)
+    l.push(30)
+    l.push(40)
+
+    print(l.head.value)
+    print(l.head.next.value)
+    `
+    assertPrint('Generic Linked List test - 0', prog6, ["40", "30"]);
 })
