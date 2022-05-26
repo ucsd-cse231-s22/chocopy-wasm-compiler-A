@@ -1,7 +1,7 @@
 import { assertPrint, assertTCFail, assertTC, assertFail } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
-describe("PA3 hidden tests", () => {
+describe("List tests", () => {
 
 // 1 - Simple list accessing
 assertPrint("list-access", `
