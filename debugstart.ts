@@ -5,6 +5,7 @@ import { addLibs  } from "./tests/import-object.test";
 
 // entry point for debugging
 async function debug() {
+  
   var source = `
 def f(x:int, y:int):
     print(x + y)

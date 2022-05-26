@@ -12,6 +12,8 @@ export type compileVal = {
     tag: "nac"|"val"|"undef"|"copyId", value?: Value<any>;
 }
 
+const varDefEnvTag: string = "$$VD$$";
+
 export function optimizeValue(val: Value<any>, env: Env): Value<any>{
     if (val.tag !== "id"){
         return val;
@@ -200,7 +202,9 @@ export function computePredecessorSuccessor(basicBlocks: Array<BasicBlock<any>>)
     let succs: Map<string, string[]> = new Map<string, string[]>();
     let preds: Map<string, string[]> = new Map<string, string[]>();
     let blockMapping: Map<string, BasicBlock<any>> = new Map<string, BasicBlock<any>>();
+    console.log("Length of basic block list - ", basicBlocks.length);
     basicBlocks.forEach(basicBlock=>{
+        console.log("Basic block label - ", basicBlock.label);
         blockMapping.set(basicBlock.label, basicBlock);
         const lastStmt = basicBlock.stmts[basicBlock.stmts.length-1];
         if(lastStmt !== undefined && lastStmt.tag === "ifjmp"){
@@ -341,6 +345,7 @@ function optimizeBlock(block: BasicBlock<any>, env: Env): [BasicBlock<any>, bool
 }
 
 export function optimizeFunction(func: FunDef<any>): FunDef<any>{
+    if (func.body.length === 0) return func;
     var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctions(func);
 
     var functionOptimized: boolean = false;
@@ -367,6 +372,7 @@ export function optimizeClass(c: Class<any>): Class<any>{
 }
 
 export function  generateEnvironmentProgram(program: Program<any>): [Map<string, Env>, Map<string, Env>]{
+    // console.log("Optimizing the body of the program");
     var initialEnv = computeInitEnv(program.inits, false);
 
     var inEnvMapping: Map<string, Env> = new Map<string, Env>();
@@ -381,9 +387,14 @@ export function  generateEnvironmentProgram(program: Program<any>): [Map<string,
 
     var [preds, succs, blockMapping]: [Map<string, string[]>, Map<string, string[]>, Map<string, BasicBlock<any>>] = computePredecessorSuccessor(program.body);
 
-    preds.set(program.body[0].label, ["VD"]);
-    succs.set("VD", [program.body[0].label]);
-    outEnvMapping.set("VD", initialEnv);
+    preds.set(program.body[0].label, [varDefEnvTag]);
+    succs.set(varDefEnvTag, [program.body[0].label]);
+    outEnvMapping.set(varDefEnvTag, initialEnv);
+
+    console.log("InEnvMapping - ", inEnvMapping);
+    // console.log("Block mapping startProg - ", JSON.stringify(blockMapping.get(program.body[0].label), (_, v) => typeof v === 'bigint' ? v.toString() : v));
+    console.log("Preds - ", JSON.stringify(preds, null, 2));
+    console.log("Successors - ", JSON.stringify(succs, null, 2));
 
     generateEnvironments([program.body[0].label], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
 
@@ -409,9 +420,9 @@ export function generateEnvironmentFunctions(func: FunDef<any>): [Map<string, En
 
     var [preds, succs, blockMapping]: [Map<string, string[]>, Map<string, string[]>, Map<string, BasicBlock<any>>] = computePredecessorSuccessor(func.body);
 
-    preds.set(func.body[0].label, ["VD"]);
-    succs.set("VD", [func.body[0].label]);
-    outEnvMapping.set("VD", initialEnv);
+    preds.set(func.body[0].label, [varDefEnvTag]);
+    succs.set(varDefEnvTag, [func.body[0].label]);
+    outEnvMapping.set(varDefEnvTag, initialEnv);
     
     generateEnvironments([func.body[0].label], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
 
@@ -419,7 +430,7 @@ export function generateEnvironmentFunctions(func: FunDef<any>): [Map<string, En
 }
 
 export function optimizeProgram(program: Program<any>): Program<any>{
-
+    if (program.body.length == 0) return program;
     var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentProgram(program);
 
     //Write code to optimize the program using the environment
@@ -484,7 +495,11 @@ export function generateEnvironments(workList: Array<string>, inEnvMapping: Map<
     inEnvMapping.set(currBlock, newInEnv);
     outEnvMapping.set(currBlock, updateEnvironmentByBlock(newInEnv, blockMapping.get(currBlock)));
     
-    const wlAddition: string[] = (succs.get(currBlock) === undefined)?([]):(succs.get(currBlock));
+    const wlAddition: string[] = (succs.get(currBlock) === undefined)?([]):(succs.get(currBlock).map(succBlock => {
+        if (succBlock !== varDefEnvTag) return succBlock;
+    }));
+    console.log("wlAddition - ", wlAddition);
+
     generateEnvironments([...workList, ...wlAddition], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
 
     return;
