@@ -69,13 +69,15 @@ function lambdalift_helper(preFun: FunDef<Type>, fun: FunDef<Type>, env: LocalFu
 
     env.funnamestack.push(fun.name);
     var funcname = env.funnamestack.join("$");
-    var funcbody:Array<Stmt<Type>> = [];
-    var body: Array<Stmt<Type>>;
+    var body_all_locals: Array<Stmt<Type>>;          // function body with all explicit nonlocals modefied as lookup
+    var body_correct_call:Array<Stmt<Type>> = [];    // function body with modified subfunction names.
+    var body_final: Array<Stmt<Type>> = [];          // 
+    
     var paramset: Set<Expr<Type>>;
-    [paramset, body] = getNonLocalsInFunBody(fun, env);
+    [paramset, body_all_locals] = getNonLocalsInFunBody(fun, env);
     var funcparams = Array.from(paramset).map(e => <Parameter<Type>>{name: (e as any).name, type: e.a}).concat(fun.parameters);
-    body.forEach(s => {
-        funcbody.push(changeCallinStmt(s, env));
+    body_all_locals.forEach(s => {
+        body_correct_call.push(changeCallinStmt(s, env));
     })
     for(var i=0; i<fun.funs.length; i++){
         lambdalift_helper(fun, fun.funs[i], env, flattenedfun, generatedclasses);
@@ -90,29 +92,144 @@ function lambdalift_helper(preFun: FunDef<Type>, fun: FunDef<Type>, env: LocalFu
         env.funlocals.add(v.name);
     });
     // get the right locals 
+    body_final = body_correct_call;
     env.funlocals.forEach(local =>{
         if(env.classesneeded.get(local)){
             var classinfo = env.classesneeded.get(local)
             var classname = (classinfo[1] as any).name
             generatedclasses.push(generateClassDef(local, classname, classinfo[0]));
-            // ******* assume this nonlocal only exists in the parameter list, is not used in body
-            // ******* need a function to do var name replace in the future. Just a beta version~
             fun.parameters.forEach(p =>{
                 if(p.name === local){
                     p.name = local+ "_value";
                 }
+                body_final = body_final.map(s => changeIDtoLookupinStmt(s, local, p.type, classinfo[1]));
             })
             var classinit: Array<VarInit<Type>> = [];
             var classconstruct : Array<Stmt<Type>> = [];
             classinit.push({a:NONE, name: local, type: classinfo[1], value:{tag:"none"}});
             classconstruct.push({a: NONE, tag: "assign", name: local, value: {a:classinfo[1], tag: "construct", name: classname}})
             classconstruct.push({a: NONE, tag: "field-assign", obj: {a: classinfo[1], tag: "id", name: local}, field: "value", value: {a: {tag: "number"}, tag: "id", name: local+"_value"}})
-            funcbody = classconstruct.concat(funcbody);
+            body_final = classconstruct.concat(body_final);
             fun.inits.push(...classinit);
         }
     })
 
-    flattenedfun.push({ ...fun, name: funcname, parameters: funcparams, funs: [], body: funcbody});
+    flattenedfun.push({ ...fun, name: funcname, parameters: funcparams, funs: [], body: body_final});
+}
+
+// s : a statement
+// name: name of the parameter
+// pretype: previous type of this parameter
+// currtype: current type- must be a class Refx. 
+function changeIDtoLookupinStmt(s: Stmt<Type>, name: string, pretype: Type, currtype: Type): Stmt<Type>{
+    switch (s.tag){
+        case "assign":
+            var value = changeIDtoLookupinExpr(s.value, name, pretype, currtype);
+            return {...s, value};
+        case "return":
+            var value = changeIDtoLookupinExpr(s.value, name, pretype, currtype);
+            return {...s, value};
+        case "expr":
+            var expr = changeIDtoLookupinExpr(s.expr, name, pretype, currtype);
+            return {...s, expr};
+        case "field-assign":
+            var obj = changeIDtoLookupinExpr(s.obj, name, pretype, currtype);
+            var value = changeIDtoLookupinExpr(s.value, name, pretype, currtype);
+            return {...s, obj, value};
+        case "index-assign":
+            var list = changeIDtoLookupinExpr(s.list, name, pretype, currtype);
+            var index = changeIDtoLookupinExpr(s.index, name, pretype, currtype);
+            var value = changeIDtoLookupinExpr(s.value, name, pretype, currtype);
+            return {...s, list, index, value};
+        case "if":
+            var cond = changeIDtoLookupinExpr(s.cond, name, pretype, currtype);
+            var newthn: Array<Stmt<Type>> = [];
+            var newels: Array<Stmt<Type>> = [];
+            s.thn.forEach(s_thn =>{
+                newthn.push(changeIDtoLookupinStmt(s_thn, name, pretype, currtype));
+            })
+            s.els.forEach(s_els =>{
+                newels.push(changeIDtoLookupinStmt(s_els, name, pretype, currtype));
+            })
+            return {...s, cond, thn:newthn, els:newels};
+        case "while":
+            var cond = changeIDtoLookupinExpr(s.cond, name, pretype, currtype);
+            var body: Array<Stmt<Type>> = [];
+            s.body.forEach(s_body =>{
+                newthn.push(changeIDtoLookupinStmt(s_body, name, pretype, currtype));
+            })
+            return {...s, cond, body};
+        case "for":
+            var iterable = changeIDtoLookupinExpr(s.iterable, name, pretype, currtype);
+            var body: Array<Stmt<Type>> = [];
+            s.body.forEach(s_body =>{
+                newthn.push(changeIDtoLookupinStmt(s_body, name, pretype, currtype));
+            })
+            return {...s, iterable, body};
+        default:
+            return s;
+    }
+}
+
+function changeIDtoLookupinExpr(e: Expr<Type>, name: string, pretype: Type, currtype: Type): Expr<Type>{
+    switch (e.tag){
+        case "literal":
+            return e;
+        case "id":
+            if(e.name === name && e.a.tag === pretype.tag){
+                return {a: pretype, tag: "lookup", obj: {a: currtype, tag: "id", name: name}, field: "value"};
+            }
+            else{
+                return e;
+            }
+        case "binop":
+            var left = changeIDtoLookupinExpr(e.left, name, pretype, currtype);
+            var right = changeIDtoLookupinExpr(e.right, name, pretype, currtype);
+            return {...e, left, right};
+        case "uniop":
+            var expr = changeIDtoLookupinExpr(e.expr, name, pretype, currtype);
+            return {...e, expr};
+        case "builtin1":
+            var arg = changeIDtoLookupinExpr(e.arg, name, pretype, currtype);
+            return {...e, arg};
+        case "builtin2":
+            var left = changeIDtoLookupinExpr(e.left, name, pretype, currtype);
+            var right = changeIDtoLookupinExpr(e.right, name, pretype, currtype);
+            return {...e, left, right};
+        case "call":
+            var newargs: Array<Expr<Type>> = [];
+            e.arguments.forEach(a=>{
+                newargs.push(changeIDtoLookupinExpr(a, name, pretype, currtype));
+            });
+            return {...e, arguments: newargs};
+        case "lookup":
+            var obj = changeIDtoLookupinExpr(e.obj, name, pretype, currtype);
+            return {...e, obj};
+        case "index":
+            var obj = changeIDtoLookupinExpr(e.obj, name, pretype, currtype);
+            var index = changeIDtoLookupinExpr(e.index, name, pretype, currtype);
+            return {...e, obj, index};
+        case "method-call":
+            var obj = changeIDtoLookupinExpr(e.obj, name, pretype, currtype);
+            var newargs: Array<Expr<Type>> = [];
+            e.arguments.forEach(a=>{
+                newargs.push(changeIDtoLookupinExpr(a, name, pretype, currtype));
+            });
+            return {...e, obj, arguments: newargs};
+        case "construct":
+            return e;
+        case "list-obj":
+            var newentries: Array<Expr<Type>> = [];
+            e.entries.forEach(entry=>{
+                newentries.push(changeIDtoLookupinExpr(entry, name, pretype, currtype));
+            });
+            return {...e, entries: newentries};
+        case "list-length":
+            var list = changeIDtoLookupinExpr(e.list, name, pretype, currtype);
+            return {...e, list};
+        default:
+            return e;
+    }
 }
 
 function changeCallinStmt(s: any, env : LocalFuncEnv) : Stmt<Type>{
@@ -166,7 +283,7 @@ function changeCallinExpr(e: Expr<Type>, env: LocalFuncEnv): Expr<Type>{
             }
             // also need to change arg lists.
             env.funnonlocalsdic.get(e.name).flat().forEach(p=> {
-                newargs.push({tag: "id", name: p.name});
+                newargs.push({a: p.type, tag: "id", name: p.name});
             })
             newargs = newargs.concat(e.arguments);
             return {...e, name: newname, arguments: newargs};
@@ -321,8 +438,6 @@ function getNonLocalsInStmt(s: Stmt<Type>, explicit_nonlocals: Array<string>, en
 
 export function getNonLocalsInFunBody(fun : FunDef<Type>, env: LocalFuncEnv) : [Set<Expr<Type>>, Array<Stmt<Type>>] {
     var res : [Set<string>, Set<Expr<Type>>] = [new Set(), new Set()];
-    
-    
     var explicit_nonlocals = fun.nonlocals;
     var newbody: Array<Stmt<Type>> = [];
     fun.body.forEach(s => {

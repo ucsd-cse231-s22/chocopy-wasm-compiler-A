@@ -12,7 +12,7 @@ def f(x : int) -> int:
     nonlocal x
     x = z+x
     return x
-  return h(10) + h(7)
+  return h(x) + h(7)
 
 print(f(6))
 `

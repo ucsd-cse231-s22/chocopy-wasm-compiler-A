@@ -23,5 +23,18 @@ def f(x : int) -> int:
 print(f(6))
 `, [`39`]);
 
+assertPrint("nested-function-nonlocal", 
+`
+def f(x : int) -> int:
+  def h(z : int) -> int:
+    nonlocal x
+    x = z+x
+    return x
+  return h(x) + h(7)
+
+print(f(6))`, [`31`]);
+
+
+
 
 });

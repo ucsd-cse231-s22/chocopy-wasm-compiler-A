@@ -297,7 +297,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Plus:
           if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
           else if(equalType(tLeft.a, tRight.a) && tLeft.a.tag === "list" && tRight.a.tag === "list" ){
-            var a = {tag:"list", length: tLeft.a.listsize+tRight.a.listsize, elementtype: tLeft.a.elementtype};
+            var a = {tag:"list", listsize: tLeft.a.listsize+tRight.a.listsize, elementtype: tLeft.a.elementtype};
             return {a: a as Type, ...tBin}
           }
           else if (equalType(tLeft.a, STR) && equalType(tRight.a, STR)) { return { a: STR, ...tBin } }
@@ -401,7 +401,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
 
         if(argTypes.length === expr.arguments.length &&
            tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
-             return {...expr, a: retType, arguments: expr.arguments};
+             return {...expr, a: retType, arguments: tArgs};
            } else {
             throw new TypeError("Function call type mismatch: " + expr.name);
            }
