@@ -4,7 +4,7 @@ export type Annotation = {
   type?: Type,
   fromLoc?: Location, // include
   endLoc?: Location, // exclude
-  eolLoc: Location, // loc of the next line break
+  eolLoc?: Location, // loc of the next line break
   src?: string
 }
 export type Location = {
@@ -14,6 +14,7 @@ export type Location = {
 }
 
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
+export type Callable = {tag: "callable"; params: Array<Type>; ret: Type };
 export type Type =
   | {tag: "number"}
   | {tag: "bool"}
@@ -21,6 +22,7 @@ export type Type =
   | {tag: "class", name: string, params: Array<Type> }
   | {tag: "either", left: Type, right: Type }
   | {tag: "typevar", name: string }
+  | Callable;
 
 export type Parameter<A> = { a?: A, name: string, type: Type }
 
@@ -31,19 +33,25 @@ export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods
 export type TypeVar<A> = { a?: A, name: string, canonicalName: string, types: Array<Type> }
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Literal<A> }
+export type NonlocalVarInit<A> = { a?: A, name: string };
 
-export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, ret: Type, inits: Array<VarInit<A>>, body: Array<Stmt<A>> }
+export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, ret: Type, inits: Array<VarInit<A>>, body: Array<Stmt<A>>, nonlocals: Array<NonlocalVarInit<A>>, children: Array<FunDef<A>> }
 
 export type Stmt<A> =
   | {  a?: A, tag: "assign", name: string, value: Expr<A> }
   | {  a?: A, tag: "return", value: Expr<A> }
   | {  a?: A, tag: "expr", expr: Expr<A> }
   | {  a?: A, tag: "pass" }
+  | {  a?: A, tag: "continue" }
+  | {  a?: A, tag: "break" }
   | {  a?: A, tag: "field-assign", obj: Expr<A>, field: string, value: Expr<A> }
   | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
+  | {  a?: A, tag: "nonlocal", name: string }
+  | {  a?: A, tag: "for", iterator: string, values: Expr<A>, body: Array<Stmt<A>> }
 
+export type Lambda<A> = {  a?: A, tag: "lambda", params: Array<string>, type: Callable, expr: Expr<A> };
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal<A> }
   | {  a?: A, tag: "id", name: string }
@@ -51,11 +59,13 @@ export type Expr<A> =
   | {  a?: A, tag: "uniop", op: UniOp, expr: Expr<A> }
   | {  a?: A, tag: "builtin1", name: string, arg: Expr<A> }
   | {  a?: A, tag: "builtin2", name: string, left: Expr<A>, right: Expr<A>}
-  | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>> } 
+  | {  a?: A, tag: "call", fn: Expr<A>, arguments: Array<Expr<A>> } 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
+  | Lambda<A>
+  | {  a?: A, tag: "if-expr", cond: Expr<A>, thn: Expr<A>, els: Expr<A> }
 
 // add annotation for reporting row/col in errors
 export type Literal<A> = 

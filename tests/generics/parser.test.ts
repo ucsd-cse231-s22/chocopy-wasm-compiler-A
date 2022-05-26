@@ -1,5 +1,5 @@
 import {expect} from 'chai';
-import { parser } from 'lezer-python';
+import { parser } from '@lezer/python';
 import { parse, traverseLiteral, traverseType, traverseTypeVarInit, traverseGenericParams, traverseClass, ParserEnv } from '../../parser';
 import { Type, VarInit } from '../../ast';
 

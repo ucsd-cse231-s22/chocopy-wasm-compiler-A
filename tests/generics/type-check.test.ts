@@ -132,7 +132,10 @@ describe('Generics Type-Checker Tests', () => {
               parameters: [{name: 'self', type: CLASS('Box', [CLASS('T')])}],
               ret: CLASS('T'),
               inits: [],
-              body: [{tag: 'return', value: {'tag': 'lookup', obj: {tag: 'id', name: 'self'}, field: 'x'}}]},
+              body: [{tag: 'return', value: {'tag': 'lookup', obj: {tag: 'id', name: 'self'}, field: 'x'}}],
+              nonlocals: [],
+              children: [],
+            },
           ],
           typeParams: ['T']
         }
@@ -153,7 +156,10 @@ describe('Generics Type-Checker Tests', () => {
           parameters: [{name: 'self', type: CLASS('Box', [TYPEVAR('T')])}],
           ret: TYPEVAR('T'),
           inits: [],
-          body: [{tag: 'return', value: {'tag': 'lookup', obj: {tag: 'id', name: 'self'}, field: 'x'}}]},
+          body: [{tag: 'return', value: {'tag': 'lookup', obj: {tag: 'id', name: 'self'}, field: 'x'}}],
+          nonlocals: [],
+          children: [],
+        },
       ],
       typeParams: ['T']
     });
@@ -187,7 +193,9 @@ describe('Generics Type-Checker Tests', () => {
               ],
               body: [
                 {tag: 'return', value: {'tag': 'lookup', obj: {tag: 'id', name: 'self'}, field: 'x'}}
-              ]
+              ],
+              nonlocals: [],
+              children: [],
             },
           ],
           typeParams: ['T']
@@ -211,7 +219,10 @@ describe('Generics Type-Checker Tests', () => {
           inits: [
             {name: 'v', type: TYPEVAR('T'), value: PyZero()},
           ],
-          body: [{tag: 'return', value: {'tag': 'lookup', obj: {tag: 'id', name: 'self'}, field: 'x'}}]},
+          body: [{tag: 'return', value: {'tag': 'lookup', obj: {tag: 'id', name: 'self'}, field: 'x'}}],
+          nonlocals: [],
+          children: [],
+        },
       ],
       typeParams: ['T']
     });
@@ -233,7 +244,7 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -253,7 +264,7 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], nonlocals:       [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
           ],
           typeParams: ['T'],
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -280,7 +291,7 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},{name: 'y', type: CLASS('U'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}} ],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] , nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
           ],
           typeParams: ['T'],
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -304,7 +315,7 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] }
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [] }
           ],
           typeParams: ['T'],
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -328,10 +339,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -351,10 +362,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ],
+            ], nonlocals: [], children: [],
             a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
@@ -382,10 +393,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}}
-            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -409,10 +420,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
+            ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
           ],
           typeParams: ['T'],
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}},
@@ -444,10 +455,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -475,10 +486,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: {tag: 'none'}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
@@ -504,10 +515,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "isNone", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: BOOL, inits: [], body: [
               {tag: "return", value: {tag: 'binop', op: BinOp.Is, left: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, right: { tag: "literal", value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
@@ -532,10 +543,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
@@ -544,7 +555,7 @@ describe('Generics Type-Checker Tests', () => {
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
@@ -560,10 +571,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
@@ -597,10 +608,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
@@ -609,7 +620,7 @@ describe('Generics Type-Checker Tests', () => {
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
         { tag: "field-assign", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "literal", value: {tag: "num", value: 10}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -626,10 +637,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
@@ -664,10 +675,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -678,7 +689,7 @@ describe('Generics Type-Checker Tests', () => {
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
         { tag: "assign", name: "n", value: {tag: "lookup", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -695,10 +706,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -735,10 +746,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
@@ -748,7 +759,7 @@ describe('Generics Type-Checker Tests', () => {
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
         { tag: "assign", name: "n", value: {tag: "method-call", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, method: "get", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -765,10 +776,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
@@ -804,10 +815,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: CLASS('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -817,8 +828,8 @@ describe('Generics Type-Checker Tests', () => {
         { name: "b", type: CLASS('Box', [CLASS('Box', [NUM])]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", name: "Box", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
-        { tag: "field-assign", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "call", name: "Box", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "field-assign", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
@@ -834,10 +845,10 @@ describe('Generics Type-Checker Tests', () => {
           name: 'Box',
           fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [
-            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+            { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
             { name: "get", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: TYPEVAR('T'), inits: [], body: [
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
-            ], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
+            ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
