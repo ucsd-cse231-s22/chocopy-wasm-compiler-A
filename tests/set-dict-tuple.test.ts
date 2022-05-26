@@ -99,10 +99,40 @@ describe("basic-set-functions", ()=>{
   x.add(2)
   x.update({3,12,13})
   x.print()`,["2","12","3","13"]);
+});
+
+describe("basic-set-functions", ()=>{
 
   assertPrint("dict-constructor",`
   d : dict = dict([int, int])
   d = {3: 2}
   print(d.get(3,-1))`,["2"]);
 
+  assertPrint("dict-add",`
+  d : dict = dict([int, int])
+  d = {3: 2}
+  d.add(4,7)
+  print(d.get(4,-1))`,["7"]);
+
+  assertPrint("dict-pop",`
+  d : dict = dict([int, int])
+  d = {3: 2}
+  d.add(4,7)
+  print(d.pop(4))
+  print(d.size())`,["7","1"]);
+
+  assertPrint("dict-duplicate-key",`
+  d : dict = dict([int, int])
+  d = {3: 2}
+  d.add(3,5)
+  d.add(13,51)
+  print(d.get(3,-1))
+  print(d.get(13,-1))`,["5","51"]);
+
+  assertPrint("dict-duplicate-key",`
+  d : dict = dict([int, int])
+  d = {3: 2}
+  d.add(3,5)
+  print(d.has(3))
+  print(d.has(4))`,["True","False"]);
 });

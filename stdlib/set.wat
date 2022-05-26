@@ -675,9 +675,7 @@
     (local.get $key)
     (i32.const 10) ;;hard-coding hash table size
     (i32.rem_u) ;;Compute hash
-    (i32.mul (i32.const 4)) ;;Multiply by 4 for memory offset
-    (i32.add) ;;Reaching the proper bucket. Call this bucketAddress
-    (i32.load)
+    (call $load)
     (local.set $nodePtr)
     (local.get $nodePtr)
     (i32.const 0) ;;None
@@ -691,15 +689,15 @@
         (block
             (loop ;; While loop till we find a node whose next is None
                 (local.get $nodePtr)
-                (i32.load) ;;Loading head of linkedList
+                (i32.const 0)
+                (call $load) ;;Loading head of linkedList
                 (local.get $key)
                 (i32.eq) ;; if tag is same as the provided one
                 (if
                 (then
                     (local.get $nodePtr)
-                    (i32.const 4)
-                    (i32.add) ;; Value
-                    (i32.load) ;;HT
+                    (i32.const 1)
+                    (call $load) ;;HT
                     (local.set $returnVal)
                     (i32.const 1)
                     (local.set $tagHitFlag) ;; Set tagHitFlag to True
@@ -707,9 +705,8 @@
                 ) ;; closing if
 
                 (local.get $nodePtr)
-                (i32.const 8)
-                (i32.add) ;; Next pointer
-                (i32.load)
+                (i32.const 2)
+                (call $load)
                 (local.set $nodePtr)
                 (br_if 0 ;; Opening br_if
                     (local.get $nodePtr)
@@ -856,7 +853,8 @@
     (i32.add) ;;Reaching the proper bucket. Call this bucketAddress
     (local.set $prevPtr) ;; prevPtr equal to bucketAddress
     (local.get $prevPtr)
-    (i32.load)
+    (i32.const 0)
+    (call $load)
     (i32.const 0) ;;None
     (i32.eq)
     (if
@@ -866,12 +864,14 @@
     ) ;;close then
     (else
         (local.get $prevPtr)
-        (i32.load) ;; Address of the head of linkedList.
+        (i32.const 0)
+        (call $load) ;; Address of the head of linkedList.
         (local.set $currPtr) ;; currPtr stores the address of the head of the first node.
         (block
             (loop
                 (local.get $currPtr)
-                (i32.load)
+                (i32.const 0)
+                (call $load)
                 (local.get $key)
                 (i32.eq) ;; if tag is same as the provided one
                 (if
@@ -881,19 +881,18 @@
                     (i32.add)
                     (local.set $returnVal) ;; setting the returnValue to the address of value in the node.
                     (local.get $prevPtr)
+                    (i32.const 0)
                     (local.get $currPtr)
-                    (i32.const 8)
-                    (i32.add)
-                    (i32.load)
-                    (i32.store) ;; Updating the address of next in previous node to the next of the current node.
+                    (i32.const 2)
+                    (call $load)
+                    (call $store) ;; Updating the address of next in previous node to the next of the current node.
                     (local.get $currPtr)
                     (i32.const 8)
                     (i32.add)
                     (local.set $prevPtr) ;; Updating the prevPtr to the next of the current node.
                     (local.get $currPtr)
-                    (i32.const 8)
-                    (i32.add)
-                    (i32.load)
+                    (i32.const 2)
+                    (call $load)
                     (local.set $currPtr) ;; Updating the currPtr
                 ) ;; closing then
                 ) ;; closing if
@@ -908,7 +907,8 @@
     ) ;;close else
     ) ;; close if
     (local.get $returnVal)
-    (i32.load)
+    (i32.const 0)
+    (call $load)
     (return))
 
 (func $dict$CreateEntry (param $key i32) (param $val i32) (result i32)
@@ -917,20 +917,19 @@
     (call $alloc)
     (local.tee $$allocPointer)
 
+    (i32.const 0)
     (local.get $key)
-    (i32.store) ;; Dumping tag
+    (call $store) ;; Dumping tag
 
     (local.get $$allocPointer)
-    (i32.const 4)
-    (i32.add) ;; Moving to the next block
+    (i32.const 1)
     (local.get $val)
-    (i32.store) ;; Dumping value
+    (call $store) ;; Dumping value
 
     (local.get $$allocPointer)
-    (i32.const 8)
-    (i32.add) ;; Moving to the next block
+    (i32.const 2)
     (i32.const 0) ;;None
-    (i32.store) ;; Dumping None in the next
+    (call $store) ;; Dumping None in the next
 
     (local.get $$allocPointer)
     (return))
@@ -945,9 +944,7 @@
     (local.get $key)
     (i32.const 10)
     (i32.rem_u) ;;Compute hash
-    (i32.mul (i32.const 4)) ;;Multiply by 4 for memory offset
-    (i32.add) ;;Reaching the proper bucket. Call this bucketAddress
-    (i32.load)
+    (call $load)
     (i32.const 0) ;;None
     (i32.eq)
     (if
@@ -960,20 +957,17 @@
         (local.get $key)
         (i32.const 10)
         (i32.rem_u) ;;Compute hash
-        (i32.mul (i32.const 4)) ;;Multiply by 4 for memory offset
-        (i32.add) ;;Recomputed bucketAddress
         (local.get $$allocPointer)
-        (i32.store) ;;Updated the bucketAddress pointing towards first element.
+        (call $store) ;;Updated the bucketAddress pointing towards first element.
     ) ;; Closing then
     (else ;; Opening else
         (local.get $baseAddr) ;; Recomputing the bucketAddress to follow the linkedList.
         (local.get $key)
         (i32.const 10)
         (i32.rem_u) ;;Compute hash
-        (i32.mul (i32.const 4)) ;;Multiply by 4 for memory offset
-        (i32.add) ;;Recomputed bucketAddress
-        (i32.load) ;;Loading head of linkedList
-        (i32.load) ;;Loading the tag of head
+        (call $load) ;;Loading head of linkedList
+        (i32.const 0)
+        (call $load) ;;Loading the tag of head
         (local.get $key)
         (i32.eq)
         (if ;; if tag is same as the provided one
@@ -982,13 +976,10 @@
             (local.get $key)
             (i32.const 10)
             (i32.rem_u) ;;Compute hash
-            (i32.mul (i32.const 4)) ;;Multiply by 4 for memory offset
-            (i32.add) ;;Recomputed bucketAddress
-            (i32.load) ;;Loading head of linkedList
-            (i32.const 4)
-            (i32.add) ;; Value
+            (call $load) ;;Loading head of linkedList
+            (i32.const 1)
             (local.get $val)
-            (i32.store) ;; Updating the value
+            (call $store) ;; Updating the value
             (i32.const 1)
             (local.set $tagHitFlag) ;; Set tagHitFlag to True
         ) ;; closing then
@@ -997,39 +988,41 @@
         (local.get $key)
         (i32.const 10)
         (i32.rem_u) ;;Compute hash
-        (i32.mul (i32.const 4)) ;;Multiply by 4 for memory offset
-        (i32.add) ;;Recomputed bucketAddress
-        (i32.load) ;;Loading head of linkedList
+        (call $load) ;;Loading head of linkedList
         (i32.const 8)
         (i32.add) ;; Next pointer
         (local.set $nodePtr)
         (block
             (loop ;; While loop till we find a node whose next is None
                 (local.get $nodePtr)
-                (i32.load) ;; Traversing to head of next node
+                (i32.const 0)
+                (call $load) ;; Traversing to head of next node
                 (i32.const 0) ;;None
                 (i32.ne) ;; If nodePtr not None
                 (if
                 (then
                     (local.get $nodePtr)
-                    (i32.load) ;;Loading head of linkedList
-                    (i32.load) ;;Loading the tag of head
+                    (i32.const 0)
+                    (call $load) ;;Loading head of linkedList
+                    (i32.const 0)
+                    (call $load) ;;Loading the tag of head
                     (local.get $key)
                     (i32.eq) ;; if tag is same as the provided one
                     (if
                     (then
                         (local.get $nodePtr)
-                        (i32.load) ;;Loading head of linkedList
-                        (i32.const 4)
-                        (i32.add) ;; Value
+                        (i32.const 0)
+                        (call $load) ;;Loading head of linkedList
+                        (i32.const 1)
                         (local.get $val)
-                        (i32.store) ;; Updating the value
+                        (call $store) ;; Updating the value
                         (i32.const 1)
                         (local.set $tagHitFlag) ;; Set tagHitFlag to True
                     ) ;; closing then
                     ) ;; closing if
                     (local.get $nodePtr)
-                    (i32.load) ;;Loading head of linkedList
+                    (i32.const 0)
+                    (call $load) ;;Loading head of linkedList
                     (i32.const 8)
                     (i32.add) ;; Next pointer
                     (local.set $nodePtr)
@@ -1037,7 +1030,8 @@
                 ) ;; Closing if
                 (br_if 0 ;; Opening br_if
                     (local.get $nodePtr)
-                    (i32.load) ;; Traversing to head of next node
+                    (i32.const 0)
+                    (call $load) ;; Traversing to head of next node
                     (i32.const 0) ;;None
                     (i32.ne) ;; If nodePtr not None
                 ) ;; Closing br_if
@@ -1054,8 +1048,9 @@
             (call $dict$CreateEntry) ;;create node
             (local.set $$allocPointer)
             (local.get $nodePtr) ;; Get the address of "next" block in node, whose next is None.
+            (i32.const 0)
             (local.get $$allocPointer)
-            (i32.store) ;; Updated the next pointing towards first element of new node.
+            (call $store) ;; Updated the next pointing towards first element of new node.
         ) ;; Closing then inside else
         ) ;; Closing if inside else
     ) ;; Closing else
