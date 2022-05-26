@@ -1,10 +1,6 @@
 
-import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, ClassIndex } from './ast';
 import { NUM, BOOL, NONE, STR, EMPTY, CLASS, LIST } from './utils';
-import { emptyEnv } from './compiler';
-import { BlockList } from 'net';
-import { IncomingMessage } from 'http';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends Error {
@@ -238,6 +234,8 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
   const newInheritance = emptyInheritance();
   const temp = new Map();
   temp.set("object", [[], new Map(), new Map()]); // parents list, fields, method-class
+  // fields: {key: field name, value: VarInit<A>}
+  // method-class: {key: method name, value: class last defined}
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
   program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
   // program.classes.forEach(cls => {
@@ -253,7 +251,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
   var visitedClasses = new Map<string, string>();
   visitedClasses.set("object", '');
   while (true) {
-    program.classes.forEach(cls => {
+    program.classes.forEach(cls => { // cls: new added class
       if (!visitedClasses.has(cls.name) && visitedClasses.has(cls.parent)) {
         visitedClasses.set(cls.name, cls.parent)
         var currFields = new Map();
@@ -288,7 +286,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
               throw new TypeCheckError("different param type of inherited method " + entry[0] + " in class " + cls.name)
             }
           } else {
-            cls.methods.push({name: entry[0], parameters: [], ret: {tag: "none"}, inits: [], body: [], class: methodCla.get(entry[0])})
+            cls.methods.push({name: entry[0], parameters: [], ret: NONE, inits: [], body: [], class: methodCla.get(entry[0])})
             methodClass.set(entry[0], methodCla.get(entry[0]));
             currMethods.set(entry[0], entry[1]);
           }
