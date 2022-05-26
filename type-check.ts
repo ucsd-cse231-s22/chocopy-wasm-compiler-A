@@ -274,6 +274,14 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       const typedObj:Expr<Annotation> = tcExpr(env,locals,expr.obj,SRC);
       const typedIdx:Expr<Annotation> = tcExpr(env,locals,expr.index,SRC);
       return {  a: typedObj.a, tag: "index", obj: typedObj, index: typedIdx };
+
+    case "slice":
+      const typedSliceObj:Expr<Annotation> = tcExpr(env,locals,expr.obj,SRC);
+      const typedLeft:Expr<Annotation> = tcExpr(env,locals,expr.start,SRC);
+      const typedRight:Expr<Annotation> = tcExpr(env,locals,expr.stop,SRC);
+      const typedStep:Expr<Annotation> = tcExpr(env,locals,expr.step,SRC);
+      return {  a: typedSliceObj.a, tag: "slice", obj: typedSliceObj, start: typedLeft, stop: typedRight, step: typedStep}
+
     case "literal":
       return { ...expr, a: { ...expr.a, type: tcLiteral(expr.value) } };
     case "binop":

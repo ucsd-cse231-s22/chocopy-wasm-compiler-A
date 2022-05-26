@@ -381,6 +381,67 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
           return;
         }
     }
+    case "slice": {
+      if (e.a.type == STRING){
+        console.log("Enter slice")
+        console.log(e)
+        var [indexoinits, indexostmts, indexoval] = flattenExprToVal(e.obj, env);
+        const newIndexStrName = generateName("newStr");
+        const newIndexStrName2 = generateName("newStr");
+        const [_3, _4, leftVal] = flattenExprToVal(e.start, env)
+        const [_5, _6, rightVal] = flattenExprToVal(e.stop, env)
+        const [_7, _8, stepVal] = flattenExprToVal(e.step, env)
+        var index_offset: number = 0;
+        let step = 1
+        if (stepVal.tag == "num") {
+          step = Number(stepVal.value)
+        }
+        console.log("step")
+        console.log(step)
+        var loadStmts: Array<IR.Stmt<Annotation>>  = []
+        if (leftVal.tag == "num" && rightVal.tag == "num") {
+          index_offset = 1
+          for (let i = Number(leftVal.value) + 1; i < Number(rightVal.value) +1; i = i + step) {
+
+            const loadStmt:IR.Expr<Annotation> = {
+              tag: "load",
+              start: indexoval,
+              offset: { tag: "wasmint", value: Number(i) }
+            };
+            loadStmts.push({ tag: "assign", name: newIndexStrName2, value: loadStmt})
+            loadStmts.push({
+              tag: "store",
+              start: {tag: "id", name: newIndexStrName},
+              offset: {tag:"wasmint", value: index_offset},
+              value: { a: {...e.a,type:NUM}, tag: "id", name: newIndexStrName2 }
+            });
+            index_offset += 1
+          }
+        }
+        let alloc_index_string : IR.Expr<Annotation>
+        if (leftVal.tag == "num" && rightVal.tag == "num") {
+          alloc_index_string = { tag: "alloc", amount: { tag: "wasmint", value: index_offset } };
+        }
+
+        var assigns_index_string : IR.Stmt<Annotation>[] = [];
+        if (leftVal.tag == "num" && rightVal.tag == "num") {
+          assigns_index_string.push({
+            tag: "store",
+            start: {tag: "id", name: newIndexStrName},
+            offset: {tag:"wasmint", value: 0},
+            value: {a:{...e.a,type:NUM} , tag:"wasmint", value:index_offset-1}
+          });
+        }
+
+        indexoinits.push({ name: newIndexStrName, type: STRING, value: { tag: "none" } });
+        indexoinits.push({ name: newIndexStrName2, type: NUM, value:{tag:"wasmint",value:0} });
+        return [indexoinits,
+          [...indexostmts, { tag: "assign", name: newIndexStrName, value: alloc_index_string },...loadStmts, ...assigns_index_string],
+          {  tag: "value", value: { a: e.a, tag: "id", name: newIndexStrName } }];
+      }else{//This is for other group like lists/dictionary/sets/tuples
+        return;
+      }
+    }
     case "construct":
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
