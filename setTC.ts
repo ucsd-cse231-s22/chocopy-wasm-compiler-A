@@ -17,10 +17,10 @@ export function setMethodTC(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : E
       switch(expr.method){
         case "add":
           if (numArgs != 1){
-            throw new TypeCheckError("Set.remove only takes 1 parameter")
+            throw new TypeCheckError("Set.add only takes 1 parameter")
           } else {
             if (!tObj.hasOwnProperty('name')){
-              throw new TypeCheckError("The object of Set.remove does not have a name")
+              throw new TypeCheckError("The object of Set.add does not have a name")
             }
           }
           return {...expr,a:{tag:"none"},obj:{...expr.obj,a:SET(NUM)}};

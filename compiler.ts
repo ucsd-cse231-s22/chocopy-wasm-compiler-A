@@ -209,6 +209,10 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       return [`
       (i32.const 10)
       (call $alloc)`];
+    case "dict":
+      return [`
+      (i32.const 10)
+      (call $alloc)`];
   }
 }
 

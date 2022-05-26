@@ -31,20 +31,6 @@ describe('parse(source) function', () => {
 });
 
 
-// Week6: Project Milestone Tests
-// describe("proj-tuple-test", ()=>{
-  
-//   assertTC("tc-assign-tuple-mixed",`
-//   x:tuple = (3,False,None)
-//   x`,TUPLE([NUM,BOOL,NONE]));
-
-//   assertPrint("pr-tuple-indexing",`
-//   x:tuple = (3,False,None)
-//   print(x[0])
-//   print(x[1])
-//   print(x[2])`,["3","False","None"])
-// });
-
 // Week 7:
 describe("set-test", ()=>{
   assertTC("tc-assign-set-int",`
@@ -113,5 +99,10 @@ describe("basic-set-functions", ()=>{
   x.add(2)
   x.update({3,12,13})
   x.print()`,["2","12","3","13"]);
+
+  assertPrint("dict-constructor",`
+  d : dict = dict([int, int])
+  d = {3: 2}
+  print(d.get(3,-1))`,["2"]);
 
 });

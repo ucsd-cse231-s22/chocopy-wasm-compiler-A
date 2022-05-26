@@ -1,8 +1,10 @@
 // import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
-import { NUM, BOOL, NONE, CLASS, SET } from './utils';
+import { NUM, BOOL, NONE, CLASS, SET, DICT } from './utils';
 import { emptyEnv } from './compiler';
 import { setExprTC, setMethodTC } from './setTC';
+import { table } from 'console';
+import { dictExprTC, dictMethodTC } from './dictTC';
 // import common from 'mocha/lib/interfaces/common';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
@@ -77,16 +79,28 @@ export function equalSet(t1: Type, t2: Type) {
   );
 }
 
+export function equalDict(t1: Type, t2: Type) {
+  return (
+    t1 === t2 ||
+    (t1.tag === "dict" && t2.tag === "dict" && 
+    t1.key.tag === t2.key.tag &&
+    t1.value.tag === t2.value.tag)
+  );
+}
 export function isNoneOrClass(t: Type) {
   return t.tag === "none" || t.tag === "class";
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" || equalSet(t1,t2)
-  // none is assignable to set
-  || t1.tag === "set" && t2.tag === "none" 
+
+  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
+  // Set Logic
+  || equalSet(t1,t2) || t1.tag === "set" && t2.tag === "none" 
+  // Dict Logic
+  || equalDict(t1,t2) || t1.tag === "dict" && t2.tag === "none" 
 }
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
+
   return isSubtype(env, t1, t2);
 }
 
@@ -232,7 +246,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       if (!fields.has(stmt.field)) 
         throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObj.a.name}`);
       if (!isAssignable(env, tVal.a, fields.get(stmt.field)))
-        throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
+        throw new TypeCheckError(`could not assigntcLiteral value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
       return {...stmt, a: NONE, obj: tObj, value: tVal};
   }
 }
@@ -393,6 +407,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           case "set":
             //Use setMethodTC function defined in "setTC.ts"
             return setMethodTC(env,locals,expr);
+          case "dict":
+            return dictMethodTC(env,locals,expr);
           default:
             console.log(`objTag of ${objATag} not supported`)
         }
@@ -401,6 +417,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       case "set_expr":
           // Use setExprTC defined in "setTC.ts"
           return setExprTC(env,locals,expr);
+      case "dict_expr":
+          return dictExprTC(env,locals,expr)
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
 }
@@ -410,7 +428,9 @@ export function tcLiteral(literal : Literal) {
         case "bool": return BOOL;
         case "num": return NUM;
         case "none": return NONE;
-        case "set": return SET(NUM);  
+        case "set": return SET(NUM); 
+        case "dict": return DICT(literal.key_typ,literal.val_typ);
+        default: throw new Error("tcLiteral failed because of unsupported tag for switch-case"); 
     }
 }
 
