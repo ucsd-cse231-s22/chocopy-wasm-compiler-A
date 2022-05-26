@@ -133,6 +133,8 @@ describe("basic-set-functions", ()=>{
   d : dict = dict([int, int])
   d = {3: 2}
   d.add(3,5)
-  print(d.has(3))
-  print(d.has(4))`,["True","False"]);
+  d.add(4,6)
+  print(d.Dget(3))
+  print(3 in d)
+  print(len(d))`,["5","True","2"]);
 });

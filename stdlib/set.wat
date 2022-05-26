@@ -463,10 +463,7 @@
 
     (local.get $tagHitFlag)
     (call $ele_not_found)
-    (local.get $tagHitFlag)
     (return))
-
-
 
 ;; Given a set A and set B, add all elements in B to A
 (func $set$update (param $baseAddr$new i32) (param $baseAddr i32) (result i32)
@@ -659,8 +656,6 @@
     (local.get $size)
     (return))
 
-
-
 (func $dict$get (param $baseAddr i32) (param $key i32) (param $defaultValue i32) (result i32)
     (local $nodePtr i32) ;; Local variable to store the address of nodes in linkedList
     (local $tagHitFlag i32) ;; Local bool variable to indicate whether tag is hit
@@ -723,8 +718,6 @@
     ) ;; close if
     (local.get $returnVal)
     (return))
-
-
 
 (func $dict$clear (param $baseAddr i32) (result i32)
     (local $i i32)
@@ -1147,4 +1140,70 @@
     ) ;; close if
 
     (local.get $tagHitFlag)
+    (return))
+
+
+(func $dict$Dget (param $baseAddr i32) (param $key i32) (result i32)
+    (local $nodePtr i32) ;; Local variable to store the address of nodes in linkedList
+    (local $tagHitFlag i32) ;; Local bool variable to indicate whether tag is hit
+    (local $returnVal i32)
+    (i32.const 0)
+    (local.set $tagHitFlag) ;; Initialize tagHitFlag to False
+
+
+    (local.get $baseAddr)
+    (local.get $key)
+    (i32.const 10) ;;hard-coding hash table size
+    (i32.rem_u) ;;Compute hash
+    (call $load)
+    (local.set $nodePtr)
+    (local.get $nodePtr)
+    (i32.const 0) ;;None
+    (i32.eq)
+    (if
+    (then ;; if the literal in bucketAddress is None
+        (local.get $tagHitFlag)
+        (call $ele_not_found)
+        (local.set $returnVal) ;; Initialize returnVal to -1
+    ) ;;close then
+    (else
+        (block
+            (loop ;; While loop till we find a node whose next is None
+                (local.get $nodePtr)
+                (i32.const 0)
+                (call $load) ;;Loading head of linkedList
+                (local.get $key)
+                (i32.eq) ;; if tag is same as the provided one
+                (if
+                (then
+                    (local.get $nodePtr)
+                    (i32.const 1)
+                    (call $load) ;;HT
+                    (local.set $returnVal)
+                    (i32.const 1)
+                    (local.set $tagHitFlag) ;; Set tagHitFlag to True
+                ) ;; closing then
+                ) ;; closing if
+
+                (local.get $nodePtr)
+                (i32.const 2)
+                (call $load)
+                (local.set $nodePtr)
+                (br_if 0 ;; Opening br_if
+                    (local.get $nodePtr)
+                    (i32.const 0) ;;None
+                    (i32.ne) ;; If nodePtr not None
+                    (local.get $tagHitFlag)
+                    (i32.eqz)
+                    (i32.and)
+                ) ;; Closing br_if
+                (br 1)
+            ) ;; Closing loop
+        ) ;; Closing Block
+    ) ;;close else
+    ) ;; close if
+    (local.get $tagHitFlag)
+    (call $ele_not_found)
+    (local.set $tagHitFlag)
+    (local.get $returnVal)
     (return))

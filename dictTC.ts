@@ -42,6 +42,8 @@ export function dictMethodTC(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : 
           return {...expr,a:valType,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
         case "get":
           return {...expr,a:valType,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}}
+        case "Dget":
+          return {...expr,a:valType,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}}
         case "size":
           return {...expr,a:NUM,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
         case "clear":
