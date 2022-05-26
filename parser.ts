@@ -188,6 +188,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s);
       c.nextSibling(); // Focus on .
+      // bracket???
       c.nextSibling(); // Focus on property
       var propName = s.substring(c.from, c.to);
       c.parent();
@@ -429,11 +430,39 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
     throw Error("invalid variable init");
   }
   c.firstChild(); // go to :
-  c.nextSibling(); // go to type
+  c.nextSibling(); // go to VariableName
+  // Set Initialization
   if (s.substring(c.from, c.to) === "set") {
     c.parent();
     c.parent();
     return { name, type: { tag: "set", content_type: {tag: "number"} }, value: { tag: "set"}};
+  }
+  // Dict Initialization
+  else if (s.substring(c.from, c.to) === "dict") {
+    c.parent();
+    c.nextSibling(); // AssignOp
+    c.nextSibling(); // CallExpression
+    c.firstChild(); // VariableName
+    c.nextSibling(); // ArgList
+    c.firstChild(); // (
+    c.nextSibling(); // ArrayExpression
+    c.firstChild(); // [
+    c.nextSibling(); // VariableName
+    var key_type : Type;
+    var value_type : Type;
+    if (s.substring(c.from, c.to) === "int") { key_type = {tag: "number"}; } 
+    else if (s.substring(c.from, c.to) === "bool") key_type = {tag: "bool"};
+    else key_type = {tag: "none"};
+    c.nextSibling(); // ,
+    c.nextSibling(); // VariableName
+    if (s.substring(c.from, c.to) === "int") { value_type = {tag: "number"}; } 
+    else if (s.substring(c.from, c.to) === "bool") value_type = {tag: "bool"};
+    else value_type = {tag: "none"};
+    c.parent();
+    c.parent();
+    c.parent();
+    c.parent();
+    return { name, type: { tag: "dict", key: key_type, value: value_type }, value: { tag: "dict"}};
   }
   const type = traverseType(c, s);
   c.parent();

@@ -27,9 +27,9 @@ export function stringifyTree(t: TreeCursor, source: string, d: number){
 
 // var source = `s:set = set()\ns.add(3)\ns.remove(3)`;
 var source = `
-x:set = set()
-x = {1,2,3}
-x.update({4,5})
+d : dict = dict([int, int])
+d = {3: 2}
+print(d.get(3))
 `; // s:set = {3,5,7}\n3 in s
 /* DONE:
 s = {3,5,7}
