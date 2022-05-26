@@ -18,16 +18,6 @@ export function optimizeValue(val: Value<any>, env: Env): Value<any>{
     if (val.tag !== "id"){
         return val;
     }
-    //Previously the following lines of code used to only return the value
-    //of rhs as a num. Like for stmt: a=b, it would get b from env(if present as num)
-    //so the optimized value would becomee something like a=3(if b was 3 in env).
-    //Now after copy propogation: the stmt may become a=c, if b,{tag: "copyId", value: {tag: "id", name:"c"}}
-    //was present in the env.
-
-    //also have to resolve ciircular assignments
-    //x=y
-    //y=z
-    //z=x
 
     if (env.vars.has(val.name)){
         if (["nac", "undef"].includes(env.vars.get(val.name).tag))
@@ -91,6 +81,8 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<an
             throw new Error("Compiler Error: Function should be invoked only if the expression can be folded");
         switch(op){
             case BinOp.Eq: return {tag: "bool", value: leftVal.value === rightVal.value};
+
+            case BinOp.Neq: return {tag: "bool", value: leftVal.value !== rightVal.value};
 
         }
     }
@@ -194,6 +186,8 @@ export function optimizeStatements(stmt: Stmt<any>, env: Env): Stmt<any>{
             return stmt;
         case "store":
             return stmt;
+        default:
+            return stmt;
     }
 }
 
@@ -202,9 +196,7 @@ export function computePredecessorSuccessor(basicBlocks: Array<BasicBlock<any>>)
     let succs: Map<string, string[]> = new Map<string, string[]>();
     let preds: Map<string, string[]> = new Map<string, string[]>();
     let blockMapping: Map<string, BasicBlock<any>> = new Map<string, BasicBlock<any>>();
-    console.log("Length of basic block list - ", basicBlocks.length);
     basicBlocks.forEach(basicBlock=>{
-        console.log("Basic block label - ", basicBlock.label);
         blockMapping.set(basicBlock.label, basicBlock);
         const lastStmt = basicBlock.stmts[basicBlock.stmts.length-1];
         if(lastStmt !== undefined && lastStmt.tag === "ifjmp"){
@@ -338,7 +330,9 @@ function optimizeBlock(block: BasicBlock<any>, env: Env): [BasicBlock<any>, bool
     var blockOptimized: boolean = false;
     var newStmts: Stmt<any>[] = block.stmts.map(s => {
         var optimizedstatement = optimizeStatements(s, env);
-        if (!blockOptimized && !checkStmtEquality(optimizedstatement, s)) blockOptimized = true;
+        if (!blockOptimized && !checkStmtEquality(optimizedstatement, s)) {
+            blockOptimized = true;
+        }
         return optimizedstatement;
     });
     return [{...block, stmts: newStmts}, blockOptimized];
@@ -349,7 +343,6 @@ export function optimizeFunction(func: FunDef<any>): FunDef<any>{
     var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctions(func);
 
     var functionOptimized: boolean = false;
-    //Write code to optimize functions here
     var newBody: Array<BasicBlock<any>> = func.body.map(b => {
         var tempBlockEnv: Env = duplicateEnv(inEnvMapping.get(b.label));
         var [optimizedBlock, blockOptimized]: [BasicBlock<any>, boolean] = optimizeBlock(b, tempBlockEnv);
@@ -372,7 +365,6 @@ export function optimizeClass(c: Class<any>): Class<any>{
 }
 
 export function  generateEnvironmentProgram(program: Program<any>): [Map<string, Env>, Map<string, Env>]{
-    // console.log("Optimizing the body of the program");
     var initialEnv = computeInitEnv(program.inits, false);
 
     var inEnvMapping: Map<string, Env> = new Map<string, Env>();
@@ -390,11 +382,6 @@ export function  generateEnvironmentProgram(program: Program<any>): [Map<string,
     preds.set(program.body[0].label, [varDefEnvTag]);
     succs.set(varDefEnvTag, [program.body[0].label]);
     outEnvMapping.set(varDefEnvTag, initialEnv);
-
-    console.log("InEnvMapping - ", inEnvMapping);
-    // console.log("Block mapping startProg - ", JSON.stringify(blockMapping.get(program.body[0].label), (_, v) => typeof v === 'bigint' ? v.toString() : v));
-    console.log("Preds - ", JSON.stringify(preds, null, 2));
-    console.log("Successors - ", JSON.stringify(succs, null, 2));
 
     generateEnvironments([program.body[0].label], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
 
@@ -498,7 +485,6 @@ export function generateEnvironments(workList: Array<string>, inEnvMapping: Map<
     const wlAddition: string[] = (succs.get(currBlock) === undefined)?([]):(succs.get(currBlock).map(succBlock => {
         if (succBlock !== varDefEnvTag) return succBlock;
     }));
-    console.log("wlAddition - ", wlAddition);
 
     generateEnvironments([...workList, ...wlAddition], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
 
