@@ -6,12 +6,15 @@ export function dictMethodTC(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : 
     if (expr.tag !== "method-call"){
       throw new TypeCheckError("Type checking a non-method call for dict")
     }
+
     var tObj = tcExpr(env, locals, expr.obj);
     var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
   
     if (tObj.a.tag!="dict"){
       throw new TypeCheckError("Parsing dict method on Non-dict");
-    }   
+    }  
+      const keyType:Type = parseKeyValType(tObj.a.key);
+      const valType:Type = parseKeyValType(tObj.a.value);
       let args = expr.arguments
       let numArgs = args.length;
       //DICT related Method Call
@@ -24,7 +27,7 @@ export function dictMethodTC(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : 
               throw new TypeCheckError("The object of Dict.add does not have a name")
             }
           }
-          return {...expr,a:{tag:"none"},obj:{...expr.obj,a:DICT(args[0].a,args[1].a)}};
+          return {...expr,a:NONE,obj:{...expr.obj,a:DICT(args[0].a,args[1].a)}};
         case "pop":
           if (numArgs != 1){
             throw new TypeCheckError("Dict.remove only takes 1 parameter")
@@ -36,24 +39,23 @@ export function dictMethodTC(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : 
           if (tObj.a.tag != "dict"){
               throw new TypeCheckError("Call dict method from non-dict");
           }
-          return {...expr,a:tObj.a.value,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
+          return {...expr,a:valType,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
         case "get":
-            console.debug("GETRETURN",tObj.a.value);
-          return {...expr,a:tObj.a.value,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}}
+          return {...expr,a:valType,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}}
         case "size":
           return {...expr,a:NUM,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
         case "clear":
           if (numArgs != 0){
             throw new TypeCheckError("Dict.clear only takes no parameter")
           }
-          return {...expr,a:{tag:"none"},obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
+          return {...expr,a:NONE,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
         case "update":
           if(!isIterable(tArgs)){
             throw new TypeCheckError(`Try to update DICT with non-Iterable ${tArgs[0].a}}`)
           }
-          return {...expr,a:{tag:"none"},obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
+          return {...expr,a:NONE,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
         case "print":
-          return {...expr,a:tObj.a.value,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
+          return {...expr,a:valType,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
         case "has":
           return {...expr,a:BOOL,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
       }
@@ -67,8 +69,6 @@ export function dictExprTC(env : GlobalTypeEnv, locals : LocalTypeEnv,expr:Expr<
         throw new TypeCheckError("Type checking a non-dict_expr")
     }
     
-    var keyType = null;
-    var valType = null;
     const key_idx = 0;
     const val_idx = 1;
     
@@ -80,8 +80,8 @@ export function dictExprTC(env : GlobalTypeEnv, locals : LocalTypeEnv,expr:Expr<
         // do nothing here, key & value type not declared
     } else {
         //Fetch dict data Type
-        keyType = dictExpr[0][key_idx].a
-        valType = dictExpr[0][val_idx].a
+        var keyType:Type = dictExpr[0][key_idx].a
+        var valType:Type = dictExpr[0][val_idx].a
         for (var i = 1; i < dictExpr.length; ++i) {
 
         var lexprKeyType = dictExpr[i][key_idx].a;
@@ -124,4 +124,17 @@ if (iter_exprs.includes(exprs[0].tag)){
     return true
 }
 return false
+}
+export function parseKeyValType(anno: Type):Type{
+    switch(anno.tag){
+        case "number":
+            return NUM;
+        case "bool":
+            return BOOL;
+        case "none":
+            return NONE;
+        default:
+            throw new TypeCheckError(`Unsupported key/val Type ${anno}`)
+
+    }
 }
