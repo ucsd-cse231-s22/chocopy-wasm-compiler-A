@@ -1,3 +1,4 @@
+import { stat } from "fs";
 import { BinOp, Parameter, Type, UniOp} from "./ast";
 import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "./ir";
 
@@ -8,16 +9,32 @@ type Env = {
 }
 
 export type compileVal = {
-    tag: "nac"|"val"|"undef", value?: Value<any>;
+    tag: "nac"|"val"|"undef"|"copyId", value?: Value<any>;
 }
 
 export function optimizeValue(val: Value<any>, env: Env): Value<any>{
     if (val.tag !== "id"){
         return val;
     }
+    //Previously the following lines of code used to only return the value
+    //of rhs as a num. Like for stmt: a=b, it would get b from env(if present as num)
+    //so the optimized value would becomee something like a=3(if b was 3 in env).
+    //Now after copy propogation: the stmt may become a=c, if b,{tag: "copyId", value: {tag: "id", name:"c"}}
+    //was present in the env.
+
+    //also have to resolve ciircular assignments
+    //x=y
+    //y=z
+    //z=x
+
     if (env.vars.has(val.name)){
         if (["nac", "undef"].includes(env.vars.get(val.name).tag))
             return val;
+        
+        var tempVal = env.vars.get(val.name);
+        if(tempVal.tag === "copyId"){
+            
+        }
         val = env.vars.get(val.name).value;
     }
     return val;
@@ -138,6 +155,8 @@ export function optimizeExpression(e: Expr<Type>, env: Env): Expr<Type>{
             var start = optimizeValue(e.start, env);
             var offset = optimizeValue(e.offset, env);
             return {...e, start: start, offset: offset};
+        default:
+            return e;
     }
 }
 
@@ -247,13 +266,24 @@ function mergeEnvironment(a: Env, b: Env): Env{
             returnEnv.vars.set(key, {tag: "undef"})
         }
         else if (aValue.tag === "undef"){
-            returnEnv.vars.set(key, {tag: "val", value: bValue.value})
+            if(bValue.tag === "val")
+                returnEnv.vars.set(key, {tag: "val", value: bValue.value})
+            else
+                returnEnv.vars.set(key, {tag: "copyId", value: bValue.value})
         }
         else if (bValue.tag === "undef"){
-            returnEnv.vars.set(key, {tag: "val", value: aValue.value});
+            if(aValue.tag === "val")
+                returnEnv.vars.set(key, {tag: "val", value: aValue.value});
+            else
+                returnEnv.vars.set(key, {tag: "copyId", value: aValue.value})
         }
-        else if (checkValueEquality(aValue.value, bValue.value))
-            returnEnv.vars.set(key, {tag: "val", value: aValue.value});
+        else if (checkValueEquality(aValue.value, bValue.value)){
+            if(aValue.tag === "val")
+                returnEnv.vars.set(key, {tag: "val", value: aValue.value});
+            else
+                returnEnv.vars.set(key, {tag: "copyId", value: aValue.value})
+        }
+            
         else
             returnEnv.vars.set(key, {tag: "nac"});
     });
@@ -268,7 +298,8 @@ function updateEnvironmentByBlock(inEnv: Env, block: BasicBlock<any>): Env{
             const optimizedExpression = optimizeExpression(statement.value, outEnv);
             if (optimizedExpression.tag === "value"){
                 if (optimizedExpression.value.tag === "id"){
-                    outEnv.vars.set(statement.name, {tag: "nac"});
+                    // outEnv.vars.set(statement.name, {tag: "nac"});
+                    outEnv.vars.set(statement.name, {tag: "copyId", value: optimizedExpression.value});
                 }
                 else{
                     outEnv.vars.set(statement.name, {tag: "val", value: optimizedExpression.value});
