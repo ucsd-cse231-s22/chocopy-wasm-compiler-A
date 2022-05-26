@@ -239,10 +239,8 @@ describe("String tests", () => {
   assertPrint("String-Muliplication",`
   s:str = "abc"
   x:int = 3
-  print(3*s)
-  print(s*x)  
   print(x*s)
-  `,['abcabcabc', 'abcabcabc', 'abcabcabc'])
+  `,['abcabcabc'])
 
   assertPrint("String-Muliplication-In-Function",`
   def f(s:str, x:int) -> str:
