@@ -1,5 +1,5 @@
 import { Annotation, Class, Expr, Literal, Parameter, Program, Stmt, Type, VarInit } from './ast';
-import { CLASS } from './utils';
+import { BOOL, CLASS, NONE, NUM } from './utils';
 
 export type GlobalMorphEnv = {
     classesInx: Map<string, number>,
@@ -19,19 +19,21 @@ export function concretizeGenericTypes(type: Type, genv: GlobalMorphEnv) : Type 
     }
 }
 
-// TODO: add annotation from the __ZERO__
-export function resolveZero(type: Type) : Literal<Annotation> {
+export function resolveZero(type: Type, a: Annotation) : Literal<Annotation> {
     switch (type.tag) {
         case "number":
-            return { tag: "num", value: 0 };
+            return { a: { ...a, type: NUM}, tag: "num", value: 0 };
         case "bool":
-            return { tag: "bool", value: false };
+            return { a: { ...a, type: BOOL}, tag: "bool", value: false };
         case "class":
-            return { tag: "none" };
+            return { a: { ...a, type: NONE}, tag: "none" };
     }
 }
 
 export function processExprs(expr: Expr<Annotation>, genv: GlobalMorphEnv) : Expr<Annotation> {
+    if (expr.a.type === undefined) {
+        return expr;
+    }
     expr.a.type = concretizeGenericTypes(expr.a.type, genv);
     switch(expr.tag) {
         case "binop":
@@ -103,12 +105,15 @@ export function processExprs(expr: Expr<Annotation>, genv: GlobalMorphEnv) : Exp
 }
 
 export function processStmts(stmt: Stmt<Annotation>, genv: GlobalMorphEnv) : Stmt<Annotation> {
+    if (stmt.a.type === undefined) {
+        return stmt;
+    }
     stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
     switch(stmt.tag) {
         case "assign":
             const assignValueExpr = processExprs(stmt.value, genv);
             if (stmt.a.type.tag === "class" && stmt.a.type.params.length > 0) {
-                return { a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))}, ...stmt, value: assignValueExpr };
+                return { ...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))}, value: assignValueExpr };
             }
             return { ...stmt, value: assignValueExpr };
         case "expr":
@@ -166,7 +171,7 @@ export function monomorphizeClass(cname: string, canonicalName: string, classes:
     mClass.fields = mClass.fields.map(field => {
         if (field.type.tag === "typevar" || (field.type.tag === "class" && field.type.params.length > 0)) {
             field.type = concretizeGenericTypes(field.type, genv);
-            field.value = resolveZero(field.type);
+            field.value = resolveZero(field.type, field.a);
         }
         return field;
     });
@@ -178,7 +183,7 @@ export function monomorphizeClass(cname: string, canonicalName: string, classes:
         method.inits = method.inits.map(init => {
             if (init.type.tag === "typevar" || (init.type.tag === "class" && init.type.params.length > 0)) {
                 init.type = concretizeGenericTypes(init.type, genv);
-                init.value = resolveZero(init.type);
+                init.value = resolveZero(init.type, init.a);
             }
             return init;
         });
@@ -228,7 +233,7 @@ export function processMethodParams(params: Array<Parameter<Annotation>>, classe
 
 export function processInits(inits: Array<VarInit<Annotation>>, classes: Array<Class<Annotation>>, genv: GlobalMorphEnv) : Array<VarInit<Annotation>> {
     return inits.map(init => {
-        if (init.type.tag === "class" && init.type.params.length > 0) { // this implies a var init of a class with generic types
+        if (init.type.tag === "class" && init.type.params.length > 0) {
             const canonicalName = getCanonicalTypeName(init.type);
             if (!genv.morphedClasses.has(canonicalName)) {
                 const typeCname = init.type.name;
