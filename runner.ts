@@ -7,9 +7,10 @@ import wabt from 'wabt';
 import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
-import { Annotation, Program, Type, Value } from './ast';
-import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
-import { lowerProgram } from './lower';
+import { Annotation, FunDef, Program, Type, Value } from './ast';
+import { PyValue, NONE, BOOL, NUM, CLASS, makeWasmFunType } from "./utils";
+import { closureName, lowerProgram } from './lower';
+import { monomorphizeProgram } from './monomorphizer';
 import { optimizeProgram } from './optimization';
 import { wasmErrorImports } from './errors';
 
@@ -48,11 +49,14 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
+  const newClassIndices = new Map(env.classIndices);
+  const functionNames = new Map(env.functionNames);
 
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
     newGlobals.set(v.name, true);
   });
+<<<<<<< HEAD
 
   prog.classes.forEach(cls => {
     const classFields = new Map();
@@ -88,29 +92,49 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
 
     cls.fields.forEach((field, i) => classFields.set(field.name, [offset + i, field.value]));
     newClasses.set(cls.name, [classFields, classMethods, cls.super, superClassMethodsCount+classMethods.size - overridenMethods]);
+=======
+  prog.funs.forEach(f => {
+    functionNames.set(f.name, closureName(f.name, []));
+    const addClasses = (f: FunDef<Annotation>, ancestors: Array<FunDef<Annotation>>) => {
+      newClasses.set(closureName(f.name, ancestors), new Map());
+      f.children.forEach(c => addClasses(c, [f, ...ancestors]));
+    }
+    addClasses(f, []);
+  });
+  prog.classes.forEach(cls => {
+    const classFields = new Map();
+    cls.fields.forEach((field, i) => classFields.set(field.name, [i + 1, field.value]));
+    newClasses.set(cls.name, classFields);
+>>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
   });
   return {
     globals: newGlobals,
     classes: newClasses,
+    classIndices: newClassIndices,
+    functionNames,
     locals: env.locals,
     labels: env.labels,
     offset: newOffset,
+<<<<<<< HEAD
     vtable: env.vtable,
     classIndexes: env.classIndexes, // TODO: finalize structure
     
+=======
+    vtableMethods: env.vtableMethods,
+>>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
   }
 }
-
 
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
 export async function run(source : string, config: Config) : Promise<[Value<Annotation>, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   config.importObject.errors.src = source; // for error reporting
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
-  const globalEnv = augmentEnv(config.env, tprogram);
-  const irprogram = lowerProgram(tprogram, globalEnv);
+  const tmprogram = monomorphizeProgram(tprogram);
+  const globalEnv = augmentEnv(config.env, tmprogram);
+  const irprogram = lowerProgram(tmprogram, globalEnv);
   const optIr = optimizeProgram(irprogram);
-  const progTyp = tprogram.a.type;
+  const progTyp = tmprogram.a.type;
   var returnType = "";
   var returnExpr = "";
   // const lastExpr = parsed.stmts[parsed.stmts.length - 1]
@@ -124,6 +148,18 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
   // const compiled = compiler.compile(tprogram, config.env);
   const compiled = compile(optIr, globalEnv);
 
+  const vtable = `(table ${globalEnv.vtableMethods.length} funcref)
+    (elem (i32.const 0) ${globalEnv.vtableMethods.map(method => `$${method[0]}`).join(" ")})`;
+  const typeSet = new Set<number>();
+  globalEnv.vtableMethods.forEach(([_, paramNum])=>typeSet.add(paramNum));
+  let types = "";
+  typeSet.forEach(paramNum => {
+    let paramType = "";
+    if (paramNum > 0) {
+      paramType = `(param${" i32".repeat(paramNum)})`
+    }
+    types += `(type ${makeWasmFunType(paramNum)} (func ${paramType} (result i32)))\n`;
+  })
   const globalImports = [...globalsBefore.keys()].map(name =>
     `(import "env" "${name}" (global $${name} (mut i32)))`
   ).join("\n");
@@ -161,9 +197,11 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $$gte (import "imports" "$gte") (param i32) (param i32) (result i32))
     (func $$lt (import "imports" "$lt") (param i32) (param i32) (result i32))
     (func $$gt (import "imports" "$gt") (param i32) (param i32) (result i32))
+    ${types}
     ${globalImports}
     ${compiled.vtable}
     ${globalDecls}
+    ${vtable}
     ${config.functions}
     ${compiled.functions}
     (func (export "exported_func") ${returnType}
@@ -171,7 +209,6 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
       ${returnExpr}
     )
   )`;
-  console.log(wasmSource);
   const [result, instance] = await runWat(wasmSource, importObject);
 
   return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance];

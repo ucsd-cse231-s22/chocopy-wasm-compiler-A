@@ -1,9 +1,10 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { Annotation, BinOp, Type, UniOp } from "./ast"
-import { BOOL, NONE, NUM } from "./utils";
+import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
+<<<<<<< HEAD
   // class name    ->   field -> field offset, value, mehtod -> method offset, super classes, super class method count
   classes: Map<string, [Map<string, [number, Value<Annotation>]>, Map<string, number>, Array<string>, number]>;
   locals: Set<string>;
@@ -11,16 +12,31 @@ export type GlobalEnv = {
   offset: number;
   vtable: Array<string>;
   classIndexes: Map<string, [number, number]>;
+=======
+  classes: Map<string, Map<string, [number, Value<Annotation>]>>;  
+  classIndices: Map<string, number>;
+  functionNames: Map<string, string>;
+  locals: Set<string>;
+  labels: Array<string>;
+  offset: number;
+  vtableMethods: Array<[string, number]>;
+>>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
 }
 
 export const emptyEnv : GlobalEnv = { 
   globals: new Map(), 
   classes: new Map(),
+  classIndices: new Map(), 
+  functionNames: new Map(),
   locals: new Set(),
   labels: [],
   offset: 0,
+<<<<<<< HEAD
   vtable: [],
   classIndexes: new Map(),
+=======
+  vtableMethods: [] 
+>>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
 };
 
 type CompileResult = {
@@ -49,7 +65,6 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
-  console.log(ast.inits, globalNames);
   const funs : Array<string> = [];
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
@@ -86,6 +101,7 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
   // const commandGroups = ast.stmts.map((stmt) => codeGenStmt(stmt, withDefines));
   const allCommands = [...localDefines, ...inits, bodyCommands];
   withDefines.locals.clear();
+  ast.inits.forEach(x => withDefines.globals.set(x.name, true));
   return {
     globals: globalNames,
     functions: allFuns,
@@ -212,6 +228,11 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
+
+    case "call_indirect":
+      var valStmts = codeGenExpr(expr.fn, env);
+      var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      return [...fnStmts, ...valStmts, `(call_indirect (type ${makeWasmFunType(expr.arguments.length)}))`];
 
     case "alloc":
       return [
@@ -355,7 +376,8 @@ function codeGenDef(def : FunDef<Annotation>, env : GlobalEnv) : Array<string> {
   bodyCommands += blockCommands;
   bodyCommands += ") ;; end $loop"
   env.locals.clear();
-  return [`(func $${def.name} ${params} (result i32)
+  return [`
+  (func $${def.name} ${params} (result i32)
     ${locals}
     ${inits}
     ${bodyCommands}
@@ -365,11 +387,16 @@ function codeGenDef(def : FunDef<Annotation>, env : GlobalEnv) : Array<string> {
 
 function codeGenClass(cls : Class<Annotation>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
+<<<<<<< HEAD
   methods.forEach(method => method.name = `${cls.name}$${method.name}`); // append class name to method name
   const result = methods.map(method => {
     var params = method.parameters.map(p => `(param $${p.name} i32)`).join(" ");
     return [...[`(type $type$${method.name} (func ${params} (result i32)))`], ...codeGenDef(method, env).flat()]
   });
+=======
+  methods.forEach(method => method.name = createMethodName(cls.name, method.name));
+  const result = methods.map(method => codeGenDef(method, env));
+>>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
   return result.flat();
 }
 
