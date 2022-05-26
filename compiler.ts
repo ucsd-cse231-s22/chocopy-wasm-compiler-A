@@ -87,12 +87,6 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
         ...codeGenValue(stmt.value, env),
         `call $store`
       ]
-    case "duplicate_str":
-      return [
-        ...codeGenValue(stmt.source, env),
-        ...codeGenValue(stmt.dest, env),
-        `call $duplicate_str`
-      ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
       if (env.locals.has(stmt.name)) {
