@@ -23,8 +23,6 @@ function print(typ: Type, arg : number, loader: WebAssembly.ExportValue) : any {
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
   elt.innerText = stringify(typ, arg, loader);
-  if(typ.tag === "number")
-    return load_bignum(arg, loader);
   return arg;
 }
 
