@@ -102,12 +102,12 @@ function lowerStringInits(init: AST.VarInit<Annotation>,blocks: Array<IR.BasicBl
 
 }
 
-function lowerClassVarInits(global_inits:IR.VarInit<AST.Annotation>[],cls: AST.Class<Annotation>,inits: Array<AST.VarInit<Annotation>>, env: GlobalEnv, blocks?: Array<IR.BasicBlock<Annotation>>) : Array<IR.VarInit<Annotation>> {
+function lowerClassVarInits(inits: Array<AST.VarInit<Annotation>>, env: GlobalEnv) : Array<IR.VarInit<Annotation>> {
 
-  return inits.map(i => lowerClassVarInit(global_inits,cls,i, env,blocks));
+  return inits.map(i => lowerClassVarInit(i, env));
 }
 
-function lowerClassVarInit(global_inits:IR.VarInit<AST.Annotation>[],cls: AST.Class<Annotation>,init: AST.VarInit<Annotation>, env: GlobalEnv,blocks: Array<IR.BasicBlock<Annotation>>) : IR.VarInit<Annotation> {
+function lowerClassVarInit(init: AST.VarInit<Annotation>, env: GlobalEnv) : IR.VarInit<Annotation> {
   return {
     ...init,
     value: literalToVal(init.value)
@@ -123,7 +123,7 @@ function lowerClass(inits:IR.VarInit<Annotation>[],cls: AST.Class<Annotation>, e
 
     return {
         ...cls,
-        fields: lowerClassVarInits(inits,cls,cls.fields, env,blocks),
+        fields: lowerClassVarInits(cls.fields, env),
         methods: lowerFunDefs(cls.methods, env)
     }
 }
