@@ -139,20 +139,20 @@ export function builtin_bignum(args: number[], builtin: Function, libmem: WebAss
   return save_bignum(rslt, libmem);
 }
 
-export function PyValue(typ: Type, result: number): Value<Annotation> {
+export function PyValue(typ: Type, result: bigint): Value<Annotation> {
   switch (typ.tag) {
     case "number":
       return PyInt(result);
     case "bool":
       return PyBool(Boolean(result));
     case "class":
-      return PyObj(typ.name, result);
+      return PyObj(typ.name, Number(result));
     case "none":
       return PyNone();
   }
 }
 
-export function PyInt(n: number): Value<Annotation> {
+export function PyInt(n: bigint): Value<Annotation> {
   return { tag: "num", value: n };
 }
 

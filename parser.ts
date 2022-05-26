@@ -82,7 +82,7 @@ export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv):
     case "Number":
       return {
         tag: "num",
-        value: Number(s.substring(c.from, c.to))
+        value: BigInt(s.substring(c.from, c.to))
       }
     case "Boolean":
       return {
