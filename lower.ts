@@ -30,12 +30,11 @@ export function lowerProgram(p : AST.Program<Annotation>, env : GlobalEnv) : IR.
     blocks.push(firstBlock);
     var inits:IR.VarInit<AST.Annotation>[] = flattenStmts(p.stmts, blocks, env);
     inits = [...inits, ...lowerVarInits(p.inits, env, blocks)];
-    var classes:IR.Class<AST.Annotation>[] = lowerClasses(inits,p.classes, env,blocks)
     return {
         a: p.a,
         funs: lowerFunDefs(p.funs, env),
         inits: inits,
-        classes: classes,
+        classes: lowerClasses(p.classes, env),
         body: blocks
     }
 }
@@ -115,11 +114,11 @@ function lowerClassVarInit(init: AST.VarInit<Annotation>, env: GlobalEnv) : IR.V
 }
 
 
-function lowerClasses(inits:IR.VarInit<AST.Annotation>[],classes: Array<AST.Class<Annotation>>, env : GlobalEnv, blocks: Array<IR.BasicBlock<Annotation>>) : Array<IR.Class<Annotation>> {
-    return classes.map(c => lowerClass(inits,c, env, blocks));
+function lowerClasses(classes: Array<AST.Class<Annotation>>, env : GlobalEnv) : Array<IR.Class<Annotation>> {
+    return classes.map(c => lowerClass(c, env));
 }
 
-function lowerClass(inits:IR.VarInit<Annotation>[],cls: AST.Class<Annotation>, env : GlobalEnv,blocks:Array<IR.BasicBlock<Annotation>>) : IR.Class<Annotation> {
+function lowerClass(cls: AST.Class<Annotation>, env : GlobalEnv) : IR.Class<Annotation> {
 
     return {
         ...cls,
