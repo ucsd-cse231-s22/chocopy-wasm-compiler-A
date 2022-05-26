@@ -36,10 +36,10 @@ export function dictMethodTC(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : 
           if (tObj.a.tag != "dict"){
               throw new TypeCheckError("Call dict method from non-dict");
           }
-          return {...expr,a:tObj.a.value,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
+          return {...expr,a:NUM,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
         case "get":
-            console.debug("GETRETURN",tObj.a.value);
-          return {...expr,a:tObj.a.value,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}}
+            // console.debug("GETRETURN",tObj.a.value);
+          return {...expr,a:NUM,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}}
         case "size":
           return {...expr,a:NUM,obj:{...expr.obj,a:DICT(tObj.a.key,tObj.a.value)}};
         case "clear":
