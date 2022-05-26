@@ -9,7 +9,7 @@ type Env = {
 }
 
 export type compileVal = {
-    tag: "nac"|"val"|"undef"|"copyId", value?: Value<any>;
+    tag: "nac"|"val"|"undef", value?: Value<any>;
 }
 
 const varDefEnvTag: string = "$$VD$$";
@@ -23,10 +23,6 @@ export function optimizeValue(val: Value<any>, env: Env): Value<any>{
         if (["nac", "undef"].includes(env.vars.get(val.name).tag))
             return val;
         
-        var tempVal = env.vars.get(val.name);
-        if(tempVal.tag === "copyId"){
-            
-        }
         val = env.vars.get(val.name).value;
     }
     return val;
