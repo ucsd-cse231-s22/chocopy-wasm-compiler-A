@@ -462,7 +462,7 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
     c.parent();
     c.parent();
     c.parent();
-    return { name, type: { tag: "dict", key: key_type, value: value_type }, value: { tag: "dict"}};
+    return { name, type: { tag: "dict", key: key_type, value: value_type }, value: { tag: "dict", key_typ: key_type, val_typ: value_type} };
   }
   const type = traverseType(c, s);
   c.parent();
