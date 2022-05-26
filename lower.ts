@@ -329,6 +329,8 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
         value: { a: {...e.a,type:NUM}, tag: "id", name: newStringLengthVar }
       });
 
+
+
       //we need to alloc lengthA to randomname
       strConcatstmts.push({ tag: "assign", name: Randomname, value: alloc_left_string });
       //TODO: store each character of A into the Randomname
@@ -378,42 +380,6 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
           left: lval,
           right: rval
         }];
-    case "str-mul":
-      var [vinits, vstmts, vval] = flattenExprToVal(e.value, env);
-      var [tinits, tstmts, tval] = flattenExprToVal(e.times, env);
-
-      // // 1. put the new length on top of memory
-      // // 2. for-loop duplicate string
-      // const MulStringName = generateName("newStr");
-      // const MulStringLen = generateName("newStrLength")
-
-      // const MulStringLenAlloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: 1 } };
-
-      // var initsArray: Array<IR.VarInit<Annotation>> = [];
-      // initsArray.push({ name: MulStringName, type: STRING, value: { tag: "none" } });
-      // initsArray.push({ name: MulStringLen, type: NUM, value: { tag: "wasmint", value: 0 } });
-
-
-      // const getLengthMul: IR.Expr<Annotation>  = {  a:{...e.a, type:NUM}, tag: "getLengthMul", addr: vval, times:tval};
-      // var strMulstmts: IR.Stmt<AST.Annotation>[] = [];
-      // strMulstmts.push({ tag: "assign", name: MulStringName, value: MulStringLenAlloc })
-      // strMulstmts.push({ tag: "assign", name: MulStringLen, value: getLengthMul })
-      // strMulstmts.push({
-      //   tag: "store",
-      //   start: {tag: "id", name: MulStringName},
-      //   offset: {tag:"wasmint", value: 0},
-      //   value: { a: {...e.a,type:NUM}, tag: "id", name: MulStringLen }
-      // });
-
-      return [[...vinits, ...tinits], [...vstmts, ...tstmts], {
-        ...e,
-        tag: "builtin2",
-        name: "str_mul",
-        left: vval,
-        right: tval
-      }];
-
-    
     case "builtin1":
       var [inits, stmts, val] = flattenExprToVal(e.arg, env);
       return [inits, stmts, {tag: "builtin1", a: e.a, name: e.name, arg: val}];
@@ -563,6 +529,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
         }
         
       })
+
 
       return [
         initsArray,

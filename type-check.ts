@@ -291,12 +291,6 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
             expr.a); }
         case BinOp.Minus:
         case BinOp.Mul:
-          if(equalType(tLeft.a.type, STRING) && equalType(tRight.a.type, NUM)){
-            // string concatenation is not a simple BinOp
-            return{a:{ ...expr.a, type:STRING}, tag:"str-mul", value:tLeft, times:tRight};
-          } else if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, STRING)) {
-            return{a:{ ...expr.a, type:STRING}, tag:"str-mul", value:tRight, times:tLeft};
-          }
         case BinOp.IDiv:
         case BinOp.Mod:
           if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: NUM } } }
@@ -304,6 +298,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
             expr.a); }
         case BinOp.Eq:
         case BinOp.Neq:
+
           if (tLeft.a.type.tag === "class" || tRight.a.type.tag === "class") throw new TypeCheckError(SRC, "cannot apply operator '==' on class types")
           if (equalType(tLeft.a.type, tRight.a.type)) { return { ...tBin, a: { ...expr.a, type: BOOL } }; }
           else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects the same type on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
