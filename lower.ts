@@ -81,6 +81,8 @@ function literalToVal(lit: AST.Literal) : IR.Value<Type> {
             return lit 
         case "set":
             return lit       
+        case "dict":
+          return lit   
     }
 }
 
@@ -253,6 +255,15 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           callMethod
         ];
       }
+
+      if(objTyp.tag == "dict"){
+        const callMethod : IR.Expr<Type> = { tag: "call", name: `dict$${e.method}`, arguments: [objval, ...argvals] }
+        return [
+          [...objinits, ...arginits],
+          [...objstmts, ...argstmts],
+          callMethod
+        ];
+      }
       
       if(objTyp.tag !== "class") { // I don't think this error can happen
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
@@ -314,6 +325,24 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           [ { tag: "assign", name: name, value: setAlloc }, ...elealloc],
           { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: name } }
         ];
+        break;
+
+    case "dict_expr":
+      const dictName = generateName("newSDict");
+      const dictAlloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: 10  } };
+      const elemAlloc : IR.Stmt<Type>[] = e.entries.map(e => {
+        const v0 = flattenExprToVal(e[0], env);
+        const v1 = flattenExprToVal(e[1], env);
+        return {
+          tag: "expr",
+          expr: { tag: "call", name: `dict$add`, arguments: [{ tag: "id", name: dictName },v0[2],v1[2]] }
+        }
+      });
+      return [
+        [{ a: e.a, name: dictName, type: e.a, value: { tag: "none" } }],
+        [ { tag: "assign", name: dictName, value: dictAlloc }, ...elemAlloc],
+        { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: dictName } }
+      ];
 
     case "id":
       return [[], [], {tag: "value", value: { ...e }} ];

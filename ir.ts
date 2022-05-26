@@ -39,3 +39,4 @@ export type Value<A> =
   | { a?: A, tag: "id", name: string }
   | { a?: A, tag: "none" }
   | { a?: A, tag: "set"}
+  | { a?: A, tag: "dict" }
