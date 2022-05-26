@@ -125,7 +125,9 @@ describe("basic-set-functions", ()=>{
   d : dict = dict([int, int])
   d = {3: 2}
   d.add(3,5)
-  print(d.get(3,-1))`,["5"]);
+  d.add(13,51)
+  print(d.get(3,-1))
+  print(d.get(13,-1))`,["5","51"]);
 
   assertPrint("dict-duplicate-key",`
   d : dict = dict([int, int])
