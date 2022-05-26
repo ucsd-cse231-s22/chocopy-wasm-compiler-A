@@ -158,6 +158,15 @@ export function processStmts(stmt: Stmt<Annotation>, genv: GlobalMorphEnv) : Stm
                 return { ...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))} ,cond: wcond, body: wBody };
             }
             return { ...stmt, cond: wcond, body: wBody };
+        case "for":
+            const {body, iterator, values} = stmt;
+            const wbody = body.map(st => processStmts(st, genv));
+            const wvalues = processExprs(values, genv);
+            if (stmt.a.type.tag === "class" && stmt.a.type.params.length > 0) {
+                return { ...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))} , iterator, body: wbody, values: wvalues };
+            }
+            return { ...stmt, iterator, values: wvalues, body: wbody };
+
         default:
             return stmt;
     }
