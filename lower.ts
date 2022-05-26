@@ -322,6 +322,12 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       const alloc_left_string : IR.Expr<Annotation> = { tag: "alloc", amount: { a: {...e.a,type:NUM}, tag: "id", name: newStringLengthVar2 } };
       const alloc_right_string : IR.Expr<Annotation> = { tag: "alloc", amount: { a: {...e.a,type:NUM}, tag: "id", name: newStringLengthVar3 } };
       //TODO: store the length of A + B into the newIndexStrName
+      // strConcatstmts.push({
+      //   tag: "store",
+      //   start: {tag: "id", name: newIndexStrName},
+      //   offset: {tag:"wasmint", value: 0},
+      //   value: { a: {...e.a,type:NUM}, tag: "id", name: newStringLengthVar }
+      // });
       strConcatstmts.push({
         tag: "store",
         start: {tag: "id", name: newIndexStrName},

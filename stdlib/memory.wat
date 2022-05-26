@@ -6,15 +6,13 @@
 
   ;; Take an amount of blocks (4-byte words) to allocate, return an address
   ;; handle suitable for giving to other access methods
-  (func (export "alloc") (param $amount i32) (result i32)
+  (func $alloc (export "alloc") (param $amount i32) (result i32)
     (local $addr i32)
     (local.set $addr (global.get $heap))
     (global.set $heap (i32.add (global.get $heap) (i32.mul (local.get $amount) (i32.const 4))))
     (local.get $addr))
 
-
-
-  (func (export "duplicate_str") (param $source i32) (param $dest i32)
+  (func $duplicate_str(export "duplicate_str") (param $source i32) (param $dest i32)
     (local $length i32)
     (local $i i32)
     (local $j i32)
@@ -70,6 +68,47 @@
     (func (export "get_Length") (param $addr1 i32) (param $addr2 i32) (result i32)
   (i32.add (i32.load (local.get $addr1)) (i32.load (local.get $addr2)))
   )
+
+  (func (export "str-concatenation") (param $left i32) (param $right i32) (result i32)
+    (local $leftlength i32)
+    (local $rightlength i32)
+    (local $lengthsum i32)
+    (local $stringaddr i32)
+    (local $tooladdr i32)
+
+    (local.set $leftlength (i32.load (local.get $left)))
+    (local.set $rightlength (i32.load (local.get $right)))
+    (local.set $lengthsum (i32.add (i32.load (local.get $left)) (i32.load (local.get $right))))
+    ;; get the addr of length
+    (i32.const 1)
+    (call $alloc)
+    (local.set $stringaddr)
+    ;;store the lengthsum
+    (i32.store (i32.add (local.get $stringaddr) (i32.mul (i32.const 0) (i32.const 4))) (local.get $lengthsum))
+
+    ;;alloc leftlength
+    (local.get $leftlength)
+    (call $alloc)
+    (local.set $tooladdr)
+
+    ;;duplicate left
+    (local.get $left)
+    (local.get $tooladdr)
+    (call $duplicate_str)
+
+    ;;alloc rightlength
+    (local.get $rightlength)
+    (call $alloc)
+    (local.set $tooladdr)
+
+    ;;duplicate right
+    (local.get $right)
+    (local.get $tooladdr)
+    (call $duplicate_str)    
+
+    (local.get $stringaddr)
+  )
+
 
   (func (export "str_comparison") (param $addr1 i32) (param $addr2 i32) (result i32)
     (local $len1 i32)

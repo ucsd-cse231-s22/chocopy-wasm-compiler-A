@@ -284,6 +284,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         case BinOp.Plus:
           if(equalType(tLeft.a.type, STRING) && equalType(tRight.a.type, STRING)){
               // string concatenation is not a simple BinOp
+              return{a:{ ...expr.a, type:STRING},tag:"builtin2",name:"str-concatenation",left:tLeft,right:tRight};
               return{a:{ ...expr.a, type:STRING},tag:"str-concat",left:tLeft,right:tRight};
           }
           if(equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: NUM } }}
