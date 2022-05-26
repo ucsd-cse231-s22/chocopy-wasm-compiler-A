@@ -935,7 +935,7 @@
     (local.get $$allocPointer)
     (return))
 
-(func $dict$Update (param $baseAddr i32) (param $key i32) (param $val i32) (result i32)
+(func $dict$add (param $baseAddr i32) (param $key i32) (param $val i32) (result i32)
     (local $nodePtr i32) ;; Local variable to store the address of nodes in linkedList
     (local $tagHitFlag i32) ;; Local bool variable to indicate whether tag is hit
     (local $$allocPointer i32)
