@@ -10,6 +10,7 @@ import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Annotation, FunDef, Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS, makeWasmFunType } from "./utils";
 import { closureName, lowerProgram } from './lower';
+import { monomorphizeProgram } from './monomorphizer';
 import { optimizeProgram } from './optimization';
 import { wasmErrorImports } from './errors';
 
@@ -85,10 +86,11 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
   config.importObject.errors.src = source; // for error reporting
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
-  const globalEnv = augmentEnv(config.env, tprogram);
-  const irprogram = lowerProgram(tprogram, globalEnv);
+  const tmprogram = monomorphizeProgram(tprogram);
+  const globalEnv = augmentEnv(config.env, tmprogram);
+  const irprogram = lowerProgram(tmprogram, globalEnv);
   const optIr = optimizeProgram(irprogram);
-  const progTyp = tprogram.a.type;
+  const progTyp = tmprogram.a.type;
   var returnType = "";
   var returnExpr = "";
   // const lastExpr = parsed.stmts[parsed.stmts.length - 1]

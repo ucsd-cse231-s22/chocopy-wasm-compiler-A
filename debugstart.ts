@@ -21,7 +21,6 @@ class C(object):
   // x = C()`
 const ast = parse(source);
 // console.log(ast);
-  
   const repl = new BasicREPL(await addLibs());
   const result = repl.run(source).then(result => {
     console.log(result);    

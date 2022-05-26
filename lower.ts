@@ -66,7 +66,7 @@ function lowerFunDef(
   ancestors: Array<AST.FunDef<Annotation>>
 ): [Array<AST.Class<Annotation>>, AST.VarInit<Annotation>, AST.Stmt<Annotation>] {
   var name = closureName(f.name, ancestors);
-  var type: Type = { tag: "class", name };
+  var type: Type = CLASS(name);
   var self: AST.Parameter<Annotation> = { name: "self", type };
 
   var envCopy = { ...env, functionNames: new Map(env.functionNames) };
@@ -97,7 +97,8 @@ function lowerFunDef(
           inits: [varInit, ...defs.map(x => x[1]), ...f.inits],
           body: [assignStmt, ...defs.map(x => x[2]), ...f.body]
         }
-      ]
+      ],
+      typeParams: []
     }, ...defs.map(x => x[0]).flat()],
     varInit,
     assignStmt
@@ -513,7 +514,8 @@ function lambdaToClass(lambda: AST.Lambda<Annotation>) : [AST.Class<Annotation>,
           nonlocals: [],
           children: []
         }
-      ]
+      ],
+      typeParams: [],
     },
     { a: lambda.a, tag: "construct", name: lambdaClassName }
   ];
