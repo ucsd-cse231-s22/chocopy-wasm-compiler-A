@@ -28,11 +28,11 @@ function print(typ: Type, arg : number, loader: WebAssembly.ExportValue) : any {
   return arg;
 }
 
-// function assert_not_none(arg: any) : any {
-//   if (arg === 0)
-//     throw new Error("RUNTIME ERROR: cannot perform operation on none");
-//   return arg;
-// }
+function assert_not_none(arg: any) : any {
+  if (arg === 0)
+    throw new Error("RUNTIME ERROR: cannot perform operation on none");
+  return arg;
+}
 
 function webStart() {
   document.addEventListener("DOMContentLoaded", async function() {
@@ -48,7 +48,7 @@ function webStart() {
 
     var importObject = {
       imports: {
-        assert_not_none: (arg1: any, arg2: any) => assert_not_none(arg1, arg2),
+        assert_not_none: (arg: any) => assert_not_none(arg),
         print_num: (arg: number) => print(NUM, arg, memoryModule.instance.exports.load),
         print_bool: (arg: number) => print(BOOL, arg, null),
         print_none: (arg: number) => print(NONE, arg, null),
