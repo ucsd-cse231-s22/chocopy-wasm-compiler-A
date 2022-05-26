@@ -98,7 +98,7 @@ export function isNoneOrClass(t: Type) {
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" || t1.tag == "none" && t2.tag == "str"
+  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
 
 }
 

@@ -13,7 +13,7 @@ function stringify(typ: Type, arg: any): string {
       return "None";
     case Type.String:
       if (arg as number == 256) {
-        return ""
+        return "\n"
       }
       else {
         return String.fromCharCode(arg as number);
