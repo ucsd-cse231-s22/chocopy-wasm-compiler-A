@@ -1,7 +1,6 @@
-import { BasicREPL } from "../repl";
-
 import { Type } from "../ast";
-import { importObject, addLibs } from "./import-object.test";
+import { BasicREPL } from "../repl";
+import { addLibs, importObject } from "./import-object.test";
 
 export function typeCheck(source: string) : Type {
   const repl = new BasicREPL(importObject);
@@ -19,3 +18,6 @@ export const NONE : Type = {tag: "none"}
 export function CLASS(name : string, params: Array<Type> = []) : Type { 
   return {tag: "class", name, params}
 };
+export function CALLABLE(params: Array<Type>, ret: Type): Type {
+  return { tag: "callable", params, ret };
+}

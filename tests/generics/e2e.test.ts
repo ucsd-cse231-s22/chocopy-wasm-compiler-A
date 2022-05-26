@@ -102,50 +102,6 @@ describe('e2e tests to check generics', () => {
     assertPrint('Joe\'s blessed test case from class', prog3, ["0", "10"]);
 
     const prog4 = `
-    T = TypeVar('T', A, B)
-
-    class A():
-      x: int = 0
-
-    class B():
-      x: bool = False
-
-    class Cmp(Generic[T]):
-      v: T = __ZERO__
-
-      def cmp(self: Cmp[T], other: Cmp[T]) -> bool:
-        return self.v.x == other.v.x
-
-    o1: Cmp[A] = None
-    o2: Cmp[A] = None
-    
-    o3: Cmp[B] = None
-    o4: Cmp[B] = None
-
-    o1 = Cmp()
-    o1.v = A()
-    
-    o2 = Cmp()
-    o2.v = A()
-
-    o3 = Cmp()
-    o3.v = B()
-
-    o4 = Cmp()
-    o4.v = B()
-
-    print(o1.cmp(o2))
-
-    o2.v.x = 5
-    print(o1.cmp(o2))
-
-    o4.v.x = not o4.v.x
-    print(o3.cmp(o4))
-    `
-
-    assertPrint('Generic field access', prog4, ["True", "False", "False"]);
-
-    const prog5 = `
     L = TypeVar('L')
     R = TypeVar('R')
 
@@ -175,9 +131,9 @@ describe('e2e tests to check generics', () => {
     print(p2.right)
     `
 
-    assertPrint('Generic Pair class with swap function', prog5, ["10", "True", "True", "10"]);
+    assertPrint('Generic Pair class with swap function', prog4, ["10", "True", "True", "10"]);
 
-    const prog6 = `
+    const prog5 = `
     T = TypeVar('T')
 
     class Node(Generic[T]):
@@ -218,5 +174,5 @@ describe('e2e tests to check generics', () => {
     print(l.head.value)
     print(l.head.next.value)
     `
-    assertPrint('Generic Linked List test - 0', prog6, ["30", "20"]);
+    assertPrint('Generic Linked List test - 0', prog5, ["30", "20"]);
 })

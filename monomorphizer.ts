@@ -1,5 +1,5 @@
-import { Class, Expr, Literal, Parameter, Program, Stmt, Type, VarInit } from './ast';
-import { CLASS } from './utils';
+import { Annotation, Class, Expr, Literal, Parameter, Program, Stmt, Type, VarInit } from './ast';
+import { BOOL, CLASS, NONE, NUM } from './utils';
 
 export type GlobalMorphEnv = {
     classesInx: Map<string, number>,
@@ -19,81 +19,84 @@ export function concretizeGenericTypes(type: Type, genv: GlobalMorphEnv) : Type 
     }
 }
 
-export function resolveZero(type: Type) : Literal {
+export function resolveZero(type: Type, a: Annotation) : Literal<Annotation> {
     switch (type.tag) {
         case "number":
-            return { tag: "num", value: 0 };
+            return { a: { ...a, type: NUM}, tag: "num", value: 0 };
         case "bool":
-            return { tag: "bool", value: false };
+            return { a: { ...a, type: BOOL}, tag: "bool", value: false };
         case "class":
-            return { tag: "none" };
+            return { a: { ...a, type: NONE}, tag: "none" };
     }
 }
 
-export function processExprs(expr: Expr<Type>, genv: GlobalMorphEnv) : Expr<Type> {
-    expr.a = concretizeGenericTypes(expr.a, genv);
+export function processExprs(expr: Expr<Annotation>, genv: GlobalMorphEnv) : Expr<Annotation> {
+    if (expr.a.type === undefined) {
+        return expr;
+    }
+    expr.a.type = concretizeGenericTypes(expr.a.type, genv);
     switch(expr.tag) {
         case "binop":
             const binL = processExprs(expr.left, genv);
             const binR = processExprs(expr.right, genv);
-            if (expr.a.tag === "class" && expr.a.params.length > 0) {
-                return { ...expr, a: CLASS(getCanonicalTypeName(expr.a)), left: binL, right: binR };
+            if (expr.a.type.tag === "class" && expr.a.type.params.length > 0) {
+                return { ...expr, a: {...expr.a, type: CLASS(getCanonicalTypeName(expr.a.type))}, left: binL, right: binR };
             }
             return { ...expr, left: binL, right: binR };
         case "call":
             const cExprs = expr.arguments.map(a => processExprs(a, genv));
-            if (expr.a.tag === "class" && expr.a.params.length > 0) {
-                return { ...expr, a: CLASS(getCanonicalTypeName(expr.a)), arguments: cExprs };
+            if (expr.a.type.tag === "class" && expr.a.type.params.length > 0) {
+                return { ...expr, a: {...expr.a, type: CLASS(getCanonicalTypeName(expr.a.type))}, arguments: cExprs };
             }
             return { ...expr, arguments: cExprs };
         case "construct":
-            if (expr.a.tag === "class" && expr.a.params.length > 0) {
-                const constructCname = getCanonicalTypeName(expr.a)
-                return { ...expr, a: CLASS(constructCname), name: constructCname };
+            if (expr.a.type.tag === "class" && expr.a.type.params.length > 0) {
+                const constructCname = getCanonicalTypeName(expr.a.type)
+                return { ...expr, a: {...expr.a, type: CLASS(constructCname)}, name: constructCname };
             }
             return expr;
         case "id":
-            if (expr.a.tag === "class" && expr.a.params.length > 0) {
-                return { ...expr, a: CLASS(getCanonicalTypeName(expr.a)) };
+            if (expr.a.type.tag === "class" && expr.a.type.params.length > 0) {
+                return { ...expr, a: {...expr.a, type: CLASS(getCanonicalTypeName(expr.a.type))} };
             }
             return expr;
         case "index":
             const inxExpr = processExprs(expr.index, genv);
             const inxObj = processExprs(expr.obj, genv);
-            if (expr.a.tag === "class" && expr.a.params.length > 0) {
-                return { ...expr, a: CLASS(getCanonicalTypeName(expr.a)), index: inxExpr, obj: inxObj };
+            if (expr.a.type.tag === "class" && expr.a.type.params.length > 0) {
+                return { ...expr, a: {...expr.a, type: CLASS(getCanonicalTypeName(expr.a.type))}, index: inxExpr, obj: inxObj };
             }
             return { ...expr, index: inxExpr, obj: inxObj };
         case "lookup":
             const lObj = processExprs(expr.obj, genv);
-            if (expr.a.tag === "class" && expr.a.params.length > 0) {
-                return { ...expr, a: CLASS(getCanonicalTypeName(expr.a)), obj: lObj };
+            if (expr.a.type.tag === "class" && expr.a.type.params.length > 0) {
+                return { ...expr, a: {...expr.a, type: CLASS(getCanonicalTypeName(expr.a.type))}, obj: lObj };
             }
             return { ...expr, obj: lObj };
         case "method-call":
             const mcExprs = expr.arguments.map(a => processExprs(a, genv));
             const mcObj = processExprs(expr.obj, genv);
-            if (expr.a.tag === "class" && expr.a.params.length > 0) {
-                return { ...expr, a: CLASS(getCanonicalTypeName(expr.a)), arguments: mcExprs, obj: mcObj };
+            if (expr.a.type.tag === "class" && expr.a.type.params.length > 0) {
+                return { ...expr, a: {...expr.a, type: CLASS(getCanonicalTypeName(expr.a.type))}, arguments: mcExprs, obj: mcObj };
             }
             return { ...expr, arguments: mcExprs, obj: mcObj };
         case "uniop":
             const uexpr = processExprs(expr.expr, genv);
-            if (expr.a.tag === "class" && expr.a.params.length > 0) {
-                return { ...expr, a: CLASS(getCanonicalTypeName(expr.a)), expr: uexpr };
+            if (expr.a.type.tag === "class" && expr.a.type.params.length > 0) {
+                return { ...expr, a: {...expr.a, type: CLASS(getCanonicalTypeName(expr.a.type))}, expr: uexpr };
             }
             return { ...expr, expr: uexpr };
         case "builtin1":
             const b1arg = processExprs(expr.arg, genv);
-            if (expr.a.tag === "class" && expr.a.params.length > 0) {
-                return { ...expr, a: CLASS(getCanonicalTypeName(expr.a)), arg: b1arg };
+            if (expr.a.type.tag === "class" && expr.a.type.params.length > 0) {
+                return { ...expr, a: {...expr.a, type: CLASS(getCanonicalTypeName(expr.a.type))}, arg: b1arg };
             }
             return { ...expr, arg: b1arg };
         case "builtin2":
             const b2left = processExprs(expr.left, genv);
             const b2right = processExprs(expr.right, genv);
-            if (expr.a.tag === "class" && expr.a.params.length > 0) {
-                return { ...expr, a: CLASS(getCanonicalTypeName(expr.a)), left: b2left, right: b2right };
+            if (expr.a.type.tag === "class" && expr.a.type.params.length > 0) {
+                return { ...expr, a: {...expr.a, type: CLASS(getCanonicalTypeName(expr.a.type))}, left: b2left, right: b2right };
             }
             return { ...expr, left: b2left, right: b2right };
         default:
@@ -101,55 +104,58 @@ export function processExprs(expr: Expr<Type>, genv: GlobalMorphEnv) : Expr<Type
     }
 }
 
-export function processStmts(stmt: Stmt<Type>, genv: GlobalMorphEnv) : Stmt<Type> {
-    stmt.a = concretizeGenericTypes(stmt.a, genv);
+export function processStmts(stmt: Stmt<Annotation>, genv: GlobalMorphEnv) : Stmt<Annotation> {
+    if (stmt.a.type === undefined) {
+        return stmt;
+    }
+    stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
     switch(stmt.tag) {
         case "assign":
             const assignValueExpr = processExprs(stmt.value, genv);
-            if (stmt.a.tag === "class" && stmt.a.params.length > 0) {
-                return { a: CLASS(getCanonicalTypeName(stmt.a)), ...stmt, value: assignValueExpr };
+            if (stmt.a.type.tag === "class" && stmt.a.type.params.length > 0) {
+                return { ...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))}, value: assignValueExpr };
             }
             return { ...stmt, value: assignValueExpr };
         case "expr":
             const expr = processExprs(stmt.expr, genv);
-            if (stmt.a.tag === "class" && stmt.a.params.length > 0) {
-                return {...stmt, a: CLASS(getCanonicalTypeName(stmt.a)), expr };
+            if (stmt.a.type.tag === "class" && stmt.a.type.params.length > 0) {
+                return {...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))}, expr };
             }
             return { ...stmt, expr };
         case "field-assign":
             const faobj = processExprs(stmt.obj, genv);
             const faval = processExprs(stmt.value, genv);
-            if (stmt.a.tag === "class" && stmt.a.params.length > 0) {
-                return { ...stmt, a: CLASS(getCanonicalTypeName(stmt.a)), obj: faobj, value: faval };
+            if (stmt.a.type.tag === "class" && stmt.a.type.params.length > 0) {
+                return { ...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))}, obj: faobj, value: faval };
             }
             return { ...stmt, obj: faobj, value: faval };
         case "index-assign":
             const iaobj = processExprs(stmt.obj, genv);
             const iinx = processExprs(stmt.index, genv);
             const ival = processExprs(stmt.value, genv);
-            if (stmt.a.tag === "class" && stmt.a.params.length > 0) {
-                return { ...stmt, a: CLASS(getCanonicalTypeName(stmt.a)), obj: iaobj, index: iinx, value: ival };
+            if (stmt.a.type.tag === "class" && stmt.a.type.params.length > 0) {
+                return { ...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))}, obj: iaobj, index: iinx, value: ival };
             }
             return { ...stmt, obj: iaobj, index: iinx, value: ival };
         case "if":
             const ifcond = processExprs(stmt.cond, genv);
             const ifthn = stmt.thn.map(st => processStmts(st, genv));
             const ifels = stmt.els.map(st => processStmts(st, genv));
-            if (stmt.a.tag === "class" && stmt.a.params.length > 0) {
-                return { ...stmt, a: CLASS(getCanonicalTypeName(stmt.a)), cond: ifcond, thn: ifthn, els: ifels };
+            if (stmt.a.type.tag === "class" && stmt.a.type.params.length > 0) {
+                return { ...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))}, cond: ifcond, thn: ifthn, els: ifels };
             }
             return { ...stmt, cond: ifcond, thn: ifthn, els: ifels };
         case "return":
             const retExpr = processExprs(stmt.value, genv);
-            if (stmt.a.tag === "class" && stmt.a.params.length > 0) {
-                return { ...stmt, a: CLASS(getCanonicalTypeName(stmt.a)), value: retExpr };
+            if (stmt.a.type.tag === "class" && stmt.a.type.params.length > 0) {
+                return { ...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))}, value: retExpr };
             }
             return { ...stmt, value: retExpr };
         case "while":
             const wcond = processExprs(stmt.cond, genv);
             const wBody = stmt.body.map(st => processStmts(st, genv));
-            if (stmt.a.tag === "class" && stmt.a.params.length > 0) {
-                return { ...stmt, a: CLASS(getCanonicalTypeName(stmt.a)), cond: wcond, body: wBody };
+            if (stmt.a.type.tag === "class" && stmt.a.type.params.length > 0) {
+                return { ...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))} ,cond: wcond, body: wBody };
             }
             return { ...stmt, cond: wcond, body: wBody };
         default:
@@ -157,15 +163,15 @@ export function processStmts(stmt: Stmt<Type>, genv: GlobalMorphEnv) : Stmt<Type
     }
 }
 
-export function monomorphizeClass(cname: string, canonicalName: string, classes: Array<Class<Type>>, genv: GlobalMorphEnv) : Class<Type> {
-    let cClass : Class<Type> = classes[genv.classesInx.get(cname)];
-    let mClass : Class<Type> = JSON.parse(JSON.stringify(cClass))
+export function monomorphizeClass(cname: string, canonicalName: string, classes: Array<Class<Annotation>>, genv: GlobalMorphEnv) : Class<Annotation> {
+    let cClass : Class<Annotation> = classes[genv.classesInx.get(cname)];
+    let mClass : Class<Annotation> = JSON.parse(JSON.stringify(cClass))
     mClass.name = canonicalName;
     mClass.typeParams = [];
     mClass.fields = mClass.fields.map(field => {
         if (field.type.tag === "typevar" || (field.type.tag === "class" && field.type.params.length > 0)) {
             field.type = concretizeGenericTypes(field.type, genv);
-            field.value = resolveZero(field.type);
+            field.value = resolveZero(field.type, field.a);
         }
         return field;
     });
@@ -177,7 +183,7 @@ export function monomorphizeClass(cname: string, canonicalName: string, classes:
         method.inits = method.inits.map(init => {
             if (init.type.tag === "typevar" || (init.type.tag === "class" && init.type.params.length > 0)) {
                 init.type = concretizeGenericTypes(init.type, genv);
-                init.value = resolveZero(init.type);
+                init.value = resolveZero(init.type, init.a);
             }
             return init;
         });
@@ -209,7 +215,7 @@ export function getCanonicalTypeName(t : Type) : string {
     }
 }
 
-export function processMethodParams(params: Array<Parameter<Type>>, classes: Array<Class<Type>>, genv: GlobalMorphEnv) : Array<Parameter<Type>> {
+export function processMethodParams(params: Array<Parameter<Annotation>>, classes: Array<Class<Annotation>>, genv: GlobalMorphEnv) : Array<Parameter<Annotation>> {
     return params.map(param => {
         if (param.type.tag === "class" && param.type.params.length > 0) { // this implies a var init of a class with generic types
             const canonicalName = getCanonicalTypeName(param.type);
@@ -225,9 +231,9 @@ export function processMethodParams(params: Array<Parameter<Type>>, classes: Arr
     });
 }
 
-export function processInits(inits: Array<VarInit<Type>>, classes: Array<Class<Type>>, genv: GlobalMorphEnv) : Array<VarInit<Type>> {
+export function processInits(inits: Array<VarInit<Annotation>>, classes: Array<Class<Annotation>>, genv: GlobalMorphEnv) : Array<VarInit<Annotation>> {
     return inits.map(init => {
-        if (init.type.tag === "class" && init.type.params.length > 0) { // this implies a var init of a class with generic types
+        if (init.type.tag === "class" && init.type.params.length > 0) {
             const canonicalName = getCanonicalTypeName(init.type);
             if (!genv.morphedClasses.has(canonicalName)) {
                 const typeCname = init.type.name;
@@ -241,7 +247,7 @@ export function processInits(inits: Array<VarInit<Type>>, classes: Array<Class<T
     });
 }
 
-export function monomorphizeProgram(program: Program<Type>) : Program<Type> {
+export function monomorphizeProgram(program: Program<Annotation>) : Program<Annotation> {
     let classesInx : Map<string, number> = new Map();
     program.classes.forEach((clazz, inx) => classesInx.set(clazz.name, inx));
     let genv : GlobalMorphEnv = {classesInx, typeVars: new Map(), morphedClasses: new Set()};
