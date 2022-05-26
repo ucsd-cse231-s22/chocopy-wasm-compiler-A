@@ -291,13 +291,27 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
             expr.a); }
         case BinOp.Minus:
         case BinOp.Mul:
+          if(equalType(tLeft.a.type, STRING) && equalType(tRight.a.type, NUM)){
+            // string mul number is not a simple BinOp
+            return{a:{ ...expr.a, type:STRING}, tag:"builtin2", name: "str_mul" , left:tLeft, right:tRight};
+          } else if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, STRING)) {
+            return{a:{ ...expr.a, type:STRING}, tag:"builtin2", name: "str_mul", left:tRight, right:tLeft};
+          }
         case BinOp.IDiv:
         case BinOp.Mod:
           if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: NUM } } }
           else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${JSON.stringify(tLeft.a.type.tag)} and ${JSON.stringify(tRight.a.type.tag)}`,
             expr.a); }
         case BinOp.Eq:
+          if(equalType(tLeft.a.type, STRING) && equalType(tRight.a.type, STRING)){
+            // string equal is not a simple BinOp
+            return{a:{ ...expr.a, type:BOOL},tag:"builtin2",name:"str_eq",left:tLeft,right:tRight};
+          }
         case BinOp.Neq:
+          if(equalType(tLeft.a.type, STRING) && equalType(tRight.a.type, STRING)){
+            // string inequal is not a simple BinOp
+            return{a:{ ...expr.a, type:BOOL},tag:"builtin2",name:"str_ineq",left:tLeft,right:tRight};
+          }
 
           if (tLeft.a.type.tag === "class" || tRight.a.type.tag === "class") throw new TypeCheckError(SRC, "cannot apply operator '==' on class types")
           if (equalType(tLeft.a.type, tRight.a.type)) { return { ...tBin, a: { ...expr.a, type: BOOL } }; }

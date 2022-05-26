@@ -272,20 +272,20 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
       if (e.op == AST.BinOp.IDiv || e.op == AST.BinOp.Mod) { // check division by zero
         checkDenom.push(ERRORS.flattenDivideByZero(e.a, rval));
       }
-      if (lval.tag == "id") {
-        if (lval.a.type == STRING && rval.a.type == STRING) {
-          var str_op: IR.Value<null> = {tag: "wasmint", value: 0};
-          if (e.op == AST.BinOp.Eq) {
-            str_op = {...str_op, value: 1};
-          }
-          return [[...linits, ...rinits], [...lstmts, ...rstmts, ...checkDenom], {
-            tag: "str_compare",
-            op: str_op,
-            left: lval,
-            right: rval
-          }];
-        }
-      }
+      // if (lval.tag == "id") {
+      //   if (lval.a.type == STRING && rval.a.type == STRING) {
+      //     var str_op: IR.Value<null> = {tag: "wasmint", value: 0};
+      //     if (e.op == AST.BinOp.Eq) {
+      //       str_op = {...str_op, value: 1};
+      //     }
+      //     return [[...linits, ...rinits], [...lstmts, ...rstmts, ...checkDenom], {
+      //       tag: "str_compare",
+      //       op: str_op,
+      //       left: lval,
+      //       right: rval
+      //     }];
+      //   }
+      // }
 
       return [[...linits, ...rinits], [...lstmts, ...rstmts,...checkDenom], {
           ...e,
