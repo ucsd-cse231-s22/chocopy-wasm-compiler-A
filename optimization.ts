@@ -1,4 +1,3 @@
-import { stat } from "fs";
 import { BinOp, Parameter, Type, UniOp} from "./ast";
 import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "./ir";
 
@@ -18,7 +17,6 @@ export function optimizeValue(val: Value<any>, env: Env): Value<any>{
     if (val.tag !== "id"){
         return val;
     }
-
     if (env.vars.has(val.name)){
         if (["nac", "undef"].includes(env.vars.get(val.name).tag))
             return val;
@@ -259,24 +257,13 @@ function mergeEnvironment(a: Env, b: Env): Env{
             returnEnv.vars.set(key, {tag: "undef"})
         }
         else if (aValue.tag === "undef"){
-            if(bValue.tag === "val")
-                returnEnv.vars.set(key, {tag: "val", value: bValue.value})
-            // else
-            //     returnEnv.vars.set(key, {tag: "copyId", value: bValue.value})
+            returnEnv.vars.set(key, {tag: "val", value: bValue.value})
         }
         else if (bValue.tag === "undef"){
-            if(aValue.tag === "val")
-                returnEnv.vars.set(key, {tag: "val", value: aValue.value});
-            // else
-            //     returnEnv.vars.set(key, {tag: "copyId", value: aValue.value})
+            returnEnv.vars.set(key, {tag: "val", value: aValue.value});
         }
-        else if (checkValueEquality(aValue.value, bValue.value)){
-            if(aValue.tag === "val")
-                returnEnv.vars.set(key, {tag: "val", value: aValue.value});
-            // else
-            //     returnEnv.vars.set(key, {tag: "copyId", value: aValue.value})
-        }
-            
+        else if (checkValueEquality(aValue.value, bValue.value))
+            returnEnv.vars.set(key, {tag: "val", value: aValue.value});
         else
             returnEnv.vars.set(key, {tag: "nac"});
     });
@@ -293,7 +280,6 @@ function updateEnvironmentByBlock(inEnv: Env, block: BasicBlock<any>): Env{
             if (optimizedExpression.tag === "value"){
                 if (optimizedExpression.value.tag === "id"){
                     outEnv.vars.set(statement.name, {tag: "nac"});
-                    // outEnv.vars.set(statement.name, {tag: "copyId", value: optimizedExpression.value});
                 }
                 else{
                     outEnv.vars.set(statement.name, {tag: "val", value: optimizedExpression.value});
