@@ -97,7 +97,7 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
-  console.log(ast.inits, globalNames);
+  // console.log(ast.inits, globalNames);
   const funs : Array<string> = [];
   const typelist: Array<string> = getTypeList(ast.table, 0);
   const tablelist: Array<string> = getTableList(ast.table);

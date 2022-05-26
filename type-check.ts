@@ -190,7 +190,7 @@ export function inheritanceUpdate(originalNodes: Array<ClassIndex<null>>, newcla
           methodParam.push([method.parameters.length, method.ret.tag !== "none"]);
         }
         else {
-          methodClass[methods.indexOf(method.name)] = newclass.name;
+          methodClass[methods.indexOf(method.name)] = method.class;
         }
       })
       children.push({
@@ -307,7 +307,6 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
         } else {
           newInheritance.children = inheritanceUpdate(newInheritance.children, cls);
         }
-        
       }
     })
     if (classCount === numClass)
@@ -730,9 +729,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
               methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a, argTyp))) {
                 return {...expr, a: methodRet, obj: tObj, arguments: tArgs};
               } else {
-                console.log(methodArgs[2]);
-                console.log(realArgs[2].a);
-                console.log(isAssignable(env, realArgs[2].a, methodArgs[2]));
                throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}` );
               }
           } else {
