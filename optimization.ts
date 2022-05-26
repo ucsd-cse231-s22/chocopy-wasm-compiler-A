@@ -346,7 +346,7 @@ export function optimizeClass(c: Class<any>): Class<any>{
     return {...c, methods: optimizedMethods};
 }
 
-export function  generateEnvironmentProgram(program: Program<any>): [Map<string, Env>, Map<string, Env>]{
+export function generateEnvironmentProgram(program: Program<any>): [Map<string, Env>, Map<string, Env>]{
     var initialEnv = computeInitEnv(program.inits, false);
 
     var inEnvMapping: Map<string, Env> = new Map<string, Env>();
