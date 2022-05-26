@@ -1,3 +1,4 @@
+import { stat } from "fs";
 import { BinOp, Parameter, Type, UniOp} from "./ast";
 import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "./ir";
 
@@ -8,16 +9,24 @@ type Env = {
 }
 
 export type compileVal = {
-    tag: "nac"|"val"|"undef", value?: Value<any>;
+    tag: "nac"|"val"|"undef"|"copyId", value?: Value<any>;
 }
+
+const varDefEnvTag: string = "$$VD$$";
 
 export function optimizeValue(val: Value<any>, env: Env): Value<any>{
     if (val.tag !== "id"){
         return val;
     }
+
     if (env.vars.has(val.name)){
         if (["nac", "undef"].includes(env.vars.get(val.name).tag))
             return val;
+        
+        var tempVal = env.vars.get(val.name);
+        if(tempVal.tag === "copyId"){
+            
+        }
         val = env.vars.get(val.name).value;
     }
     return val;
@@ -73,6 +82,8 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<an
         switch(op){
             case BinOp.Eq: return {tag: "bool", value: leftVal.value === rightVal.value};
 
+            case BinOp.Neq: return {tag: "bool", value: leftVal.value !== rightVal.value};
+
         }
     }
     else{
@@ -119,8 +130,7 @@ export function optimizeExpression(e: Expr<Type>, env: Env): Expr<Type>{
                 return {...e, expr: arg};
             var val: Value<any> = evaluateUniOp(e.op, arg);
             return e;
-            // NOTE(joe): had to skip this optimization b/c negative literals for bignums not supported
-            // return {tag: "value", value: val};
+ 
         case "builtin1":
             var arg = optimizeValue(e.arg, env);
             return {...e, arg: arg};
@@ -175,6 +185,8 @@ export function optimizeStatements(stmt: Stmt<any>, env: Env): Stmt<any>{
         case "jmp":
             return stmt;
         case "store":
+            return stmt;
+        default:
             return stmt;
     }
 }
@@ -251,13 +263,24 @@ function mergeEnvironment(a: Env, b: Env): Env{
             returnEnv.vars.set(key, {tag: "undef"})
         }
         else if (aValue.tag === "undef"){
-            returnEnv.vars.set(key, {tag: "val", value: bValue.value})
+            if(bValue.tag === "val")
+                returnEnv.vars.set(key, {tag: "val", value: bValue.value})
+            // else
+            //     returnEnv.vars.set(key, {tag: "copyId", value: bValue.value})
         }
         else if (bValue.tag === "undef"){
-            returnEnv.vars.set(key, {tag: "val", value: aValue.value});
+            if(aValue.tag === "val")
+                returnEnv.vars.set(key, {tag: "val", value: aValue.value});
+            // else
+            //     returnEnv.vars.set(key, {tag: "copyId", value: aValue.value})
         }
-        else if (checkValueEquality(aValue.value, bValue.value))
-            returnEnv.vars.set(key, {tag: "val", value: aValue.value});
+        else if (checkValueEquality(aValue.value, bValue.value)){
+            if(aValue.tag === "val")
+                returnEnv.vars.set(key, {tag: "val", value: aValue.value});
+            // else
+            //     returnEnv.vars.set(key, {tag: "copyId", value: aValue.value})
+        }
+            
         else
             returnEnv.vars.set(key, {tag: "nac"});
     });
@@ -274,6 +297,7 @@ function updateEnvironmentByBlock(inEnv: Env, block: BasicBlock<any>): Env{
             if (optimizedExpression.tag === "value"){
                 if (optimizedExpression.value.tag === "id"){
                     outEnv.vars.set(statement.name, {tag: "nac"});
+                    // outEnv.vars.set(statement.name, {tag: "copyId", value: optimizedExpression.value});
                 }
                 else{
                     outEnv.vars.set(statement.name, {tag: "val", value: optimizedExpression.value});
@@ -306,17 +330,19 @@ function optimizeBlock(block: BasicBlock<any>, env: Env): [BasicBlock<any>, bool
     var blockOptimized: boolean = false;
     var newStmts: Stmt<any>[] = block.stmts.map(s => {
         var optimizedstatement = optimizeStatements(s, env);
-        if (!blockOptimized && !checkStmtEquality(optimizedstatement, s)) blockOptimized = true;
+        if (!blockOptimized && !checkStmtEquality(optimizedstatement, s)) {
+            blockOptimized = true;
+        }
         return optimizedstatement;
     });
     return [{...block, stmts: newStmts}, blockOptimized];
 }
 
 export function optimizeFunction(func: FunDef<any>): FunDef<any>{
+    if (func.body.length === 0) return func;
     var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctions(func);
 
     var functionOptimized: boolean = false;
-    //Write code to optimize functions here
     var newBody: Array<BasicBlock<any>> = func.body.map(b => {
         var tempBlockEnv: Env = duplicateEnv(inEnvMapping.get(b.label));
         var [optimizedBlock, blockOptimized]: [BasicBlock<any>, boolean] = optimizeBlock(b, tempBlockEnv);
@@ -326,7 +352,7 @@ export function optimizeFunction(func: FunDef<any>): FunDef<any>{
 
     /* NOTE(joe): taking out all recursive optimization because there is no easy
      * way to add fallthrough cases above */
-    // if (functionOptimized) return optimizeFunction({...func, body: newBody})
+    if (functionOptimized) return optimizeFunction({...func, body: newBody})
 
     return {...func, body: newBody};
 }
@@ -338,7 +364,7 @@ export function optimizeClass(c: Class<any>): Class<any>{
     return {...c, methods: optimizedMethods};
 }
 
-export function generateEnvironmentProgram(program: Program<any>): [Map<string, Env>, Map<string, Env>]{
+export function  generateEnvironmentProgram(program: Program<any>): [Map<string, Env>, Map<string, Env>]{
     var initialEnv = computeInitEnv(program.inits, false);
 
     var inEnvMapping: Map<string, Env> = new Map<string, Env>();
@@ -353,9 +379,9 @@ export function generateEnvironmentProgram(program: Program<any>): [Map<string, 
 
     var [preds, succs, blockMapping]: [Map<string, string[]>, Map<string, string[]>, Map<string, BasicBlock<any>>] = computePredecessorSuccessor(program.body);
 
-    preds.set(program.body[0].label, ["VD"]);
-    succs.set("VD", [program.body[0].label]);
-    outEnvMapping.set("VD", initialEnv);
+    preds.set(program.body[0].label, [varDefEnvTag]);
+    succs.set(varDefEnvTag, [program.body[0].label]);
+    outEnvMapping.set(varDefEnvTag, initialEnv);
 
     generateEnvironments([program.body[0].label], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
 
@@ -381,9 +407,9 @@ export function generateEnvironmentFunctions(func: FunDef<any>): [Map<string, En
 
     var [preds, succs, blockMapping]: [Map<string, string[]>, Map<string, string[]>, Map<string, BasicBlock<any>>] = computePredecessorSuccessor(func.body);
 
-    preds.set(func.body[0].label, ["VD"]);
-    succs.set("VD", [func.body[0].label]);
-    outEnvMapping.set("VD", initialEnv);
+    preds.set(func.body[0].label, [varDefEnvTag]);
+    succs.set(varDefEnvTag, [func.body[0].label]);
+    outEnvMapping.set(varDefEnvTag, initialEnv);
     
     generateEnvironments([func.body[0].label], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
 
@@ -391,7 +417,7 @@ export function generateEnvironmentFunctions(func: FunDef<any>): [Map<string, En
 }
 
 export function optimizeProgram(program: Program<any>): Program<any>{
-
+    if (program.body.length == 0) return program;
     var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentProgram(program);
 
     //Write code to optimize the program using the environment
@@ -404,7 +430,7 @@ export function optimizeProgram(program: Program<any>): Program<any>{
     });
     /* NOTE(joe): turning this off; it (a) doesn't have fallthrough cases for new
      * expressions and (b) when I add fallthrough cases, it stack-overflows */
-    //if (programOptimized) program = optimizeProgram({...program, body: newBody});
+    if (programOptimized) program = optimizeProgram({...program, body: newBody});
 
     var newClass: Array<Class<any>> = program.classes.map(c => {
         return optimizeClass(c);
@@ -456,7 +482,10 @@ export function generateEnvironments(workList: Array<string>, inEnvMapping: Map<
     inEnvMapping.set(currBlock, newInEnv);
     outEnvMapping.set(currBlock, updateEnvironmentByBlock(newInEnv, blockMapping.get(currBlock)));
     
-    const wlAddition: string[] = (succs.get(currBlock) === undefined)?([]):(succs.get(currBlock));
+    const wlAddition: string[] = (succs.get(currBlock) === undefined)?([]):(succs.get(currBlock).map(succBlock => {
+        if (succBlock !== varDefEnvTag) return succBlock;
+    }));
+
     generateEnvironments([...workList, ...wlAddition], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
 
     return;
