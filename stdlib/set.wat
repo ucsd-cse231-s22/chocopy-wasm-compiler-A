@@ -864,12 +864,14 @@
     ) ;;close then
     (else
         (local.get $prevPtr)
-        (i32.load) ;; Address of the head of linkedList.
+        (i32.const 0)
+        (call $load) ;; Address of the head of linkedList.
         (local.set $currPtr) ;; currPtr stores the address of the head of the first node.
         (block
             (loop
                 (local.get $currPtr)
-                (i32.load)
+                (i32.const 0)
+                (call $load)
                 (local.get $key)
                 (i32.eq) ;; if tag is same as the provided one
                 (if
