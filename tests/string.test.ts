@@ -236,4 +236,25 @@ describe("String tests", () => {
   print(c.s[0] == d.s[0])  
   `,['False'])
 
+  assertPrint("String-Muliplication",`
+  s:str = "abc"
+  x:int = 3
+  print(x*s)
+  `,['abcabcabc'])
+
+  assertPrint("String-Muliplication-In-Function",`
+  def f(s:str, x:int) -> str:
+     return s * x
+  print(f("abc", 3))
+  `,['abcabcabc'])
+
+
+  assertPrint("String-Muliplication-In-Class",`
+  class C(object):
+    s:str = "abc"
+    x:int = 3
+  c:C = None
+  c = C()
+  print(c.s * c.x)
+  `,['abcabcabc'])
 });
