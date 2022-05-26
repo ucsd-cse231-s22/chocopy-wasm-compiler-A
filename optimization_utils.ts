@@ -47,7 +47,8 @@ export function checkValueEquality(a: Value<any>, b: Value<any>): boolean{
 export function checkCompileValEquality(a: compileVal, b: compileVal): boolean{
     if (a.tag !== b.tag)
         return false;
-    if (a.tag === "val" || a.tag === "copyId"){
+    // || a.tag === "copyId"
+    if (a.tag === "val"){
         return checkValueEquality(a.value, b.value);
     }
     return true;

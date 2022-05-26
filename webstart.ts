@@ -2,7 +2,7 @@ import {BasicREPL} from './repl';
 import { Type, Value, Annotation } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
 import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath  } from './utils';
-import { assert_not_none, importObjectErrors } from './errors';
+import { importObjectErrors } from './errors';
 
 
 function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : string {

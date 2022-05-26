@@ -6,17 +6,13 @@ import { addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-class C(object):
-  def f(self: C) -> int:
-    if True:
-      return 0
-    else:
-      return`
+def f(x:int, y:int):
+    print(x + y)
+f(100000000000000000000000, 100000000000000000000001)`
   // var source = `
   // class C(object):
   //   def __init__(self:C, other:D):
   //     pass
-  
   // x:C = None
   // x = C()`
 const ast = parse(source);

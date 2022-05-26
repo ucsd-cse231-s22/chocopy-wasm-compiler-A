@@ -136,8 +136,7 @@ export function optimizeExpression(e: Expr<Type>, env: Env): Expr<Type>{
                 return {...e, expr: arg};
             var val: Value<any> = evaluateUniOp(e.op, arg);
             return e;
-            // NOTE(joe): had to skip this optimization b/c negative literals for bignums not supported
-            // return {tag: "value", value: val};
+ 
         case "builtin1":
             var arg = optimizeValue(e.arg, env);
             return {...e, arg: arg};
@@ -270,20 +269,20 @@ function mergeEnvironment(a: Env, b: Env): Env{
         else if (aValue.tag === "undef"){
             if(bValue.tag === "val")
                 returnEnv.vars.set(key, {tag: "val", value: bValue.value})
-            else
-                returnEnv.vars.set(key, {tag: "copyId", value: bValue.value})
+            // else
+            //     returnEnv.vars.set(key, {tag: "copyId", value: bValue.value})
         }
         else if (bValue.tag === "undef"){
             if(aValue.tag === "val")
                 returnEnv.vars.set(key, {tag: "val", value: aValue.value});
-            else
-                returnEnv.vars.set(key, {tag: "copyId", value: aValue.value})
+            // else
+            //     returnEnv.vars.set(key, {tag: "copyId", value: aValue.value})
         }
         else if (checkValueEquality(aValue.value, bValue.value)){
             if(aValue.tag === "val")
                 returnEnv.vars.set(key, {tag: "val", value: aValue.value});
-            else
-                returnEnv.vars.set(key, {tag: "copyId", value: aValue.value})
+            // else
+            //     returnEnv.vars.set(key, {tag: "copyId", value: aValue.value})
         }
             
         else
@@ -301,8 +300,8 @@ function updateEnvironmentByBlock(inEnv: Env, block: BasicBlock<any>): Env{
             const optimizedExpression = optimizeExpression(statement.value, outEnv);
             if (optimizedExpression.tag === "value"){
                 if (optimizedExpression.value.tag === "id"){
-                    // outEnv.vars.set(statement.name, {tag: "nac"});
-                    outEnv.vars.set(statement.name, {tag: "copyId", value: optimizedExpression.value});
+                    outEnv.vars.set(statement.name, {tag: "nac"});
+                    // outEnv.vars.set(statement.name, {tag: "copyId", value: optimizedExpression.value});
                 }
                 else{
                     outEnv.vars.set(statement.name, {tag: "val", value: optimizedExpression.value});
@@ -355,7 +354,7 @@ export function optimizeFunction(func: FunDef<any>): FunDef<any>{
 
     /* NOTE(joe): taking out all recursive optimization because there is no easy
      * way to add fallthrough cases above */
-    // if (functionOptimized) return optimizeFunction({...func, body: newBody})
+    if (functionOptimized) return optimizeFunction({...func, body: newBody})
 
     return {...func, body: newBody};
 }
@@ -367,7 +366,7 @@ export function optimizeClass(c: Class<any>): Class<any>{
     return {...c, methods: optimizedMethods};
 }
 
-export function generateEnvironmentProgram(program: Program<any>): [Map<string, Env>, Map<string, Env>]{
+export function  generateEnvironmentProgram(program: Program<any>): [Map<string, Env>, Map<string, Env>]{
     var initialEnv = computeInitEnv(program.inits, false);
 
     var inEnvMapping: Map<string, Env> = new Map<string, Env>();
@@ -433,7 +432,7 @@ export function optimizeProgram(program: Program<any>): Program<any>{
     });
     /* NOTE(joe): turning this off; it (a) doesn't have fallthrough cases for new
      * expressions and (b) when I add fallthrough cases, it stack-overflows */
-    //if (programOptimized) program = optimizeProgram({...program, body: newBody});
+    if (programOptimized) program = optimizeProgram({...program, body: newBody});
 
     var newClass: Array<Class<any>> = program.classes.map(c => {
         return optimizeClass(c);
