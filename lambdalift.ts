@@ -232,7 +232,7 @@ function changeIDtoLookupinExpr(e: Expr<Type>, name: string, pretype: Type, curr
     }
 }
 
-function changeCallinStmt(s: any, env : LocalFuncEnv) : Stmt<Type>{
+function changeCallinStmt(s: Stmt<Type>, env : LocalFuncEnv) : Stmt<Type>{
     switch (s.tag){
         case "assign":
             var value = changeCallinExpr(s.value, env);
@@ -244,11 +244,41 @@ function changeCallinStmt(s: any, env : LocalFuncEnv) : Stmt<Type>{
             var expr = changeCallinExpr(s.expr, env);
             return {...s, expr};
         case "field-assign":
+            var value = changeCallinExpr(s.value, env);
+            var obj = changeCallinExpr(s.obj, env);
+            return {...s, obj, value};
         case "index-assign":
+            var list = changeCallinExpr(s.list, env);
+            var index = changeCallinExpr(s.index, env);
+            var value = changeCallinExpr(s.value, env);
+            return {...s, list, index, value};
         case "if":
+            var cond = changeCallinExpr(s.cond, env);
+            var newthn: Array<Stmt<Type>> = [];
+            s.thn.forEach(s_thn =>{
+                newthn.push(changeCallinStmt(s_thn, env));
+            })
+            var newels: Array<Stmt<Type>> = [];
+            s.els.forEach(s_els =>{
+                newels.push(changeCallinStmt(s_els, env));
+            })
+            return {...s, cond, thn: newthn, els: newels};
         case "while":
+            var cond = changeCallinExpr(s.cond, env);
+            var newbody: Array<Stmt<Type>> = [];
+            s.body.forEach(s_body =>{
+                newbody.push(changeCallinStmt(s_body, env));
+            })  
+            return {...s, cond, body: newbody};
         case "for":
-            return {...s};
+            var iterable = changeCallinExpr(s.iterable, env);
+            var newbody: Array<Stmt<Type>> = [];
+            s.body.forEach(s_body =>{
+                newbody.push(changeCallinStmt(s_body, env));
+            })
+            return {...s, iterable, body: newbody};
+        default:
+            return s;
     }
 }
 
@@ -287,8 +317,33 @@ function changeCallinExpr(e: Expr<Type>, env: LocalFuncEnv): Expr<Type>{
             })
             newargs = newargs.concat(e.arguments);
             return {...e, name: newname, arguments: newargs};
+        case "lookup":
+            var obj = changeCallinExpr(e.obj, env);
+            return {...e, obj};
+        case "index":
+            var obj = changeCallinExpr(e.obj, env);
+            var index = changeCallinExpr(e.obj, env);
+            return {...e, obj, index};
+        case "method-call":
+            var obj = changeCallinExpr(e.obj, env);
+            var newargs:Array<Expr<Type>> = [];
+            e.arguments.forEach(arg=>{
+                newargs.push(changeCallinExpr(arg, env));
+            })
+            return {...e, obj, arguments:newargs};
+        case "construct":
+            return e;
+        case "list-obj":
+            var newentries:Array<Expr<Type>> = [];
+            e.entries.forEach(entry=>{
+                newentries.push(changeCallinExpr(entry, env));
+            })
+            return {...e, entries: newentries};
+        case "list-length":
+            var list = changeCallinExpr(e.list, env);
+            return {...e, list};
         default: 
-            return {...e};
+            return e;
     }
 }
 
