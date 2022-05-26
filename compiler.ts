@@ -260,6 +260,12 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
         returnVal.push(`(f32.const inf)`);
         returnVal.push(`(call $store_float)`);
       }
+      else if (val.value === NaN){
+        returnVal.push(`(local.get $$scratch)`);
+        returnVal.push(`(i32.const 0)`)
+        returnVal.push(`(f32.const nan)`);
+        returnVal.push(`(call $store_float)`);
+      }
       else {
         returnVal.push(`(local.get $$scratch)`);
         returnVal.push(`(i32.const 0)`)

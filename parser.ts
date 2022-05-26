@@ -42,33 +42,16 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
       if (s.substring(c.from, c.to) === "inf"){
         return {
           tag: "float",
-          value: Infinity,
-          import: "inf"
+          value: Infinity
+        }
+      }
+      else if (s.substring(c.from, c.to) === "nan"){
+        return {
+          tag: "float",
+          value: NaN,
         }
       }
       else { throw new Error("Not literal") }
-      case "MemberExpression": // x : float = inf
-      c.firstChild();
-      if (s.substring(c.from, c.to) === "math"){
-        c.nextSibling(); // focus :
-        c.nextSibling(); 
-        if (s.substring(c.from, c.to) === "inf"){
-          c.parent();
-          return {
-            tag: "float",
-            value: Infinity,
-            import: "math"
-          }
-        }
-        else {
-          c.parent();
-          throw new Error("Not literal")
-        }
-      }
-      else { 
-        c.parent();
-        throw new Error("Not literal") 
-      }
     default:
       throw new Error("Not literal")
   }
