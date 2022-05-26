@@ -104,31 +104,15 @@ function lowerStringInits(init: AST.VarInit<Annotation>,blocks: Array<IR.BasicBl
 
 function lowerClassVarInits(global_inits:IR.VarInit<AST.Annotation>[],cls: AST.Class<Annotation>,inits: Array<AST.VarInit<Annotation>>, env: GlobalEnv, blocks?: Array<IR.BasicBlock<Annotation>>) : Array<IR.VarInit<Annotation>> {
 
-  //return inits.map(i => lowerClassVarInit(global_inits,cls,i, env,blocks));
-  return inits.map(i => tmpVarInit(global_inits,cls,i, env,blocks));
+  return inits.map(i => lowerClassVarInit(global_inits,cls,i, env,blocks));
 }
 
-function tmpVarInit(global_inits:IR.VarInit<AST.Annotation>[],cls: AST.Class<Annotation>,init: AST.VarInit<Annotation>, env: GlobalEnv,blocks: Array<IR.BasicBlock<Annotation>>) : IR.VarInit<Annotation> {
+function lowerClassVarInit(global_inits:IR.VarInit<AST.Annotation>[],cls: AST.Class<Annotation>,init: AST.VarInit<Annotation>, env: GlobalEnv,blocks: Array<IR.BasicBlock<Annotation>>) : IR.VarInit<Annotation> {
   return {
     ...init,
     value: literalToVal(init.value)
 }
 }
-
-// function lowerClassVarInit(global_inits:IR.VarInit<AST.Annotation>[],cls: AST.Class<Annotation>,init: AST.VarInit<Annotation>, env: GlobalEnv,blocks: Array<IR.BasicBlock<Annotation>>) : IR.VarInit<Annotation> {
-// if (init.value.tag == "str"){
-//   // new function here
-//   init.name = cls.name + "$" + init.name;
-//   global_inits.unshift({ name: init.name, type: init.a.type, value: { tag: "none" }});
-//   return lowerStringInits(init, blocks);
-// }  
-
-// return {
-//       ...init,
-//       value: literalToVal(init.value)
-//   }
-// }
-
 
 
 function lowerClasses(inits:IR.VarInit<AST.Annotation>[],classes: Array<AST.Class<Annotation>>, env : GlobalEnv, blocks: Array<IR.BasicBlock<Annotation>>) : Array<IR.Class<Annotation>> {
@@ -281,78 +265,6 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<I
         expr: val
       }];
 
-    case "str-concat":
-      var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
-      var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
-      //load the legnth of left
-      const load_left_length: IR.Expr<Annotation> = {
-        tag: "load",
-        start: lval,
-        offset: { tag: "wasmint", value: 0 }
-      };
-      //load the length of right
-      const load_right_length: IR.Expr<Annotation> = {
-        tag: "load",
-        start: rval,
-        offset: { tag: "wasmint", value: 0 }
-      };
-
-      const alloc_index_string_length : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: 1 } };
-      const newIndexStrName = generateName("newStr");
-      const newStringLengthVar = generateName("newStrLength");
-      const newStringLengthVar2 = generateName("newStrLength");
-      const newStringLengthVar3 = generateName("newStrLength");
-
-      const Randomname = generateName("Random");
-      var initsArray: Array<IR.VarInit<Annotation>> = [];
-      var strConcatstmts: IR.Stmt<AST.Annotation>[] = [];
-      initsArray.push({ name: newIndexStrName, type: STRING, value: { tag: "none" } });
-      initsArray.push({ name: newStringLengthVar, type:  NUM, value: { tag: "wasmint", value: 0 } });
-      initsArray.push({ name: newStringLengthVar2, type:  NUM, value: { tag: "wasmint", value: 0 } });
-      initsArray.push({ name: newStringLengthVar3, type:  NUM, value: { tag: "wasmint", value: 0 } });
-
-      initsArray.push({ name: Randomname, type: STRING, value: { tag: "none" } });
-      const getLength: IR.Expr<Annotation>  = {  a:{...e.a, type:NUM}, tag: "getLengthSum", addr1: lval, addr2:rval};
-
-
-      strConcatstmts.push({ tag: "assign", name: newIndexStrName, value: alloc_index_string_length });
-      strConcatstmts.push({ tag: "assign", name: newStringLengthVar, value: getLength });
-      strConcatstmts.push({ tag: "assign", name: newStringLengthVar2, value: load_left_length });
-      strConcatstmts.push({ tag: "assign", name: newStringLengthVar3, value: load_right_length });
-      const alloc_left_string : IR.Expr<Annotation> = { tag: "alloc", amount: { a: {...e.a,type:NUM}, tag: "id", name: newStringLengthVar2 } };
-      const alloc_right_string : IR.Expr<Annotation> = { tag: "alloc", amount: { a: {...e.a,type:NUM}, tag: "id", name: newStringLengthVar3 } };
-      //TODO: store the length of A + B into the newIndexStrName
-      strConcatstmts.push({
-        tag: "store",
-        start: {tag: "id", name: newIndexStrName},
-        offset: {tag:"wasmint", value: 0},
-        value: { a: {...e.a,type:NUM}, tag: "id", name: newStringLengthVar }
-      });
-
-
-
-      //we need to alloc lengthA to randomname
-      strConcatstmts.push({ tag: "assign", name: Randomname, value: alloc_left_string });
-      //TODO: store each character of A into the Randomname
-      strConcatstmts.push({
-        //a: STRING,
-        tag: "duplicate_str",
-        source: lval,
-        dest: {  a: {...e.a,type:STRING}, tag: "id", name: Randomname }
-      });
-      
-      //we need to alloc lengthB to randomname
-      strConcatstmts.push({ tag: "assign", name: Randomname, value: alloc_right_string });
-      //TODO: store each character of B into the Randomname
-      strConcatstmts.push({
-        a: {...e.a, type:STRING},
-        tag: "duplicate_str",
-        source: rval,
-        dest: {  a: {...e.a,type:STRING}, tag: "id", name: Randomname }
-      });
-      return [[...initsArray,...linits,...rinits],
-        [...lstmts,...rstmts,...strConcatstmts],
-        { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newIndexStrName }}];
     case "binop":
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);

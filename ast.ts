@@ -54,7 +54,6 @@ export type Expr<A> =
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
-  | {  a?: A, tag: "str-concat",left: Expr<A>, right: Expr<A>}
 
   // add annotation for reporting row/col in errors
 export type Literal<A> = 
