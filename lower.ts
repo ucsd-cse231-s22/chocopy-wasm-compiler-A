@@ -346,7 +346,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const className = objTyp.name;
       const checkObj : IR.Stmt<Type> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [objval]}}
       // const callMethod : IR.Expr<Type> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
-      const callMethod : IR.Expr<Type> = { tag: "vtable", index: env.vtable.indexOf(`$${className}$${e.method}`), arguments: [objval, ...argvals] }
+      const callMethod : IR.Expr<Type> = { tag: "vtable", index: env.vtable.indexOf(`$${findClassName(className, e.method, env)}$${e.method}`), arguments: [objval, ...argvals] }
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
@@ -539,4 +539,11 @@ function buildVtable(program: AST.Program<Type>, env: GlobalEnv) {
   })
   env.vtable = vtable;
   env.classRange = classRange;
+}
+
+function findClassName(cls: string, method: string, env: GlobalEnv) : string {
+  const methods = env.classes.get(cls)[1];
+  if(methods.has(method)) return cls;
+  const superclass = env.classes.get(cls)[2];
+  return findClassName(superclass, method, env)
 }

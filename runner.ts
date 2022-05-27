@@ -44,22 +44,22 @@ export async function runWat(source : string, importObject : any) : Promise<any>
   return [result, wasmModule];
 }
 
-function generateDefaultMethods(program: AST.Program<any>) {
-  program.classes.forEach(cls => {
-    if(cls.superclass !== "object") {
-      const methods = cls.methods;
-      const supercls = cls.superclass;
-      const superMethods = program.classes.find(cls => cls.name === supercls).methods;
-      superMethods.forEach((sm, idx) => {
-        if(sm.name !== "__init__") {
-          if(!methods.some(method => method.name === sm.name)) {
-            cls.methods.push(sm);
-          }
-        }
-      })
-    }
-  })
-}
+// function generateDefaultMethods(program: AST.Program<any>) {
+//   program.classes.forEach(cls => {
+//     if(cls.superclass !== "object") {
+//       const methods = cls.methods;
+//       const supercls = cls.superclass;
+//       const superMethods = program.classes.find(cls => cls.name === supercls).methods;
+//       superMethods.forEach((sm, idx) => {
+//         if(sm.name !== "__init__") {
+//           if(!methods.some(method => method.name === sm.name)) {
+//             cls.methods.push(sm);
+//           }
+//         }
+//       })
+//     }
+//   })
+// }
 
 
 export function augmentEnv(env: GlobalEnv, prog: Program<Type>, strings : Map<string, string>) : GlobalEnv {
@@ -127,7 +127,7 @@ function getStrings(source: string) : Map<string, string> {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   const strings = getStrings(source);
   const parsed = parse(source);
-  generateDefaultMethods(parsed);
+  // generateDefaultMethods(parsed);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   const globalEnv = augmentEnv(config.env, tprogram, strings);
   const irprogram = lowerProgram(tprogram, globalEnv);
