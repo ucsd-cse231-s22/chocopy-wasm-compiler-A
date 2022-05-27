@@ -38,28 +38,28 @@ describe("Inheritance tests", () => {
 // `, [`3`, `3`, `8`, `55`, `12`]);
 
 // 2 - False Inheir : call inheir method with parent
-assertTCFail("call-child-method-in-parent", `
-class A(object):
-  x:int = 3
-  y:int = 4
-  def f(self : A) -> int:
-    return 9
+// assertTCFail("call-child-method-in-parent", `
+// class A(object):
+//   x:int = 3
+//   y:int = 4
+//   def f(self : A) -> int:
+//     return 9
     
-class B(A):
-  t:int = 5
-  def f(self : B) -> int:
-    self.x = 12
-    return 8
+// class B(A):
+//   t:int = 5
+//   def f(self : B) -> int:
+//     self.x = 12
+//     return 8
 
-  def g(self : B) -> bool:
-    return True
+//   def g(self : B) -> bool:
+//     return True
 
-b : A = None
-b = B()
+// b : A = None
+// b = B()
 
-print(b.g())
+// print(b.g())
 
-`);
+// `);
 
 // 3 - Link list example
 assertPrint("linklist-eg", `

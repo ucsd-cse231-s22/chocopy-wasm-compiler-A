@@ -176,11 +176,7 @@ export function inheritanceUpdate(originalNodes: Array<ClassIndex<null>>, newcla
       var methodParam = parent.methodParam.map(x => x);
       var methodClass = parent.methodClass.map(x => x);
       newclass.fields.forEach(field => {
-        if (fields.includes(field.name)) {
-          throw new TypeCheckError("cannot redefine attribute:" + field.name);
-        } else {
           fields.push(field.name);
-        }
       })
       newclass.methods.forEach(method => {
         if (!methods.includes(method.name)) {
@@ -258,28 +254,34 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
         var currMethods = new Map();
         var methodClass = new Map(); // <method name, class name>
         var fieldexist = new Map(); // <field name, field>
-        cls.fields.forEach(field => {
-          currFields.set(field.name, field.type)
-          fieldexist.set(field.name, field)
-        });
-        cls.methods.forEach(method => {
-          currMethods.set(method.name, [method.parameters.map(p => p.type), method.ret]);
-          methodClass.set(method.name, cls.name);
-        });
         var parentFields = new Map();
         var parentMethods = new Map();
         if (cls.parent !== "object") {
           [parentFields, parentMethods] = newClasses.get(cls.parent);
         }
+        cls.fields.forEach((field, index) => {
+          currFields.set(field.name, field.type)
+          fieldexist.set(field.name, [field, index + parentFields.size])
+        });
+        cls.methods.forEach(method => {
+          currMethods.set(method.name, [method.parameters.map(p => p.type), method.ret]);
+          methodClass.set(method.name, cls.name);
+        });
         var [_, fieldCla, methodCla] = temp.get(cls.parent);
-        for (const entry of parentFields) {
-          if (currFields.has(entry[0])) {
-            throw new TypeCheckError("cannot redefine attribute:" + entry[0]);
+        var parFie = new Map();
+        for (const [key, value] of parentFields) {
+          if (currFields.has(key)) {
+            throw new TypeCheckError("cannot redefine attribute:" + key);
           }
-          cls.fields.push(fieldCla.get(entry[0]));
-          fieldexist.set(entry[0], fieldCla.get(entry[0]));
-          currFields.set(entry[0], entry[1]);
+          var f, ind = fieldCla.get(key);
+          parFie.set(ind, f);
+          fieldexist.set(key, [f, ind]);
+          currFields.set(key, value);
         }
+        for (let i = parentFields.size; i > 0; i --) {
+          cls.fields.splice(0, 0, parFie.get(i - 1));
+        }
+
         for (const entry of parentMethods) {
           if (currMethods.has(entry[0])){
             if (!checkParams(currMethods.get(entry[0]), entry[1])) {
