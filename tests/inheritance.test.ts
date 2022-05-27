@@ -4,62 +4,62 @@ import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 describe("Inheritance tests", () => {
 
 // 1 - Inheir same father
-// assertPrint("inheir-field-and-func", `
-// class A(object):
-//   x:int = 3
-//   y:int = 4
-//   def f(self : A) -> int:
-//     return 9
+assertPrint("inheir-field-and-func", `
+class A(object):
+  x:int = 3
+  y:int = 4
+  def f(self : A) -> int:
+    return 9
     
-// class B(A):
-//   t:int = 5
-//   def f(self : B) -> int:
-//     self.x = 12
-//     return 8
+class B(A):
+  t:int = 5
+  def f(self : B) -> int:
+    self.x = 12
+    return 8
 
-// class C(A):
-//   z:int = 12
-//   def f(self : C) -> int:
-//     return 55
+class C(A):
+  z:int = 12
+  def f(self : C) -> int:
+    return 55
 
-// a : A = None
-// b : A = None
-// c : A = None
-// a = A()
-// b = B()
-// c = C()
+a : A = None
+b : A = None
+c : A = None
+a = A()
+b = B()
+c = C()
 
-// print(a.x)
-// print(c.x)
-// print(b.f())
-// print(c.f())
-// print(b.x)
+print(a.x)
+print(c.x)
+print(b.f())
+print(c.f())
+print(b.x)
 
-// `, [`3`, `3`, `8`, `55`, `12`]);
+`, [`3`, `3`, `8`, `55`, `12`]);
 
 // 2 - False Inheir : call inheir method with parent
-// assertTCFail("call-child-method-in-parent", `
-// class A(object):
-//   x:int = 3
-//   y:int = 4
-//   def f(self : A) -> int:
-//     return 9
+assertTCFail("call-child-method-in-parent", `
+class A(object):
+  x:int = 3
+  y:int = 4
+  def f(self : A) -> int:
+    return 9
     
-// class B(A):
-//   t:int = 5
-//   def f(self : B) -> int:
-//     self.x = 12
-//     return 8
+class B(A):
+  t:int = 5
+  def f(self : B) -> int:
+    self.x = 12
+    return 8
 
-//   def g(self : B) -> bool:
-//     return True
+  def g(self : B) -> bool:
+    return True
 
-// b : A = None
-// b = B()
+b : A = None
+b = B()
 
-// print(b.g())
+print(b.g())
 
-// `);
+`);
 
 // 3 - Link list example
 assertPrint("linklist-eg", `
@@ -113,73 +113,73 @@ print(l.sum())
 `, [`1`, `0`, `5`]);
 
 // 4 - Lots of Inheritance : Fail
-// assertFail("lots-of-inheritance", `
-// class A(object):
-//   s:str = "HelloWorld"
-//   def f(self : A) -> int:
-//     return 9
+assertFail("lots-of-inheritance", `
+class A(object):
+  s:str = "HelloWorld"
+  def f(self : A) -> int:
+    return 9
     
-// class B(A):
-//   t:int = 5
-//   def f(self : B) -> int:
-//     return 8
+class B(A):
+  t:int = 5
+  def f(self : B) -> int:
+    return 8
 
-//   def g(self : B) -> bool:
-//     return True
+  def g(self : B) -> bool:
+    return True
 
-// class C(object):
-//   a:[int] = None
-//   def p(self : C) -> int:
-//     self.a = [1, 2, 3]
-//     return self.a[1]
+class C(object):
+  a:[int] = None
+  def p(self : C) -> int:
+    self.a = [1, 2, 3]
+    return self.a[1]
 
-// class D(C):
-//   def p(self : D) -> int:
-//     return self.a[2]
+class D(C):
+  def p(self : D) -> int:
+    return self.a[2]
 
-// d : C = None
-// d = D()
-// d.p()
+d : C = None
+d = D()
+d.p()
 
-// `);
+`);
 
 // 5 - Lots of Inheritance
-// assertPrint("lots-of-inheritance-2", `
-// class A(object):
-//   s:str = "HelloWorld"
-//   def f(self : A) -> int:
-//     return 9
+assertPrint("lots-of-inheritance-2", `
+class A(object):
+  s:str = "HelloWorld"
+  def f(self : A) -> int:
+    return 9
     
-// class B(A):
-//   t:int = 5
-//   def f(self : B) -> int:
-//     return 8
+class B(A):
+  t:int = 5
+  def f(self : B) -> int:
+    return 8
 
-//   def g(self : B) -> bool:
-//     return True
+  def g(self : B) -> bool:
+    return True
 
-// class C(object):
-//   a:[int] = None
-//   def p(self : C) -> int:
-//     self.a = [1, 2, 3]
-//     return self.a[1]
+class C(object):
+  a:[int] = None
+  def p(self : C) -> int:
+    self.a = [1, 2, 3]
+    return self.a[1]
 
-// class D(C):
-//   def p(self : D) -> int:
-//     return self.a[2]
+class D(C):
+  def p(self : D) -> int:
+    return self.a[2]
 
-// d : C = None
-// a : A = None
-// b : A = None
-// a = A()
-// b = B()
-// d = C()
-// print(d.p())
-// print(a.f())
-// print(a.s[4])
-// print(b.s + a.s)
+d : C = None
+a : A = None
+b : A = None
+a = A()
+b = B()
+d = C()
+print(d.p())
+print(a.f())
+print(a.s[4])
+print(b.s + a.s)
 
-// `, [`2`, `9`, `o`, `HelloWorldHelloWorld`]);
+`, [`2`, `9`, `o`, `HelloWorldHelloWorld`]);
 
 // 6 - Calling parent methods
 assertPrint("call-parent-methods", `
@@ -221,35 +221,35 @@ print(a.t)
 `);
 
 // 7 - Multiple Inheritance
-// assertPrint("multiple-inheir", `
-// class A(object):
-//   def f(self : A) -> int:
-//     return 9
+assertPrint("multiple-inheir", `
+class A(object):
+  def f(self : A) -> int:
+    return 9
     
-// class B(A):
-//   t:int = 5
-//   def g(self : B) -> bool:
-//     return True
+class B(A):
+  t:int = 5
+  def g(self : B) -> bool:
+    return True
 
-// class C(B):
-//   fi:int = 94
-//   def g(self : C) -> bool:
-//     return False
+class C(B):
+  fi:int = 94
+  def g(self : C) -> bool:
+    return False
 
-// a : A = None
-// ac : A = None
-// b : B = None
-// c : B = None
-// a = A()
-// ac = C()
-// b = B()
-// c = C()
-// print(ac.f())
-// print(c.f())
-// print(c.g())
-// print(b.g())
+a : A = None
+ac : A = None
+b : B = None
+c : B = None
+a = A()
+ac = C()
+b = B()
+c = C()
+print(ac.f())
+print(c.f())
+print(c.g())
+print(b.g())
 
-// `, [`9`, `9`, `False`, `True`]);
+`, [`9`, `9`, `False`, `True`]);
 
 // 8 - Non-align Parent Methods
 assertTCFail("non-align-parent-methods", `
@@ -313,28 +313,28 @@ ac = C()
 // `, [`9`, `16`, `9`]);
 
 // 10 - Changing parent fields
-// assertPrint("change-parent-fields", `
-// class A(object):
-//   p : str = "CompilerIsTheBest"
-//   def f(self : A) -> str:
-//     return self.p
+assertPrint("change-parent-fields", `
+class A(object):
+  p : str = "CompilerIsTheBest"
+  def f(self : A) -> str:
+    return self.p
     
-// class B(A):
-//   def change(self : B) -> str:
-//     self.p = self.p + "Y"
-//     return self.f()
+class B(A):
+  def change(self : B) -> str:
+    self.p = self.p + "Y"
+    return self.f()
 
-// a : A = None
-// b : B = None
-// a = B()
-// b = B()
+a : A = None
+b : B = None
+a = B()
+b = B()
 
-// print(a.f())
-// print(b.f())
-// print(b.change())
-// print(b.change())
-// print(b.p)
+print(a.f())
+print(b.f())
+print(b.change())
+print(b.change())
+print(b.p)
 
-// `, [`CompilerIsTheBest`, `CompilerIsTheBest`, `CompilerIsTheBestY`, `CompilerIsTheBestYY`, `CompilerIsTheBestYY`]);
+`, [`CompilerIsTheBest`, `CompilerIsTheBest`, `CompilerIsTheBestY`, `CompilerIsTheBestYY`, `CompilerIsTheBestYY`]);
 
 });

@@ -273,7 +273,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
           if (currFields.has(key)) {
             throw new TypeCheckError("cannot redefine attribute:" + key);
           }
-          var f, ind = fieldCla.get(key);
+          var [f, ind] = fieldCla.get(key);
           parFie.set(ind, f);
           fieldexist.set(key, [f, ind]);
           currFields.set(key, value);
