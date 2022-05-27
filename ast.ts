@@ -10,6 +10,8 @@ export type Type =
   | { tag: "set", content_type: Type }
   | { tag: "dict", key: Type; value: Type }
   | { tag: "tuple", contentTypes: Array<Type> }
+  | {tag: "list", itemType: Type }
+  | {tag: "empty"}
 
 export type Parameter<A> = { name: string, type: Type }
 
@@ -41,6 +43,7 @@ export type Expr<A> =
   | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>> } 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
+  | {  a?: A, tag: "slice", obj: Expr<A>, index_s?: Expr<A>, index_e?: Expr<A> } // Refer to list group, used for dict add
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
 
@@ -53,7 +56,7 @@ export type Literal =
   | { tag: "bool", value: boolean }
   | { tag: "none" }
   | { tag: "set" } // For set initialization [None or set() ?]
-  | { tag: "dict" , key_typ: Type, val_typ: Type } // For set initialization [None or set() ?]
+  | { tag: "dict", key_typ: Type, val_typ: Type } // For set initialization [None or set() ?]
 
 // TODO: should we split up arithmetic ops from bool ops?
 export enum BinOp { Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};

@@ -4,7 +4,7 @@ import { NUM, BOOL, NONE, CLASS, SET, DICT } from './utils';
 import { emptyEnv } from './compiler';
 import { setExprTC, setMethodTC } from './setTC';
 import { table } from 'console';
-import { dictExprTC, dictMethodTC } from './dictTC';
+import { dictExprTC, dictMethodTC, parseKeyValType } from './dictTC';
 // import common from 'mocha/lib/interfaces/common';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
@@ -248,6 +248,16 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
       if (!isAssignable(env, tVal.a, fields.get(stmt.field)))
         throw new TypeCheckError(`could not assigntcLiteral value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
       return {...stmt, a: NONE, obj: tObj, value: tVal};
+    case "index-assign":
+      // obj: Expr<A>, index/key: Expr<A>, value: Expr<A>
+      var tObj = tcExpr(env, locals, stmt.obj);
+      if (tObj.a.tag == "dict") { // add 
+      var tIdx = tcExpr(env, locals, stmt.index);
+      var tValD = tcExpr(env, locals, stmt.value);
+      return { tag: "expr", expr: {tag: "method-call", obj: tObj, method: "add", arguments: [tIdx, tValD]} };
+      }
+      break;
+      // !!! list tc implementation below:
   }
 }
 
@@ -379,6 +389,16 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeCheckError("field lookups require an object");
       }
+    case "index":
+      // obj: Expr<A>, index/key: Expr<A>
+      var tObj = tcExpr(env, locals, expr.obj);
+      parseKeyValType
+      var tIdx = tcExpr(env, locals, expr.index);
+      if(tObj.a.tag == "dict") {
+        return { tag:"method-call", obj: tObj, method: "Dget", arguments: [tIdx], a: parseKeyValType(tObj.a.value) };
+      }
+      break;
+      // !!! list tc implementation below:
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj);
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));

@@ -187,8 +187,45 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
     case "MemberExpression":
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s);
-      c.nextSibling(); // Focus on .
+      c.nextSibling(); // Focus on . or [
       // bracket???
+      if (s.substring(c.from, c.to) == "[") {
+        // Start with :
+        c.nextSibling(); // Focus on start index or : or index/key
+        if (s.substring(c.from, c.to) == ":") {
+          c.nextSibling(); // Focus on end index or ]
+          if (s.substring(c.from, c.to) == "]") {
+            c.parent();
+            return { tag: "slice", obj: objExpr };
+          }
+          var endIndex = traverseExpr(c, s);
+          c.parent();
+          return { tag: "slice", obj: objExpr, index_e: endIndex };
+        }
+
+        // Start index or index/key
+        var startIndex = traverseExpr(c, s);
+        c.nextSibling(); // Focus on : or ]
+        if (s.substring(c.from, c.to) == "]") {
+          c.parent();
+          return { tag: "index", obj: objExpr, index: startIndex }; // dict: key
+        }
+
+        // Start index and :
+        c.nextSibling(); // Focus on end index or ]
+        if (s.substring(c.from, c.to) == "]") {
+          c.parent();
+          return { tag: "slice", obj: objExpr, index_s: startIndex };
+        }
+        var endIndex = traverseExpr(c, s);
+        c.parent();
+        return {
+          tag: "slice",
+          obj: objExpr,
+          index_s: startIndex,
+          index_e: endIndex,
+        };
+      } else {
       c.nextSibling(); // Focus on property
       var propName = s.substring(c.from, c.to);
       c.parent();
@@ -197,6 +234,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         obj: objExpr,
         field: propName
       }
+    }
     case "self":
       return {
         tag: "id",
@@ -300,6 +338,13 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
           name: target.name,
           value: value
         }  
+      } else if (target.tag === "index") {
+        return {
+          tag: "index-assign",
+          obj: target.obj,
+          index: target.index,
+          value: value,
+        }
       } else {
         throw new Error("Unknown target while parsing assignment");
       }

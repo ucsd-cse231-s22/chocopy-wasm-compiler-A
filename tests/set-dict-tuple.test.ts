@@ -137,4 +137,13 @@ describe("basic-set-functions", ()=>{
   print(d.Dget(3))
   print(3 in d)
   print(len(d))`,["5","True","2"]);
+
+  assertPrint("dict-[]",`
+  d : dict = dict([int, int])
+  d = {3: 2}
+  d[3] = 5
+  d[4] = 6
+  print(d[3])
+  print(3 in d)
+  print(len(d))`,["5","True","2"]);
 });
