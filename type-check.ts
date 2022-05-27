@@ -136,7 +136,7 @@ export function equalTypeParams(params1: Type[], params2: Type[]) : boolean {
 
 export function equalType(t1: Type, t2: Type) {
   return (
-    t1 === t2 ||
+    (t1.tag === t2.tag && (t1.tag === NUM.tag || t1.tag === BOOL.tag || t1.tag === NONE.tag)) ||
     (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
     (t1.tag === "callable" && t2.tag === "callable" && equalCallable(t1, t2)) ||
     (t1.tag === "typevar" && t2.tag === "typevar" && t1.name === t2.name)
@@ -689,10 +689,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg, SRC);
         
-        // [lisa] commented out for now because it's failing some hidden test
-        // if (tArg.a.type.tag !== "number" && tArg.a.type.tag !== "bool") {
-        //   throw new TypeCheckError(SRC, `print() expects types "int" or "bool" as the argument, got ${JSON.stringify(tArg.a.type.tag)}`, tArg.a, tArg.a.endLoc);
-        // }
+        if (!equalType(tArg.a.type, NUM) && !equalType(tArg.a.type, BOOL) && !equalType(tArg.a.type, NONE)) {
+           throw new TypeCheckError(SRC, `print() expects types "int" or "bool" or "none" as the argument, got ${JSON.stringify(tArg.a.type.tag)}`, tArg.a);
+        }
         return { ...expr, a: tArg.a, arg: tArg };
       } else if (env.functions.has(expr.name)) {
         const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
