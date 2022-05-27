@@ -12,7 +12,8 @@ import { emptyGlobalTypeEnv, tc } from "../type-check";
 import { assert } from "console";
 import { importObject } from "./import-object.test";
 import {run, typeCheck} from "./helpers.test";
-import { assertPrint } from "./asserts.test";
+import { assertPrint, assertTC, assertTCFail } from "./asserts.test";
+import { NONE } from "../utils";
 
 // We write tests for each function in parser.ts here. Each function gets its
 // own describe statement. Each it statement represents a single test. You
@@ -34,3 +35,41 @@ def f(y: int) -> int:
 print(f(5))
 `,['120'])
 });
+
+assertTC("Capture local variable",`
+def a():
+  x: int = 5
+  def b():
+    print(x + 8)
+`, NONE)
+
+assertTC("Capture parameter",`
+def a(x: int):
+  def b():
+    print(x + 8)
+`, NONE)
+
+assertTCFail("Captured vars",`
+def a(x: int):
+  y: bool = False
+  def b():
+    print(x + y)
+`)
+
+assertTC("Nonlocal",`
+def a() -> int:
+  x: int = 5
+  def b():
+    nonlocal x
+    x = 8
+    print(x + 8)
+  b()
+  return x
+`, NONE)
+
+assertPrint("Capture local variable run",`
+def a():
+  x: int = 5
+  def b():
+    print(x + 8)
+`, ['13']);
