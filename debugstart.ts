@@ -16,6 +16,8 @@ class C(object):
       return`
   source = `
   x:float=2.4
+  b:float=3.34
+  b = x
   print(x)
 `;
   console.log(stringifyTree(parser.parse(source).cursor(),source, 0));

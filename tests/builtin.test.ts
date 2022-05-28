@@ -41,6 +41,8 @@ describe("builtin tests", () => {
     // 15
     assertPrint("float-variable", `x:float=2.4\nprint(-x)`, [`-2.4000000953674316`]);
 
+    // 16
+    assertPrint("float-2-variables", `x:float=2.4\nc:float=2.5\nc=x\nprint(-c)`, [`-2.4000000953674316`]);
 
     // import / math
     assertPrint("gcd", `print(gcd(12, 18))`, [`6`]);

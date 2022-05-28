@@ -94,7 +94,7 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
-      if (stmt.value.tag === "load" && stmt.a.tag === "float") {
+      if (stmt.value.tag === "load" && stmt.value.start.a.tag === "float") {
         var ret: string[] = [];
         ret.push(`(i32.const 4)`);
         ret.push(`(call $alloc)`);
