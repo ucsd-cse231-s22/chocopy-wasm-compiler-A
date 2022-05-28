@@ -797,6 +797,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         throw new TypeCheckError(SRC, `method calls require an object of type "class", got ${JSON.stringify(tObj.a.type.tag)}`, expr.a);
       }
 <<<<<<< HEAD
+<<<<<<< HEAD
 	  case "list-comp":
 		// check if iterable is instance of class
 		const iterable = tcExpr(env, locals, expr.iterable);
@@ -826,6 +827,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
     default: 
       throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
 =======
+=======
+>>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
     case "if-expr":
       var tThn = tcExpr(env, locals, expr.thn, SRC);
       var tCond = tcExpr(env, locals, expr.cond, SRC);
@@ -837,6 +840,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       // var newType = join(env, tThn.a, tEls.a)
       return {...expr, a: tThn.a, cond: tCond, thn: tThn, els: tEls};
     default: throw new TypeCheckError(SRC, `unimplemented type checking for expr: ${expr}`, expr.a);
+<<<<<<< HEAD
+>>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
+=======
 >>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
   }
 }

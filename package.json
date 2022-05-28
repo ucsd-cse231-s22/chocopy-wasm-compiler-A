@@ -9,6 +9,10 @@
     "build-parse": "tsc parsestart.ts --esModuleInterop --moduleResolution node --outDir cli/",
     "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' node node_modules/.bin/mocha -r ts-node/register --reporter mochawesome 'tests/**/*.test.ts'",
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+    "test-coverage": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' nyc --reporter lcov node node_modules/.bin/mocha -r ts-node/register --reporter mochawesome 'tests/**/*.test.ts'",
+>>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
 =======
     "test-coverage": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' nyc --reporter lcov node node_modules/.bin/mocha -r ts-node/register --reporter mochawesome 'tests/**/*.test.ts'",
 >>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a

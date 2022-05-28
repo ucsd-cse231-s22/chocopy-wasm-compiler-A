@@ -814,6 +814,7 @@ export function isVarInit(c: TreeCursor, s: string, env: ParserEnv): Boolean {
     const isVar = c.type.name as any === "TypeDef";
     c.parent();
     return isVar;
+<<<<<<< HEAD
   } else {
     return false;
   }
@@ -840,11 +841,42 @@ export function isTypeVarInit(c : TreeCursor, s : string) : Boolean {
     c.parent();
     c.parent();
     return true;  
+=======
+>>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
   } else {
     return false;
   }
 }
 
+<<<<<<< HEAD
+=======
+export function isTypeVarInit(c : TreeCursor, s : string) : Boolean {
+  if (c.type.name === "AssignStatement") {
+    c.firstChild(); // Focus on lhs
+    c.nextSibling(); // go to AssignOp
+    c.nextSibling(); // go to CallExpression
+
+    if (c.type.name as any !== "CallExpression") {
+      c.parent();
+      return false;
+    }
+
+    c.firstChild(); // Focus on TypeVar
+    if (c.type.name as any !== "VariableName" || s.substring(c.from, c.to).trim() !== "TypeVar") {
+      c.parent();
+      c.parent();
+      return false;
+    }
+
+    c.parent();
+    c.parent();
+    return true;  
+  } else {
+    return false;
+  }
+}
+
+>>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
 export function isScopeDef(c : TreeCursor, s : string) : Boolean {
   return c.type.name === "ScopeStatement";
 }

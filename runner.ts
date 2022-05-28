@@ -165,7 +165,10 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     )
   )`;
 <<<<<<< HEAD
+<<<<<<< HEAD
   // console.log(wasmSource);
+=======
+>>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
 =======
 >>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
   const [result, instance] = await runWat(wasmSource, importObject);

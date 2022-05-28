@@ -6,11 +6,17 @@ cli
 *.sw*
 mochawesome-report
 <<<<<<< HEAD
+<<<<<<< HEAD
 *.DS_Store
 package-lock.json
 =======
+=======
+>>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
 *lock*
 .vscode
 *.DS_Store
 package-lock.json
+<<<<<<< HEAD
+>>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
+=======
 >>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a

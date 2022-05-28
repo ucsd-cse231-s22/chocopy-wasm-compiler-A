@@ -17,11 +17,7 @@ class C(object):
   //   def __init__(self:C, other:D):
   //     pass
 <<<<<<< HEAD
-  
-  // x:C = None
-  // x = C()`
-const ast = parse(source);
-// console.log(ast);
+<<<<<<< HEAD
 =======
 >>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
   
@@ -29,6 +25,16 @@ const ast = parse(source);
   // x = C()`
 const ast = parse(source);
 // console.log(ast);
+<<<<<<< HEAD
+=======
+>>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
+  
+  // x:C = None
+  // x = C()`
+const ast = parse(source);
+// console.log(ast);
+=======
+>>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
   const repl = new BasicREPL(await addLibs());
   const result = repl.run(source).then(result => {
     console.log(result);    
