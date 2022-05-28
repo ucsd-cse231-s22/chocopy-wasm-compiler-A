@@ -1,6 +1,7 @@
 import { Expr, Stmt, Value } from "./ir";
 import { Type } from "./ast";
 import { compileVal } from "./optimization";
+import { copyVal } from "./optimization_copy_prop";
 
 export function isTagId(value: Value<any>): value is { tag: "id",  name: string, a?: any} {
     return value.tag === "id";
@@ -42,6 +43,21 @@ export function checkValueEquality(a: Value<any>, b: Value<any>): boolean{
     else if (a.value === b.value)
         return true;
     return false;
+}
+
+export function checkArrayEquality(a: Array<any>, b: Array<any>): boolean {
+    if (a.length !== b.length) return false;
+    
+    return a.every((val) => { return b.includes(val) });
+}
+
+export function checkCopyValEquality(a: copyVal, b: copyVal): boolean{
+    if (a.tag !== b.tag)
+        return false;
+    if (a.tag === "copyId"){
+        return a.forward === b.forward && checkArrayEquality(a.reverse, b.reverse);
+    }
+    return true;
 }
 
 export function checkCompileValEquality(a: compileVal, b: compileVal): boolean{
