@@ -55,7 +55,7 @@ export function checkCopyValEquality(a: copyVal, b: copyVal): boolean{
     if (a.tag !== b.tag)
         return false;
     if (a.tag === "copyId"){
-        return a.forward === b.forward && checkArrayEquality(a.reverse, b.reverse);
+        return checkValueEquality(a.value, b.value) && checkArrayEquality(a.reverse, b.reverse);
     }
     return true;
 }
