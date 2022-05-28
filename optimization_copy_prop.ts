@@ -1,38 +1,36 @@
+import { stringify } from "querystring";
 import { BinOp, Parameter, Type, UniOp} from "./ast";
 import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "./ir";
 
-import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkCompileValEquality, checkStmtEquality } from "./optimization_utils"; 
+import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkCopyValEquality, checkStmtEquality } from "./optimization_utils"; 
+import { BasicREPL } from "./repl";
 
 type Env = {
-    vars?: Map<string, compileVal>;
+    copyVars?: Map<string, copyVal>;
 }
 
-export type compileVal = {
-    tag: "nac"|"val"|"undef", value?: Value<any>;
+// export type compileVal = {
+//     tag: "nac"|"val"|"undef", value?: Value<any>;
+// }
+
+export type copyVal = {
+    tag: "nac"|"copyId"|"undef", forward ?: string, reverse?: string[];
 }
 
 const varDefEnvTag: string = "$$VD$$";
+
 
 export function optimizeValue(val: Value<any>, env: Env): Value<any>{
     if (val.tag !== "id"){
         return val;
     }
-    if (env.vars.has(val.name)){
-        if (["nac", "undef"].includes(env.vars.get(val.name).tag))
+    if (env.copyVars.has(val.name)){
+        if (["nac", "undef"].includes(env.copyVars.get(val.name).tag))
             return val;
         
-        val = env.vars.get(val.name).value;
+        val = { name: env.copyVars.get(val.name).forward, ...val };
     }
     return val;
-}
-
-export function checkIfFoldableBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<any>): boolean {
-    if ([BinOp.IDiv, BinOp.Mod].includes(op)){
-        if (!isTagBigInt(leftVal) || !isTagBigInt(rightVal))
-            throw new Error("Compiler Error: Function should be invoked only if the expression can be folded");
-        if (rightVal.value === 0n) return false;
-    }
-    return true;
 }
 
 export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<any>): Value<any>{
@@ -114,15 +112,12 @@ export function optimizeExpression(e: Expr<Type>, env: Env): Expr<Type>{
         case "binop":
             var left = optimizeValue(e.left, env);
             var right = optimizeValue(e.right, env);
-            if (left.tag === "id" || right.tag === "id" || !checkIfFoldableBinOp(e.op, left, right))
-                return {...e, left: left, right: right};
-            var val: Value<any> = evaluateBinOp(e.op, left, right);
-            return {tag: "value", value: val};
+
+            return {tag: "value", left, right, ...e};
         case "uniop":
             var arg = optimizeValue(e.expr, env);
             if (arg.tag === "id")
                 return {...e, expr: arg};
-            var val: Value<any> = evaluateUniOp(e.op, arg);
             return e;
  
         case "builtin1":
@@ -153,16 +148,8 @@ export function optimizeStatements(stmt: Stmt<any>, env: Env): Stmt<any>{
     switch(stmt.tag){
         case "assign":
             var optimizedExpression: Expr<any> = optimizeExpression(stmt.value, env);
-            if (optimizedExpression.tag === "value"){
-                if (optimizedExpression.value.tag === "id"){
-                    env.vars.set(stmt.name, {tag: "nac"});
-                }
-                else{
-                    env.vars.set(stmt.name, {tag: "val", value: optimizedExpression.value});
-                }
-            }
-            else{
-                env.vars.set(stmt.name, {tag: "nac"});
+            if (optimizedExpression.tag !== "value"){
+                env.copyVars.set(stmt.name, {tag: "nac"});
             }
             return {...stmt, value: optimizedExpression};
         case "return":
@@ -172,12 +159,8 @@ export function optimizeStatements(stmt: Stmt<any>, env: Env): Stmt<any>{
             var optimizedExpression: Expr<any> = optimizeExpression(stmt.expr, env);
             return {...stmt, expr: optimizedExpression};
         case "pass":
-            return stmt;
         case "ifjmp":
-            var optimizedValue: Value<any> = optimizeValue(stmt.cond, env);
-            return {...stmt, cond: optimizedValue};
         case "jmp":
-            return stmt;
         case "store":
             return stmt;
         default:
@@ -235,58 +218,75 @@ export function computePredecessorSuccessor(basicBlocks: Array<BasicBlock<any>>)
 
 }
 
-function computeInitEnv(varDefs: Array<VarInit<any>>, dummyEnv: boolean): Env{
-    var env: Env = {vars: new Map<string, compileVal>()};
+function computeInitEnv(varDefs: Array<VarInit<any>>): Env{
+    var env: Env = {copyVars: new Map<string, copyVal>()};
     varDefs.forEach(def => {
-        if (!dummyEnv)
-            env.vars.set(def.name, {tag: "val", value: def.value});
-        else
-            env.vars.set(def.name, {tag: "undef"});
+        env.copyVars.set(def.name, {tag: "undef"});
     });
     return env;
 }
 
 function mergeEnvironment(a: Env, b: Env): Env{
-    var returnEnv: Env = {vars: new Map<string, compileVal>()};
+    var returnEnv: Env = {copyVars: new Map<string, copyVal>()};
 
-    a.vars.forEach((aValue: compileVal, key: string) => {
-        const bValue: compileVal = b.vars.get(key);
+    a.copyVars.forEach((aValue: copyVal, key: string) => {
+        const bValue: copyVal = b.copyVars.get(key);
         if (bValue.tag === "nac" || aValue.tag === "nac")
-            returnEnv.vars.set(key, {tag: "nac"});
+            returnEnv.copyVars.set(key, {tag: "nac"});
         else if (aValue.tag === "undef" && bValue.tag === "undef"){
-            returnEnv.vars.set(key, {tag: "undef"})
+            returnEnv.copyVars.set(key, {tag: "undef"})
         }
         else if (aValue.tag === "undef"){
-            returnEnv.vars.set(key, {tag: "val", value: bValue.value})
+            returnEnv.copyVars.set(key, {tag: "copyId", forward: bValue.forward, reverse: [...bValue.reverse, ...aValue.reverse]})
         }
         else if (bValue.tag === "undef"){
-            returnEnv.vars.set(key, {tag: "val", value: aValue.value});
+            returnEnv.copyVars.set(key, {tag: "copyId", forward: aValue.forward, reverse: [...aValue.reverse, ...bValue.reverse]});
         }
-        else if (checkValueEquality(aValue.value, bValue.value))
-            returnEnv.vars.set(key, {tag: "val", value: aValue.value});
+        else if (aValue.forward === bValue.forward)
+            returnEnv.copyVars.set(key, {tag: "copyId", forward: aValue.forward, reverse: [...bValue.reverse, ...aValue.reverse]});
         else
-            returnEnv.vars.set(key, {tag: "nac"});
+            returnEnv.copyVars.set(key, {tag: "nac"});
     });
 
     return returnEnv;
 }
 
+function updateForwardsAndBackwards(stmt: Stmt<any>, env: Env): Env{
+    // const forwards: Map<string, string> = new Map<string, string>();
+    if(stmt.tag === "assign" && stmt.value.tag === "value" && isTagId(stmt.value.value)){
+        const copyFrom = stmt.value.value.name;
+        const copyTo = stmt.name;
+        
+        let backwards: string[] = [];
+        const oldCopyFromEnv = env.copyVars.get(copyFrom);
+        
+        var oldBackwards = oldCopyFromEnv.reverse;
+        backwards = [...oldBackwards, copyTo];
+
+        env.copyVars.set(copyFrom, {tag: "copyId", reverse: backwards, ...oldCopyFromEnv});
+        env.copyVars.set(copyTo, {tag: "copyId", forward: copyTo, reverse: []});
+        
+        return env;
+    }
+}
+
 function updateEnvironmentByBlock(inEnv: Env, block: BasicBlock<any>): Env{
-    var outEnv: Env = {vars: new Map(inEnv.vars)};
+    var outEnv: Env = {copyVars: new Map(inEnv.copyVars)};
     block.stmts.forEach(statement => {
         if (statement === undefined) { console.log(block.stmts); }
         if (statement.tag === "assign"){
             const optimizedExpression = optimizeExpression(statement.value, outEnv);
             if (optimizedExpression.tag === "value"){
                 if (optimizedExpression.value.tag === "id"){
-                    outEnv.vars.set(statement.name, {tag: "nac"});
+                    // outEnv.vars.set(statement.name, {tag: "nac"});
+                    outEnv = updateForwardsAndBackwards(statement, outEnv);
                 }
-                else{
-                    outEnv.vars.set(statement.name, {tag: "val", value: optimizedExpression.value});
-                }
+                // else{
+                //     outEnv.vars.set(statement.name, {tag: "val", value: optimizedExpression.value});
+                // }
             }
             else{
-                outEnv.vars.set(statement.name, {tag: "nac"});
+                outEnv.copyVars.set(statement.name, {tag: "nac"});
             }
         }
     });
@@ -294,16 +294,16 @@ function updateEnvironmentByBlock(inEnv: Env, block: BasicBlock<any>): Env{
 }
 
 function duplicateEnv(env: Env): Env{
-    return {vars: new Map(env.vars)};
+    return {copyVars: new Map(env.copyVars)};
 }
 
 function addParamsToEnv(params: Array<Parameter<any>>, env: Env, dummyEnv: boolean){
     params.forEach(p => {
         if (dummyEnv){
-            env.vars.set(p.name, {tag: "undef"});
+            env.copyVars.set(p.name, {tag: "undef"});
         }
         else{
-            env.vars.set(p.name, {tag: "nac"});
+            env.copyVars.set(p.name, {tag: "nac"});
         }
     });
 }
@@ -347,16 +347,15 @@ export function optimizeClass(c: Class<any>): Class<any>{
 }
 
 export function generateEnvironmentProgram(program: Program<any>): [Map<string, Env>, Map<string, Env>]{
-    var initialEnv = computeInitEnv(program.inits, false);
 
     var inEnvMapping: Map<string, Env> = new Map<string, Env>();
     var outEnvMapping: Map<string, Env> = new Map<string, Env>();
 
-    var dummyEnv = computeInitEnv(program.inits, true);
+    var initialEnv = computeInitEnv(program.inits);
 
     program.body.forEach(f => {
-        inEnvMapping.set(f.label, duplicateEnv(dummyEnv));
-        outEnvMapping.set(f.label, duplicateEnv(dummyEnv));
+        inEnvMapping.set(f.label, duplicateEnv(initialEnv));
+        outEnvMapping.set(f.label, duplicateEnv(initialEnv));
     });
 
     var [preds, succs, blockMapping]: [Map<string, string[]>, Map<string, string[]>, Map<string, BasicBlock<any>>] = computePredecessorSuccessor(program.body);
@@ -371,13 +370,13 @@ export function generateEnvironmentProgram(program: Program<any>): [Map<string, 
 }
 
 export function generateEnvironmentFunctions(func: FunDef<any>): [Map<string, Env>, Map<string, Env>]{
-    var initialEnv  = computeInitEnv(func.inits, false);
+    var initialEnv  = computeInitEnv(func.inits);
     addParamsToEnv(func.parameters, initialEnv, false);
 
     var inEnvMapping: Map<string, Env> = new Map<string, Env>();
     var outEnvMapping: Map<string, Env> = new Map<string, Env>();
 
-    var dummyEnv = computeInitEnv(func.inits, true);
+    var dummyEnv = computeInitEnv(func.inits);
     addParamsToEnv(func.parameters, initialEnv, true);
 
     func.body.forEach(f => {
@@ -440,14 +439,14 @@ function mergeAllPreds(predecessorBlocks: Array<string>, outEnvMapping: Map<stri
 
 function checkEnvEquality(a: Env, b: Env): boolean{
     
-    const aVars = a.vars;
-    const bVars = b.vars;
+    const aVars = a.copyVars;
+    const bVars = b.copyVars;
 
     for (const key of aVars.keys()){
         const aValue = aVars.get(key);
         const bValue = bVars.get(key);
         
-        if (!checkCompileValEquality(aValue, bValue)) return false;
+        if (!checkCopyValEquality(aValue, bValue)) return false;
     }
     return true;
 }
