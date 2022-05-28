@@ -82,6 +82,7 @@ function webStart() {
         print_none: (arg: number) => print(NONE, arg),
         print_newline: (arg: number) => print(undefined, arg),
         print_ellipsis: (arg: number) => print(ELLIPSIS, arg),
+        print_float: (arg: number) => print(FLOAT, arg),
         int: (arg: any) => arg,
         bool: (arg: any) => arg !== 0,
         abs: Math.abs,

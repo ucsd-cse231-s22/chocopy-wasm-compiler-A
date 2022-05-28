@@ -1,11 +1,13 @@
 import { readFileSync } from "fs";
 import { gcd, lcm, factorial } from "../stdlib/math";
 
-enum Type { Num, Bool, None, Ellipsis }
+enum Type { Num, Bool, None, Ellipsis, FLOAT }
 
 function stringify(typ: Type, arg: any): string {
   switch (typ) {
     case Type.Num:
+      return (arg as number).toString();
+    case Type.FLOAT:
       return (arg as number).toString();
     case Type.Bool:
       return (arg as boolean) ? "True" : "False";
@@ -56,6 +58,7 @@ export const importObject : any = {
     print_none: (arg: number) => print(Type.None, arg),
     print_newline: (arg: number) => print(undefined, arg),
     print_ellipsis: (arg: number) => print(Type.Ellipsis, arg),
+    print_float: (arg: number) => print(Type.FLOAT, arg),
     int: (arg: any) => arg,
     bool: (arg: any) => arg !== 0,
     abs: Math.abs,

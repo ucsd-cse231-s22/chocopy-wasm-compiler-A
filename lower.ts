@@ -303,11 +303,14 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       ];
     case "id":
       if (e.a.tag === "float") {
-        var newNameFloat = generateName("valname");
+
+        
+        var newNameFloat = e.name;
+
         return [[], [], {
           tag: "load",
           start: {tag: "id", name: newNameFloat, a: e.a},
-          offset: { tag: "wasmint", value: 4 }}];
+          offset: { tag: "wasmint", value: 0 }}];
       }
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":

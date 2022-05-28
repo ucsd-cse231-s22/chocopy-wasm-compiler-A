@@ -15,7 +15,8 @@ class C(object):
     else:
       return`
   source = `
-  print(12)
+  x:float=2.4
+  print(x)
 `;
   console.log(stringifyTree(parser.parse(source).cursor(),source, 0));
   const ast = parse(source);

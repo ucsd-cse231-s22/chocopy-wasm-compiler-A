@@ -6,3 +6,5 @@ cli
 *.sw*
 mochawesome-report
 *lock*
+.vscode/*
+./debugstart.ts
