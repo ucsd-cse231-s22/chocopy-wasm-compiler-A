@@ -137,7 +137,7 @@ export function equalTypeParams(params1: Type[], params2: Type[]) : boolean {
 export function equalType(t1: Type, t2: Type) {
   return (
     t1 === t2 ||
-    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
+    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name && equalTypeParams(t1.params, t2.params)) ||
     (t1.tag === "callable" && t2.tag === "callable" && equalCallable(t1, t2)) ||
     (t1.tag === "typevar" && t2.tag === "typevar" && t1.name === t2.name)
   );
@@ -180,8 +180,7 @@ export function isValidType(env: GlobalTypeEnv, t: Type) : boolean {
   }
 
   if(t.tag === "callable") {
-    // TODO: actually check if callable is valid
-    return true;
+    return t.params.every(p => isValidType(env, p)) && isValidType(env, t.ret);
   }
 
   // TODO: handle all other newer non-class types here
@@ -269,8 +268,9 @@ export function specializeType(env: Map<string, Type>, t: Type) : Type {
   }
 
   if(t.tag === "callable") {
-    // TODO: Actually specialize the callable
-    return t;
+    let specializedParams = t.params.map(p => specializeType(env, p));
+    let specializedRet = specializeType(env, t.ret);
+    return CALLABLE(specializedParams, specializedRet);
   }
 
   // at this point t has to be a class type
@@ -406,14 +406,14 @@ export function resolveClassTypeParams(env: GlobalTypeEnv, cls: Class<Annotation
   let [fieldsTy, methodsTy, typeparams] = env.classes.get(cls.name);
 
   let newFieldsTy = new Map(Array.from(fieldsTy.entries()).map(([name, type]) => {
-    let [_, newType] = resolveTypeTypeParams(cls.typeParams, type);
+    let newType = resolveTypeTypeParams(cls.typeParams, type);
     return [name, newType];
   }));
 
   let newMethodsTy: Map<string, [Type[], Type]> = new Map(Array.from(methodsTy.entries()).map(([name, [params, ret]]) => {
-    let [_, newRet] = resolveTypeTypeParams(cls.typeParams, ret); 
+    let newRet = resolveTypeTypeParams(cls.typeParams, ret); 
     let newParams = params.map(p => {
-      let [_, newP] = resolveTypeTypeParams(cls.typeParams, p);
+      let newP = resolveTypeTypeParams(cls.typeParams, p);
       return newP;
     });
 
@@ -429,38 +429,48 @@ export function resolveClassTypeParams(env: GlobalTypeEnv, cls: Class<Annotation
 }
 
 export function resolveVarInitTypeParams(env: string[], init: VarInit<Annotation>) : VarInit<Annotation> {
-  let [_, newType] = resolveTypeTypeParams(env, init.type);
+  let newType = resolveTypeTypeParams(env, init.type);
   return {...init, type: newType};
 }
 
 export function resolveFunDefTypeParams(env: string[], fun: FunDef<Annotation>) : FunDef<Annotation> {
   let newParameters = fun.parameters.map(p => resolveParameterTypeParams(env, p));
-  let [_, newRet] = resolveTypeTypeParams(env, fun.ret);
+  let newRet = resolveTypeTypeParams(env, fun.ret);
   let newInits = fun.inits.map(i => resolveVarInitTypeParams(env, i));
 
   return {...fun, ret: newRet, parameters: newParameters, inits: newInits};
 }
 
 export function resolveParameterTypeParams(env: string[], param: Parameter<Annotation>) : Parameter<Annotation> {
-  let [_, newType] = resolveTypeTypeParams(env, param.type);
+  let newType = resolveTypeTypeParams(env, param.type);
   return {...param, type: newType}
 }
 
-export function resolveTypeTypeParams(env: string[], type: Type) : [boolean, Type] {
-  if(type.tag !== "class") {
-    return [false, type];
+export function resolveTypeTypeParams(env: string[], type: Type) : Type {
+  switch(type.tag) {
+    case "number":
+    case "bool":
+    case "none":
+    case "either":
+      return type;
+    case "class":
+      if(env.indexOf(type.name) !== -1) {
+        // TODO: throw an error here if type-params are not empty
+        // shouldn't allow typevars to have type-params ?
+        return TYPEVAR(type.name);
+      }
+      let newParams: Type[]= type.params.map((p) => {
+        let newType = resolveTypeTypeParams(env, p);
+        return newType;
+      });
+      return {...type, params: newParams};  
+    case "callable":
+      let rret = resolveTypeTypeParams(env, type.ret);
+      let rparams = type.params.map(p => resolveTypeTypeParams(env, p));
+      return {...type, ret: rret, params: rparams};
   }
 
-  if(env.indexOf(type.name) !== -1) {
-    return [true, TYPEVAR(type.name)]
-  }
-
-  let newParams: Type[]= type.params.map((p) => {
-    let [_, newType] = resolveTypeTypeParams(env, p);
-    return newType;
-  });
-
-  return [true, {...type, params: newParams}];
+  
 }
 
 export function tcTypeVars(env: GlobalTypeEnv, tv: TypeVar<Annotation>, SRC: string) : TypeVar<Annotation> {

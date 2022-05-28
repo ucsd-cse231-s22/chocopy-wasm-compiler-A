@@ -175,4 +175,46 @@ describe('e2e tests to check generics', () => {
     print(l.head.next.value)
     `
     assertPrint('Generic Linked List test - 0', prog5, ["30", "20"]);
+
+    const prog6 = `
+    T = TypeVar('T')
+
+    class Box(Generic[T]):
+      v: T = __ZERO__
+
+      def map(self: Box[T], f: Callable[[T], T]):
+        self.v = f(self.v)
+
+    b: Box[int] = None
+    b = Box()
+    b.v = 10
+    print(b.v)
+    b.map(mklambda(Callable[[int], int], lambda a: a+2))
+    print(b.v)
+    `
+
+    assertPrint('Generic Box with lambda map - 0', prog6, ["10", "12"]);
+
+    const prog7 = `
+    T = TypeVar('T')
+
+    class Box(Generic[T]):
+      v: T = __ZERO__
+
+      def map(self: Box[T], f: Callable[[T], T]) -> Box[T]:
+        b : Box[T] = None
+        b = Box()
+
+        b.v = f(self.v)
+        return b
+
+    b1 : Box[int] = None
+    b1 = Box()
+    print(b1.v)
+    print(b1.map(mklambda(Callable[[int], int], lambda a: a + 2)).v)
+    print(b1.map(mklambda(Callable[[int], int], lambda a: (a + 1) * 10)).v)
+    print(b1.v)
+    `
+
+    assertPrint('Generic Box with lambda map - 1', prog7, ["0", "2", "10", "0"]);
 })
