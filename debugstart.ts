@@ -1,6 +1,6 @@
 import { parse } from "./parser";
 import { BasicREPL } from "./repl";
-import { importObject, addLibs  } from "./tests/import-object.test";
+import { addLibs  } from "./tests/import-object.test";
 
 
 // entry point for debugging
@@ -16,12 +16,19 @@ class C(object):
   // class C(object):
   //   def __init__(self:C, other:D):
   //     pass
+<<<<<<< HEAD
   
   // x:C = None
   // x = C()`
 const ast = parse(source);
 // console.log(ast);
+=======
+>>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
   
+  // x:C = None
+  // x = C()`
+const ast = parse(source);
+// console.log(ast);
   const repl = new BasicREPL(await addLibs());
   const result = repl.run(source).then(result => {
     console.log(result);    
@@ -29,4 +36,5 @@ const ast = parse(source);
 }
 
 debug();
+
 

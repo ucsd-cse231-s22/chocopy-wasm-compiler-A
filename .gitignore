@@ -5,5 +5,12 @@ debugger
 cli
 *.sw*
 mochawesome-report
+<<<<<<< HEAD
 *.DS_Store
 package-lock.json
+=======
+*lock*
+.vscode
+*.DS_Store
+package-lock.json
+>>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a

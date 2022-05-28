@@ -39,7 +39,7 @@ class C(object):
   def none(self: C) -> C:
     return None
     
-C().none()`, CLASS("C"));
+C().none()`, CLASS("C", []));
 
   assertTC("none-field-assign", `
 class C(object):
@@ -189,7 +189,7 @@ class C(object):
   def new(self: C, other: C) -> C:
     return self
 
-C().new(None)`, CLASS("C"));
+C().new(None)`, CLASS("C", []));
 
   // Does __init__ get called
   assertTCFail("init-no-args", `
