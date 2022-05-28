@@ -1146,4 +1146,19 @@ print(d)
       {print: ["109"], isIrDifferent: true}
     )
 
+    assertOptimize(
+        "sanity-if-copy-prop", 
+        `
+        a:int = 3
+b:int = 9
+if False:
+    a = 4
+else:
+    a = 5
+b = a
+print(b)
+        `,
+        { print: ["5"], isIrDifferent: true }
+    );
+
 });

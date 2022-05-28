@@ -1,9 +1,11 @@
 import { BinOp, Parameter, Type, UniOp} from "./ast";
 import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "./ir";
 
-import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkCompileValEquality, checkStmtEquality } from "./optimization_utils"; 
+import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkCompileValEquality, checkCopyValEquality, checkStmtEquality } from "./optimization_utils"; 
 
-class Env{  
+import {copyVal, computeInitEnvForCopyProp} from "./optimization_copy_prop";
+
+export class Env{  
     
     //General basic block environment class for dataflow analysis
 
@@ -37,6 +39,7 @@ class Env{
     }
     
 }
+
 class constPropEnv extends Env{
     vars : Map<string, compileVal>;
 
@@ -119,9 +122,108 @@ class constPropEnv extends Env{
         return returnEnv;
     }
 }
-class copyPropEnv extends Env{
 
+export class copyEnv extends Env{
+    copyVars: Map<string, copyVal>;
+
+    constructor(copyVars: Map<string, copyVal>){
+        super();
+        this.copyVars = copyVars;
+    }
+
+    get(arg : string) : Value<any>{
+        return this.copyVars.get(arg).value;
+    }
+
+    set(arg : string, value : copyVal){
+        this.copyVars.set(arg, value);
+    }
+
+    has(arg : string) : boolean{
+        return this.copyVars.has(arg);
+    }
+
+    duplicateEnv(): copyEnv {
+        return new copyEnv(new Map(this.copyVars))
+    }
+
+    checkEqual(b: copyEnv): boolean {
+        const aVars = this.copyVars;
+        const bVars = b.copyVars;
+
+        for (const key of aVars.keys()){
+            const aValue = aVars.get(key);
+            const bValue = bVars.get(key);
+            
+            if (!checkCopyValEquality(aValue, bValue)) return false;
+        }
+        return true;
+    }
+
+    updateEnvironmentByBlock(block: BasicBlock<any>): copyEnv {
+        var outEnv: copyEnv = new copyEnv(new Map(this.copyVars));
+        block.stmts.forEach(statement => {
+            if (statement === undefined) { console.log(block.stmts); }
+            if (statement.tag === "assign"){
+                const optimizedExpression = optimizeExpression(statement.value, outEnv);
+                if (optimizedExpression.tag === "value"){
+                    if (optimizedExpression.value.tag === "id"){
+                        // outEnv.vars.set(statement.name, {tag: "nac"});
+                        outEnv.updateForwardsAndBackwards(statement);
+                    }
+                    // else{
+                    //     outEnv.vars.set(statement.name, {tag: "val", value: optimizedExpression.value});
+                    // }
+                }
+                else{
+                    outEnv.copyVars.set(statement.name, {tag: "nac"});
+                }
+            }
+        });
+        return outEnv;
+    }
+
+    updateForwardsAndBackwards(stmt: Stmt<any>){
+        // const forwards: Map<string, string> = new Map<string, string>();
+        if(stmt.tag === "assign" && stmt.value.tag === "value" && isTagId(stmt.value.value)){
+            const copyFrom = stmt.value.value.name;
+            const copyTo = stmt;
+            
+            let backwards: string[] = [];
+            const oldCopyFromEnv = this.copyVars.get(copyFrom);
+            
+            var oldBackwards = oldCopyFromEnv.reverse;
+            backwards = [...oldBackwards, copyTo.name];
+    
+            this.copyVars.set(copyFrom, {tag: "copyId", reverse: backwards, ...oldCopyFromEnv});
+            this.copyVars.set(copyTo.name, {tag: "copyId", value: stmt.value.value, reverse: []});            
+        }
+    }
+
+    mergeEnvironment(b: copyEnv): copyEnv {
+        var returnEnv: copyEnv = new copyEnv(new Map<string, copyVal>());
+        this.copyVars.forEach((aValue: copyVal, key: string) => {
+            const bValue: copyVal = b.copyVars.get(key);
+            if (bValue.tag === "nac" || aValue.tag === "nac")
+                returnEnv.copyVars.set(key, {tag: "nac"});
+            else if (aValue.tag === "undef" && bValue.tag === "undef"){
+                returnEnv.copyVars.set(key, {tag: "undef"})
+            }
+            else if (aValue.tag === "undef"){
+                returnEnv.copyVars.set(key, {tag: "copyId", value: bValue.value, reverse: [...bValue.reverse, ...aValue.reverse]})
+            }
+            else if (bValue.tag === "undef"){
+                returnEnv.copyVars.set(key, {tag: "copyId", value: aValue.value, reverse: [...aValue.reverse, ...bValue.reverse]});
+            }
+            else if (aValue.value === bValue.value)
+                returnEnv.copyVars.set(key, {tag: "copyId", value: aValue.value, reverse: [...bValue.reverse, ...aValue.reverse]});
+            else
+                returnEnv.copyVars.set(key, {tag: "nac"});
+        });
+        return returnEnv;
+    }
 }
+
 class livenessEnv extends Env{
     liveVars : Set<string>
 }
@@ -354,7 +456,7 @@ export function computePredecessorSuccessor(basicBlocks: Array<BasicBlock<any>>)
 
 }
 
-function computeInitEnv(varDefs: Array<VarInit<any>>, dummyEnv: boolean): Env{
+function computeInitEnvForConstProp(varDefs: Array<VarInit<any>>, dummyEnv: boolean): Env{
     var env: Env = new constPropEnv(new Map<string, compileVal>());
     varDefs.forEach(def => {
         if (!dummyEnv)
@@ -416,7 +518,7 @@ function optimizeBlock(block: BasicBlock<any>, env: Env): [BasicBlock<any>, bool
 
 export function optimizeFunction(func: FunDef<any>): FunDef<any>{
     if (func.body.length === 0) return func;
-    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctions(func);
+    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctions(func, computeInitEnvForConstProp);
 
     var functionOptimized: boolean = false;
     var newBody: Array<BasicBlock<any>> = func.body.map(b => {
@@ -440,7 +542,7 @@ export function optimizeClass(c: Class<any>): Class<any>{
     return {...c, methods: optimizedMethods};
 }
 
-export function generateEnvironmentProgram(program: Program<any>): [Map<string, Env>, Map<string, Env>]{
+export function generateEnvironmentProgram(program: Program<any>, computeInitEnv: Function): [Map<string, Env>, Map<string, Env>]{
     var initialEnv = computeInitEnv(program.inits, false);
 
     var inEnvMapping: Map<string, Env> = new Map<string, Env>();
@@ -464,7 +566,7 @@ export function generateEnvironmentProgram(program: Program<any>): [Map<string, 
     return [inEnvMapping, outEnvMapping];
 }
 
-export function generateEnvironmentFunctions(func: FunDef<any>): [Map<string, Env>, Map<string, Env>]{
+export function generateEnvironmentFunctions(func: FunDef<any>, computeInitEnv: Function): [Map<string, Env>, Map<string, Env>]{
     var initialEnv  = computeInitEnv(func.inits, false);
     addParamsToEnv(func.parameters, initialEnv, false);
 
@@ -494,7 +596,22 @@ export function generateEnvironmentFunctions(func: FunDef<any>): [Map<string, En
 
 export function constantPropagateAndFoldProgram(program: Program<any>): [Program<any>, boolean]{
     if (program.body.length == 0) return [program, false];
-    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentProgram(program);
+    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentProgram(program, computeInitEnvForConstProp);
+
+    //Write code to optimize the program using the environment
+    var programOptimized: boolean = false;
+    var newBody: Array<BasicBlock<any>> = program.body.map(b => {
+        var tempBlockEnv: Env = duplicateEnv(inEnvMapping.get(b.label));
+        var [optimizedBlock, blockOptimized]: [BasicBlock<any>, boolean] = optimizeBlock(b, tempBlockEnv);
+        if (!programOptimized && blockOptimized) programOptimized = true;
+        return optimizedBlock;
+    });
+    return [{...program, body: newBody}, programOptimized]
+}
+
+export function copyPropagateProgram(program: Program<any>): [Program<any>, boolean]{
+    if (program.body.length == 0) return [program, false];
+    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentProgram(program, computeInitEnvForCopyProp);
 
     //Write code to optimize the program using the environment
     var programOptimized: boolean = false;
@@ -510,7 +627,7 @@ export function constantPropagateAndFoldProgram(program: Program<any>): [Program
 export function optimizeProgram(program: Program<any>): Program<any>{
     if (program.body.length == 0) return program;
     var [program, programOptimized] : [Program<any>, boolean] = constantPropagateAndFoldProgram(program);
-    // [program, programOptimized] = copyPropagateProgram(program);
+    // var [program, programOptimized] = copyPropagateProgram(program);
     // [program, programOptimized] = eliminateDeadCodeProgram(program);
 
     /* NOTE(joe): turning this off; it (a) doesn't have fallthrough cases for new
