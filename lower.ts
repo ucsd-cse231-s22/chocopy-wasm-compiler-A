@@ -3,7 +3,7 @@ import * as IR from './ir';
 import * as ERRORS from './errors';
 import { Type, Annotation } from './ast';
 import { GlobalEnv } from './compiler';
-import { APPLY, CLASS, createMethodName, BOOL, NONE } from './utils';
+import { APPLY, CLASS, createMethodName, BOOL, NONE, NUM } from './utils';
 
 let nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
