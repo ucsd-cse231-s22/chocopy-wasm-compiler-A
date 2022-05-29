@@ -8,8 +8,9 @@ import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
-import {PyValue, NONE, BOOL, NUM, CLASS, STR} from "./utils";
-import {generateName, lowerProgram} from './lower';
+import { PyValue, NONE, BOOL, NUM, CLASS, STR } from "./utils";
+import { generateName, lowerProgram } from './lower';
+import { liftprogram } from './lambdalift'
 import {match} from "assert";
 import * as AST from "./ast";
 
@@ -129,9 +130,10 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const parsed = parse(source);
   // generateDefaultMethods(parsed);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
-  const globalEnv = augmentEnv(config.env, tprogram, strings);
-  const irprogram = lowerProgram(tprogram, globalEnv);
-  const progTyp = tprogram.a;
+  const lprogram = liftprogram(tprogram);
+  const globalEnv = augmentEnv(config.env, lprogram, strings);
+  const irprogram = lowerProgram(lprogram, globalEnv);
+  const progTyp = lprogram.a;
   var returnType = "";
   var returnExpr = "";
   // const lastExpr = parsed.stmts[parsed.stmts.length - 1]

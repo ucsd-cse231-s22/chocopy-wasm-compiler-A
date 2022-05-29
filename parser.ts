@@ -4,6 +4,8 @@ import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Cl
 import { NUM, BOOL, NONE, STR, CLASS, LIST } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
+
+
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
   switch(c.type.name) {
     case "Number":
@@ -333,7 +335,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       c.firstChild(); // Focus on :
       var els = [];
       while(c.nextSibling()) { // Focus on els stmts
-        els.push(traverseStmt(c, s));
+        els.push(traverseStmt(c,s));
       }
       c.parent();
       c.parent();
@@ -364,7 +366,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
     case "ForStatement":
       c.firstChild(); // Focus on for
       c.nextSibling(); // Focus on variable name
-      let name = s.substring(c.from, c.to);
+      var name = s.substring(c.from, c.to);
       c.nextSibling(); // Focus on in / ','
       c.nextSibling(); // Focus on iterable expression
       var iter = traverseExpr(c, s);
@@ -379,6 +381,12 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       return { tag: "for", name: name, iterable: iter, body: body}
     case "PassStatement":
       return { tag: "pass" }
+    // case "ScopeStatement":
+    //   c.firstChild();
+    //   c.nextSibling();
+    //   var name = s.substring(c.from, c.to);
+    //   c.parent();
+    //   return { tag: "nonlocal", name: name}
     default:
       throw new Error("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to));
   }
@@ -464,13 +472,23 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   c.firstChild();  // Focus on :
   var inits = [];
   var body = [];
+  var funs = [];
+  var nonlocals = [];
   
   var hasChild = c.nextSibling();
 
   while(hasChild) {
     if (isVarInit(c, s)) {
       inits.push(traverseVarInit(c, s));
-    } else {
+    } 
+    else if(isScopeDecl(c,s)){
+      nonlocals.push(traverseScopeDecl(c, s));
+    }
+    else if(isFunDef(c,s)){
+      funs.push(traverseFunDef(c,s));
+    }
+    else
+    {
       break;
     }
     hasChild = c.nextSibling();
@@ -485,8 +503,10 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   c.parent();      // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
   c.parent();      // Pop to FunctionDefinition
-  return { name, parameters, ret, inits, body }
+  return { name, parameters, ret, inits, funs, body, nonlocals: nonlocals}
 }
+
+
 
 export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   const fields : Array<VarInit<null>> = [];
@@ -521,7 +541,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   c.parent();
 
   if (!methods.find(method => method.name === "__init__")) {
-    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
+    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], funs: [], body: [] });
   }
   return {
     name: className,
@@ -529,6 +549,14 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
     methods,
     superclass,
   };
+}
+
+export function traverseScopeDecl(c: TreeCursor, s: string): string{
+  c.firstChild();
+  c.nextSibling();
+  var name: string = s.substring(c.from, c.to);
+  c.parent();
+  return name;
 }
 
 export function traverseDefs(c : TreeCursor, s : string) : [Array<VarInit<null>>, Array<FunDef<null>>, Array<Class<null>>] {
@@ -559,7 +587,8 @@ export function isVarInit(c : TreeCursor, s : string) : Boolean {
     const isVar = c.type.name as any === "TypeDef";
     c.parent();
     return isVar;  
-  } else {
+  } 
+  else {
     return false;
   }
 }
@@ -570,6 +599,10 @@ export function isFunDef(c : TreeCursor, s : string) : Boolean {
 
 export function isClassDef(c : TreeCursor, s : string) : Boolean {
   return c.type.name === "ClassDefinition";
+}
+
+export function isScopeDecl(c: TreeCursor, s: string) : Boolean{
+  return c.type.name === "ScopeStatement"
 }
 
 export function traverse(c : TreeCursor, s : string) : Program<null> {

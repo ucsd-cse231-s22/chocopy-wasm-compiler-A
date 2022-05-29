@@ -1,9 +1,10 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
+import {Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Parameter} from './ast';
 import {NUM, BOOL, NONE, CLASS, STR} from './utils';
 import { emptyEnv } from './compiler';
 import {equal} from "assert";
+import {getNonLocalsInFunBody} from "./lambdalift";
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends Error {
@@ -160,7 +161,8 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   const locals = emptyLocalTypeEnv();
   const newEnv = augmentTEnv(env, program);
   const tInits = program.inits.map(init => tcInit(env, init));
-  const tDefs = program.funs.map(fun => tcDef(newEnv, fun));
+  var defLocals : Array<LocalTypeEnv> = [];
+  const tDefs = program.funs.map(fun => tcDef(newEnv, fun, defLocals));
   const tClasses = program.classes.map(cls => tcClass(newEnv, cls));
 
   // program.inits.forEach(init => env.globals.set(init.name, tcInit(init)));
@@ -191,17 +193,35 @@ export function tcInit(env: GlobalTypeEnv, init : VarInit<null>) : VarInit<Type>
   }
 }
 
-export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
-  var locals = emptyLocalTypeEnv();
-  locals.expectedRet = fun.ret;
-  locals.topLevel = false;
-  fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
-  fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init).type));
-  
-  const tBody = tcBlock(env, locals, fun.body);
-  if (!isAssignable(env, locals.actualRet, locals.expectedRet))
-    throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`)
-  return {...fun, a: NONE, body: tBody};
+
+export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>, locals: Array<LocalTypeEnv>) : FunDef<Type> {
+  var funs: Array<FunDef<Type>> = [];
+  locals.push(emptyLocalTypeEnv());
+  locals[locals.length - 1].expectedRet = fun.ret;
+  locals[locals.length - 1].topLevel = false;
+  fun.parameters.forEach(p => locals[locals.length - 1].vars.set(p.name, p.type));
+  fun.inits.forEach(init => locals[locals.length - 1].vars.set(init.name, tcInit(env, init).type));
+  fun.funs.forEach(f => {
+    env.functions.set(f.name, [f.parameters.map(p => p.type), fun.ret])
+  });
+  fun.funs.forEach(f => {
+    funs.push(tcDef(env, f, locals));
+  });
+
+  var newLocals : LocalTypeEnv = {
+    vars: new Map(),
+    expectedRet: locals[locals.length - 1].expectedRet,
+    actualRet: locals[locals.length - 1].actualRet,
+    topLevel: false
+  };
+  locals.forEach(l => {
+    newLocals.vars = new Map([...Array.from(newLocals.vars.entries()), ...Array.from(l.vars.entries())]);
+  });
+  const tBody = tcBlock(env, newLocals, fun.body);
+  if (!isAssignable(env, newLocals.actualRet, newLocals.expectedRet))
+    throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals[locals.length - 1].expectedRet)} does not match actual return type: ${JSON.stringify(locals[locals.length - 1].actualRet)}`)
+  locals.pop();
+  return {...fun, a: NONE, body: tBody, funs: funs};
 }
 
 export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
@@ -213,7 +233,8 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
       throw new TypeCheckError("Can not override field "+field.name);
   });
 
-  const tMethods = cls.methods.map(method => tcDef(env, method));
+  var defLocals : Array<LocalTypeEnv> = [];
+  const tMethods = cls.methods.map(method => tcDef(env, method, defLocals));
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
   if (init.parameters.length !== 1 || 
     init.parameters[0].name !== "self" ||
@@ -334,7 +355,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Plus:
           if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
           else if(equalType(tLeft.a, tRight.a) && tLeft.a.tag === "list" && tRight.a.tag === "list" ){
-            var a = {tag:"list", length: tLeft.a.listsize+tRight.a.listsize, elementtype: tLeft.a.elementtype};
+            var a = {tag:"list", listsize: tLeft.a.listsize+tRight.a.listsize, elementtype: tLeft.a.elementtype};
             return {a: a as Type, ...tBin}
           }
           else if (equalType(tLeft.a, STR) && equalType(tRight.a, STR)) { return { a: STR, ...tBin } }
@@ -438,7 +459,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
 
         if(argTypes.length === expr.arguments.length &&
            tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
-             return {...expr, a: retType, arguments: expr.arguments};
+             return {...expr, a: retType, arguments: tArgs};
            } else {
             throw new TypeError("Function call type mismatch: " + expr.name);
            }

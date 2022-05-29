@@ -5,22 +5,30 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 
 // entry point for debugging
 async function debug() {
-  var source = `
-class A(object):
-    x : int = 1
-    def fa(self: A) -> int:
-        return 1
-
-class B(A):
-    y : int = 1
-    def fb(self: B) -> int:
-        return 2
-
-b : B = None 
-b = B()
-print(b.fa())
-print(b.fb())
+  var source =
 `
+def f(x : int) -> int:
+  def h(z : int) -> int:
+    nonlocal x
+    x = z+x
+    return x
+  return h(x) + h(7)
+
+print(f(6))
+`
+
+//   `
+// def f(x : int) -> int:
+//   def g(y : int) -> int:
+//     def gg(z: int) -> int:
+//       return z
+//     return gg(x) + gg(y)
+//   def h(z: int) -> int:
+//     return x + z + 1
+//   return g(10) + h(7)
+
+// print(f(6))
+// `
 //   var source = `
 // def f() -> int:
 //   x : int = 0
@@ -32,13 +40,22 @@ print(b.fb())
 //   return x
 // print(f())
 // `
-  var source2 = `
-x : int = 0
-y : int = 1
-for x in [1,2,3,4,5]:
-  y = y*x
-print(y)
-  `
+//     `
+// class A(object):
+//     x : int = 1
+//     def fa(self: A) -> int:
+//         return 1
+//
+// class B(A):
+//     y : int = 1
+//     def fb(self: B) -> int:
+//         return 2
+//
+// b : B = None
+// b = B()
+// print(b.fa())
+// print(b.fb())
+// `
 // a comprehensive test that tests all features of list
 // 1. list assignment(entries can be expr)
 // 2. list index(index can be expr)
