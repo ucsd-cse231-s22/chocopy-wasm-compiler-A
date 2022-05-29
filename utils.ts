@@ -1,4 +1,4 @@
-import { Value, Type, Annotation } from "./ast";
+import { Value, Type, Annotation, Literal } from "./ast";
 
 export const bigMath = {
   // https://stackoverflow.com/a/64953280
@@ -169,8 +169,22 @@ export function PyNone(): Value<Annotation> {
   return { tag: "none" };
 }
 
+export function PyZero(): Literal<Annotation> {
+  return { tag: "zero" };
+}
+
 export const NUM : Type = {tag: "number"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
-export function CLASS(name : string) : Type {return {tag: "class", name}};
+export function CLASS(name : string, params: Array<Type> = []) : Type {return {tag: "class", name, params}};
+export function TYPEVAR(name: string) : Type {return {tag: "typevar", name}};
+export function CALLABLE(params: Array<Type>, ret: Type) : Type {return {tag: "callable", params, ret}};
 
+export const APPLY : string = "apply";
+export function createMethodName(cls: string, method: string): string{
+  return `${cls}$${method}`;
+}
+
+export function makeWasmFunType(paramNum: number): string {
+  return `$callable${paramNum}param`;
+}
