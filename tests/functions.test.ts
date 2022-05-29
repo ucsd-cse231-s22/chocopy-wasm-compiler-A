@@ -67,9 +67,72 @@ def a() -> int:
   return x
 `, NONE)
 
+assertTCFail("Nonlocal fail",`
+def a() -> int:
+  x: int = 5
+  def b():
+    x = 8
+    print(x + 8)
+  b()
+  return x
+`)
+
 assertPrint("Capture local variable run",`
+def a():
+  x: int = 4
+  def b():
+    print(13 + x)
+  b()
+a()
+`, ['17']);
+
+assertPrint(
+  "Capture local param run", `
+def a(x: int):
+  def b():
+    print(13 + x)
+  b()
+a(4)
+`,
+  ["17"]
+);
+
+assertPrint(
+  "Capture nonlocal", `
+def a(x: int):
+  def b():
+    nonlocal x
+    x = x + 2
+    print(13 + x)
+  b()
+  b()
+a(4)
+`,
+  ["19", "21"]
+);
+
+assertPrint(
+  "Capture nonlocal func", `
+def a() -> Callable[[], int]:
+  x: int = 4
+  def b() -> int:
+    nonlocal x
+    x = x + 13
+    return x
+  return b
+print(a()())
+`,
+  ["17"]
+);
+
+assertPrint("Capture redeclare",`
 def a():
   x: int = 5
   def b():
-    print(x + 8)
-`, ['13']);
+    x: int = 6
+    def c():
+      print(x + 8)
+    c()
+  b()
+a()
+`, ['14']);

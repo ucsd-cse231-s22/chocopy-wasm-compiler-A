@@ -50,7 +50,7 @@ export type GlobalTypeEnv = {
 }
 
 export type LocalTypeEnv = {
-  vars: Map<string, Type>,
+  vars: Map<string, [type: Type, mutable: boolean]>,
   expectedRet: Type,
   actualRet: Type,
   topLevel: Boolean
@@ -333,7 +333,7 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
   // TODO(joe): check for assignment in existing env vs. new declaration
   // and look for assignment consistency
   for (let name of locals.vars.keys()) {
-    newEnv.globals.set(name, locals.vars.get(name));
+    newEnv.globals.set(name, locals.vars.get(name)[0]);
   }
 
   const aprogram = { a: { ...program.a, type: lastTyp }, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody, typeVarInits: tTypeVars };
@@ -363,7 +363,7 @@ export function tcInit(env: GlobalTypeEnv, init: VarInit<Annotation>, SRC: strin
 
 export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv: NonlocalTypeEnv, SRC: string) : FunDef<Annotation> {
   var locals = emptyLocalTypeEnv();
-  locals.vars.set(fun.name, CALLABLE(fun.parameters.map(x => x.type), fun.ret));
+  locals.vars.set(fun.name, [CALLABLE(fun.parameters.map(x => x.type), fun.ret), false]);
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
 
@@ -371,20 +371,19 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv
     if(!isValidType(env, p.type)) {
       throw new TypeCheckError(SRC, `Invalid type annotation '${JSON.stringify(p.type)}' for parameter '${p.name}' in function '${fun.name}'`);
     }
-    locals.vars.set(p.name, p.type)
+    locals.vars.set(p.name, [p.type, true])
   });
-  var nonlocals = fun.nonlocals.map(init => ({ name: init.name, a: { ...init.a, type: nonlocalEnv.get(init.name) }}));
-  fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
-  fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init, SRC).type));
-  nonlocals.forEach(init => locals.vars.set(init.name, init.a.type));
+  nonlocalEnv.forEach(([value], name) => {
+    locals.vars.set(name, [value, false]);
+  })
+  var nonlocals = fun.nonlocals.map(init => ({ name: init.name, a: { ...init.a, type: nonlocalEnv.get(init.name)[0] }}));
+  fun.inits.forEach(init => locals.vars.set(init.name, [tcInit(env, init, SRC).type, true]));
+  nonlocals.forEach(init => locals.vars.set(init.name, [init.a.type, true]));
   var envCopy = copyGlobals(env);
   fun.children.forEach(f => envCopy.functions.set(f.name, [f.parameters.map(x => x.type), f.ret]));
   var children = fun.children.map(f => tcDef(envCopy, f, locals.vars, SRC));
-  fun.children.forEach(child => locals.vars.set(child.name, CALLABLE(child.parameters.map(x => x.type), child.ret)));
+  fun.children.forEach(child => locals.vars.set(child.name, [CALLABLE(child.parameters.map(x => x.type), child.ret), false]));
   
-  nonlocalEnv.forEach((value, name) => {
-    locals.vars.set(name, value);
-  })
   const tBody = tcBlock(envCopy, locals, fun.body, SRC);
   if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))
     // TODO: what locations to be reported here?
@@ -501,7 +500,10 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       const tValExpr = tcExpr(env, locals, stmt.value, SRC);
       var nameTyp;
       if (locals.vars.has(stmt.name)) {
-        nameTyp = locals.vars.get(stmt.name);
+        nameTyp = locals.vars.get(stmt.name)[0];
+        if (!locals.vars.get(stmt.name)[1]) {
+          throw new TypeCheckError(SRC, "Unbound id: " + stmt.name);
+        }
       } else if (env.globals.has(stmt.name)) {
         nameTyp = env.globals.get(stmt.name);
       } else {
@@ -668,7 +670,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       }
     case "id":
       if (locals.vars.has(expr.name)) {
-        return { ...expr, a: { ...expr.a, type: locals.vars.get(expr.name) } };
+        return { ...expr, a: { ...expr.a, type: locals.vars.get(expr.name)[0] } };
       } else if (env.globals.has(expr.name)) {
         return { ...expr, a: { ...expr.a, type: env.globals.get(expr.name) } };
       } else {
@@ -680,7 +682,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       }
       const lambdaLocals = copyLocals(locals);
       expr.params.forEach((param, i) => {
-        lambdaLocals.vars.set(param, expr.type.params[i]);
+        lambdaLocals.vars.set(param, [expr.type.params[i], true]);
       })
       let ret = tcExpr(env, lambdaLocals, expr.expr, SRC);
       if (!isAssignable(env, ret.a.type, expr.type.ret)) {
@@ -825,7 +827,7 @@ export function tcLiteral(literal : Literal<Annotation>) {
 // Will be extended to include tuples etc in later commits
 export function tcIterator(env : GlobalTypeEnv, locals : LocalTypeEnv, iterator: string): Type{
   if (locals.vars.has(iterator))
-   return locals.vars.get(iterator) 
+   return locals.vars.get(iterator)[0]
   else if (env.globals.has(iterator))
      return env.globals.get(iterator)
    throw new TypeCheckError(`Undefined iterator`)

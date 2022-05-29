@@ -181,10 +181,25 @@ export function TYPEVAR(name: string) : Type {return {tag: "typevar", name}};
 export function CALLABLE(params: Array<Type>, ret: Type) : Type {return {tag: "callable", params, ret}};
 
 export const APPLY : string = "apply";
+export const SET_PARENT : string = "set_parent";
+export const COPY : string = "copy";
 export function createMethodName(cls: string, method: string): string{
   return `${cls}$${method}`;
 }
 
 export function makeWasmFunType(paramNum: number): string {
   return `$callable${paramNum}param`;
+}
+
+export function defaultLiteral(typ: Type): Literal<Annotation> {
+  switch (typ.tag) {
+    case "number":
+      return { tag: "num", value: 0 };
+    case "bool":
+      return { tag: "bool", value: false };
+    case "class":
+      return { tag:"none" }
+    case "none":
+      return { tag:"none" }
+  }
 }

@@ -11,6 +11,7 @@ export type GlobalEnv = {
   labels: Array<string>;
   offset: number;
   vtableMethods: Array<[string, number]>;
+  nonlocalMap: Map<string, Map<string, [ancestorList: string[], isFunction: boolean, funName: string]>>;
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -21,7 +22,8 @@ export const emptyEnv : GlobalEnv = {
   locals: new Set(),
   labels: [],
   offset: 0,
-  vtableMethods: [] 
+  vtableMethods: [],
+  nonlocalMap: new Map(),
 };
 
 type CompileResult = {

@@ -34,7 +34,8 @@ export class BasicREPL {
       locals: new Set(),
       labels: [],
       offset: 1,
-      vtableMethods: []
+      vtableMethods: [],
+      nonlocalMap: new Map(),
     };
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";

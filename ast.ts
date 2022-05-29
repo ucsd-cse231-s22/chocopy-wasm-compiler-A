@@ -44,7 +44,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "pass" }
   | {  a?: A, tag: "continue" }
   | {  a?: A, tag: "break" }
-  | {  a?: A, tag: "field-assign", obj: Expr<A>, field: string, value: Expr<A> }
+  | {  a?: A, tag: "field-assign", obj: Expr<A>, field: string, value: Expr<A>}
   | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
@@ -54,7 +54,7 @@ export type Stmt<A> =
 export type Lambda<A> = {  a?: A, tag: "lambda", params: Array<string>, type: Callable, expr: Expr<A> };
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal<A> }
-  | {  a?: A, tag: "id", name: string }
+  | {  a?: A, tag: "id", name: string, transform?: boolean }
   | {  a?: A, tag: "binop", op: BinOp, left: Expr<A>, right: Expr<A>}
   | {  a?: A, tag: "uniop", op: UniOp, expr: Expr<A> }
   | {  a?: A, tag: "builtin1", name: string, arg: Expr<A> }
