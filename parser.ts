@@ -327,7 +327,7 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       var thn = traverseExpr(c, s, env);
       c.nextSibling();//if
       c.nextSibling();
-      var cond = traverseExpr(c, s, env);
+      var cond:any = traverseExpr(c, s, env);
       c.nextSibling();//else
       c.nextSibling();
       var els = traverseExpr(c, s, env);
