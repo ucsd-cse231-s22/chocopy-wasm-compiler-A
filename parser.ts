@@ -123,25 +123,24 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         tag: "id",
         name: s.substring(c.from, c.to)
       }
-    // parsing list-comp
     case "ArrayComprehensionExpression":
       c.firstChild(); // '['
       c.nextSibling();
-      const left = traverseExpr(c, s); // left
+      const left = traverseExpr(c, s, env); // left
       c.nextSibling(); // for
       c.nextSibling();
-      const elem = traverseExpr(c, s); // elem
+      const elem = traverseExpr(c, s, env); // elem
       c.nextSibling(); // in
       c.nextSibling();
       // conditions for parsing iterable to be added --!!
-      const iterable = traverseExpr(c, s); // iterable
+      const iterable = traverseExpr(c, s, env); // iterable
       c.nextSibling();
       var cond;
       if (s.substring(c.from, c.to) !== ']'){
         if (s.substring(c.from, c.to) !== 'if')
           throw new Error("PARSE TYPE ERROR: only if condition allowed in comprehensions");
         c.nextSibling();
-        cond = traverseExpr(c, s); // cond which evaluates to a binary expr
+        cond = traverseExpr(c, s, env); // cond which evaluates to a binary expr
       }
       c.parent();
       return {
@@ -814,7 +813,6 @@ export function isVarInit(c: TreeCursor, s: string, env: ParserEnv): Boolean {
     const isVar = c.type.name as any === "TypeDef";
     c.parent();
     return isVar;
-<<<<<<< HEAD
   } else {
     return false;
   }
@@ -841,42 +839,11 @@ export function isTypeVarInit(c : TreeCursor, s : string) : Boolean {
     c.parent();
     c.parent();
     return true;  
-=======
->>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
   } else {
     return false;
   }
 }
 
-<<<<<<< HEAD
-=======
-export function isTypeVarInit(c : TreeCursor, s : string) : Boolean {
-  if (c.type.name === "AssignStatement") {
-    c.firstChild(); // Focus on lhs
-    c.nextSibling(); // go to AssignOp
-    c.nextSibling(); // go to CallExpression
-
-    if (c.type.name as any !== "CallExpression") {
-      c.parent();
-      return false;
-    }
-
-    c.firstChild(); // Focus on TypeVar
-    if (c.type.name as any !== "VariableName" || s.substring(c.from, c.to).trim() !== "TypeVar") {
-      c.parent();
-      c.parent();
-      return false;
-    }
-
-    c.parent();
-    c.parent();
-    return true;  
-  } else {
-    return false;
-  }
-}
-
->>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
 export function isScopeDef(c : TreeCursor, s : string) : Boolean {
   return c.type.name === "ScopeStatement";
 }
