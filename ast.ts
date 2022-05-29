@@ -108,3 +108,4 @@ export function stringifyOp(op: Op): string {
 export type Value<A> =
     Literal<A>
   | { a?: A, tag: "object", name: string, address: number}
+  
