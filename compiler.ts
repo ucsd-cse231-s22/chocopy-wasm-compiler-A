@@ -4,39 +4,25 @@ import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./uti
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-<<<<<<< HEAD
-  // class name    ->   field -> field offset, value, mehtod -> method offset, super classes, super class method count
+  // class name    ->   field -> field offset, value, method -> method offset, super classes, super class method count
   classes: Map<string, [Map<string, [number, Value<Annotation>]>, Map<string, number>, Array<string>, number]>;
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
-  vtable: Array<string>;
-  classIndexes: Map<string, [number, number]>;
-=======
-  classes: Map<string, Map<string, [number, Value<Annotation>]>>;  
-  classIndices: Map<string, number>;
+  vtable: Array<[string, number]>;
+  classIndices: Map<string, [number, number]>
   functionNames: Map<string, string>;
-  locals: Set<string>;
-  labels: Array<string>;
-  offset: number;
-  vtableMethods: Array<[string, number]>;
->>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
 }
 
 export const emptyEnv : GlobalEnv = { 
   globals: new Map(), 
   classes: new Map(),
-  classIndices: new Map(), 
   functionNames: new Map(),
   locals: new Set(),
   labels: [],
   offset: 0,
-<<<<<<< HEAD
   vtable: [],
-  classIndexes: new Map(),
-=======
-  vtableMethods: [] 
->>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
+  classIndices: new Map(),
 };
 
 type CompileResult = {
@@ -75,7 +61,7 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
 
   const vtable = `
   (table ${env.vtable.length} funcref)
-  (elem (i32.const 0) ${env.vtable.join(" ")})
+  (elem (i32.const 0) ${env.vtable.map(method => `${method[0]}`).join(" ")})
   ${classesMethods.join("\n")}
   `
 
@@ -220,19 +206,15 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       return [
         ...fnStmts, 
         ...valStmts, 
-        `(i32.add ${methodOffsetCode})`,
-        `(call_indirect (type $type$${expr.name}))`
+        methodOffsetCode,
+        `(i32.add)`,
+        `(call_indirect (type ${expr.name}))`
       ];
 
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
-
-    case "call_indirect":
-      var valStmts = codeGenExpr(expr.fn, env);
-      var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
-      return [...fnStmts, ...valStmts, `(call_indirect (type ${makeWasmFunType(expr.arguments.length)}))`];
 
     case "alloc":
       return [
@@ -387,16 +369,11 @@ function codeGenDef(def : FunDef<Annotation>, env : GlobalEnv) : Array<string> {
 
 function codeGenClass(cls : Class<Annotation>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
-<<<<<<< HEAD
-  methods.forEach(method => method.name = `${cls.name}$${method.name}`); // append class name to method name
+  methods.forEach(method => method.name = createMethodName(cls.name, method.name));
   const result = methods.map(method => {
     var params = method.parameters.map(p => `(param $${p.name} i32)`).join(" ");
-    return [...[`(type $type$${method.name} (func ${params} (result i32)))`], ...codeGenDef(method, env).flat()]
+    return codeGenDef(method, env).flat();
   });
-=======
-  methods.forEach(method => method.name = createMethodName(cls.name, method.name));
-  const result = methods.map(method => codeGenDef(method, env));
->>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
   return result.flat();
 }
 

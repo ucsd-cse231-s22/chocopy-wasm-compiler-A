@@ -723,7 +723,7 @@ export const traverseClass = wrap_locs(traverseClassHelper);
 export function traverseClassHelper(c: TreeCursor, s: string, env: ParserEnv): Class<Annotation> {
   const fields: Array<VarInit<Annotation>> = [];
   const methods: Array<FunDef<Annotation>> = [];
-  const superClasses : Array<string> = [];
+  var superClasses : Array<string> = [];
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
@@ -734,11 +734,16 @@ export function traverseClassHelper(c: TreeCursor, s: string, env: ParserEnv): C
   c.firstChild();  // Focuses on open paren
   c.nextSibling(); // Focuses on a VariableName
   while(c.type.name !== ")") {
-    let name = s.substring(c.from, c.to);
-    superClasses.push(name);
+    if (c.type.name !== "MemberExpression"  && c.type.name !== ",") {
+      let name = s.substring(c.from, c.to);
+      superClasses.push(name);
+    }
     c.nextSibling(); // Focuses on a VariableName
   }
   c.parent();  
+
+  // add 'object' to super class if not specified
+  superClasses = superClasses.length === 0 ? ['object'] : superClasses;
 
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon

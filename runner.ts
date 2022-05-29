@@ -49,20 +49,18 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
-  const newClassIndices = new Map(env.classIndices);
   const functionNames = new Map(env.functionNames);
 
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
     newGlobals.set(v.name, true);
   });
-<<<<<<< HEAD
 
   prog.classes.forEach(cls => {
     const classFields = new Map();
     const classMethods = new Map();
     var overridenMethods = 0;
-    // TODO: update to support multiple inheritance
+    // TODO(anuj): update to support multiple inheritance
     var offset : number  = 0;
     if (cls.super[0] !== "object") { 
       newClasses.get(cls.super[0])[0].forEach((value, key) => {
@@ -92,36 +90,26 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
 
     cls.fields.forEach((field, i) => classFields.set(field.name, [offset + i, field.value]));
     newClasses.set(cls.name, [classFields, classMethods, cls.super, superClassMethodsCount+classMethods.size - overridenMethods]);
-=======
+  });
+
   prog.funs.forEach(f => {
     functionNames.set(f.name, closureName(f.name, []));
     const addClasses = (f: FunDef<Annotation>, ancestors: Array<FunDef<Annotation>>) => {
-      newClasses.set(closureName(f.name, ancestors), new Map());
+      newClasses.set(closureName(f.name, ancestors), [new Map(), new Map(), [], 0]);
       f.children.forEach(c => addClasses(c, [f, ...ancestors]));
     }
     addClasses(f, []);
   });
-  prog.classes.forEach(cls => {
-    const classFields = new Map();
-    cls.fields.forEach((field, i) => classFields.set(field.name, [i + 1, field.value]));
-    newClasses.set(cls.name, classFields);
->>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
-  });
+  
   return {
     globals: newGlobals,
     classes: newClasses,
-    classIndices: newClassIndices,
     functionNames,
     locals: env.locals,
     labels: env.labels,
     offset: newOffset,
-<<<<<<< HEAD
     vtable: env.vtable,
-    classIndexes: env.classIndexes, // TODO: finalize structure
-    
-=======
-    vtableMethods: env.vtableMethods,
->>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
+    classIndices: env.classIndices,
   }
 }
 
@@ -148,10 +136,9 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
   // const compiled = compiler.compile(tprogram, config.env);
   const compiled = compile(optIr, globalEnv);
 
-  const vtable = `(table ${globalEnv.vtableMethods.length} funcref)
-    (elem (i32.const 0) ${globalEnv.vtableMethods.map(method => `$${method[0]}`).join(" ")})`;
+
   const typeSet = new Set<number>();
-  globalEnv.vtableMethods.forEach(([_, paramNum])=>typeSet.add(paramNum));
+  globalEnv.vtable.forEach(([_, paramNum])=>typeSet.add(paramNum));
   let types = "";
   typeSet.forEach(paramNum => {
     let paramType = "";
@@ -201,7 +188,6 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     ${globalImports}
     ${compiled.vtable}
     ${globalDecls}
-    ${vtable}
     ${config.functions}
     ${compiled.functions}
     (func (export "exported_func") ${returnType}

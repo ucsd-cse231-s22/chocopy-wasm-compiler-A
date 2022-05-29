@@ -3,7 +3,7 @@ import * as IR from './ir';
 import * as ERRORS from './errors';
 import { Type, Annotation } from './ast';
 import { GlobalEnv } from './compiler';
-import { APPLY, CLASS, createMethodName, BOOL, NONE } from './utils';
+import { APPLY, CLASS, createMethodName, BOOL, NONE, makeWasmFunType } from './utils';
 
 let nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -28,53 +28,49 @@ export function closureName(f: string, ancestors: Array<AST.FunDef<Annotation>>)
 // }
 
 export function generateVtable(p : AST.Program<Annotation>, env : GlobalEnv) {
-  var vtable : Array<string> = [];
-  var classIndexes = new Map(); // stores the start and end index of the class in vtable
+  var vtable : Array<[string, number]> = [];
+  var classIndices = new Map(); // stores the start and end index of the class in vtable
   var methodIndex = 0;
   p.classes.forEach(cls => {
     if (cls.super[0]!=="object") {
-      const superClassIndexes = classIndexes.get(cls.super[0])
+      const superClassIndexes = classIndices.get(cls.super[0])
       var superClassVtable = vtable.slice(superClassIndexes[0], superClassIndexes[1])
       cls.methods.forEach(m => {
         const methodOffset = env.classes.get(cls.name)[1].get(m.name);
         if (methodOffset >= superClassVtable.length) {
-          superClassVtable.push(`$${cls.name}$${m.name}`)
+          superClassVtable.push([`$${cls.name}$${m.name}`, m.parameters.length])
         } else {
-          superClassVtable[methodOffset] = `$${cls.name}$${m.name}`;
+          superClassVtable[methodOffset] = [`$${cls.name}$${m.name}`, m.parameters.length];
         }
       })
-      classIndexes.set(cls.name, [vtable.length, vtable.length +superClassVtable.length])
+      classIndices.set(cls.name, [vtable.length, vtable.length +superClassVtable.length])
       vtable = [...vtable , ...superClassVtable]
     } else {
       // add methods directly and increment methodIndex
-      classIndexes.set(cls.name, [vtable.length, vtable.length + cls.methods.length])
+      classIndices.set(cls.name, [vtable.length, vtable.length + cls.methods.length])
       cls.methods.forEach(m => {
-        vtable.push(`$${cls.name}$${m.name}`)
+        vtable.push([`$${cls.name}$${m.name}`, m.parameters.length])
       })
     }
   })
-  // add classIndexes & vtable in env
+  // add classIndices & vtable in env
   env.vtable = vtable;
-  env.classIndexes = classIndexes;
+  env.classIndices = classIndices;
 }
 
 
 export function lowerProgram(p : AST.Program<Annotation>, env : GlobalEnv) : IR.Program<Annotation> {
-<<<<<<< HEAD
     generateVtable(p, env);
-=======
     nameCounters = new Map();
->>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
     var blocks : Array<IR.BasicBlock<Annotation>> = [];
     var firstBlock : IR.BasicBlock<Annotation> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     p.funs.forEach(f => env.functionNames.set(f.name, closureName(f.name, [])));
     var [closures, cinits, cstmts] = lowerFunDefs(p.funs, env);
-    [...closures, ...p.classes].forEach(cls => {
-      env.classIndices.set(cls.name, env.vtableMethods.length)
-      env.vtableMethods.push(...cls.methods
-        .filter(method => !method.name.includes("__init__"))
-        .map((method): [string, number] => [createMethodName(cls.name, method.name), method.parameters.length]));
+    closures.forEach(cls => {
+      env.classIndices.set(cls.name, [env.vtable.length, env.vtable.length + 1])
+      env.vtable.push(...cls.methods
+        .map((method): [string, number] => [`$${createMethodName(cls.name, method.name)}`, method.parameters.length]));
     });
 
     var classes = lowerClasses([...closures, ...p.classes], env);
@@ -134,7 +130,8 @@ function lowerFunDef(
           body: [assignStmt, ...defs.map(x => x[2]), ...f.body]
         }
       ],
-      typeParams: []
+      typeParams: [],
+      super: []
     }, ...defs.map(x => x[0]).flat()],
     varInit,
     assignStmt
@@ -240,14 +237,9 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
       return [[], []];
 
     case "field-assign": {
-<<<<<<< HEAD
-      var [oinits, ostmts, oval] = flattenExprToVal(s.obj, env);
-      var [ninits, nstmts, nval] = flattenExprToVal(s.value, env);
-
-=======
       var [oinits, ostmts, oval, oclasses] = flattenExprToVal(s.obj, blocks, env);
       var [ninits, nstmts, nval, nclasses] = flattenExprToVal(s.value, blocks, env);
->>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
+
       if(s.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
       const classdata = env.classes.get(s.obj.a.type.name);
       const offset : IR.Value<Annotation> = { tag: "wasmint", value: getClassFieldOffet(s.obj.a.type.name, s.field, env) };
@@ -409,6 +401,8 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
           ...e,
           tag: "call_indirect",
           fn: { tag: "load", start: fval, offset: zeroOffset },
+          methodOffset: { tag: "wasmint", value: 1 }, // Hack: assuming function's apply is always the 2nd method. Ideally closure classes should be present in the env classes.
+          name: makeWasmFunType(e.arguments.length + 1), // +1 for self arguement
           arguments: [fval, ...callvals]
         },
         [...fclasses, ...callclasses]
@@ -426,9 +420,9 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       }
       const className = getMethodClassName(objTyp.type.name, e.method, env);
       const zeroOffset: IR.Value<Annotation> = { tag: "wasmint", value: 0 };
-      const methodOffset : IR.Value<Annotation> =  { tag: "num", value: BigInt(env.classes.get(className)[1].get(e.method)) }
+      const methodOffset : IR.Value<Annotation> =  { tag: "wasmint", value: env.classes.get(className)[1].get(e.method) }
       const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, objval);
-      const callMethod : IR.Expr<Annotation> = { tag: "call_indirect", fn: { tag: "load", start: objval, offset: zeroOffset}, arguments: [objval, ...argvals], name: `${className}$${e.method}`, methodOffset: methodOffset }
+      const callMethod : IR.Expr<Annotation> = { tag: "call_indirect", fn: { tag: "load", start: objval, offset: zeroOffset}, arguments: [objval, ...argvals], name: makeWasmFunType(e.arguments.length + 1), methodOffset: methodOffset } // plus 1 for self arguement
 
       return [
         [...objinits, ...arginits],
@@ -452,19 +446,15 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
     case "construct":
       const classdata = env.classes.get(e.name);
       const newName = generateName("newObj");
-<<<<<<< HEAD
       var fields = [...classdata[0].entries()];
       var superClass = classdata[2];
 
-      while(superClass[0] !== "object") {
+      while(superClass.length !== 0 && superClass[0] !== "object") {
         const superClassFields = [...env.classes.get(superClass[0])[0].entries()]
         superClass = [...env.classes.get(superClass[0])[2]]
         fields = [...superClassFields, ...fields]
       }
       
-=======
-      const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1} };
->>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
       const assigns : IR.Stmt<Annotation>[] = fields.map(f => {
 
         const [_, [index, value]] = f;
@@ -477,30 +467,25 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       });
 
       const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1 } }; // + 1 to store class method index in vtable
+      const methodOffset = env.classes.get(e.name)[1].has("__init__") ? env.classes.get(e.name)[1].get("__init__") : 0; // TODO: Hack: Closures classes should have details in the env
       const callCons : IR.Expr<Annotation> = { 
         tag: "call_indirect", 
-        fn: { tag: "value", value : { tag: "wasmint", value: env.classIndexes.get(e.name)[0] }}, 
+        fn: { tag: "value", value : { tag: "wasmint", value: env.classIndices.get(e.name)[0] }}, 
         arguments: [{ a: e.a, tag: "id", name: newName }], 
-        name: `${e.name}$__init__`, 
-        methodOffset: { tag: "num", value: BigInt(env.classes.get(e.name)[1].get("__init__")) }
+        name: makeWasmFunType(1), 
+        methodOffset: { tag: "wasmint", value: methodOffset }
       };
 
       return [
         [ { name: newName, type: e.a.type, value: { tag: "none" } }],
-<<<<<<< HEAD
         [ { tag: "assign", name: newName, value: alloc }, 
-          {tag: "store",  start: { tag: "id", name: newName }, offset: { tag: "wasmint", value: 0 }, value: {tag: "num", value: BigInt(env.classIndexes.get(e.name)[0])}}, // store class method offset from vtable
+          {tag: "store",  
+          start: { tag: "id", name: newName }, 
+          offset: { tag: "wasmint", value: 0 }, 
+          value: {tag: "wasmint", value: env.classIndices.get(e.name)[0]}
+        }, // store class method offset from vtable
           ...assigns,
           {tag: "expr", expr : callCons},
-=======
-        [ { tag: "assign", name: newName, value: alloc }, { // store class offset
-            tag: "store",
-            start: { tag: "id", name: newName },
-            offset: { tag: "wasmint", value: 0 },
-            value: { tag: "wasmint", value: env.classIndices.get(e.name) }
-          }, ...assigns,
-          { tag: "expr", expr: { tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
->>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } },
         []
@@ -544,12 +529,11 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
 
       const classFields = new Map();
       classDef.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
-      env.classes.set(classDef.name, classFields);
-      env.classIndices.set(classDef.name, env.vtableMethods.length);
-      env.vtableMethods.push(...classDef.methods
-        .filter(method => !method.name.includes("__init__"))
+      env.classes.set(classDef.name, [new Map(classFields), new Map(), [], 0]);
+      env.classIndices.set(classDef.name, [env.vtable.length, env.vtable.length + 1]);
+      env.vtable.push(...classDef.methods
         .map((method): [string, number] => [
-          createMethodName(classDef.name, method.name), method.parameters.length
+          `$${createMethodName(classDef.name, method.name)}`, method.parameters.length
         ])
       );
       const irClass = lowerClass(classDef, env);
@@ -560,7 +544,6 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
   }
 }
 
-<<<<<<< HEAD
 function getClassFieldOffet(className: string, fieldName: string, env: GlobalEnv) : number {
   while (className !== "object") {
     const classdata = env.classes.get(className);
@@ -580,9 +563,6 @@ function getMethodClassName(className: string, methodName: string, env: GlobalEn
   }
 }
 
-function flattenExprToVal(e : AST.Expr<Annotation>, env : GlobalEnv) : [Array<IR.VarInit<Annotation>>, Array<IR.Stmt<Annotation>>, IR.Value<Annotation>] {
-  var [binits, bstmts, bexpr] = flattenExprToExpr(e, env);
-=======
 function lambdaToClass(lambda: AST.Lambda<Annotation>) : [AST.Class<Annotation>, AST.Expr<Annotation>] {
   var lambdaClassName = generateName("lambda");
   var params = lambda.params.map((param, i) => ({
@@ -614,6 +594,7 @@ function lambdaToClass(lambda: AST.Lambda<Annotation>) : [AST.Class<Annotation>,
         }
       ],
       typeParams: [],
+      super: []
     },
     { a: lambda.a, tag: "construct", name: lambdaClassName }
   ];
@@ -621,7 +602,6 @@ function lambdaToClass(lambda: AST.Lambda<Annotation>) : [AST.Class<Annotation>,
 
 function flattenExprToVal(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock<Annotation>>, env : GlobalEnv) : [Array<IR.VarInit<Annotation>>, Array<IR.Stmt<Annotation>>, IR.Value<Annotation>, Array<IR.Class<Annotation>>] {
   var [binits, bstmts, bexpr, bclasses] = flattenExprToExpr(e, blocks, env);
->>>>>>> 1a1f3ec6f0d4321cd67e9d8b01992e1cf5e810f4
   if(bexpr.tag === "value") {
     return [binits, bstmts, bexpr.value, bclasses];
   }
