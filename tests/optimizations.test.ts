@@ -1151,14 +1151,34 @@ print(d)
         `
         a:int = 3
 b:int = 9
+c:int = 1
 if False:
     a = 4
 else:
     a = 5
 b = a
 print(b)
+c = b
         `,
         { print: ["5"], isIrDifferent: true }
+    );
+
+    assertOptimize(
+        "sanity-if-copy-prop", 
+        `
+        a:int = 3
+b:int = 9
+c:int = 1
+print(1)
+if a > 1:
+    a = 4
+else:
+    a = 5
+b = a
+print(b)
+c = b
+        `,
+        { print: ["1", "4"], isIrDifferent: true }
     );
 
 });

@@ -3,7 +3,7 @@ import { run, Config, augmentEnv } from "./runner";
 import { GlobalEnv } from "./compiler";
 import { tc, defaultTypeEnv, GlobalTypeEnv } from "./type-check";
 import { Program } from "./ir";
-import { optimizeProgram } from "./optimization";
+import { optimizeProgram } from "./optimizations/optimization";
 import { Value, Type, Annotation } from "./ast";
 import { parse } from "./parser";
 import { lowerProgram } from "./lower";

@@ -11,7 +11,7 @@ import { Annotation, FunDef, Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS, makeWasmFunType } from "./utils";
 import { closureName, lowerProgram } from './lower';
 import { monomorphizeProgram } from './monomorphizer';
-import { optimizeProgram } from './optimization';
+import { optimizeProgram } from './optimizations/optimization';
 import { wasmErrorImports } from './errors';
 
 export type Config = {
