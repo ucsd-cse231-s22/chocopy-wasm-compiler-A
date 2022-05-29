@@ -10,7 +10,6 @@ import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
-import { repl } from './webstart';
 
 export type Config = {
   importObject: any;
@@ -47,6 +46,8 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
+  var classesList = new Array<string>();
+  classesList = classesList.concat( Array.from(newClasses.keys()));
 
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
@@ -56,13 +57,16 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
     const classFields = new Map();
     cls.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
     newClasses.set(cls.name, classFields);
+    classesList.push(cls.name);
   });
+  classesList.sort();
   return {
     globals: newGlobals,
     classes: newClasses,
     locals: env.locals,
     labels: env.labels,
     offset: newOffset,
+    classesList:classesList
   }
 }
 
@@ -71,10 +75,8 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
-  repl.currentTypeEnv = tenv
   
   const globalEnv = augmentEnv(config.env, tprogram);
-  repl.currentEnv = globalEnv
 
   const irprogram = lowerProgram(tprogram, globalEnv);
   const progTyp = tprogram.a;

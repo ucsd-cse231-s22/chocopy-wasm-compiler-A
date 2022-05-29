@@ -3,7 +3,6 @@ import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
-export var CLASSNAME:Array<string> =[];
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends Error {
    __proto__: Error
@@ -19,7 +18,8 @@ export class TypeCheckError extends Error {
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>,
+  classesNumber: Array<string>,
 }
 
 export type LocalTypeEnv = {
@@ -40,6 +40,7 @@ export const defaultTypeEnv = {
   globals: new Map(),
   functions: defaultGlobalFunctions,
   classes: new Map(),
+  classesNumber:new Array<string>()
 };
 
 export function emptyGlobalTypeEnv() : GlobalTypeEnv {
@@ -47,7 +48,7 @@ export function emptyGlobalTypeEnv() : GlobalTypeEnv {
     globals: new Map(),
     functions: new Map(),
     classes: new Map(),
-
+    classesNumber:[]
   };
 }
 
@@ -102,8 +103,9 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
     cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
     newClasses.set(cls.name, [fields, methods]);
   });
-  CLASSNAME =  Array.from(newClasses.keys());
-  return { globals: newGlobs, functions: newFuns, classes: newClasses};
+  var classnames =  Array.from(newClasses.keys());
+  classnames.sort();
+  return { globals: newGlobs, functions: newFuns, classes: newClasses,classesNumber: classnames};
 }
 
 export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type>, GlobalTypeEnv] {
@@ -128,6 +130,7 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
   for (let name of locals.vars.keys()) {
     newEnv.globals.set(name, locals.vars.get(name));
   }
+  
   const aprogram = {a: lastTyp, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody};
   return [aprogram, newEnv];
 }

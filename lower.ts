@@ -3,7 +3,6 @@ import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
 import {CLASS, NONE, NUM} from './utils'
-import { CLASSNAME } from './type-check';
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
   if(nameCounters.has(base)) {
@@ -23,6 +22,8 @@ function generateName(base : string) : string {
 // }
 
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
+  console.log("!!!!!!")
+  console.log(env.classesList)
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
@@ -218,7 +219,8 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       if(e.name === "print" && e.arg.a.tag === "class"){
         //find the index of the object
         
-        const id = CLASSNAME.indexOf(e.arg.a.name);
+        const id = env.classesList.indexOf(e.arg.a.name);
+     
         const b21 = {a:e.a, name:"print_object", tag:"builtin2",left:{a:NUM, literal:{ tag: "num", value: id }},right:e.arg}
       
         const b2:AST.Expr<Type> = {

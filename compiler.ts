@@ -8,7 +8,8 @@ export type GlobalEnv = {
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
-  ordered_class: Array<string>;
+  classesList: Array<string> ; 
+
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -17,7 +18,7 @@ export const emptyEnv : GlobalEnv = {
   locals: new Set(),
   labels: [],
   offset: 0,
-  ordered_class: []
+  classesList: []
 
 };
 

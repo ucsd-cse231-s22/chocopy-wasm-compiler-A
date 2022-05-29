@@ -29,6 +29,7 @@ export class BasicREPL {
       locals: new Set(),
       labels: [],
       offset: 1,
+      classesList:[]
     };
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";
@@ -54,7 +55,8 @@ export class BasicREPL {
   tc(source: string): Type {
     const config: Config = { importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions };
     const parsed = parse(source);
-    const [result, _] = tc(this.currentTypeEnv, parsed);
+    const [result, globalTypeEnv] = tc(this.currentTypeEnv, parsed);
+    this.currentTypeEnv = globalTypeEnv;
     return result.a;
   }
 }

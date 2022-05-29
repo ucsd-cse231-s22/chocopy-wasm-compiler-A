@@ -1,6 +1,6 @@
 import { BasicREPL } from './repl';
 import { Type, Value, Class } from './ast';
-import { CLASSNAME, defaultTypeEnv } from './type-check';
+import {  defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import CodeMirror from 'codemirror';
 import "codemirror/addon/edit/closebrackets";
@@ -14,27 +14,9 @@ import "./style.scss";
 import { autocompleteHint, populateAutoCompleteSrc } from "./autocomplete";
 import { default_keywords, default_functions } from "./const";
 import { type } from 'os';
-const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
-let memoryModule:WebAssembly.WebAssemblyInstantiatedSource;
-const importObject = {
-  imports: {
-    assert_not_none: (arg: any) => assert_not_none(arg),
-    print_num: (arg: number) => print(NUM, arg),
-    print_bool: (arg: number) => print(BOOL, arg),
-    print_none: (arg: number) => print(NONE, arg),
-    print_object:print_object,
-    abs: Math.abs,
-    min: Math.min,
-    max: Math.max,
-    pow: Math.pow
-  },
-  libmemory: 0 as any,
-  memory_values: memory,
-  js: { memory: memory }
-};
-export var repl = new BasicREPL(importObject);
 
-function stringify(typ: Type, arg: any): string {
+
+function stringify(typ: Type, arg: any, repl: BasicREPL): string {
   switch (typ.tag) {
     case "number":
       return (arg as number).toString();
@@ -43,15 +25,15 @@ function stringify(typ: Type, arg: any): string {
     case "none":
       return "None";
     case "class":
-      return stringify_object( arg, typ.name, 0, new Map(), 1).join("\n");
+      return stringify_object( arg, typ.name, 0, new Map(), 1,repl).join("\n");
   }
 }
 
-export function stringify_object( pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number): Array<string> {
+export function stringify_object( pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number,repl: BasicREPL): Array<string> {
 
   var fields_offset_ = repl.currentEnv.classes.get(classname);
   var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
-  var mem = new Uint32Array(memory.buffer);
+  var mem = new Uint32Array(repl.importObject.js.memory.buffer);
   var display: Array<string> = [];
   // A[1][0] refers to the offset value of field A, sorted by the offset value to ensure the iteration has a consistent order. 
   var fields_offset = Array.from(fields_offset_.entries());
@@ -75,11 +57,11 @@ export function stringify_object( pointer: number, classname: string, level: num
         display.push(`${space.repeat(level + 2)}${thisfield[0]} : none `);
       } else {
         display.push(`${space.repeat(level + 2)}${thisfield[0]}:{`)
-        display.push(...stringify_object(mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5, met_object, object_number + 1));
+        display.push(...stringify_object(mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5, met_object, object_number + 1,repl));
         display.push(`${space.repeat(level + 2)}}`)
       }
     } else {
-      display.push(`${space.repeat(level + 2)}${thisfield[0]} : ${stringify(thisfield_type, mem[pointer / 4 + thisfield[1][0]])} `);
+      display.push(`${space.repeat(level + 2)}${thisfield[0]} : ${stringify(thisfield_type, mem[pointer / 4 + thisfield[1][0]],repl)} `);
     }
   }
   )
@@ -88,19 +70,19 @@ export function stringify_object( pointer: number, classname: string, level: num
   return display;
 }
 
-function print(typ: Type, arg: number): any {
+function print(typ: Type, arg: number,repl: BasicREPL): any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
-  elt.innerText = stringify(typ, arg);
+  elt.innerText = stringify(typ, arg,repl);
   return arg;
 }
-function print_object(id: number, arg: number): any {
+function print_object(id: number, arg: number,repl: BasicREPL): any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
-  const typ = CLASSNAME[id]
-  elt.innerText = stringify(CLASS(typ), arg);
+  var typ = repl.currentTypeEnv.classesNumber[id];
+  elt.innerText = stringify(CLASS(typ), arg,repl);
   return arg;
 }
 function assert_not_none(arg: any): any {
@@ -173,15 +155,16 @@ c2.next = c3
 // setup codeMirror instance and events
 
 function webStart() {
+  const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
 
   document.addEventListener("DOMContentLoaded", async function () {
-  memoryModule  = await fetch('memory.wasm').then(response =>
+    var codeContent: string | ArrayBuffer
+    const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
+    const memoryModule = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()
     ).then(bytes =>
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
-    importObject.libmemory=memoryModule.instance.exports;
-
     // https://github.com/mdn/webassembly-examples/issues/5
     var codeContent: string | ArrayBuffer
     // const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
@@ -255,7 +238,8 @@ function webStart() {
                 pow: Math.pow,
               },
             };
-            
+             repl = new BasicREPL(importObject);
+
             const source = document.getElementById("user-code") as HTMLTextAreaElement;
             repl.run(source.value).then((r) => {
               [defList, classMethodList] = populateAutoCompleteSrc(repl);
@@ -273,10 +257,26 @@ function webStart() {
       return editorBox;
     }
     const editorBox = initCodeMirror();
+    var importObject = {
+      imports: {
+        assert_not_none: (arg: any) => assert_not_none(arg),
+        print_num: (arg: number) => print(NUM, arg,repl),
+        print_bool: (arg: number) => print(BOOL, arg,repl),
+        print_none: (arg: number) => print(NONE, arg,repl),
+        print_object:(c:number,addr:number) =>print_object(c,addr,repl),
 
+        abs: Math.abs,
+        min: Math.min,
+        max: Math.max,
+        pow: Math.pow
+      },
+      libmemory: memoryModule.instance.exports,
+      memory_values: memory,
+      js: { memory: memory }
+    };
+    var repl = new BasicREPL(importObject);
+    
 
-
-     repl = new BasicREPL(importObject);
 
     function renderResult(result: Value): void {
       if (result === undefined) { console.log("skip"); return; }
@@ -292,7 +292,7 @@ function webStart() {
           break;
         case "object":
           // elt.innerHTML = `${result.name} object at ${result.address}`
-          elt.innerHTML = stringify_object( result.address, result.name, 0, new Map(), 1).join("\n");
+          elt.innerHTML = stringify_object( result.address, result.name, 0, new Map(), 1,repl).join("\n");
           break
         default: throw new Error(`Could not render value: ${result}`);
       }
