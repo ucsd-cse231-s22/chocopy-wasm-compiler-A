@@ -218,7 +218,6 @@ describe('e2e tests to check generics', () => {
 
     assertPrint('Generic Box with lambda map - 1', prog7, ["0", "2", "10", "0"]);
 
-
     const prog8 = `
     T = TypeVar('T')
 
@@ -226,7 +225,8 @@ describe('e2e tests to check generics', () => {
       a: T = __ZERO__
 
     def genericFunc(a: int, x: T, y: Box[T]) -> T :
-      return x
+      y.a = x
+      return y.a
 
     b1 : Box[int] = None  
     b1 = Box()
@@ -234,5 +234,27 @@ describe('e2e tests to check generics', () => {
     print(genericFunc(2, 3, b1))
     print(b1.a)
     `
-    assertPrint('Generic function', prog8, ["0", "3", "0"]);
+    assertPrint('Generic function', prog8, ["0", "3", "3"]);
+
+    const prog9 = `
+    T = TypeVar('T')
+
+    class Box(Generic[T]):
+      a: T = __ZERO__
+      
+      def callGenFunc(self: Box[T]) -> T:
+        b2 : Box[int] = None
+        b2 = Box()
+        return genericFunc(3, 4, b2)
+
+    def genericFunc(a: int, x: T, y: Box[T]) -> T :
+      y.a = x
+      return y.a
+
+    b1 : Box[int] = None  
+    b1 = Box()
+    print(b1.callGenFunc())
+    print(b1.a)
+    `
+    assertPrint('Generic function used inside Generic class', prog9, ["4", "0"]);
 })

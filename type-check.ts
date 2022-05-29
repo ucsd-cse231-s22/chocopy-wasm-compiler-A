@@ -304,35 +304,55 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
   return { globals: newGlobs, functions: newFuns, classes: newClasses, typevars: newTypevars };
 }
 
-
-
 export function collectTypeVarsInGenericFuncDef(env: GlobalTypeEnv, type: Type) : string[] {
-    if (type.tag === "class" && env.typevars.has(type.name)) {
-      return [type.name];
-    }
+  if (type.tag === "class" && env.typevars.has(type.name)) {
+    return [type.name];
+  }
 
-    if (type.tag === "callable") {
-      // Letting return be as is, it'll throw an error if type var is not one from the params
-      type.params.map(p => collectTypeVarsInGenericFuncDef(env, p)).flat();
-    }
+  if (type.tag === "callable") {
+    // Letting return be as is, it'll throw an error if type var is not one from the params
+    type.params.map(p => collectTypeVarsInGenericFuncDef(env, p)).flat();
+  }
 
-    return [];
+  return [];
 }
 
+export function recResolveType(env: GlobalTypeEnv, typ: Type) : Type {
+  if (typ.tag === "class" && env.typevars.has(typ.name)) {
+    return { tag: "typevar", name: typ.name };
+  }
+
+  if (typ.tag === "class" && typ.params.length > 0) {
+    const tParams = typ.params.map(p => recResolveType(env, p));
+    return { ...typ, params: tParams }
+  }
+
+  if (typ.tag === "callable") {
+    const tParams = typ.params.map(p => recResolveType(env, p));
+    const tRet = recResolveType(env, typ.ret);
+    return { ...typ, params: tParams, ret: tRet };
+  }
+
+  return typ;
+}
+
+export function resolveFuncGenericTypes(env: GlobalTypeEnv) {
+  env.globals.forEach((v, k) => {
+    if (v.tag === "callable") {
+      const tParams = v.params.map(p => recResolveType(env, p));
+      const tRet = recResolveType(env, v.ret);
+      env.globals.set(k, { ...v, params: tParams, ret: tRet });
+    }
+  })
+}
+ 
 export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<Annotation>, GlobalTypeEnv] {
   const SRC = program.a.src;
   const locals = emptyLocalTypeEnv();
   const newEnv = augmentTEnv(env, program);
   const tTypeVars = program.typeVarInits.map(tv => tcTypeVars(newEnv, tv, SRC));
   const tInits = program.inits.map(init => tcInit(newEnv, init, SRC));
-  const tDefs = program.funs.map(fun => {
-    const typeVars = fun.parameters.map(p => collectTypeVarsInGenericFuncDef(newEnv, p.type)).flat();
-    if (typeVars.length > 0) {
-      return tcGenericDef(newEnv, fun, typeVars, new Map(), SRC);
-    } else {
-      return tcDef(newEnv, fun, new Map(), SRC);
-    }
-  });
+  resolveFuncGenericTypes(newEnv);
   const tClasses = program.classes.map(cls => {
     if(cls.typeParams.length === 0) {
       return tcClass(newEnv, cls, SRC);
@@ -341,7 +361,15 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
       return tcGenericClass(newEnv, rCls, SRC);
     }
   });
-
+  const tDefs = program.funs.map(fun => {
+    const typeVars = fun.parameters.map(p => collectTypeVarsInGenericFuncDef(newEnv, p.type)).flat();
+    if (typeVars.length > 0) {
+      return tcGenericDef(newEnv, fun, typeVars, new Map(), SRC);
+    } else {
+      return tcDef(newEnv, fun, new Map(), SRC);
+    }
+  });
+  
   // program.inits.forEach(init => env.globals.set(init.name, tcInit(init)));
   // program.funs.forEach(fun => env.functions.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
   // program.funs.forEach(fun => tcDef(env, fun));
@@ -876,6 +904,7 @@ export function doGenericFuncParamTypeMatching(tenv : Map<string, Type>, pType: 
 export function checkAssignabilityOfFuncCallLocalParams(env: GlobalTypeEnv, tenv : Map<string, Type>, pType : Type, argType : Type) : boolean {
   if (pType.tag === "typevar" || (pType.tag === "class" && pType.params.length > 0) || pType.tag === "callable") {
     doGenericFuncParamTypeMatching(tenv, pType, argType);
+    
     const sType = specializeType(tenv, pType);
     return isAssignable(env, argType, sType);
   }

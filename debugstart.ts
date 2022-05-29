@@ -10,15 +10,19 @@ async function debug() {
 
   class Box(Generic[T]):
     a: T = __ZERO__
+    
+    def callGenFunc(self: Box[T]):
+      b2 : Box[int] = None
+      b2 = Box()
+      print(genericFunc(3, 4, b2))
 
-  def genericFunc(b: int, x: T, y: Box[T]) -> T :
-    return x
+  def genericFunc(a: int, x: T, y: Box[T]) -> T :
+    y.a = x
+    return y.a
 
   b1 : Box[int] = None  
   b1 = Box()
-  print(b1.a)
-  print(genericFunc(2, 3, b1))
-  print(b1.a)
+  b1.callGenFunc()
   `
   // var source = `
   // class C(object):
