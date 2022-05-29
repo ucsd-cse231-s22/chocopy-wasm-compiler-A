@@ -1,17 +1,3 @@
-import * as mocha from "mocha";
-import { expect } from "chai";
-import { parser } from "@lezer/python";
-import {
-  traverseExpr,
-  traverseStmt,
-  traverse,
-  parse,
-  traverseType,
-} from "../parser";
-import { emptyGlobalTypeEnv, tc } from "../type-check";
-import { assert } from "console";
-import { importObject } from "./import-object.test";
-import {run, typeCheck} from "./helpers.test";
 import { assertPrint, assertTC, assertTCFail } from "./asserts.test";
 import { NONE } from "../utils";
 
@@ -136,3 +122,21 @@ def a():
   b()
 a()
 `, ['14']);
+
+assertPrint(
+  "Fixed-point combinator",
+  `
+fact: Callable[[int], int] = None
+def fix(f: Callable[[Callable[[int], int]], Callable[[int], int]]) -> Callable[[int], int]:
+  def f1(x: int) -> int:
+    return f(fix(f))(x)
+  return f1
+def fact_to_fix(rec: Callable[[int], int]) -> Callable[[int], int]:
+  def factt(x: int) -> int:
+    return 1 if x == 0 else rec(x - 1) * x
+  return factt
+fact = fix(fact_to_fix)
+print(fact(5))
+`,
+  ["120"]
+);

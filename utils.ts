@@ -198,8 +198,16 @@ export function defaultLiteral(typ: Type): Literal<Annotation> {
     case "bool":
       return { tag: "bool", value: false };
     case "class":
-      return { tag:"none" }
+      return { tag: "none" }
     case "none":
-      return { tag:"none" }
+      return { tag: "none" }
+    case "either":
+      const leftDefault =  defaultLiteral(typ.left);
+      const rightDefault =  defaultLiteral(typ.right);
+      if (leftDefault !== rightDefault) {
+        throw new Error("It's cursed");
+      }
+    case "callable":
+      return {tag: "none" }
   }
 }

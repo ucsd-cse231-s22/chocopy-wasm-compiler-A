@@ -110,9 +110,6 @@ function lowerFunDef(
     ancestor.children.forEach(child => {
       scopedVars.set(child.name, [ancestorNames.slice(0, i), true, closureName(child.name, childAncestors)]);
     })
-
-    // recursion
-    scopedVars.set(ancestor.name, [ancestorNames.slice(0, i), true, ancestorName]);
   })
   // setting by closure name
   env.nonlocalMap.set(name, scopedVars);
