@@ -483,6 +483,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         start: oval,
         offset: { tag: "wasmint", value: offset }}, oclasses];
     }
+
     case "construct":
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
@@ -511,6 +512,8 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } },
         []
       ];
+    case "list-comp":
+      return flattenListComp(e, env, blocks);
     case "id":
       return [[], [], {tag: "value", value: { ...e }}, []];
     case "literal":
