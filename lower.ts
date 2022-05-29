@@ -148,7 +148,12 @@ function lowerClass(cls: AST.Class<Annotation>, env : GlobalEnv) : Array<IR.Clas
 }
 
 function literalToVal(lit: AST.Literal<Annotation>) : IR.Value<Annotation> {
-    return lit;
+  switch(lit.tag) {
+    case "num":
+    case "bool":
+    case "none":
+        return lit
+  }
 }
 
 function flattenStmts(s : Array<AST.Stmt<Annotation>>, blocks: Array<IR.BasicBlock<Annotation>>, env : GlobalEnv) : [Array<IR.VarInit<Annotation>>, Array<IR.Class<Annotation>>] {
