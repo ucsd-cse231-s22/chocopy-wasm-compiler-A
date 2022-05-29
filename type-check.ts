@@ -238,7 +238,7 @@ export function specializeMethodType(env: GlobalTypeEnv, objTy: Type, [argTypes,
 
   if(objTy.params.length === 0) {
     // classes without type parameters
-    // do not need and specialization.
+    // do not need any specialization.
     return [argTypes, retType];
   }
 
@@ -304,13 +304,35 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
   return { globals: newGlobs, functions: newFuns, classes: newClasses, typevars: newTypevars };
 }
 
+
+
+export function collectTypeVarsInGenericFuncDef(env: GlobalTypeEnv, type: Type) : string[] {
+    if (type.tag === "class" && env.typevars.has(type.name)) {
+      return [type.name];
+    }
+
+    if (type.tag === "callable") {
+      // Letting return be as is, it'll throw an error if type var is not one from the params
+      type.params.map(p => collectTypeVarsInGenericFuncDef(env, p)).flat();
+    }
+
+    return [];
+}
+
 export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<Annotation>, GlobalTypeEnv] {
   const SRC = program.a.src;
   const locals = emptyLocalTypeEnv();
   const newEnv = augmentTEnv(env, program);
   const tTypeVars = program.typeVarInits.map(tv => tcTypeVars(newEnv, tv, SRC));
   const tInits = program.inits.map(init => tcInit(newEnv, init, SRC));
-  const tDefs = program.funs.map(fun => tcDef(newEnv, fun, new Map(), SRC));
+  const tDefs = program.funs.map(fun => {
+    const typeVars = fun.parameters.map(p => collectTypeVarsInGenericFuncDef(newEnv, p.type)).flat();
+    if (typeVars.length > 0) {
+      return tcGenericDef(newEnv, fun, typeVars, new Map(), SRC);
+    } else {
+      return tcDef(newEnv, fun, new Map(), SRC);
+    }
+  });
   const tClasses = program.classes.map(cls => {
     if(cls.typeParams.length === 0) {
       return tcClass(newEnv, cls, SRC);
@@ -359,6 +381,12 @@ export function tcInit(env: GlobalTypeEnv, init: VarInit<Annotation>, SRC: strin
   } else {
     throw new TypeCheckError(SRC, `Expected type ${JSON.stringify(init.type.tag)}; got type ${JSON.stringify(valTyp.tag)}`, init.value.a);
   }
+}
+
+export function tcGenericDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, typeVars: string[], nonlocalEnv: NonlocalTypeEnv, SRC: string) : FunDef<Annotation> {
+  let rDef = resolveFunDefTypeParams(typeVars, fun);
+  env.globals.set(rDef.name, CALLABLE(rDef.parameters.map(p => p.type), rDef.ret));
+  return tcDef(env, rDef, nonlocalEnv, SRC);
 }
 
 export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv: NonlocalTypeEnv, SRC: string) : FunDef<Annotation> {
@@ -752,9 +780,10 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
           throw new TypeCheckError("Cannot call non-callable expression");
         }
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
+        const tenv : Map<string, Type> = new Map();
         
-        if(newFn.a.type.params.length === expr.arguments.length &&
-          newFn.a.type.params.every((param, i) => isAssignable(env, tArgs[i].a.type, param))) {
+        if (newFn.a.type.params.length === expr.arguments.length &&
+          newFn.a.type.params.every((param, i) => checkAssignabilityOfFuncCallLocalParams(env, tenv, param, tArgs[i].a.type))) {
           return {...expr, a: {...expr.a, type: newFn.a.type.ret}, arguments: tArgs, fn: newFn};
         } else {
           const tArgsStr = tArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
@@ -818,6 +847,40 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       return {...expr, a: tThn.a, cond: tCond, thn: tThn, els: tEls};
     default: throw new TypeCheckError(SRC, `unimplemented type checking for expr: ${expr}`, expr.a);
   }
+}
+
+export function doGenericFuncParamTypeMatching(tenv : Map<string, Type>, pType: Type, argType: Type) {
+  if (pType.tag === "typevar") {
+    if (!tenv.has(pType.name)) {
+      tenv.set(pType.name, argType);
+    }
+  }
+
+  if (pType.tag === "class" && pType.params.length > 0) {
+    if (argType.tag !== "class" || argType.params.length !== pType.params.length) {
+      // Error here, essentially if Box[T] is expected and int/bool/class with no incorrect # of params is passed?
+      throw new TypeCheckError();
+    }
+    pType.params.forEach((p, i) => doGenericFuncParamTypeMatching(tenv, p, argType.params[i]));
+  }
+
+  if (pType.tag === "callable") {
+    if (argType.tag !== "callable") {
+      throw new TypeCheckError();
+    }
+    pType.params.forEach((p, i) => doGenericFuncParamTypeMatching(tenv, p, argType.params[i]));
+    doGenericFuncParamTypeMatching(tenv, pType.ret, argType.ret);
+  }
+}
+
+export function checkAssignabilityOfFuncCallLocalParams(env: GlobalTypeEnv, tenv : Map<string, Type>, pType : Type, argType : Type) : boolean {
+  if (pType.tag === "typevar" || (pType.tag === "class" && pType.params.length > 0) || pType.tag === "callable") {
+    doGenericFuncParamTypeMatching(tenv, pType, argType);
+    const sType = specializeType(tenv, pType);
+    return isAssignable(env, argType, sType);
+  }
+  
+  return isAssignable(env, argType, pType);
 }
 
 export function tcLiteral(literal : Literal<Annotation>) {

@@ -217,4 +217,22 @@ describe('e2e tests to check generics', () => {
     `
 
     assertPrint('Generic Box with lambda map - 1', prog7, ["0", "2", "10", "0"]);
+
+
+    const prog8 = `
+    T = TypeVar('T')
+
+    class Box(Generic[T]):
+      a: T = __ZERO__
+
+    def genericFunc(a: int, x: T, y: Box[T]) -> T :
+      return x
+
+    b1 : Box[int] = None  
+    b1 = Box()
+    print(b1.a)
+    print(genericFunc(2, 3, b1))
+    print(b1.a)
+    `
+    assertPrint('Generic function', prog8, ["0", "3", "0"]);
 })

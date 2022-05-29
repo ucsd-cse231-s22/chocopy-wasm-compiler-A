@@ -6,12 +6,20 @@ import { addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-class C(object):
-  def f(self: C) -> int:
-    if True:
-      return 0
-    else:
-      return`
+  T = TypeVar('T')
+
+  class Box(Generic[T]):
+    a: T = __ZERO__
+
+  def genericFunc(b: int, x: T, y: Box[T]) -> T :
+    return x
+
+  b1 : Box[int] = None  
+  b1 = Box()
+  print(b1.a)
+  print(genericFunc(2, 3, b1))
+  print(b1.a)
+  `
   // var source = `
   // class C(object):
   //   def __init__(self:C, other:D):
