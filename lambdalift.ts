@@ -509,7 +509,7 @@ export function generateClassDef(varname: string, classname: string, vartype: Ty
         case "number":
             fields.push({ a: vartype, name: "value", type: vartype, value: { tag: "num", value: 0}})
             methods.push({a:{tag:"none"}, body: [], funs: [], inits: [], name: "__init__", parameters: [{name: "self", type: {tag: "class", name: classname}}], ret: {tag: "none"}});
-            return { a: NONE, name: classname, fields: fields, methods: methods};
+            return { a: NONE, name: classname, fields: fields, methods: methods, superclass: "object"};
         default:
             throw new Error("Not Supported!");
     }
