@@ -31,7 +31,7 @@ print(aString1+aString2)
 assertPrint("string-length",
 `
 print(len("Hello"))
-`, [5]))
+`, ["5"])
 ```
 
 4. 
@@ -46,11 +46,17 @@ print(aString[1])
 
 5. 
 
+**Note:** We changed this test case. Because based on our design, the previous test case is meaningless. 
 ```python
-assertTC("list-basic", 
+assertPrint("list-basic", 
 `
 a : [int] = None
-a = [1, 2, 3, 4, 5]`, LIST({tag: "number"}));
+a = [1, 2, 3, 4, 5]
+print(a[0])
+print(a[1])
+print(a[2])
+print(a[3])
+print(a[4])`, [`1`, `2`, `3`, `4`, `5`]);
 ```
 
 6. 
@@ -125,38 +131,34 @@ print(f())`, ["4"]
 
 In `ast.ts`, we need to add string type to `Type`.
 ```typescript
-{tag: "str", name: string}
+{tag: "str"}
 ```
 
 In `ir.ts`, we need to add string type to `Value<A>`.
 ```typescript
-{ a?: A, tag: "str", name: string }
+{ a?: A, tag: "str", value: string }
 ```
 
 
 ### Lists
 
-In `ast.ts`, we need to add list and empty to `Type`.
+~~In `ast.ts`, we need to add list to `Type`.
 ```typescript
-{tag: "list", type: Type}
-{tag: "empty"}
+{tag: "list", listsize: number, elementtype: Type}
 ```
 
-We need to add list to `Expr<A>`.
+We need to add list-obj, index to `Expr<A>`.
 ```typescript
-{ a?: A, tag: "list", value: Expr<A>[] }
+{  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
+{  a?: A, tag: "list-obj", length: number, entries: Array<Expr<A>>}
 ```
 
-We need to add empty to `Literal`.
+We need to add index-assign to `Stmt<A>`,
 ```typescript
-{ tag: "empty" }
+{  a?: A, tag: "index-assign", list: Expr<A>, index: Expr<A>, value: Expr<A> }
 ```
 
-In `ir.ts`, we need to add list and empty to `Value<A>`.
-```typescript
-{ a?: A, tag: "list", value: Value<A>[] }
-{ a?: A, tag: "empty" }
-```
+We do not need to add anything into `ir.ts`.
 
 ### For Statement
 we need to add a new type of statement for “for-loop”,
@@ -171,7 +173,7 @@ there should be mainly three parts in this structure: a variable x, an iterator 
 x here should be a predefined variable, otherwise chocopy compiler should report the error that the variable is undefined, so x here is a name with the string type; the iterator should be a list in chocopy’s scope, and we can use an expression to represent it.
 The final structure should be like this:
 ```typescript
-{ tag: "for", name: name, iterable: iter, body: body}
+{ a?: A, tag: "for", name: string, iterable: Expr<A>, body: Array<Stmt<A>>}
 ```
 
 
@@ -180,17 +182,17 @@ The final structure should be like this:
 
 ### String
 
-+ In `type-check.ts`, add case `str` in `tcString` to annotate a string. 
++ In `type-check.ts`, add case `str` in `tcLiteral` to annotate a string. 
 + In `type-check.ts`, modify `tcExpr`  to make `BinOp.Plus` with 2 strings legal. 
-+ In `compiler.ts`, need a function `CodeGenString` to generate wasm code.
-+ In `compiler.ts`, need to modify case `binop` in `codeGenExpr` to handle string concatence situation.
++ In `compiler.ts`, add case `str` in `codeGenValue` to generate wasm code.
++ In `compiler.ts`, add function `codeGenBinOpStr` to handle string concatenation.
 
 ### Lists
 
-+ In `parser.ts`, support parsing list and empty in `traverseExpr`.
-+ In `type-check.ts`, support type checking list and empty in `tcExpr`. 
-+ In `lower.ts`, support lowering list and empty in `flattenExprToExpr`, `flattenExprToVal`, and `literalToVal`.
-+ In `compiler.ts`, support code generation for list and empty in `codeGenExpr` and `codeGenValue`.
++ In `parser.ts`, support parsing list in `traverseExpr`.
++ In `type-check.ts`, support type checking list in `tcExpr`. 
++ In `lower.ts`, support lowering list in `flattenExprToExpr`, `flattenExprToVal`, and `literalToVal`.
++ In `compiler.ts`, support runtime error check for list index out of bound.
 
 ### For-loop
 + In `parser.ts`, support parsing for "for" statement in `traverseStmt`.
@@ -201,12 +203,28 @@ The final structure should be like this:
 
 ### String
 
-String are placed consecutively on heap memory. Concatenation of two strings returns a new string whose first char is placed on the next available heap address at the time of concatenation.
+In the heap memory, a string is represented as a sequence of 32-bit integers. The first integer is the string's length, and the following integers are ASCII codes of the string characters. Indexing into a string returns a new string of length 1. Concatenation returns a new string with length equal to the sum of the lengths of its operands.
 
 ### Lists
 
-List elements are placed consecutively on heap memory. Concatenation of two lists returns a new list whose first element is placed on the next available heap address at the time of concatenation.
+List elements are placed consecutively on heap memory. The first element stored in the heap is the length of the list. Concatenation of two lists returns a new list whose first element is placed on the next available heap address at the time of concatenation.
+
+
 
 ### For-loop
 
-The implementation of the for loop can use a helper class with three different fields: initial_state, step, stop_condition; we can utilize this helper class to generate code for the loop
+As chocopy does not contain complex iterators like dictionary, so we choose a simple design to transfer the for loop to equal while statement.
+I initialize a virtual index for each for loop with value 0. For each body of the for statement, I insert an assignment statement at the beginning to assign
+current list[index] to the variable id, and a step statement at the end of the body to update the index. To avoid conflict of different for loop, I use
+the generateName method to differentiate index for different "for loop".
+
+## How to run/test our code
+```
+make
+npm install
+npm run test
+```
+
+Besides `PA3-visible-test` and `PA3-hidden-test`, you can see another two sets of tests called `string test` and `list-test`, which contains all the tests we described in `ChocoPy-design.md`.
+
+You can also run `npm run build-web`. Open a webserver, and then type chocopy scripts on the webpage to see the result.

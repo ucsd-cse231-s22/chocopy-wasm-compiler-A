@@ -24,11 +24,14 @@ export class BasicREPL {
       this.importObject.js = { memory: memory };
     }
     this.currentEnv = {
+      strings: new Map(),
       globals: new Map(),
       classes: new Map(),
       locals: new Set(),
       labels: [],
-      offset: 1
+      offset: 1,
+      vtable: [],
+      classRange: new Map(),
     };
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";

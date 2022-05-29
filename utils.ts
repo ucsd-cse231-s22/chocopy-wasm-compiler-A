@@ -1,7 +1,9 @@
-import { Value, Type } from "./ast";
+import {Value, Type, Expr, Literal} from "./ast";
 
 export function PyValue(typ: Type, result: number): Value {
   switch (typ.tag) {
+    case "str":
+      return PyObj("$strObj", result);
     case "number":
       return PyInt(result);
     case "bool":
@@ -26,6 +28,15 @@ export function PyObj(name: string, address: number): Value {
   else return { tag: "object", name, address };
 }
 
+export function PyLiteralInt(n: number): Literal {
+  return { tag: "num", value: n }
+}
+
+export function PyLiteralExpr(v: Value) : Expr<Type> {
+  if (v.tag === "object") throw new Error("Can not transfer object to literal, check your implementation.")
+  return {  a: NUM, tag: "literal", value: v }
+}
+
 export function PyNone(): Value {
   return { tag: "none" };
 }
@@ -33,4 +44,6 @@ export function PyNone(): Value {
 export const NUM : Type = {tag: "number"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
+export const STR : Type = {tag: "str"};
 export function CLASS(name : string) : Type {return {tag: "class", name}};
+export function LIST(elementtype: Type): Type {return {tag: "list", listsize:0, elementtype: elementtype}}
