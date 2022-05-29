@@ -796,39 +796,32 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       } else {
         throw new TypeCheckError(SRC, `method calls require an object of type "class", got ${JSON.stringify(tObj.a.type.tag)}`, expr.a);
       }
-<<<<<<< HEAD
-<<<<<<< HEAD
-	  case "list-comp":
-		// check if iterable is instance of class
-		const iterable = tcExpr(env, locals, expr.iterable);
-		if (iterable.a.tag === "class"){
-			const classData = env.classes.get(iterable.a.name);
-			// check if next and hasNext methods are there
-			if (!classData[1].has("next") || !classData[1].has("hasNext"))
-				throw new Error("TYPE ERROR: Class of the instance must have next() and hasNext() methods");
-			// need to create a local env for elem to be inside comprehension only
-			var loc = locals;
-			if (expr.elem.tag === "id"){
-				loc.vars.set(expr.elem.name, NUM);
-				const elem = {...expr.elem, a: NUM};
-				const left = tcExpr(env, loc, expr.left);
-        var cond;
-        if (expr.cond)
-				  cond = tcExpr(env, loc, expr.cond);
-				if (cond && cond.a.tag !== "bool")
-					throw new Error("TYPE ERROR: comprehension if condition must return bool")
-				return {...expr, left, elem, cond, iterable, a: CLASS(iterable.a.name)};
-			}
-			else
-				throw new Error("TYPE ERROR: elem has to be an id");
-		}
-		else
-			throw new Error("TYPE ERROR: Iterable must be an instance of a class");
-    default: 
-      throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
-=======
-=======
->>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
+      case "list-comp":
+        // check if iterable is instance of class
+        const iterable = tcExpr(env, locals, expr.iterable,SRC);
+        if (iterable.a.type.tag === "class"){
+          const classData = env.classes.get(iterable.a.type.name);
+          // check if next and hasNext methods are there
+          if (!classData[1].has("next") || !classData[1].has("hasNext"))
+            throw new Error("TYPE ERROR: Class of the instance must have next() and hasNext() methods");
+          // need to create a local env for elem to be inside comprehension only
+          var loc = locals;
+          if (expr.elem.tag === "id"){
+            loc.vars.set(expr.elem.name, NUM);
+            const elem = {...expr.elem, a: {...expr, type: NUM}};
+            const left = tcExpr(env, loc, expr.left,SRC);
+            var cond;
+            if (expr.cond)
+              cond = tcExpr(env, loc, expr.cond,SRC);
+            if (cond && cond.a.type.tag !== "bool")
+              throw new Error("TYPE ERROR: comprehension if condition must return bool")
+            return {...expr, left, elem, cond, iterable, a: {...expr, type: CLASS(iterable.a.type.name)}};
+          }
+          else
+            throw new Error("TYPE ERROR: elem has to be an id");
+        }
+        else
+          throw new Error("TYPE ERROR: Iterable must be an instance of a class");  
     case "if-expr":
       var tThn = tcExpr(env, locals, expr.thn, SRC);
       var tCond = tcExpr(env, locals, expr.cond, SRC);
@@ -840,10 +833,6 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       // var newType = join(env, tThn.a, tEls.a)
       return {...expr, a: tThn.a, cond: tCond, thn: tThn, els: tEls};
     default: throw new TypeCheckError(SRC, `unimplemented type checking for expr: ${expr}`, expr.a);
-<<<<<<< HEAD
->>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
-=======
->>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
   }
 }
 
