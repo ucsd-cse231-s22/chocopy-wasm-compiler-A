@@ -211,6 +211,7 @@ function webStart() {
       if (result === undefined) { console.log("skip"); return; }
       if (result.tag === "none") return;
       const elt = document.createElement("pre");
+      elt.setAttribute("class", "output-success")
       document.getElementById("output").appendChild(elt);
       switch (result.tag) {
         case "num":
@@ -231,6 +232,7 @@ function webStart() {
       const elt = document.createElement("pre");
       document.getElementById("output").appendChild(elt);
       elt.setAttribute("style", "color: red");
+      elt.setAttribute("class", "output-fail");
       elt.innerText = String(result);
     }
 

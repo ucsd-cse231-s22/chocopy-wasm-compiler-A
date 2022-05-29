@@ -27,17 +27,35 @@
             font-family: monospace;
         }
 
-        .interactions {
+        .repl {
+            /*border: 10px solid lightgray;*/
+            border-radius: 15px;
             float: right;
-            width: 49%;
-            margin-left: 1em;
+            width: 48%;
             padding: 0;
             height: 100%;
+            margin-top: 20px;
+            margin-right: 20px;
+            /*background-color: #f9f9f9;*/
+        }
+
+        .repl-navbar {
+            background-color: #eeeeee;
+            border-radius: 5px;
+        }
+
+        .navbar-nav {
+            width: 100%;
+            text-align: center;
+        }
+
+        .interactions {
+            padding: 20px;
         }
 
         .repl-code {
             height: 2em;
-            width: 30em;
+            width: 90%;
             text-align: left;
             font-family: monospace;
         }
@@ -47,9 +65,29 @@
         }
 
         .output pre {
+            width: 90%;
             max-width: 100%;
             white-space: break-spaces;
             line-break: anywhere;
+
+        }
+
+        .output-success{
+            border-color: #00CC66;
+            color: #000;
+            padding: 5px 0 5px 10px;
+            margin: 5px 0 15px 12px;
+            background-color: #F0FFF0;
+            border-left: 6px solid #00CC66;
+        }
+
+        .output-fail{
+            border-color: red;
+            color: #000;
+            padding: 5px 0 5px 10px;
+            margin: 5px 0 15px 12px;
+            background-color: #FFF0F0;
+            border-left: 6px solid red;
         }
     </style>
 </head>
@@ -79,14 +117,20 @@
         <textarea class="user-code" id="user-code"></textarea>
     </div>
 
-    <div class="interactions" style="margin-top: 100px">
-        <div class="output" id="output">
-        </div>
-        <div id="repl-entry">
-            <span class="prompt"><code>»</code></span>
-            <textarea type="text" id="next-code" class="repl-code"></textarea>
+    <div class="repl">
+        <nav class="navbar navbar-light shadow repl-navbar" >
+            <span class="navbar-nav mb-0 h6">interactive REPL</span>
+        </nav>
+        <div class="interactions" style="margin-top: 30px">
+            <div class="output" id="output">
+            </div>
+            <div id="repl-entry">
+                <span class="prompt"><code>»</code></span>
+                <textarea type="text" id="next-code" class="repl-code"></textarea>
+            </div>
         </div>
     </div>
+
 </body>
 
 </html>
