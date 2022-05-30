@@ -1,7 +1,7 @@
 import { assertPrint, assertTCFail, assertTC, assertFail } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
-describe("PA3 hidden tests", () => {
+describe("For loop tests", () => {
 
 // 1 - Not paired variable
 assertTCFail("invalid-var-for-loop",

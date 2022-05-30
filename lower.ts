@@ -23,18 +23,22 @@ function generateName(base : string) : string {
 //   return [name, {tag: "label", a: a, name: name}];
 // }
 
+var inhTable: Array<IR.ClassIndex<Type>> = []
+
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {
     // console.log(JSON.stringify(p, null, 4));
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
+    inhTable = p.table;
     var inits = flattenStmts(p.stmts, blocks, env);
     return {
         a: p.a,
         funs: lowerFunDefs(p.funs, env),
         inits: [...inits, ...lowerVarInits(p.inits, env)],
         classes: lowerClasses(p.classes, env),
-        body: blocks
+        body: blocks,
+        table: p.table
     }
 }
 
@@ -328,7 +332,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       }
       const className = objTyp.name;
       const checkObj : IR.Stmt<Type> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [objval]}}
-      const callMethod : IR.Expr<Type> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
+      const callMethod : IR.Expr<Type> = { tag: "methodcall", class: className, name: e.method, arguments: [objval, ...argvals] }
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
@@ -416,7 +420,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
+      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1 } };
       const assigns : IR.Stmt<Type>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {
@@ -426,6 +430,19 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
           value: value
         }
       });
+      let [v, has] = getClassIndex(e.name, inhTable);
+      if (!has) {
+        throw new Error("Compiler's cursed, go home");
+      }
+      assigns.splice(0, 0, {
+        tag: "store",
+        start: { tag: "id", name: newName },
+        offset: { tag: "wasmint", value: 0 },
+        value: {
+          tag: "wasmint",
+          value: v
+        }
+      })
 
       return [
         [ { name: newName, type: e.a, value: { tag: "none" } }],
@@ -439,6 +456,23 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "literal":
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
   }
+}
+
+function getClassIndex(classname: string, t: Array<IR.ClassIndex<Type>>) : [number, boolean] {
+  let index = 0;
+  for (let i = 0; i < t.length; i ++) {
+    if (t[i].classname === classname)
+      return [index, true];
+    else {
+      index += t[i].methods.length;
+      let [val, has] = getClassIndex(classname, t[i].children)
+      if (has)
+        return [val+index, has];
+      else
+        index += val;
+    }
+  }
+  return [index, false];
 }
 
 function flattenExprToVal(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>] {
