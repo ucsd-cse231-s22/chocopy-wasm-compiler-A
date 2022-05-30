@@ -1,12 +1,6 @@
 
-<<<<<<< HEAD
-import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Parameter } from './ast';
-import { NUM, BOOL, NONE, CLASS } from './utils';
-=======
-import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Callable } from './ast';
+import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Callable, Parameter } from './ast';
 import { NUM, BOOL, NONE, CLASS, CALLABLE } from './utils';
->>>>>>> bd167027
 import { emptyEnv } from './compiler';
 import { fullSrcLine, drawSquiggly } from './errors';
 
@@ -51,8 +45,8 @@ export class TypeCheckError extends Error {
 
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
-  functions: Map<string, [Array<Parameter<Type>>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Parameter<Type>>, Type]>]>
+  functions: Map<string, [Array<Parameter<Annotation>>, Type]>,
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Parameter<Annotation>>, Type]>]>
 }
 
 export type LocalTypeEnv = {
@@ -146,11 +140,7 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
-<<<<<<< HEAD
-  program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters, fun.ret]));
-=======
-  program.funs.forEach(fun => newGlobs.set(fun.name, CALLABLE(fun.parameters.map(p => p.type), fun.ret)));
->>>>>>> bd167027
+  program.funs.forEach(fun => newGlobs.set(fun.name, CALLABLE(fun.parameters, fun.ret)));
   program.classes.forEach(cls => {
     const fields = new Map();
     const methods = new Map();
@@ -415,7 +405,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       }
       const lambdaLocals = copyLocals(locals);
       expr.params.forEach((param, i) => {
-        lambdaLocals.vars.set(param, expr.type.params[i]);
+        lambdaLocals.vars.set(param, expr.type.params[i].type);
       })
       let ret = tcExpr(env, lambdaLocals, expr.expr, SRC);
       if (!isAssignable(env, ret.a.type, expr.type.ret)) {
@@ -425,16 +415,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
     case "builtin1":
       // TODO: type check `len` after lists are implemented
       if (expr.name === "print") {
-<<<<<<< HEAD
-        const tArg = tcExpr(env, locals, expr.arg);
-        return {...expr, a: tArg.a, arg: tArg};
-      } else if(env.functions.has(expr.name)) {
-        const [[expectedParam], retTyp] = env.functions.get(expr.name);
-        const expectedArgTyp = expectedParam.type;
-        const tArg = tcExpr(env, locals, expr.arg);
-=======
         const tArg = tcExpr(env, locals, expr.arg, SRC);
->>>>>>> bd167027
         
         // [lisa] commented out for now because it's failing some hidden test
         // if (tArg.a.type.tag !== "number" && tArg.a.type.tag !== "bool") {
@@ -442,7 +423,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         // }
         return { ...expr, a: tArg.a, arg: tArg };
       } else if (env.functions.has(expr.name)) {
-        const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
+        const [[expectedParam], retTyp] = env.functions.get(expr.name);
+        const expectedArgTyp = expectedParam.type;
         const tArg = tcExpr(env, locals, expr.arg, SRC);
 
         if (isAssignable(env, tArg.a.type, expectedArgTyp)) {
@@ -455,23 +437,14 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         throw new TypeCheckError(SRC, "Undefined function: " + expr.name, expr.a);
       }
     case "builtin2":
-<<<<<<< HEAD
-      if(env.functions.has(expr.name)) {
+      if (env.functions.has(expr.name)) {
         const [[leftParam, rightParam], retTyp] = env.functions.get(expr.name);
         const leftTyp = leftParam.type;
         const rightTyp = rightParam.type;
-        const tLeftArg = tcExpr(env, locals, expr.left);
-        const tRightArg = tcExpr(env, locals, expr.right);
-        if(isAssignable(env, leftTyp, tLeftArg.a) && isAssignable(env, rightTyp, tRightArg.a)) {
-          return {...expr, a: retTyp, left: tLeftArg, right: tRightArg};
-=======
-      if (env.functions.has(expr.name)) {
-        const [[leftTyp, rightTyp], retTyp] = env.functions.get(expr.name);
         const tLeftArg = tcExpr(env, locals, expr.left, SRC);
         const tRightArg = tcExpr(env, locals, expr.right, SRC);
         if (isAssignable(env, leftTyp, tLeftArg.a.type) && isAssignable(env, rightTyp, tRightArg.a.type)) {
           return { ...expr, a: { ...expr.a, type: retTyp }, left: tLeftArg, right: tRightArg };
->>>>>>> bd167027
         } else {
           throw new TypeCheckError(SRC, `Function call expects arguments of types ${JSON.stringify(leftTyp.tag)} and ${JSON.stringify(rightTyp.tag)}, got ${JSON.stringify(tLeftArg.a.type.tag)} and ${JSON.stringify(tRightArg.a.type.tag)}`,
             expr.a);
@@ -480,18 +453,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         throw new TypeCheckError(SRC, "Undefined function: " + expr.name, expr.a);
       }
     case "call":
-<<<<<<< HEAD
-      if (expr.fn.tag !== "id") {
-        throw new TypeError("Call expression does not have a name");
-      }
-      if(env.classes.has(expr.fn.name)) {
-        // surprise surprise this is actually a constructor
-        const tConstruct : Expr<Type> = { a: CLASS(expr.fn.name), tag: "construct", name: expr.fn.name };
-=======
       if (expr.fn.tag === "id" && env.classes.has(expr.fn.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct: Expr<Annotation> = { a: { ...expr.a, type: CLASS(expr.fn.name) }, tag: "construct", name: expr.fn.name };
->>>>>>> bd167027
         const [_, methods] = env.classes.get(expr.fn.name);
         if (methods.has("__init__")) {
           const [initArgs, initRet] = methods.get("__init__");
@@ -503,30 +467,13 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         } else {
           return tConstruct;
         }
-<<<<<<< HEAD
-      } else if(env.functions.has(expr.fn.name)) {
-        const [expectedParams, retType] = env.functions.get(expr.fn.name);
-        const tArgs = tcCallOrMethod(expr.fn.name, expectedParams, expr.arguments, expr.kwarguments, env, locals);
-        return {...expr, a: retType, arguments: tArgs, kwarguments: undefined };
-      } else {
-        throw new TypeError("Undefined function: " + expr.fn.name);
-=======
       } else {
         const newFn = tcExpr(env, locals, expr.fn, SRC);
         if(newFn.a.type.tag !== "callable") {
           throw new TypeCheckError("Cannot call non-callable expression");
         }
-        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
-        
-        if(newFn.a.type.params.length === expr.arguments.length &&
-          newFn.a.type.params.every((param, i) => isAssignable(env, tArgs[i].a.type, param))) {
-          return {...expr, a: {...expr.a, type: newFn.a.type.ret}, arguments: tArgs, fn: newFn};
-        } else {
-          const tArgsStr = tArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
-          const argTypesStr = newFn.a.type.params.map(argType => JSON.stringify(argType.tag)).join(", ");
-          throw new TypeCheckError(SRC, `Function call expects arguments of types [${argTypesStr}], got [${tArgsStr}]`, expr.a);
-        }
->>>>>>> bd167027
+        const tArgs = tcCallOrMethod("???", newFn.a.type.params, expr.arguments, expr.kwarguments, env, locals, SRC);
+        return {...expr, a: {...expr.a, type: newFn.a.type.ret}, arguments: tArgs, fn: newFn};
       }
     case "lookup":
       var tObj = tcExpr(env, locals, expr.obj, SRC);
@@ -545,37 +492,18 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         throw new TypeCheckError(SRC, `field lookups require an object of type "class", got ${JSON.stringify(tObj.a.type.tag)}`, expr.a);
       }
     case "method-call":
-<<<<<<< HEAD
-      var tObj = tcExpr(env, locals, expr.obj);
-      if (tObj.a.tag === "class") {
-        if (env.classes.has(tObj.a.name)) {
-          const [_, methods] = env.classes.get(tObj.a.name);
-          if (methods.has(expr.method)) {
-            const [methodArgs, methodRet] = methods.get(expr.method);
-            const realArgs = [expr.obj].concat(expr.arguments);
-            const tArgs = tcCallOrMethod(expr.method, methodArgs, realArgs, expr.kwarguments, env, locals);
-            // Remove self from arguments
-            tArgs.shift();
-            return {...expr, a: methodRet, obj: tObj, arguments: tArgs, kwarguments: undefined};
-=======
       var tObj = tcExpr(env, locals, expr.obj, SRC);
-      var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
+      // var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
       if (tObj.a.type.tag === "class") {
         if (env.classes.has(tObj.a.type.name)) {
           const [_, methods] = env.classes.get(tObj.a.type.name);
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = methods.get(expr.method);
-            const realArgs = [tObj].concat(tArgs);
-            if (methodArgs.length === realArgs.length &&
-              methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a.type, argTyp))) {
-              return { ...expr, a: { ...expr.a, type: methodRet }, obj: tObj, arguments: tArgs };
-            } else {
-              const argTypesStr = methodArgs.map(argType => JSON.stringify(argType.tag)).join(", ");
-              const tArgsStr = realArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
-              throw new TypeCheckError(SRC, `Method call ${expr.method} expects arguments of types [${argTypesStr}], got [${tArgsStr}]`,
-              expr.a);
-            }
->>>>>>> bd167027
+            const realArgs = [tObj].concat(expr.arguments);
+            const tArgs = tcCallOrMethod(expr.method, methodArgs, realArgs, expr.kwarguments, env, locals, SRC);
+            // Remove self from arguments
+            tArgs.shift();
+            return {...expr, a: {...expr.a, type: methodRet}, obj: tObj, arguments: tArgs, kwarguments: undefined};
           } else {
             throw new TypeCheckError(SRC, `could not found method ${expr.method} in class ${tObj.a.type.name}`,
             expr.a);
@@ -600,26 +528,18 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
   }
 }
 
-<<<<<<< HEAD
-export function tcLiteral(literal : Literal) {
-    switch(literal.tag) {
-        case "bool": return BOOL;
-        case "num": return NUM;
-        case "none": return NONE;
-    }
-}
 
 // export function tcCallOrMethod(funcName: string, realArgs: Array<Expr<null>>, realKwArgs: Map<string, Expr<null>>, env: GlobalTypeEnv, locals: LocalTypeEnv, obj?: Expr<null>): Expr<Type> {
-export function tcCallOrMethod(funcName: string, expectedParams:Array<Parameter<Type>>, realArgs: Array<Expr<null>>, realKwArgs: Map<string, Expr<null>>, env: GlobalTypeEnv, locals: LocalTypeEnv): Array<Expr<Type>> {
+export function tcCallOrMethod(funcName: string, expectedParams:Array<Parameter<Annotation>>, realArgs: Array<Expr<Annotation>>, realKwArgs: Map<string, Expr<Annotation>>, env: GlobalTypeEnv, locals: LocalTypeEnv, SRC: string): Array<Expr<Annotation>> {
   const expectedArgTypes = expectedParams.map(p => p.type);
   const expectedArgNames = expectedParams.map(p => p.name);
   if (realArgs.length > expectedArgTypes.length) {
     throw new TypeCheckError(`${funcName}() takes from 1 to ${expectedArgTypes.length} positional arguments but ${realArgs.length} were given`);
   }
-  const tAllArgs = Array<Expr<Type>>(expectedArgTypes.length).fill(null);
+  const tAllArgs = Array<Expr<Annotation>>(expectedArgTypes.length).fill(null);
   realArgs.map((arg, i) => {
-    const tArg = tcExpr(env, locals, arg);
-    if (!isAssignable(env, tArg.a, expectedArgTypes[i])) {
+    const tArg = tcExpr(env, locals, arg, SRC);
+    if (!isAssignable(env, tArg.a.type, expectedArgTypes[i])) {
       throw new TypeCheckError(`${funcName}() expected type ${JSON.stringify(expectedArgTypes[i])} for argument ${i}. Got ${JSON.stringify(tArg.a)}`);
     }
     tAllArgs[i] = tArg;
@@ -632,8 +552,8 @@ export function tcCallOrMethod(funcName: string, expectedParams:Array<Parameter<
     if (tAllArgs[argIndex] !== null) {
       throw new TypeCheckError(`${funcName}() got multiple values for argument ${name}`);
     }
-    const tKwArg = tcExpr(env, locals, value);
-    if (!isAssignable(env, tKwArg.a, expectedArgTypes[argIndex])) {
+    const tKwArg = tcExpr(env, locals, value, SRC);
+    if (!isAssignable(env, tKwArg.a.type, expectedArgTypes[argIndex])) {
       throw new TypeCheckError(`${funcName}() expected type ${JSON.stringify(expectedArgTypes[argIndex])} for argument ${name}. Got ${JSON.stringify(tKwArg.a)}`);
     }
     tAllArgs[argIndex] = tKwArg;
@@ -643,7 +563,7 @@ export function tcCallOrMethod(funcName: string, expectedParams:Array<Parameter<
       map.set(obj.name, obj.value);
     }
     return map;
-  }, new Map<string, Expr<Type>>());
+  }, new Map<string, Expr<Annotation>>());
 
   tAllArgs.forEach((tArg, i) => {
     if (tArg === null && defaultValues.has(expectedArgNames[i])) {
@@ -656,7 +576,6 @@ export function tcCallOrMethod(funcName: string, expectedParams:Array<Parameter<
   }
   return tAllArgs;
 }
-=======
 export function tcLiteral(literal: Literal<Annotation>) {
   switch (literal.tag) {
     case "bool": return BOOL;
@@ -664,4 +583,3 @@ export function tcLiteral(literal: Literal<Annotation>) {
     case "none": return NONE;
   }
 }
->>>>>>> bd167027
