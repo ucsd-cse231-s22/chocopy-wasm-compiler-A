@@ -230,6 +230,7 @@ export function monomorphizeClass(cname: string, canonicalName: string, classes:
     let cClass : Class<Annotation> = classes[genv.classesInx.get(cname)];
     let mClass : Class<Annotation> = JSON.parse(JSON.stringify(cClass))
     mClass.name = canonicalName;
+    mClass.super = cClass.super;
     mClass.typeParams = [];
     mClass.fields = mClass.fields.map(field => {
         if (field.type.tag === "typevar" || (field.type.tag === "class" && field.type.params.length > 0)) {
