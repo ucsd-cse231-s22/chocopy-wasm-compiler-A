@@ -294,7 +294,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
     case "builtin1":
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg);
-        return {...expr, a: tArg.a, arg: tArg};
+        return {...expr, a: NONE, arg: tArg};
       } else if(env.functions.has(expr.name)) {
         const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
         const tArg = tcExpr(env, locals, expr.arg);
