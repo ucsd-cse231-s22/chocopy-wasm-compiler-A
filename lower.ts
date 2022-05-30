@@ -68,6 +68,7 @@ function lowerFunDef(
   var name = closureName(f.name, ancestors);
   var type: Type = CLASS(name);
   var self: AST.Parameter<Annotation> = { name: "self", type };
+  env.ancestorMap.set(name, [f, ...ancestors]);
 
   var envCopy = { ...env, functionNames: new Map(env.functionNames) };
   f.children.forEach(c => envCopy.functionNames.set(c.name, closureName(c.name, [f, ...ancestors])));
@@ -695,7 +696,9 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         children: []
       };
 
-      var astClasses = lowerFunDef(funDef, env, env.lambdaStack.reverse())[0];
+      let currentFun = env.functionNames.get("$current");
+      var ancestors = [...env.lambdaStack.reverse(), ...env.ancestorMap.get(currentFun)];
+      var astClasses = lowerFunDef(funDef, env, ancestors)[0];
       astClasses.forEach(cls => {
         env.classIndices.set(cls.name, env.vtableMethods.length);
         env.vtableMethods.push(...cls.methods
@@ -704,8 +707,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         );
       });
 
-      let currentFun = env.functionNames.get("$current");
-      let lambdaName = closureName(name, env.lambdaStack.reverse());
+      let lambdaName = closureName(name, ancestors);
       var astExpr: AST.Expr<Annotation> = {
         tag: "method-call", 
         obj: { a: { type: CLASS(lambdaName) }, tag: "construct", name: lambdaName }, 
