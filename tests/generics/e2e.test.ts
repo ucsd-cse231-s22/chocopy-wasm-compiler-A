@@ -257,4 +257,17 @@ describe('e2e tests to check generics', () => {
     print(b1.a)
     `
     assertPrint('Generic function used inside Generic class', prog9, ["4", "0"]);
+
+    const prog10 = `
+    T = TypeVar('T')
+
+    def f(x: int) -> int:
+      return x + 2
+
+    def g(y: Callable[[T], T]) -> T:
+      return y(4)
+
+    print(g(f))
+    `
+    assertPrint('Generics with closures', prog10, ["6"]);
 })
