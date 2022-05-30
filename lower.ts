@@ -259,7 +259,7 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
         switch(left.tag) {
           case "id":
             blocks[blocks.length - 1].stmts.push(...valstmts, { a: s.a, tag: "assign", name: left.name, value: vale});
-            return valinits
+            return [valinits, []];
             // return [valinits, [
             //   ...valstmts,
             //   { a: s.a, tag: "assign", name: s.name, value: vale}
@@ -273,17 +273,18 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
         // desturcturing assignment
         switch(s.value.tag) {
           case "call":
-            var outputInits: Array<IR.VarInit<Type>> = [{ a: s.a, name: "_", type: {tag: "number"}, value: { tag: "none" } }];
-            var [valinits, valstmts, va] = flattenExprToVal(s.value, blocks, env);
+            var outputInits: Array<IR.VarInit<Annotation>> = [{ a: s.a, name: "_", type: {tag: "number"}, value: { tag: "none" } }];
+            var outputClasses: Array<IR.Class<Annotation>> = [];
+            var [valinits, valstmts, va, classes] = flattenExprToVal(s.value, blocks, env);
             outputInits = outputInits.concat(valinits);
             pushStmtsToLastBlock(blocks, ...valstmts);
             if(va.tag === "id") {
-              const nextMethod : IR.Expr<Type> = { tag: "call", name: `iterator$next`, arguments: [va] }
-              const hasNextMethod : IR.Expr<Type> = { tag: "call", name: `iterator$hasNext`, arguments: [va] }
+              const nextMethod : IR.Expr<Annotation> = { tag: "call", name: `iterator$next`, arguments: [va] }
+              const hasNextMethod : IR.Expr<Annotation> = { tag: "call", name: `iterator$hasNext`, arguments: [va] }
               s.destruct.vars.forEach(v => {
                 var [inits, stmts, val] = flattenIrExprToVal(hasNextMethod, env);
                 outputInits = outputInits.concat(inits);
-                const runtimeCheck : IR.Expr<Type> = { tag: "call", name: `destructure_check`, arguments: [] }
+                const runtimeCheck : IR.Expr<Annotation> = { tag: "call", name: `destructure_check`, arguments: [] }
                 runtimeCheck.arguments.push(val);
                 pushStmtsToLastBlock(blocks, ...stmts, { tag: "expr", expr: runtimeCheck })
                 switch(v.target.tag) {
@@ -291,11 +292,11 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                     pushStmtsToLastBlock(blocks, { a: s.a, tag: "assign", name: v.target.name, value: nextMethod});
                     break;
                   case "lookup":
-                    var [oinits, ostmts, oval] = flattenExprToVal(v.target.obj, blocks, env);
-                    var [ninits, nstmts, nval] = flattenIrExprToVal(nextMethod, env);
-                    if(v.target.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
-                    const classdata = env.classes.get(v.target.obj.a.name);
-                    const offset : IR.Value<Type> = { tag: "wasmint", value: classdata.get(v.target.field)[0] };
+                    var [oinits, ostmts, oval, oclasses] = flattenExprToVal(v.target.obj, blocks, env);
+                    var [ninits, nstmts, nval, nclasses] = flattenIrExprToVal(nextMethod, env);
+                    if(v.target.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
+                    const classdata = env.classes.get(v.target.obj.a.type.name);
+                    const offset : IR.Value<Annotation> = { tag: "wasmint", value: classdata.get(v.target.field)[0] };
                     pushStmtsToLastBlock(blocks,
                       ...ostmts, ...nstmts, {
                         tag: "store",
@@ -306,6 +307,8 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                       });
                     outputInits = outputInits.concat(oinits);
                     outputInits = outputInits.concat(ninits);
+                    outputClasses = outputClasses.concat(oclasses);
+                    outputClasses = outputClasses.concat(nclasses);
                     break;
                   default:
                     throw new Error("should not reach here");
@@ -314,22 +317,23 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
               // check if iterator has remainning elements
               var [inits1, stmts1, val1] = flattenIrExprToVal(hasNextMethod, env);
               outputInits = outputInits.concat(inits1);
-              var remain : IR.Expr<Type> = { tag: "uniop", op: UniOp.Not, expr: val1 };
+              var remain : IR.Expr<Annotation> = { tag: "uniop", op: UniOp.Not, expr: val1 };
               var [inits2, stmts2, val2] = flattenIrExprToVal(remain, env);
               outputInits = outputInits.concat(inits2);
-              const runtimeCheck : IR.Expr<Type> = { tag: "call", name: `destructure_check`, arguments: [] }
+              const runtimeCheck : IR.Expr<Annotation> = { tag: "call", name: `destructure_check`, arguments: [] }
               runtimeCheck.arguments.push(val2);
               pushStmtsToLastBlock(blocks, ...stmts1, ...stmts2, { tag: "expr", expr: runtimeCheck })
               // console.log(JSON.stringify(outputInits, null, 2));
-              return outputInits;
+              return [outputInits, outputClasses];
             } else {
               throw new Error("should not reach here");
             }
           case "array-expr":
-            var outputInits: Array<IR.VarInit<Type>> = [{ a: s.a, name: "_", type: {tag: "number"}, value: { tag: "none" } }];
-            var valinits : IR.VarInit<AST.Type>[] = [];
-            var valstmts : IR.Stmt<AST.Type>[] = [];
-            var vales : IR.Expr<AST.Type>[] = [];
+            var outputInits: Array<IR.VarInit<Annotation>> = [{ a: s.a, name: "_", type: {tag: "number"}, value: { tag: "none" } }];
+            var outputClasses: Array<IR.Class<Annotation>> = [];
+            var valinits : IR.VarInit<AST.Annotation>[] = [];
+            var valstmts : IR.Stmt<AST.Annotation>[] = [];
+            var vales : IR.Expr<AST.Annotation>[] = [];
             for(var expr of s.value.elements) {
               var [exprinits, exprstmts, vale] = flattenExprToExpr(expr, blocks, env);
               valinits = valinits.concat(exprinits);
@@ -344,11 +348,11 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                   pushStmtsToLastBlock(blocks, { a: s.a, tag: "assign", name: v.target.name, value: vales[idx]});
                   break;
                 case "lookup":
-                  var [oinits, ostmts, oval] = flattenExprToVal(v.target.obj, env);
-                  var [ninits, nstmts, nval] = flattenIrExprToVal(vales[idx], env);
-                  if(v.target.obj.a.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
-                  const classdata = env.classes.get(v.target.obj.a.name);
-                  const offset : IR.Value<Type> = { tag: "wasmint", value: classdata.get(v.target.field)[0] };
+                  var [oinits, ostmts, oval, oclasses] = flattenExprToVal(v.target.obj, blocks, env);
+                  var [ninits, nstmts, nval, nclasses] = flattenIrExprToVal(vales[idx], env);
+                  if(v.target.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
+                  const classdata = env.classes.get(v.target.obj.a.type.name);
+                  const offset : IR.Value<Annotation> = { tag: "wasmint", value: classdata.get(v.target.field)[0] };
                   pushStmtsToLastBlock(blocks,
                     ...ostmts, ...nstmts, {
                       tag: "store",
@@ -359,12 +363,14 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                     });
                   outputInits = outputInits.concat(oinits);
                   outputInits = outputInits.concat(ninits);
+                  outputClasses = outputClasses.concat(oclasses);
+                  outputClasses = outputClasses.concat(nclasses);
                   break;
                 default:
                   throw new Error("should not reach here");
               }
             });
-            return outputInits;
+            return [outputInits, outputClasses];
           default:
             throw new Error("should not reach here");
         }
@@ -738,9 +744,9 @@ function flattenExprToVal(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock<
   }
 }
 
-function flattenIrExprToVal(e : IR.Expr<Annotation>, env : GlobalEnv) : [Array<IR.VarInit<Annotation>>, Array<IR.Stmt<Annotation>>, IR.Value<Annotation>] {
+function flattenIrExprToVal(e : IR.Expr<Annotation>, env : GlobalEnv) : [Array<IR.VarInit<Annotation>>, Array<IR.Stmt<Annotation>>, IR.Value<Annotation>, Array<IR.Class<Annotation>>] {
   if(e.tag === "value") {
-    return [[], [], e.value];
+    return [[], [], e.value, []];
   }
   else {
     var newName = generateName("valname");
@@ -753,9 +759,10 @@ function flattenIrExprToVal(e : IR.Expr<Annotation>, env : GlobalEnv) : [Array<I
     // TODO: we have to add a new var init for the new variable we're creating here.
     // but what should the default value be?
     return [
-      [{ a: e.a, name: newName, type: e.a, value: { tag: "none" } }],
+      [{ a: e.a, name: newName, type: e.a.type, value: { tag: "none" } }],
       [setNewName],  
-      {tag: "id", name: newName, a: e.a}
+      {tag: "id", name: newName, a: e.a},
+      []
     ];
   }
 }
