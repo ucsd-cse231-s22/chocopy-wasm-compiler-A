@@ -569,6 +569,31 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       const [oinits, ostmts, oval, oclasses] = flattenExprToVal(e.obj, blocks, env);
       if(e.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
       const classdata = env.classes.get(e.obj.a.type.name);
+
+      if(e.a.type.tag === "callable"){
+        
+        let self = generateName("$boundSelf");
+        let initSelf: AST.VarInit<Annotation> = { name: self, type: e.obj.a.type, value: {tag: "none"} };
+        let assignSelf: AST.Stmt<Annotation> = { tag: "assign", name: self, value: e.obj };
+        
+        let [stmtInits, stmtClass] = flattenStmt(assignSelf, blocks, env);
+
+        let names: string[] = e.a.type.params.map(() => generateName("$tmp"));
+        let ids: AST.Expr<Annotation>[] = e.a.type.params.map((type, index) => ({ tag: "id", name: names[index], a: { type } }));
+        
+        let expr: AST.Expr<Annotation> = {
+          tag: "method-call",
+          obj: { tag: "id", name: self, a: { ...e.obj.a } },
+          method: e.field,
+          arguments: [{ tag: "id", name: self, a: { ...e.obj.a } }, ...ids],
+          a: { type: e.a.type }
+        };
+        let lambda : AST.Lambda<Annotation> = { tag: "lambda", type: e.a.type, params: names, expr };
+        
+        var [linits, lstmts, lexpr, lclasses] = flattenExprToExpr(lambda, blocks, env)
+        return [[lowerVarInit(initSelf,env),...stmtInits, ...linits], [...lstmts], lexpr, [...stmtClass,...lclasses]];
+      }
+
       const [offset, _] = classdata.get(e.field);
       const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, oval);
       return [oinits, [...ostmts, checkObj], {

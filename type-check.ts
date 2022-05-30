@@ -761,11 +761,18 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       var tObj = tcExpr(env, locals, expr.obj, SRC);
       if (tObj.a.type.tag === "class") {
         if (env.classes.has(tObj.a.type.name)) {
-          const [fields, _] = env.classes.get(tObj.a.type.name);
+          const [fields, methods] = env.classes.get(tObj.a.type.name);
+          
           if (fields.has(expr.field)) {
             return { ...expr, a: { ...expr.a, type: specializeFieldType(env, tObj.a.type, fields.get(expr.field)) }, obj: tObj };
-          } else {
-            throw new TypeCheckError(SRC, `could not find field ${expr.field} in class ${tObj.a.type.name}`, expr.a);
+          } else if(methods.has(expr.field)){
+            //TODO ACTUALY TYPE CHECK STUFF
+            const [methodArgs, methodRet] = specializeMethodType(env, tObj.a.type, methods.get(expr.field))
+            return {... expr, a: {...expr.a, type: CALLABLE(methodArgs.slice(1), methodRet)}, obj: tObj}
+          }
+          else
+          {
+            throw new TypeCheckError(SRC, `could not find field or method ${expr.field} in class ${tObj.a.type.name}`, expr.a);
           }
         } else {
           throw new TypeCheckError(SRC, `field lookup on an unknown class ${tObj.a.type.name}`, expr.a);
