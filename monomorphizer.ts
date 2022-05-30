@@ -122,60 +122,75 @@ export function processExprs(expr: Expr<Annotation>, genv: GlobalMorphEnv, prog:
     if (expr.a.type === undefined) {
         return expr;
     }
-    expr.a.type = concretizeGenericTypes(expr.a.type, genv);
     switch(expr.tag) {
         case "binop":
             const binL = processExprs(expr.left, genv, prog);
             const binR = processExprs(expr.right, genv, prog);
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             return { ...expr, a: {...expr.a, type: getCanonicalType(expr.a.type)}, left: binL, right: binR };
         case "call":
             const cExprs = expr.arguments.map(a => processExprs(a, genv, prog));
-            const fnExpr = processExprs(expr.fn, genv, prog);
+            let fnExpr;
             if (expr.fn.tag === "id" && genv.genericFuncs.has(expr.fn.name)) {
                 let mfname = processFuncCall(genv, expr, prog).name;
+                fnExpr = processExprs(expr.fn, genv, prog);
                 if (fnExpr.tag === "id") {
                     fnExpr.name = mfname;
                 }
+            } else {
+                fnExpr = processExprs(expr.fn, genv, prog);
             }
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             return { ...expr, a: {...expr.a, type: getCanonicalType(expr.a.type)}, fn: fnExpr, arguments: cExprs };
         case "construct":
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             const constructCname = getCanonicalTypeName(expr.a.type)
             return { ...expr, a: {...expr.a, type: CLASS(constructCname)}, name: constructCname };
         case "id":
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             return { ...expr, a: {...expr.a, type: getCanonicalType(expr.a.type)} };
         case "index":
             const inxExpr = processExprs(expr.index, genv, prog);
             const inxObj = processExprs(expr.obj, genv, prog);
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             return { ...expr, a: {...expr.a, type: getCanonicalType(expr.a.type)}, index: inxExpr, obj: inxObj };
         case "lookup":
             const lObj = processExprs(expr.obj, genv, prog);
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             return { ...expr, a: {...expr.a, type: getCanonicalType(expr.a.type)}, obj: lObj };
         case "method-call":
             const mcExprs = expr.arguments.map(a => processExprs(a, genv, prog));
             const mcObj = processExprs(expr.obj, genv, prog);
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             return { ...expr, a: {...expr.a, type: getCanonicalType(expr.a.type)}, arguments: mcExprs, obj: mcObj };
         case "uniop":
             const uexpr = processExprs(expr.expr, genv, prog);
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             return { ...expr, a: {...expr.a, type: getCanonicalType(expr.a.type)}, expr: uexpr };
         case "builtin1":
             const b1arg = processExprs(expr.arg, genv, prog);
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             return { ...expr, a: {...expr.a, type: getCanonicalType(expr.a.type)}, arg: b1arg };
         case "builtin2":
             const b2left = processExprs(expr.left, genv, prog);
             const b2right = processExprs(expr.right, genv, prog);
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             return { ...expr, a: {...expr.a, type: getCanonicalType(expr.a.type)}, left: b2left, right: b2right };
         case "if-expr":
             const ifexprcond = processExprs(expr.cond, genv, prog);
             const ifexprthn = processExprs(expr.thn, genv, prog);
             const ifexprels = processExprs(expr.els, genv, prog);
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             return { ...expr, a: {...expr.a, type: getCanonicalType(expr.a.type)}, cond: ifexprcond, thn: ifexprthn, els: ifexprels};
         case "lambda":
             // Assuming a Callable always gets concretized and cannonicalized to a Callable type
             // @ts-ignore
             const ltype: Callable = getCanonicalType(concretizeGenericTypes(expr.type, genv));
             const lexpr = processExprs(expr.expr, genv, prog);
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             return { ...expr, a: {...expr.a, type: ltype}, expr: lexpr, type: ltype};
         default:
+            expr.a.type = concretizeGenericTypes(expr.a.type, genv);
             return expr;
     }
 }
@@ -184,44 +199,53 @@ export function processStmts(stmt: Stmt<Annotation>, genv: GlobalMorphEnv, prog:
     if (stmt.a.type === undefined) {
         return stmt;
     }
-    stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
     switch(stmt.tag) {
         case "assign":
             const assignValueExpr = processExprs(stmt.value, genv, prog);
+            stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
             return { ...stmt, a: {...stmt.a, type: getCanonicalType(stmt.a.type)}, value: assignValueExpr };
         case "expr":
             const expr = processExprs(stmt.expr, genv, prog);
             if (stmt.a.type.tag === "class" && stmt.a.type.params.length > 0) {
+                stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
                 return {...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))}, expr };
             }
+            stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
             return {...stmt, a: {...stmt.a, type: getCanonicalType(stmt.a.type)}, expr };
         case "field-assign":
             const faobj = processExprs(stmt.obj, genv, prog);
             const faval = processExprs(stmt.value, genv, prog);
+            stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
             return { ...stmt, a: {...stmt.a, type: getCanonicalType(stmt.a.type)}, obj: faobj, value: faval };
         case "index-assign":
             const iaobj = processExprs(stmt.obj, genv, prog);
             const iinx = processExprs(stmt.index, genv, prog);
             const ival = processExprs(stmt.value, genv, prog);
+            stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
             return { ...stmt, a: {...stmt.a, type: getCanonicalType(stmt.a.type)}, obj: iaobj, index: iinx, value: ival };
         case "if":
             const ifcond = processExprs(stmt.cond, genv, prog);
             const ifthn = stmt.thn.map(st => processStmts(st, genv, prog));
             const ifels = stmt.els.map(st => processStmts(st, genv, prog));
+            stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
             return { ...stmt, a: {...stmt.a, type: getCanonicalType(stmt.a.type)}, cond: ifcond, thn: ifthn, els: ifels };
         case "return":
             const retExpr = processExprs(stmt.value, genv, prog);
+            stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
             return { ...stmt, a: {...stmt.a, type: getCanonicalType(stmt.a.type)}, value: retExpr };
         case "while":
             const wcond = processExprs(stmt.cond, genv, prog);
             const wBody = stmt.body.map(st => processStmts(st, genv, prog));
+            stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
             return { ...stmt, a: {...stmt.a, type: getCanonicalType(stmt.a.type)}, cond: wcond, body: wBody };
         case "for":
             const {body, iterator, values} = stmt;
             const wbody = body.map(st => processStmts(st, genv, prog));
             const wvalues = processExprs(values, genv, prog);
+            stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
             return { ...stmt, a: {...stmt.a, type: getCanonicalType(stmt.a.type)}, iterator, body: wbody, values: wvalues };
         default:
+            stmt.a.type = concretizeGenericTypes(stmt.a.type, genv);
             return stmt;
     }
 }
