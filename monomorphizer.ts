@@ -22,7 +22,7 @@ export function concretizeGenericTypes(type: Type, genv: GlobalMorphEnv) : Type 
 export function resolveZero(type: Type, a: Annotation) : Literal<Annotation> {
     switch (type.tag) {
         case "number":
-            return { a: { ...a, type: NUM}, tag: "num", value: 0 };
+            return { a: { ...a, type: NUM}, tag: "num", value: 0n };
         case "bool":
             return { a: { ...a, type: BOOL}, tag: "bool", value: false };
         case "class":

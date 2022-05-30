@@ -70,7 +70,7 @@ export type Expr<A> =
 
 // add annotation for reporting row/col in errors
 export type Literal<A> = 
-    { a?: A, tag: "num", value: number }
+    { a?: A, tag: "num", value: bigint }
   | { a?: A, tag: "bool", value: boolean }
   | { a?: A, tag: "none" }
   | { a?: A, tag: "zero" }
