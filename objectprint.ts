@@ -71,6 +71,8 @@ export function addAccordionEvent(repl:BasicREPL) {
       const key = thisfield[0];
       if (thisfield_type.tag === "class") {
           const new_div = document.createElement("div");
+          ele.innerHTML = "<b class='tag'>" + key + ": </b>";
+
           ele.appendChild(new_div);
           generate_folded_object(val, thisfield_type.name,repl, new_div);
       } else {

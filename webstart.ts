@@ -357,6 +357,7 @@ function webStart() {
           const source = replCodeElement.value;
           elt.value = source;
           replCodeElement.value = "";
+          repl.tc(source);
           repl.run(source).then((r) => {
             renderResult(r);
             printMem();
@@ -458,8 +459,10 @@ function webStart() {
 
     document.getElementById("run").addEventListener("click", function (e) {
       repl = new BasicREPL(importObject);
-      const source = document.getElementById("user-code") as HTMLTextAreaElement;
+
       resetRepl();
+      const source = document.getElementById("user-code") as HTMLTextAreaElement;
+      repl.tc(source.value);
       repl.run(source.value).then((r) => { renderResult(r); console.log("run finished") })
       .catch((e) => {
         renderError(e);
