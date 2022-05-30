@@ -154,14 +154,14 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       }
 
     case "builtin1":
-      const argTyp = expr.a;
+      const argTyp = expr.arg.tag;
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
-      if (expr.name === "print" && argTyp === NUM) {
+      if (expr.name === "print" && argTyp === 'num') {
         callName = "print_num";
-      } else if (expr.name === "print" && argTyp === BOOL) {
+      } else if (expr.name === "print" && argTyp === 'bool') {
         callName = "print_bool";
-      } else if (expr.name === "print" && argTyp === NONE) {
+      } else if (expr.name === "print" && argTyp === 'none') {
         callName = "print_none";
       } 
       return argStmts.concat([`(call $${callName})`]);
