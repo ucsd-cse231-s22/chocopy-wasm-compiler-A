@@ -73,7 +73,10 @@ function lowerFunDef(
   f.children.forEach(c => envCopy.functionNames.set(c.name, closureName(c.name, [f, ...ancestors])));
 
   var defs = f.children.map(x => lowerFunDef(x, envCopy, [f, ...ancestors]));
-  var assignStmt: AST.Stmt<Annotation> = { tag: "assign", name: f.name, value: { a: { type }, tag: "construct", name } }
+  var assignable : AST.Assignable<Annotation> = { tag: "id", name: f.name };
+  var assignVar : AST.AssignVar<Annotation> = { target: assignable, ignorable: false, star: false };
+  var destructureAss : AST.DestructuringAssignment<Annotation> = { isSimple: true, vars: [assignVar] };
+  var assignStmt: AST.Stmt<Annotation> = { tag: "assign", destruct: destructureAss, value: { a: { type }, tag: "construct", name } }
   var varInit: AST.VarInit<Annotation> = { name: f.name, type, value: { tag: "none" } }
   // TODO(pashabou): children, populate fields and methods of closure class
   return [
@@ -194,7 +197,10 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
   var elem = "";
   if(e.elem.tag == "id")
     elem = e.elem.name;
-  var nextAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign",name:elem, value: nextCall,a:{ ...e.a, type: NONE }}];
+  var assignable : AST.Assignable<AST.Annotation> = { tag: "id", name: elem };
+  var assignVar : AST.AssignVar<AST.Annotation> = { target: assignable, ignorable: false, star: false };
+  var destructureAss : AST.DestructuringAssignment<AST.Annotation> = { isSimple: true, vars: [assignVar] };
+  var nextAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: destructureAss, value: nextCall,a:{ ...e.a, type: NONE }}];
   var [bodyinits,bodyclasses] = flattenStmts(nextAssign, blocks, localenv);
 
   // cond
@@ -502,7 +508,10 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
       pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: forbodyLbl, els: forEndLbl });
     
       blocks.push({  a: s.a, label: forbodyLbl, stmts: [] })
-      var nextAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign",name:s.iterator, value: nextCall,a:s.a }]
+      var assignable : AST.Assignable<AST.Annotation> = { tag: "id", name: s.iterator };
+      var assignVar : AST.AssignVar<AST.Annotation> = { target: assignable, ignorable: false, star: false };
+      var destructureAss : AST.DestructuringAssignment<AST.Annotation> = { isSimple: true, vars: [assignVar] };
+      var nextAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: destructureAss, value: nextCall,a:s.a }]
       
       flattenStmts(nextAssign, blocks, localenv); // to add wasm code for i = c.next(). has no inits 
       
