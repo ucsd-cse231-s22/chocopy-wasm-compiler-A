@@ -3,7 +3,7 @@ import * as IR from './ir';
 import * as ERRORS from './errors';
 import { Type, Annotation } from './ast';
 import { GlobalEnv } from './compiler';
-import { APPLY, CLASS, createMethodName, BOOL, NONE, SET_PARENT, defaultLiteral } from './utils';
+import { APPLY, CLASS, createMethodName, BOOL, NONE, NUM, SET_PARENT, defaultLiteral } from './utils';
 
 let nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -26,10 +26,10 @@ export function closureName(f: string, ancestors: Array<AST.FunDef<Annotation>>)
 //   const name = generateName(base);
 //   return [name, {tag: "label", a: a, name: name}];
 // }
-
+var blocks : Array<IR.BasicBlock<Annotation>> = [];
 export function lowerProgram(p : AST.Program<Annotation>, env : GlobalEnv) : IR.Program<Annotation> {
     nameCounters = new Map();
-    var blocks : Array<IR.BasicBlock<Annotation>> = [];
+    blocks = [];
     var firstBlock : IR.BasicBlock<Annotation> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     p.funs.forEach(f => env.functionNames.set(f.name, closureName(f.name, [])));
@@ -241,6 +241,87 @@ function flattenStmts(s : Array<AST.Stmt<Annotation>>, blocks: Array<IR.BasicBlo
     classes.push(...res[1]);
   });
   return [inits, classes];
+}
+
+function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<Annotation>>) : [Array<IR.VarInit<Annotation>>, Array<IR.Stmt<Annotation>>, IR.Expr<Annotation>, Array<IR.Class<Annotation>>] {
+  // console.log("list comp in ir", e, "----------------");
+  var compStartLbl = generateName("$compstart");
+  var compbodyLbl = generateName("$compbody");
+  var compEndLbl = generateName("$compend");
+  var listAddLbl = generateName("$listadd");
+  // var newListName = generateName("$newList");
+  var localenv = env;
+  localenv.labels.push(compStartLbl,compbodyLbl,compEndLbl,listAddLbl);
+
+  // start
+  blocks.push({  a: e.a, label: compStartLbl, stmts: [] })
+  // a.hasNext() call
+  var hasNextCall : AST.Expr<AST.Annotation> = {tag:"method-call", obj:e.iterable, method:"hasNext", arguments:[], a:{...e.a,tag:BOOL}};
+  var [cinits, cstmts, cexpr, ceclass] = flattenExprToVal(hasNextCall, blocks, localenv);
+  pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: compbodyLbl, els: compEndLbl });
+  // console.log(cinits, cstmts, cexpr);
+
+  // body
+  blocks.push({  a: e.a, label: compbodyLbl, stmts: [] })
+  // assign a.next() to elem
+  var nextCall : AST.Expr<AST.Annotation> = {tag:"method-call", obj:e.iterable, method:"next", arguments:[], a:{ ...e.a, type: NUM }};
+  var elem = "";
+  if(e.elem.tag == "id")
+    elem = e.elem.name;
+  var nextAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign",name:elem, value: nextCall,a:{ ...e.a, type: NONE }}];
+  var [bodyinits,bodyclasses] = flattenStmts(nextAssign, blocks, localenv);
+
+  // cond
+  if (e.cond){
+    var [dinits, dstmts, dexpr, declass] = flattenExprToVal(e.cond, blocks, localenv);
+    pushStmtsToLastBlock(blocks, ...dstmts, { tag: "ifjmp", cond: dexpr, thn: listAddLbl, els: compStartLbl });
+    // console.log("dinits", dinits, "dstmts", dstmts, "dexpr", dexpr);
+  } else {
+    pushStmtsToLastBlock(blocks, {tag:"jmp", lbl: listAddLbl});
+  }
+
+  // list add
+  blocks.push({  a: e.a, label: listAddLbl, stmts: [] })
+  // do left expr
+  var [binits, bstmts, bexpr, beclass] = flattenExprToVal(e.left, blocks, localenv);
+  bodyinits.concat(binits);
+  // console.log("binits", binits, "bstmts", bstmts, "bexpr", bexpr, "bodyinits", bodyinits);
+
+  // display (NEED TO ADD TO ARRAY)
+  var displayExpr : AST.Expr<AST.Annotation> = {tag:"builtin1", name:"print", arg:e.left, a:e.left.a};
+  var disp: AST.Stmt<AST.Annotation> = {tag:"expr", expr: displayExpr, a:{ ...e.a, type: NONE }};
+  // var [einits, estmts, eexpr] = flattenExprToVal(displayExpr, localenv);
+  var [body_init, body_class] = flattenStmt(disp, blocks, localenv);
+  bodyinits.concat(body_init);
+  // console.log("einits", einits, "estmts", estmts, "eexpr", eexpr);
+  pushStmtsToLastBlock(blocks, ...bstmts, {tag:"jmp", lbl: compStartLbl});
+
+  // end
+  blocks.push({  a: e.a, label: compEndLbl, stmts: [] })
+  if (e.cond)
+    return [[...cinits, ...bodyinits, ...body_init, ...dinits, ...binits]
+      , [...cstmts, ...dstmts, ...bstmts]
+      , {
+        a: e.a,
+        tag: "value",
+        value: {
+          a: { ...e.a, type: NUM },
+          tag: "id",
+          name: elem
+        },
+      },[...ceclass, ...bodyclasses, ...body_class, ...declass, ...beclass]]
+  else
+    return [[...cinits, ...bodyinits, ...body_init, ...binits]
+      , [...cstmts, ...bstmts]
+      , {
+        a: e.a,
+        tag: "value",
+        value: {
+          a: { ...e.a, type: NUM },
+          tag: "id",
+          name: elem
+        },
+      },[...ceclass, ...bodyclasses, ...body_class, ...beclass]]
 }
 
 function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annotation>>, env : GlobalEnv) : [Array<IR.VarInit<Annotation>>, Array<IR.Class<Annotation>>] {
@@ -495,6 +576,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         start: oval,
         offset: { tag: "wasmint", value: offset }}, oclasses];
     }
+
     case "construct":
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
@@ -523,6 +605,8 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } },
         []
       ];
+    case "list-comp":
+      return flattenListComp(e, env, blocks);
     case "id":
       let localLower: ReturnType<typeof flattenExprToExpr> = [[], [], { tag: "value", value: { ...e } }, []];
       if (e.transform === false)

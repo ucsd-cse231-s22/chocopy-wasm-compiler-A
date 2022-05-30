@@ -123,6 +123,33 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         tag: "id",
         name: s.substring(c.from, c.to)
       }
+    case "ArrayComprehensionExpression":
+      c.firstChild(); // '['
+      c.nextSibling();
+      const left = traverseExpr(c, s, env); // left
+      c.nextSibling(); // for
+      c.nextSibling();
+      const elem = traverseExpr(c, s, env); // elem
+      c.nextSibling(); // in
+      c.nextSibling();
+      // conditions for parsing iterable to be added --!!
+      const iterable = traverseExpr(c, s, env); // iterable
+      c.nextSibling();
+      var cond;
+      if (s.substring(c.from, c.to) !== ']'){
+        if (s.substring(c.from, c.to) !== 'if')
+          throw new Error("PARSE TYPE ERROR: only if condition allowed in comprehensions");
+        c.nextSibling();
+        cond = traverseExpr(c, s, env); // cond which evaluates to a binary expr
+      }
+      c.parent();
+      return {
+        tag: "list-comp",
+        left,
+        elem,
+        iterable,
+        cond
+      }
     case "CallExpression":
       c.firstChild();
       const callExpr = traverseExpr(c, s, env);
@@ -300,7 +327,7 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       var thn = traverseExpr(c, s, env);
       c.nextSibling();//if
       c.nextSibling();
-      var cond = traverseExpr(c, s, env);
+      var cond:any = traverseExpr(c, s, env);
       c.nextSibling();//else
       c.nextSibling();
       var els = traverseExpr(c, s, env);
