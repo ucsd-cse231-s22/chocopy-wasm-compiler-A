@@ -176,3 +176,18 @@ We followed the original design idea and successfully implemented the object pri
 * repl internal environment structure 
 * the way to manipulate the wasm memory through typescript code 
 * the trick to deal with printing cyclic linkedlist. 
+
+
+
+# Week8 Design
+
+1. Error Reporting with line highlighted:
+    When receiving a error while running the program, we could get a line number of error from error report feature. We could highlight the specific line in left editor.
+2. Foldable object print: 
+    We could make it more pretty to show the object visualization like using a foldable HTML box.
+3. put code examples from hardcode into a file:
+    we could extract the hardcode code examples into a independent file, making it more convenient to expand.
+4. layout, style and interaction changing of the     webpage:
+    We could continue to update the overall UI of the webpage, making it more pretty to look and operate.
+5. Show line numbers:
+    Show lines numbers for codeMirror editor.

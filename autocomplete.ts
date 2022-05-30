@@ -1,32 +1,5 @@
 import CodeMirror from "codemirror";
-import { BasicREPL } from "./repl";
 
-export function populateAutoCompleteSrc(repl: BasicREPL): Array<any> {
-    var defList: string[] = [];
-    var classMethodList: string[] = [];
-    //get variable names for autocomplete
-    repl.currentTypeEnv.globals.forEach((val, key) => {
-        //don't add functions into variable list
-        // if (val.tag != "callable") {
-        //   defList.push(key);
-        // }
-    });
-    //get class names for autocomplete
-    repl.currentTypeEnv.classes.forEach((val, key) => {
-        defList.push(key);
-        //second element denotes class methods
-        if (val.length > 1) {
-            val[1].forEach((v, k) => {
-                classMethodList.push(k + "()");
-            });
-        }
-    });
-    //get function names for autocomplete
-    repl.currentTypeEnv.functions.forEach((val, key) => {
-        defList.push(key + "()");
-    });
-    return [defList, classMethodList];
-}
 
 export function autocompleteHint(editor: any, keywords: string[], getToken: any) {
     // Find the token at the cursor
@@ -85,19 +58,14 @@ function getCompletions(wordList: any, token: any, context: any) {
         var obj = context.pop(),
             base;
 
-        if (obj.type == "variable") {
-            base = obj.string;
-        } else if (obj.type == "variable-3") {
-            base = ":" + obj.string;
-        } else if (obj.type == "property") {
-            base = obj.string;
-        } else if (obj.type == "builtin") {
-            base = obj.string;
-        } else if (obj.type == "keyword") {
+        const hasCompleteList: Array<string> = ["variable", "property", "builtin", "keyword"];
+        if (hasCompleteList.indexOf(obj.type) !== -1) {
             base = obj.string;
         }
 
-        while (base != null && context.length) base = base[context.pop().string];
+        while (base != null && context.length) {
+            base = base[context.pop().string];
+        }
         if (base != null) {
             completions = gatherCompletions(wordList, prefix);
         }

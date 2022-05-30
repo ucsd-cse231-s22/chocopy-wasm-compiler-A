@@ -11,12 +11,14 @@ import "codemirror/addon/lint/lint";
 import "codemirror/addon/scroll/simplescrollbars";
 import "./style.scss";
 
-import { autocompleteHint, populateAutoCompleteSrc } from "./autocomplete";
+import { autocompleteHint } from "./autocomplete";
 import { default_keywords, default_functions } from "./const";
 import { type } from 'os';
+import { addAccordionEvent, generate_folded_object } from './objectprint';
 
-
-function stringify(typ: Type, arg: any, repl: BasicREPL): string {
+// create a element binded to an object 
+//create an element binded to an object.
+export function stringify(typ: Type, arg: any, repl: BasicREPL): string {
   switch (typ.tag) {
     case "number":
       return (arg as number).toString();
@@ -28,7 +30,27 @@ function stringify(typ: Type, arg: any, repl: BasicREPL): string {
       return stringify_object( arg, typ.name, 0, new Map(), 1,repl).join("\n");
   }
 }
+function makeMarker(msg: any): any {
+  const marker = document.createElement("div");
+  marker.classList.add("error-marker");
+  marker.innerHTML = "&nbsp;";
 
+  const error = document.createElement("div");
+  error.innerHTML = msg;
+  error.classList.add("error-message");
+  marker.appendChild(error);
+
+  return marker;
+}
+
+
+// Simple helper to highlight line given line number
+function highlightLine(actualLineNumber: number, msg: string): void {
+  var ele = document.querySelector(".CodeMirror") as any;
+  var editor = ele.CodeMirror;
+  editor.setGutterMarker(actualLineNumber, "error", makeMarker(msg));
+  editor.addLineClass(actualLineNumber, "background", "line-error");
+}
 export function stringify_object( pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number,repl: BasicREPL): Array<string> {
 
   var fields_offset_ = repl.currentEnv.classes.get(classname);
@@ -70,10 +92,13 @@ export function stringify_object( pointer: number, classname: string, level: num
   return display;
 }
 
+
+
 function print(typ: Type, arg: number,repl: BasicREPL): any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
+  elt.setAttribute("class","output-success")
   elt.innerText = stringify(typ, arg,repl);
   return arg;
 }
@@ -82,7 +107,9 @@ function print_object(id: number, arg: number,repl: BasicREPL): any {
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
   var typ = repl.currentTypeEnv.classesNumber[id];
-  elt.innerText = stringify(CLASS(typ), arg,repl);
+  elt.setAttribute("class","output-success")
+  generate_folded_object(arg,typ,repl,elt); 
+  // elt.innerText = stringify(CLASS(typ), arg,repl);
   return arg;
 }
 function assert_not_none(arg: any): any {
@@ -172,8 +199,7 @@ function webStart() {
     function initCodeMirror() {
 
       let isClassMethod = false;
-      let classMethodList: string[] = [];
-      let defList: string[] = [];
+
 
       const userCode = document.getElementById("user-code") as HTMLTextAreaElement;
       const editorBox = CodeMirror.fromTextArea(userCode, {
@@ -204,8 +230,8 @@ function webStart() {
           isClassMethod = true;
           editor.showHint({
             hint: () =>
-              autocompleteHint(editor, classMethodList, function (e: any, cur: any) {
-                return e.getTokenAt(cur);
+            autocompleteHint(editor, [], function (e: any, cur: any) {
+              return e.getTokenAt(cur);
               }),
           });
         } else {
@@ -214,7 +240,7 @@ function webStart() {
             hint: () =>
               autocompleteHint(
                 editor,
-                default_keywords.concat(default_functions).concat(defList),
+                default_keywords.concat(default_functions),
                 function (e: any, cur: any) {
                   return e.getTokenAt(cur);
                 }
@@ -229,21 +255,21 @@ function webStart() {
           case "Enter":
             isClassMethod = false;
             //compile code in background to get populate environment for autocomplete
-            var importObject = {
-              imports: {
-                print: print,
-                abs: Math.abs,
-                min: Math.min,
-                max: Math.max,
-                pow: Math.pow,
-              },
-            };
-             repl = new BasicREPL(importObject);
+            // var importObject = {
+            //   imports: {
+            //     print: print,
+            //     abs: Math.abs,
+            //     min: Math.min,
+            //     max: Math.max,
+            //     pow: Math.pow,
+            //   },
+            // };
+            //  repl = new BasicREPL(importObject);
 
-            const source = document.getElementById("user-code") as HTMLTextAreaElement;
-            repl.run(source.value).then((r) => {
-              [defList, classMethodList] = populateAutoCompleteSrc(repl);
-            });
+            // const source = document.getElementById("user-code") as HTMLTextAreaElement;
+            // repl.run(source.value).then((r) => {
+            //   [defList, classMethodList] = populateAutoCompleteSrc(repl);
+            // });
             return;
           case "Space":
             isClassMethod = false;
@@ -276,12 +302,14 @@ function webStart() {
     };
     var repl = new BasicREPL(importObject);
     
-
+    addAccordionEvent(repl);
 
     function renderResult(result: Value): void {
       if (result === undefined) { console.log("skip"); return; }
       if (result.tag === "none") return;
       const elt = document.createElement("pre");
+      elt.setAttribute("class", "output-success")
+
       document.getElementById("output").appendChild(elt);
       switch (result.tag) {
         case "num":
@@ -302,6 +330,8 @@ function webStart() {
       const elt = document.createElement("pre");
       document.getElementById("output").appendChild(elt);
       elt.setAttribute("style", "color: red");
+      elt.setAttribute("class", "output-fail");
+
       elt.innerText = String(result);
     }
 
@@ -349,10 +379,12 @@ function webStart() {
 
     function setupCodeExample() {
       const sel = document.querySelector("#exampleSelect") as HTMLSelectElement;
+      const codeExampleData = require("./codeExample.json");
+
       console.log('editorBox: ', editorBox);
       sel.addEventListener("change", (e) => {
-        const code = get_code_example(sel.value);
-        if (code !== "") {
+        const code = codeExampleData[sel.value];
+        if (code !== undefined) {
           // const usercode = document.getElementById("user-code") as HTMLTextAreaElement;
           editorBox.setValue(code);
         }
@@ -428,7 +460,14 @@ function webStart() {
       const source = document.getElementById("user-code") as HTMLTextAreaElement;
       resetRepl();
       repl.run(source.value).then((r) => { renderResult(r); console.log("run finished") })
-        .catch((e) => { renderError(e); console.log("run failed", e) });;
+      .catch((e) => {
+        renderError(e);
+        //TODO get actual error
+        // const errorline = e?.getA()?.fromLoc?.row;
+        const errorline = 11;
+        highlightLine(errorline, String(e));
+        console.log("run failed", e)
+      });;
     });
     setupRepl();
     setupCodeExample();
@@ -436,3 +475,7 @@ function webStart() {
 }
 
 webStart();
+function str(address: number): string {
+  throw new Error('Function not implemented.');
+}
+
