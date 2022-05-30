@@ -4,7 +4,7 @@ import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "
 import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkCompileValEquality, checkStmtEquality } from "./optimization_utils"; 
 
 type Env = {
-    vars?: Map<string, compileVal>;
+    vars: Map<string, compileVal>;
 }
 
 export type compileVal = {
