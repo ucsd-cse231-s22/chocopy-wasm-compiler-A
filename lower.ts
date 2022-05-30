@@ -260,12 +260,12 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
   switch(s.tag) {
     case "assign":
       if(s.destruct.isSimple === true) {
-        var [valinits, valstmts, vale] = flattenExprToExpr(s.value, blocks, env);
+        var [valinits, valstmts, vale, classes] = flattenExprToExpr(s.value, blocks, env);
         var left = s.destruct.vars[0].target;
         switch(left.tag) {
           case "id":
             blocks[blocks.length - 1].stmts.push(...valstmts, { a: s.a, tag: "assign", name: left.name, value: vale});
-            return [valinits, []];
+            return [valinits, classes];
             // return [valinits, [
             //   ...valstmts,
             //   { a: s.a, tag: "assign", name: s.name, value: vale}
@@ -283,13 +283,15 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
             var outputClasses: Array<IR.Class<Annotation>> = [];
             var [valinits, valstmts, va, classes] = flattenExprToVal(s.value, blocks, env);
             outputInits = outputInits.concat(valinits);
+            outputClasses = outputClasses.concat(classes);
             pushStmtsToLastBlock(blocks, ...valstmts);
             if(va.tag === "id") {
               const nextMethod : IR.Expr<Annotation> = { a: {type: {tag: "number"}}, tag: "call", name: `iterator$next`, arguments: [va] }
               const hasNextMethod : IR.Expr<Annotation> = { a: {type: {tag: "bool"}}, tag: "call", name: `iterator$hasNext`, arguments: [va] }
               s.destruct.vars.forEach(v => {
-                var [inits, stmts, val] = flattenIrExprToVal(hasNextMethod, env);
+                var [inits, stmts, val, cls] = flattenIrExprToVal(hasNextMethod, env);
                 outputInits = outputInits.concat(inits);
+                outputClasses = outputClasses.concat(cls);
                 const runtimeCheck : IR.Expr<Annotation> = { tag: "call", name: `destructure_check`, arguments: [] }
                 runtimeCheck.arguments.push(val);
                 pushStmtsToLastBlock(blocks, ...stmts, { tag: "expr", expr: runtimeCheck })
@@ -321,11 +323,13 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                 }
               });
               // check if iterator has remainning elements
-              var [inits1, stmts1, val1] = flattenIrExprToVal(hasNextMethod, env);
+              var [inits1, stmts1, val1, classes1] = flattenIrExprToVal(hasNextMethod, env);
               outputInits = outputInits.concat(inits1);
+              outputClasses = outputClasses.concat(classes1);
               var remain : IR.Expr<Annotation> = { a: {type: {tag: "bool"}}, tag: "uniop", op: UniOp.Not, expr: val1 };
-              var [inits2, stmts2, val2] = flattenIrExprToVal(remain, env);
+              var [inits2, stmts2, val2, classes2] = flattenIrExprToVal(remain, env);
               outputInits = outputInits.concat(inits2);
+              outputClasses = outputClasses.concat(classes2);
               const runtimeCheck : IR.Expr<Annotation> = { tag: "call", name: `destructure_check`, arguments: [] }
               runtimeCheck.arguments.push(val2);
               pushStmtsToLastBlock(blocks, ...stmts1, ...stmts2, { tag: "expr", expr: runtimeCheck })
@@ -341,10 +345,11 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
             var valstmts : IR.Stmt<AST.Annotation>[] = [];
             var vales : IR.Expr<AST.Annotation>[] = [];
             for(var expr of s.value.elements) {
-              var [exprinits, exprstmts, vale] = flattenExprToExpr(expr, blocks, env);
+              var [exprinits, exprstmts, vale, classes] = flattenExprToExpr(expr, blocks, env);
               valinits = valinits.concat(exprinits);
               valstmts = valstmts.concat(exprstmts);
               vales.push(vale);
+              outputClasses = outputClasses.concat(classes);
             }
             outputInits = outputInits.concat(valinits);
             pushStmtsToLastBlock(blocks, ...valstmts);
