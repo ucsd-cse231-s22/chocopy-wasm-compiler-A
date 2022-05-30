@@ -3,7 +3,7 @@ import * as IR from './ir';
 import * as ERRORS from './errors';
 import { Type, Annotation } from './ast';
 import { GlobalEnv } from './compiler';
-import { APPLY, CLASS, createMethodName, BOOL, NONE, NUM, SET_PARENT, defaultLiteral } from './utils';
+import { APPLY, CLASS, createMethodName, BOOL, NONE, NUM, SET_PARENT, defaultLiteral, CALLABLE } from './utils';
 
 let nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -567,33 +567,53 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       ];
     }
     case "lookup": {
+      if (e.a.type.tag === "callable") {
+        let selfName = generateName("$boundSelf");
+        let initSelf = lowerVarInit({ name: selfName, type: e.obj.a.type, value: { tag: "none" } }, env);
+        let [stmtInits, stmtClass] = flattenStmt({ tag: "assign", name: selfName, value: e.obj }, blocks, env);
+
+        let names: string[] = e.a.type.params.map((_, i) => `tmp${i}`);
+        let ids: AST.Expr<Annotation>[] = e.a.type.params.map((type, index) =>
+          ({ tag: "id", name: names[index], a: { type } })
+        );
+        let self: AST.Expr<Annotation> = { tag: "id", name: selfName, a: { ...e.obj.a }, transform: false };
+        let outerLambdaType: AST.Type = { tag: "callable", params: [e.obj.a.type], ret: e.a.type };
+        let lambda: AST.Expr<Annotation> = {
+          tag: "call",
+          fn: {
+            a: { type: outerLambdaType },
+            tag: "lambda",
+            type: outerLambdaType,
+            params: [selfName],
+            expr: {
+              a: { type: e.a.type },
+              tag: "lambda",
+              type: e.a.type,
+              params: names,
+              expr: {
+                a: { type: e.a.type },
+                tag: "method-call",
+                obj: self,
+                method: e.field,
+                arguments: [self, ...ids],
+              },
+            },
+          },
+          arguments: [self]
+        };
+        
+        var [linits, lstmts, lexpr, lclasses] = flattenExprToExpr(lambda, blocks, env);
+        return [
+          [initSelf, ...stmtInits, ...linits],
+          lstmts,
+          lexpr,
+          [...stmtClass,...lclasses]
+        ];
+      }
+
       const [oinits, ostmts, oval, oclasses] = flattenExprToVal(e.obj, blocks, env);
       if(e.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
       const classdata = env.classes.get(e.obj.a.type.name);
-
-      if(e.a.type.tag === "callable"){
-        
-        let self = generateName("$boundSelf");
-        let initSelf: AST.VarInit<Annotation> = { name: self, type: e.obj.a.type, value: {tag: "none"} };
-        let assignSelf: AST.Stmt<Annotation> = { tag: "assign", name: self, value: e.obj };
-        
-        let [stmtInits, stmtClass] = flattenStmt(assignSelf, blocks, env);
-
-        let names: string[] = e.a.type.params.map(() => generateName("$tmp"));
-        let ids: AST.Expr<Annotation>[] = e.a.type.params.map((type, index) => ({ tag: "id", name: names[index], a: { type } }));
-        
-        let expr: AST.Expr<Annotation> = {
-          tag: "method-call",
-          obj: { tag: "id", name: self, a: { ...e.obj.a } },
-          method: e.field,
-          arguments: [{ tag: "id", name: self, a: { ...e.obj.a } }, ...ids],
-          a: { type: e.a.type }
-        };
-        let lambda : AST.Lambda<Annotation> = { tag: "lambda", type: e.a.type, params: names, expr };
-        
-        var [linits, lstmts, lexpr, lclasses] = flattenExprToExpr(lambda, blocks, env)
-        return [[lowerVarInit(initSelf,env),...stmtInits, ...linits], [...lstmts], lexpr, [...stmtClass,...lclasses]];
-      }
 
       const [offset, _] = classdata.get(e.field);
       const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, oval);
