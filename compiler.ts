@@ -5,7 +5,7 @@ import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./uti
 export type GlobalEnv = {
   globals: Map<string, boolean>;
   // class name    ->   field -> field offset, value, method -> method offset, super classes, super class method count
-  classes: Map<string, [Map<string, [number, Value<Annotation>]>, Map<string, number>, Array<string>, number]>;
+  classes: Map<string, [Map<string, [number, Value<Annotation>]>, Map<string, number>, Map<string,Array<string>>, number]>;
   locals: Set<string>;
   labels: Array<string>;
   offset: number;

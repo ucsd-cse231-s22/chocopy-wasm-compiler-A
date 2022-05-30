@@ -49,7 +49,7 @@ describe('Generics Type-Checker Tests', () => {
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -64,7 +64,7 @@ describe('Generics Type-Checker Tests', () => {
       fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
       methods: [],
       typeParams: ['T'],
-      super: [],
+      super: new Map(),
       a: {eolLoc: {row: 0, col: 0, srcIdx: 0}},
     });
 
@@ -89,7 +89,7 @@ describe('Generics Type-Checker Tests', () => {
           ],
           methods: [],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ]
@@ -106,7 +106,7 @@ describe('Generics Type-Checker Tests', () => {
       ],
       methods: [],
       typeParams: ['T'],
-      super: [],
+      super: new Map(),
       a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
 
@@ -142,7 +142,7 @@ describe('Generics Type-Checker Tests', () => {
             },
           ],
           typeParams: ['T'],
-          super: []
+          super: new Map()
         }
       ]
     };
@@ -167,7 +167,7 @@ describe('Generics Type-Checker Tests', () => {
         },
       ],
       typeParams: ['T'],
-      super: []
+      super: new Map()
     });
 
     const [fieldsTy, methodsTy, _] = newEnv.classes.get('Box');
@@ -205,7 +205,7 @@ describe('Generics Type-Checker Tests', () => {
             },
           ],
           typeParams: ['T'],
-          super: []
+          super: new Map()
         }
       ]
     };
@@ -232,7 +232,7 @@ describe('Generics Type-Checker Tests', () => {
         },
       ],
       typeParams: ['T'],
-      super: []
+      super: new Map()
     });
 
     const [fieldsTy, methodsTy, _] = newEnv.classes.get('Box');
@@ -255,7 +255,7 @@ describe('Generics Type-Checker Tests', () => {
             { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -276,7 +276,7 @@ describe('Generics Type-Checker Tests', () => {
             { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], nonlocals:       [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
           ],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         } 
       ],
@@ -304,7 +304,7 @@ describe('Generics Type-Checker Tests', () => {
             { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] , nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
           ],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -329,7 +329,7 @@ describe('Generics Type-Checker Tests', () => {
             { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [] }
           ],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         },
       ],
@@ -357,7 +357,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -382,7 +382,7 @@ describe('Generics Type-Checker Tests', () => {
             a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         } 
       ],
@@ -413,7 +413,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -441,7 +441,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
           ],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}},
         } 
       ],
@@ -477,7 +477,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -508,7 +508,7 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], super: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
@@ -537,7 +537,7 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: 'binop', op: BinOp.Is, left: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, right: { tag: "literal", value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], super: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
@@ -565,7 +565,7 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], super: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
@@ -593,7 +593,7 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], super: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
@@ -630,7 +630,7 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], super: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
@@ -659,7 +659,7 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], super: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
@@ -698,7 +698,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -729,7 +729,7 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], super: [],
+          typeParams: ['T'], super: new Map(),
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -769,7 +769,7 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], super: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
@@ -799,7 +799,7 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], super: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
@@ -839,7 +839,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -870,7 +870,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
-          super: [],
+          super: new Map(),
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],

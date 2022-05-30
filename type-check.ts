@@ -45,7 +45,7 @@ export class TypeCheckError extends Error {
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<string>, Array<string>]>,
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Map<string,Array<string>>, Array<string>]>,
   typevars: Map<string, [string]>
 }
 
@@ -304,7 +304,7 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
     cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
     const typeParams = cls.typeParams;
     newClasses.set(cls.name, [fields, methods, cls.super, [...typeParams]]);
-    subclassTosuperclass.set(cls.name, cls.super)
+    subclassTosuperclass.set(cls.name, [ ...cls.super.keys() ])
   });
 
   augmentInheritance(subclassTosuperclass, newClasses, program)
@@ -318,7 +318,7 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
   return { globals: newGlobs, functions: newFuns, classes: newClasses, typevars: newTypevars };
 }
 
-export function augmentInheritance(subclassTosuperclass : Map<string, string[]>, newClasses : Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<string>, Array<string>]>, program : Program<Annotation>) {
+export function augmentInheritance(subclassTosuperclass : Map<string, string[]>, newClasses : Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Map<string,Array<string>>, Array<string>]>, program : Program<Annotation>) {
   for (let entry of Array.from(subclassTosuperclass.entries())) {
     let sub = entry[0];
     let sup = entry[1];
@@ -539,15 +539,17 @@ export function tcFields(env: GlobalTypeEnv, cls : Class<Annotation>, tFields : 
 }
 
 export function getSuperclasses(env: GlobalTypeEnv, subclass: string, classes: Array<string>) {
-  if (subclass === "object")
+  if (subclass === "object") {
+    classes.push("object") 
     return
+  }    
 
-  env.classes.get(subclass)[2].forEach(cls => {
+  env.classes.get(subclass)[2].forEach((_, cls) => {
     if (cls !== "object") {
       classes.push(cls)
     }
   })
-  env.classes.get(subclass)[2].forEach(cls => {
+  env.classes.get(subclass)[2].forEach((_, cls) => {
     getSuperclasses(env, cls, classes)
   })
 }
@@ -557,13 +559,13 @@ export function getSuperclassFields(env: GlobalTypeEnv, subclass: string, fields
     return
   else {
     const superclasses = env.classes.get(subclass)[2]
-    superclasses.forEach(cls => {
+    superclasses.forEach((_, cls) => {
       if (cls !== "object") {
         const clsfields = env.classes.get(cls)[0]
         clsfields.forEach((value, key) => fields.set(key, value));
       }
     })
-    superclasses.forEach(cls => {
+    superclasses.forEach((_, cls) => {
       getSuperclassFields(env, cls, fields)
     })
   }
@@ -574,13 +576,13 @@ export function getSuperclassMethods(env: GlobalTypeEnv, subclass: string, metho
     return
   else {
     const superclasses = env.classes.get(subclass)[2]
-    superclasses.forEach(cls => {
+    superclasses.forEach((_, cls) => {
       if (cls !== "object") {
         const clsmethods = env.classes.get(cls)[1]
         clsmethods.forEach((value, key) => methods.set(key, value));
       }
     })
-    superclasses.forEach(cls => {
+    superclasses.forEach((_, cls) => {
       getSuperclassMethods(env, cls, methods)
     })
   }

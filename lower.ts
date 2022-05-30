@@ -32,8 +32,8 @@ export function generateVtable(p : AST.Program<Annotation>, env : GlobalEnv) {
   var classIndices = new Map(); // stores the start and end index of the class in vtable
   var methodIndex = 0;
   p.classes.forEach(cls => {
-    if (cls.super[0]!=="object") {
-      const superClassIndexes = classIndices.get(cls.super[0])
+    if ([...cls.super.keys()][0] !== "object") {
+      const superClassIndexes = classIndices.get([...cls.super.keys()][0])
       var superClassVtable = vtable.slice(superClassIndexes[0], superClassIndexes[1])
       cls.methods.forEach(m => {
         const methodOffset = env.classes.get(cls.name)[1].get(m.name);
@@ -131,7 +131,7 @@ function lowerFunDef(
         }
       ],
       typeParams: [],
-      super: []
+      super: new Map()
     }, ...defs.map(x => x[0]).flat()],
     varInit,
     assignStmt
@@ -175,7 +175,8 @@ function lowerClass(cls: AST.Class<Annotation>, env : GlobalEnv) : Array<IR.Clas
     {
       ...cls,
       fields: lowerVarInits(cls.fields, env),
-      methods
+      methods,
+      super : [... cls.super.keys()]
     }
   ];
 }
@@ -447,11 +448,11 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       const classdata = env.classes.get(e.name);
       const newName = generateName("newObj");
       var fields = [...classdata[0].entries()];
-      var superClass = classdata[2];
+      var superClass = [...classdata[2].keys()];
 
       while(superClass.length !== 0 && superClass[0] !== "object") {
         const superClassFields = [...env.classes.get(superClass[0])[0].entries()]
-        superClass = [...env.classes.get(superClass[0])[2]]
+        superClass = [...env.classes.get(superClass[0])[2].keys()]
         fields = [...superClassFields, ...fields]
       }
       
@@ -529,7 +530,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
 
       const classFields = new Map();
       classDef.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
-      env.classes.set(classDef.name, [new Map(classFields), new Map(), [], 0]);
+      env.classes.set(classDef.name, [new Map(classFields), new Map(), new Map(), 0]);
       env.classIndices.set(classDef.name, [env.vtable.length, env.vtable.length + 1]);
       env.vtable.push(...classDef.methods
         .map((method): [string, number] => [
@@ -550,7 +551,7 @@ function getClassFieldOffet(className: string, fieldName: string, env: GlobalEnv
     if (classdata[0].has(fieldName)) {
       return classdata[0].get(fieldName)[0] + 1;  // + 1 to store class method index in vtable
     }
-    className = classdata[2][0];
+    className = [...classdata[2].keys()][0];
   }
 }
 
@@ -559,7 +560,7 @@ function getMethodClassName(className: string, methodName: string, env: GlobalEn
   if (env.classes.get(className)[1].has(methodName)) {
     return className
   } else {
-    return getMethodClassName(env.classes.get(className)[2][0], methodName, env);
+    return getMethodClassName([...env.classes.get(className)[2].keys()][0], methodName, env);
   }
 }
 
@@ -594,7 +595,7 @@ function lambdaToClass(lambda: AST.Lambda<Annotation>) : [AST.Class<Annotation>,
         }
       ],
       typeParams: [],
-      super: []
+      super: new Map()
     },
     { a: lambda.a, tag: "construct", name: lambdaClassName }
   ];
