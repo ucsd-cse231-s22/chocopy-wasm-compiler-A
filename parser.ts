@@ -739,12 +739,14 @@ export function traverseClassHelper(c: TreeCursor, s: string, env: ParserEnv): C
       const superclassname = s.substring(c.from, c.to);
       if (superclassname !== "Generic") {
         c.nextSibling();
+        c.nextSibling();
         var types = [];
         while(c.name !== "]") {
-          console.log(c.type.name)
-          types.push(s.substring(c.from, c.to));
+          types.push(s.substring(c.from, c.to).trim());
+          c.nextSibling();
           c.nextSibling();
         }
+        superClasses.set(superclassname, types);
       }
       c.parent();
     } else if (c.type.name !== "MemberExpression"  && c.type.name !== ",") {

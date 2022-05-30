@@ -247,6 +247,97 @@ describe('Generics Parser Tests',() => {
       expect(parsedClass.methods[0].parameters[0].name).to.deep.equal("self");
       expect(parsedClass.methods[0].parameters[0].type.tag).to.deep.equal("class");
       expect(parsedClass.typeParams).to.deep.equal(["T"]);
+      expect(Array.from(parsedClass.super.entries())).to.deep.equal([['object', []]]);
     })
+
+    it('traverses generic class with inheritance', () => {
+      const env: ParserEnv = {
+        lineBreakIndices: [],
+      }
+      const source = `
+      class Box(Generic[T], SuperBox):
+        a: int = 0
+      `;
+      const cursor = parser.parse(source).cursor();
+      // go to Class def
+      cursor.firstChild();
+
+      const parsedClass = traverseClass(cursor, source, env);
+
+      // Note: we have to use deep equality when comparing objects
+      expect(parsedClass.name).to.deep.equal("Box");
+      expect(parsedClass.fields.length).to.equal(1);
+      expect(parsedClass.fields[0].name).to.deep.equal("a");
+      expect(parsedClass.fields[0].value.tag).to.deep.equal("num");
+      expect(parsedClass.methods.length).to.equal(1);
+      expect(parsedClass.methods[0].body).to.deep.equal([]);
+      expect(parsedClass.methods[0].inits).to.deep.equal([]);
+      expect(parsedClass.methods[0].name).to.deep.equal("__init__");
+      expect(parsedClass.methods[0].parameters.length).to.equal(1);
+      expect(parsedClass.methods[0].parameters[0].name).to.deep.equal("self");
+      expect(parsedClass.methods[0].parameters[0].type.tag).to.deep.equal("class");
+      expect(parsedClass.typeParams).to.deep.equal(["T"]);
+      expect(Array.from(parsedClass.super.entries())).to.deep.equal([['SuperBox', []]]);
+    });
+
+    it('traverses generic class with generic inheritance', () => {
+      const env: ParserEnv = {
+        lineBreakIndices: [],
+      }
+      const source = `
+      class Box(Generic[T], SuperBox[T]):
+        a: int = 0
+      `;
+      const cursor = parser.parse(source).cursor();
+      // go to Class def
+      cursor.firstChild();
+
+      const parsedClass = traverseClass(cursor, source, env);
+
+      // Note: we have to use deep equality when comparing objects
+      expect(parsedClass.name).to.deep.equal("Box");
+      expect(parsedClass.fields.length).to.equal(1);
+      expect(parsedClass.fields[0].name).to.deep.equal("a");
+      expect(parsedClass.fields[0].value.tag).to.deep.equal("num");
+      expect(parsedClass.methods.length).to.equal(1);
+      expect(parsedClass.methods[0].body).to.deep.equal([]);
+      expect(parsedClass.methods[0].inits).to.deep.equal([]);
+      expect(parsedClass.methods[0].name).to.deep.equal("__init__");
+      expect(parsedClass.methods[0].parameters.length).to.equal(1);
+      expect(parsedClass.methods[0].parameters[0].name).to.deep.equal("self");
+      expect(parsedClass.methods[0].parameters[0].type.tag).to.deep.equal("class");
+      expect(parsedClass.typeParams).to.deep.equal(["T"]);
+      expect(Array.from(parsedClass.super.entries())).to.deep.equal([['SuperBox', ['T']]]);
+    });
+
+    it('traverses generic class with multiple generic/non-generic inheritance', () => {
+      const env: ParserEnv = {
+        lineBreakIndices: [],
+      }
+      const source = `
+      class Box(Generic[T], SuperBox1[T], SuperBox2, SuperBox3[T, T]):
+        a: int = 0
+      `;
+      const cursor = parser.parse(source).cursor();
+      // go to Class def
+      cursor.firstChild();
+
+      const parsedClass = traverseClass(cursor, source, env);
+
+      // Note: we have to use deep equality when comparing objects
+      expect(parsedClass.name).to.deep.equal("Box");
+      expect(parsedClass.fields.length).to.equal(1);
+      expect(parsedClass.fields[0].name).to.deep.equal("a");
+      expect(parsedClass.fields[0].value.tag).to.deep.equal("num");
+      expect(parsedClass.methods.length).to.equal(1);
+      expect(parsedClass.methods[0].body).to.deep.equal([]);
+      expect(parsedClass.methods[0].inits).to.deep.equal([]);
+      expect(parsedClass.methods[0].name).to.deep.equal("__init__");
+      expect(parsedClass.methods[0].parameters.length).to.equal(1);
+      expect(parsedClass.methods[0].parameters[0].name).to.deep.equal("self");
+      expect(parsedClass.methods[0].parameters[0].type.tag).to.deep.equal("class");
+      expect(parsedClass.typeParams).to.deep.equal(["T"]);
+      expect(Array.from(parsedClass.super.entries())).to.deep.equal([['SuperBox1', ['T']], ['SuperBox2', []], ['SuperBox3', ['T', 'T']]]);
+    });
   }); 
 });
