@@ -384,7 +384,7 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
       // reset the values class to the original state at the start of the loop - nested loops use case
       var resetCall : AST.Expr<AST.Annotation> =  {tag:"method-call", obj:s.values, method:"reset", arguments:[], a:{...s.a, type: NONE}};
       var resetStmt : AST.Stmt<AST.Annotation>[] = [{ tag: "expr", expr: resetCall , a:{ ...s.a, type: NONE }}];
-      flattenStmts(resetStmt, blocks, localenv); 
+      var [rinits, rclasses] = flattenStmts(resetStmt, blocks, localenv); 
       
       pushStmtsToLastBlock(blocks, {tag:"jmp", lbl: forStartLbl })
       blocks.push({  a: s.a, label: forStartLbl, stmts: [] })
@@ -398,14 +398,17 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
       blocks.push({  a: s.a, label: forbodyLbl, stmts: [] })
       var nextAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign",name:s.iterator, value: nextCall,a:s.a }]
       
-      flattenStmts(nextAssign, blocks, localenv); // to add wasm code for i = c.next(). has no inits 
+      var [ninits, nclasses] = flattenStmts(nextAssign, blocks, localenv); // to add wasm code for i = c.next(). has no inits 
       
       var [bodyinits, bodyclasses] = flattenStmts(s.body, blocks, localenv)
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl });
     
       blocks.push({  a: s.a, label: forEndLbl, stmts: [] })
     
-      return [[...cinits, ...bodyinits], [...bodyclasses]];
+      return [
+        [...rinits, ...cinits, ...ninits, ...bodyinits],
+        [...rclasses, ...nclasses, ...bodyclasses]
+      ];
   }
 }
 
@@ -521,8 +524,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         []
       ];
     case "id":
-      let localLower: [Array<IR.VarInit<Annotation>>, Array<IR.Stmt<Annotation>>, IR.Expr<Annotation>, Array<IR.Class<Annotation>>] 
-        = [[], [], { tag: "value", value: { ...e } }, []];
+      let localLower: ReturnType<typeof flattenExprToExpr> = [[], [], { tag: "value", value: { ...e } }, []];
       if (e.transform === false)
         return localLower;
       let currentFun = env.functionNames.get("$current");
@@ -611,10 +613,11 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
 
       var astClasses = lowerFunDef(funDef, env, env.lambdaStack.reverse())[0];
       astClasses.forEach(cls => {
-        env.classIndices.set(cls.name, env.vtableMethods.length)
+        env.classIndices.set(cls.name, env.vtableMethods.length);
         env.vtableMethods.push(...cls.methods
           .filter(method => !method.name.includes("__init__"))
-          .map((method): [string, number] => [createMethodName(cls.name, method.name), method.parameters.length]));
+          .map((method): [string, number] => [createMethodName(cls.name, method.name), method.parameters.length])
+        );
       });
 
       let currentFun = env.functionNames.get("$current");
