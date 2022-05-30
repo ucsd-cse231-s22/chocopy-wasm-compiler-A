@@ -309,7 +309,7 @@ function webStart() {
       if (result.tag === "none") return;
       const elt = document.createElement("pre");
       elt.setAttribute("class", "output-success")
-
+      addAccordionEvent(repl);
       document.getElementById("output").appendChild(elt);
       switch (result.tag) {
         case "num":
