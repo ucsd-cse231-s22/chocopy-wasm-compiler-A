@@ -107,7 +107,7 @@ function lowerFunDef(
   env.nonlocalMap.set(name, scopedVars);
 
   const classFields = new Map();
-  fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
+  fields.forEach((field, i) => classFields.set(field.name, [i + 1, field.value]));
   env.classes.set(name, classFields);
 
   var assignFields = [...f.parameters, ...f.inits].map((x): AST.Stmt<Annotation> => ({ 
@@ -298,7 +298,7 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
       var [ninits, nstmts, nval, nclasses] = flattenExprToVal(s.value, blocks, env);
       if(s.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home."); }
       const classdata = env.classes.get(s.obj.a.type.name);
-      const offset : IR.Value<Annotation> = { tag: "wasmint", value: classdata.get(s.field)[0] + 1 };
+      const offset : IR.Value<Annotation> = { tag: "wasmint", value: classdata.get(s.field)[0] };
       pushStmtsToLastBlock(blocks,
         ...ostmts, ...nstmts, {
           tag: "store",
@@ -490,14 +490,13 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       return [oinits, [...ostmts, checkObj], {
         tag: "load",
         start: oval,
-        offset: { tag: "wasmint", value: offset + 1 }}, oclasses];
+        offset: { tag: "wasmint", value: offset }}, oclasses];
     }
     case "construct":
       const classdata = env.classes.get(e.name);
-      console.log(e, env.classes);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1} };
+      const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1 } };
       const assigns : IR.Stmt<Annotation>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {

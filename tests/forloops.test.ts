@@ -145,6 +145,36 @@ for i in cls:
     "for-loop entersloop positive values",
     `
     class Range(object):
+      current : int = 0
+      min : int = 0
+      max : int = 0
+      def new(self:Range, min:int, max:int)->Range:
+        self.min = min
+        self.current = min
+        self.max = max
+        return self
+      def next(self:Range)->int:
+        c : int = 0
+        c = self.current
+        self.current = self.current + 1
+        return c
+      def hasnext(self:Range)->bool:
+        return self.current < self.max
+      def reset(self:Range) :
+        self.current = self.min
+    
+    
+    
+    cls:Range = None
+    i:int = 0
+    cls = Range().new(3, 6)
+    for i in cls:
+      print(i))`,
+      [`3`, `4`, `5`]
+    );
+    // 7
+    assertPrint("for-loop chainging iterator inside loop", `
+    class Range(object):
     current : int = 0
     min : int = 0
     max : int = 0
@@ -162,36 +192,6 @@ for i in cls:
       return self.current < self.max
     def reset(self:Range) :
       self.current = self.min
-  
-  
-  
-  cls:Range = None
-  i:int = 0
-  cls = Range().new(3, 6)
-  for i in cls:
-    print(i))`,
-    [`3`, `4`, `5`]
-  );
-  // 7
-  assertPrint("for-loop chainging iterator inside loop", `
-  class Range(object):
-  current : int = 0
-  min : int = 0
-  max : int = 0
-  def new(self:Range, min:int, max:int)->Range:
-    self.min = min
-    self.current = min
-    self.max = max
-    return self
-  def next(self:Range)->int:
-    c : int = 0
-    c = self.current
-    self.current = self.current + 1
-    return c
-  def hasnext(self:Range)->bool:
-    return self.current < self.max
-  def reset(self:Range) :
-    self.current = self.min
 
 
 cls:Range = None
