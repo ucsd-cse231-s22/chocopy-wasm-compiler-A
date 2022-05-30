@@ -105,18 +105,17 @@ export function addAccordionEvent(repl:BasicREPL) {
     if(address == 0){
       currentEle.innerText = `${classname} object is None`;
     }
-    currentEle.append
     const exp:HTMLButtonElement = document.createElement("button") ;
     exp.setAttribute("class", "accordion");
     exp.setAttribute("address",address.toString());
     exp.setAttribute("classname",classname);
     exp.setAttribute("unfolded","no"); 
-    exp.innerHTML = "<i class='arrow' id='arrow'></i> " + classname +  ` object at ${address}`;
+    exp.innerHTML = "<i class='arrow' id='arrow'></i> " + classname +  ` object at addr ${address}`;
     currentEle.appendChild(exp);
     addAccordionEvent(repl);
   }
   export function unfold_object( address: number, classname: string,repl: BasicREPL, currentEle: HTMLButtonElement) {
-     const parentNode = currentEle.parentNode;
+    const parentNode = currentEle.parentNode;
     const div = document.createElement("div");
     div.setAttribute("class", "panel");
     currentEle.appendChild(div);
@@ -145,8 +144,7 @@ export function addAccordionEvent(repl:BasicREPL) {
       }
       div.appendChild(ele);
       ele.setAttribute("class", "info");
-    }
-    )
+    })
     currentEle.setAttribute("unfolded", "true");
     addAccordionEvent(repl);
 

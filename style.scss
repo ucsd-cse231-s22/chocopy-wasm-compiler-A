@@ -49,53 +49,7 @@
       display: block;
     }
   }
-  .interactions {
-    padding: 20px;
-    .arrow {
-      border: solid black;
-      border-width: 0 3px 3px 0;
-      display: inline-block;
-      padding: 3px;
-      transform: rotate(-45deg);
-    }
-    .accordion {
-      background-color: transparent;
-      color:darkcyan;
-      cursor: pointer;
-      width: 100%;
-      border: none;
-      text-align: left;
-      outline: none;
-      font-size: 16px;
-      transition: 0.4s;
-      font-family: monospace;
-      height: 2em;
-    }
-  
-    .active, .accordion:hover {
-      background-color: #ccc; 
-      color:rebeccapurple;
-    }
-  
-    .panel {
-      width: 100%;
-      padding: 0 0 0 5%;
-      display: none;
-      background-color: transparent;
-      overflow: hidden;
-      font-family: monospace;
-      
-      .tag{
-        color:rebeccapurple;
-        vertical-align: middle;
-      }
-      .val{
-        display: inline;
-        color:darkcyan;
-        vertical-align: middle;
-      }
-    }
-}
+
 }
 .save_load {
   width: 100%;
