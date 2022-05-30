@@ -555,7 +555,16 @@ describe('Generics Type-Checker Tests', () => {
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", 
+          destruct: {
+            isSimple: true,
+            vars: [
+              { target: { tag: "id", name: "b" },
+                ignorable: false,
+                star: false }]
+        },
+        value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, 
+        a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
@@ -620,7 +629,16 @@ describe('Generics Type-Checker Tests', () => {
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", 
+          destruct: {
+            isSimple: true,
+            vars: [
+              { target: { tag: "id", name: "b" },
+                ignorable: false,
+                star: false }]
+        },
+        value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, 
+        a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
         { tag: "field-assign", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "literal", value: {tag: "num", value: 10}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -689,8 +707,26 @@ describe('Generics Type-Checker Tests', () => {
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
-        { tag: "assign", name: "n", value: {tag: "lookup", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", 
+          destruct: {
+            isSimple: true,
+            vars: [
+              { target: { tag: "id", name: "b" },
+                ignorable: false,
+                star: false }]
+        },
+        value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, 
+        a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", 
+          destruct: {
+            isSimple: true,
+            vars: [
+              { target: { tag: "lookup", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x" },
+                ignorable: false,
+                star: false }]
+        },
+        value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, 
+        a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
@@ -759,8 +795,26 @@ describe('Generics Type-Checker Tests', () => {
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
-        { tag: "assign", name: "n", value: {tag: "method-call", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, method: "get", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", 
+          destruct: {
+            isSimple: true,
+            vars: [
+              { target: { tag: "id", name: "b" },
+                ignorable: false,
+                star: false }]
+          },
+        value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, 
+        a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", 
+          destruct: {
+            isSimple: true,
+            vars: [
+              { target: { tag: "id", name: "n" },
+                ignorable: false,
+                star: false }]
+        },
+        value: {tag: "method-call", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, method: "get", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, 
+        a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
@@ -828,7 +882,14 @@ describe('Generics Type-Checker Tests', () => {
         { name: "b", type: CLASS('Box', [CLASS('Box', [NUM])]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", destruct: {
+          isSimple: true,
+          vars: [
+            { target: { tag: "id", name: "b" },
+              ignorable: false,
+              star: false }]
+          }, 
+        value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
         { tag: "field-assign", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
