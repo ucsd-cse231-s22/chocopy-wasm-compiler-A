@@ -517,9 +517,28 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
         tValExpr.a.type.params = [...nameTyp.params]; 
       }
 
-      if (!isAssignable(env, tValExpr.a.type, nameTyp))
-        throw new TypeCheckError(SRC, `Assignment value should have assignable type to type ${JSON.stringify(nameTyp.tag)}, got ${JSON.stringify(tValExpr.a.type.tag)}`,
-        tValExpr.a);
+      if (!isAssignable(env, tValExpr.a.type, nameTyp)) {
+        var typeToMatch = JSON.stringify(nameTyp.tag);
+        var typeReceived = JSON.stringify(tValExpr.a.type.tag);
+        if (nameTyp.tag == "callable") {
+          let callableParamTypes : Array<string> = [];
+          let callableRetType = JSON.stringify(nameTyp.ret.tag);
+          nameTyp.params.forEach(t => {
+            callableParamTypes.push(JSON.stringify(t.tag));
+          });
+          typeToMatch = `callable[[${callableParamTypes}], ${callableRetType}]`
+        }
+        if (tValExpr.a.type.tag == "callable") {
+          let callableParamTypes : Array<string> = [];
+          let callableRetType = JSON.stringify(tValExpr.a.type.ret.tag);
+          tValExpr.a.type.params.forEach(t => {
+            callableParamTypes.push(JSON.stringify(t.tag));
+          });
+          typeReceived = `callable[[${callableParamTypes}], ${callableRetType}]`
+        }
+        const errorMsg = `Assignment value should have assignable type to type ${typeToMatch}, got ${typeReceived}`;
+        throw new TypeCheckError(SRC, errorMsg, tValExpr.a);
+      }
       return { a: { ...stmt.a, type: NONE }, tag: stmt.tag, name: stmt.name, value: tValExpr };
     case "expr":
       const tExpr = tcExpr(env, locals, stmt.expr, SRC);
