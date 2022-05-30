@@ -2,7 +2,7 @@
 
 ### Which features had interactions that you didn’t expect before you started implementing?
 
-+ For the inheritance feature, I did not expect to manipulate the parsed ast structure before starting implementation. During implementation, I found that manually adding the default methods from super classes will make the later vtable implementation and the override mechanism more straightforward and clean. All method-call expressions will go through vtable, even the normal method-call without inheritance built previously. 
++ For the inheritance feature, I did not expect to have interactions with the normal method call feature. During implementation, to implement the inherited methods, I built a vtable to store the $class$method and use call_indirect instruction to call the corresponding method. Thus the original normal method call without inheritance will also transfer to this realization.
 + For the list feature, what I didn't expect is that `[1, 2, 3, True, None]` is a valid list. This list can not be assigned to any variable, but can be stored in memory, and besides, `print([1, 2, 3, True, None][3])` can get `True`.
 
 ### What feature are you most proud of in your implementation and why?
