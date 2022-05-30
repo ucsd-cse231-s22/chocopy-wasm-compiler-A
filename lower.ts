@@ -221,7 +221,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         
         const id = env.classesList.indexOf(e.arg.a.name);
      
-        const b21 = {a:e.a, name:"print_object", tag:"builtin2",left:{a:NUM, literal:{ tag: "num", value: id }},right:e.arg}
+        // const b21 = {a:e.a, name:"print_object", tag:"builtin2",left:{a:NUM, literal:{ tag: "num", value: id }},right:e.arg}
       
         const b2:AST.Expr<Type> = {
           a: NONE,

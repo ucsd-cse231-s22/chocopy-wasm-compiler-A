@@ -31,79 +31,13 @@ export function addAccordionEvent(repl:BasicREPL) {
     }
   }
 
-//   function prettyPrintClassObject(result: any, repl: BasicREPL, currentEle: any) {
-//     const view = new Int32Array(repl.importObject.js.memory.buffer);
-//     const typedCls = repl.currentTypeEnv.classes.get(result.name)[0];
-//     const cls = repl.currentEnv.classes.get(result.name);
-  
-//     const exp = document.createElement("button") as HTMLButtonElement;
-//     exp.setAttribute("class", "accordion");
-//     const div = document.createElement("div");
-//     div.setAttribute("class", "panel");
-//     const addr = document.createElement("p");
-//     addr.innerHTML = "<b class='tag'>address: </b><p class='val'>" + result.address + "</p>";
-  
-//     exp.innerHTML = "<i class='arrow' id='arrow'></i> " + result.name + " object";
-//     div.appendChild(addr);
-//     addr.setAttribute("class", "info");
-//     //div.appendChild(document.createElement("br"));
-  
-//     cls.forEach((value, key) => {
-//       var offset = value[0];
-//       var type = typedCls.get(key);
-  
-//       const ele = document.createElement("pre");
-//       // PyValue implementation seems incomplete, casting to any for now
-  
-//       // pretty printing object fields
-//       switch (type.tag) {
-//         case "class":
-//           if (val.tag !== "none") {
-//             ele.innerHTML = "<b class='tag'>" + key + ":</b>";
-//             const new_div = document.createElement("div");
-//             ele.appendChild(new_div);
-//             prettyPrintClassObject(val, repl, new_div);
-//           } else {
-//             ele.innerHTML = "<b class='tag'>" + key + ": </b> <p class='val'>none</p>";
-//           }
-//           break;
-//         // case "list":
-//         //   if (val.tag !== "none") {
-//         //     ele.innerHTML = "<b class='tag'>" + key + ":</b>";
-//         //     const new_div = document.createElement("div");
-//         //     ele.appendChild(new_div);
-//         //     prettyPrintList(val, repl, new_div);
-//         //   } else {
-//         //     ele.innerHTML = "<b class='tag'>" + key + ": </b> <p class='val'>none</p>";
-//         //   }
-//         //   break;
-//         // case "dict":
-//         //   if (val.tag !== "none") {
-//         //     ele.innerHTML = "<b class='tag'>" + key + ":</b>";
-//         //     const new_div = document.createElement("div");
-//         //     ele.appendChild(new_div);
-//         //     prettyPrintDictionary(val, repl, new_div);
-//         //   } else {
-//         //     ele.innerHTML = "<b class='tag'>" + key + ": </b> <p class='val'>none</p>";
-//         //   }
-//         //   break;
-//         default:
-//           ele.innerHTML = "<b class='tag'>" + key + ": </b><p class='val'>" + val.value + "</p>";
-//           break;
-//       }
-//       div.appendChild(ele);
-//       ele.setAttribute("class", "info");
-//       //div.appendChild(document.createElement("br"));
-//     });
-  
-//     currentEle.appendChild(exp);
-//     currentEle.appendChild(div);
-//   }
+
 
 
   export function generate_folded_object(address:number, classname:string, repl:BasicREPL, currentEle: HTMLElement) {
     if(address == 0){
       currentEle.innerText = `${classname} object is None`;
+      return;
     }
     const exp:HTMLButtonElement = document.createElement("button") ;
     exp.setAttribute("class", "accordion");
