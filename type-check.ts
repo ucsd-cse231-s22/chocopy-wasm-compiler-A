@@ -387,7 +387,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv
   const tBody = tcBlock(envCopy, locals, fun.body, SRC);
   if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))
     // TODO: what locations to be reported here?
-    throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`)
+    throw new TypeCheckError(SRC, `expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`)
   return {...fun, a: { ...fun.a, type: NONE }, body: tBody, nonlocals, children};
 }
 
@@ -678,7 +678,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       }
     case "lambda":
       if (expr.params.length !== expr.type.params.length) {
-        throw new TypeCheckError("Mismatch in number of parameters: " + expr.type.params.length + " != " + expr.params.length);
+        throw new TypeCheckError(SRC, "Mismatch in number of parameters: " + expr.type.params.length + " != " + expr.params.length);
       }
       const lambdaLocals = copyLocals(locals);
       expr.params.forEach((param, i) => {
@@ -686,7 +686,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       })
       let ret = tcExpr(env, lambdaLocals, expr.expr, SRC);
       if (!isAssignable(env, ret.a.type, expr.type.ret)) {
-        throw new TypeCheckError("Expected type " + JSON.stringify(expr.type.ret) + " in lambda, got type " + JSON.stringify(ret.a.type.tag));
+        throw new TypeCheckError(SRC, "Expected type " + JSON.stringify(expr.type.ret) + " in lambda, got type " + JSON.stringify(ret.a.type.tag));
       }
       return {a: { ...expr.a, type: expr.type }, tag: "lambda", params: expr.params, type: expr.type, expr: ret}
     case "builtin1":
@@ -744,7 +744,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       } else {
         const newFn = tcExpr(env, locals, expr.fn, SRC);
         if(newFn.a.type.tag !== "callable") {
-          throw new TypeCheckError("Cannot call non-callable expression");
+          throw new TypeCheckError(SRC, "Cannot call non-callable expression", newFn.a);
         }
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
         

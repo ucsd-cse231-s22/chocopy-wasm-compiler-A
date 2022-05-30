@@ -1,5 +1,6 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { Annotation, BinOp, Type, UniOp } from "./ast"
+import * as AST from "./ast";
 import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
@@ -12,6 +13,7 @@ export type GlobalEnv = {
   offset: number;
   vtableMethods: Array<[string, number]>;
   nonlocalMap: Map<string, Map<string, [ancestorList: string[], isFunction: boolean, funName: string]>>;
+  lambdaStack: Array<AST.FunDef<Annotation>>;
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -24,6 +26,7 @@ export const emptyEnv : GlobalEnv = {
   offset: 0,
   vtableMethods: [],
   nonlocalMap: new Map(),
+  lambdaStack: []
 };
 
 type CompileResult = {
