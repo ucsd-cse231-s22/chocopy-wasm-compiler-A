@@ -14,7 +14,7 @@ export type Location = {
 }
 
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
-export type Callable = {tag: "callable"; params: Array<Parameter<Annotation>>; ret: Type };
+export type Callable = {tag: "callable"; params: Array<Parameter<Type>>; ret: Type };
 export type Type =
   | {tag: "number"}
   | {tag: "bool"}
