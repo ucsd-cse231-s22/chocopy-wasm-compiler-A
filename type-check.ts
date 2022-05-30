@@ -778,7 +778,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
       if (tObj.a.type.tag === "class") {
         if (env.classes.has(tObj.a.type.name)) {
-          const [_, methods] = env.classes.get(tObj.a.type.name);
+          const [fields, methods] = env.classes.get(tObj.a.type.name);
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = specializeMethodType(env, tObj.a.type, methods.get(expr.method));
             const realArgs = [tObj].concat(tArgs);
@@ -788,6 +788,24 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
             } else {
               const argTypesStr = methodArgs.map(argType => JSON.stringify(argType.tag)).join(", ");
               const tArgsStr = realArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
+              throw new TypeCheckError(SRC, `Method call ${expr.method} expects arguments of types [${argTypesStr}], got [${tArgsStr}]`,
+              expr.a);
+            }
+          } else if (fields.has(expr.method)) {
+            const fieldType = specializeFieldType(env, tObj.a.type, fields.get(expr.method));
+            if (fieldType.tag !== "callable")
+              throw new TypeCheckError(SRC, `Field ${expr.method} of ${tObj.a.type.name} not a callable`, expr.a);
+            if (fieldType.params.length === tArgs.length &&
+              fieldType.params.every((argTyp, i) => isAssignable(env, tArgs[i].a.type, argTyp))) {
+              return {
+                tag: "call",
+                fn: { tag: "lookup", obj: tObj, field: expr.method, a: { ...expr.a, type: fieldType } },
+                arguments: tArgs,
+                a: { ...expr.a, type: fieldType.ret }
+              };
+            } else {
+              const argTypesStr = fieldType.params.map(argType => JSON.stringify(argType.tag)).join(", ");
+              const tArgsStr = tArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
               throw new TypeCheckError(SRC, `Method call ${expr.method} expects arguments of types [${argTypesStr}], got [${tArgsStr}]`,
               expr.a);
             }

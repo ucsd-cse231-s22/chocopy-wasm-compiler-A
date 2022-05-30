@@ -697,7 +697,10 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       };
 
       let currentFun = env.functionNames.get("$current");
-      var ancestors = [...env.lambdaStack.reverse(), ...env.ancestorMap.get(currentFun)];
+      var ancestors = [
+        ...env.lambdaStack.reverse(),
+        ...(env.ancestorMap.get(currentFun) ?? [])
+      ];
       var astClasses = lowerFunDef(funDef, env, ancestors)[0];
       astClasses.forEach(cls => {
         env.classIndices.set(cls.name, env.vtableMethods.length);
