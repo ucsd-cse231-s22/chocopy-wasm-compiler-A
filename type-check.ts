@@ -108,7 +108,7 @@ export type TypeError = {
 
 export function equalCallable(t1: Callable, t2: Callable): boolean {
   return t1.params.length === t2.params.length &&
-    t1.params.every((param, i) => equalType(param, t2.params[i])) && equalType(t1.ret, t2.ret);
+    t1.params.every((param, i) => equalType(param.type, t2.params[i].type)) && equalType(t1.ret, t2.ret);
 }
 
 export function equalType(t1: Type, t2: Type) {
