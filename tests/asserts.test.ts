@@ -1,13 +1,12 @@
-import "mocha";
-import { BasicREPL } from "../repl";
-import { Value, Annotation } from "../ast";
-import { addLibs, importObject } from "./import-object.test";
-import { run, typeCheck } from "./helpers.test";
-import { fail } from 'assert'
-import {Program} from '../ir'
-import {Type} from '../ast'
+import { fail } from 'assert';
 import * as chai from 'chai';
 import chaiExclude from 'chai-exclude';
+import "mocha";
+import { Annotation, Value } from "../ast";
+import { Program } from '../ir';
+import { BasicREPL } from "../repl";
+import { run, typeCheck } from "./helpers.test";
+import { addLibs, importObject } from "./import-object.test";
 
 chai.use(chaiExclude);
 
@@ -30,19 +29,19 @@ export function assert(name: string, source: string, expected: Value<Annotation>
   });
 }
 
-export async function assertOptimizeIR(name: string, source: string, expectedIR: Program<Annotation>) {
+export async function assertOptimizeIR(name: string, source: string, expectedIR: Program<Annotation>, optimizationSwitch: "0" | "1" | "2") {
   it(name, async () => {
     const repl = new BasicREPL(await addLibs());
-    const [ _, optimizedIr ] = repl.optimize(source);
+    const [ _, optimizedIr ] = repl.optimize(source, optimizationSwitch);
     chai.expect(optimizedIr).excludingEvery(['a', 'label', 'name']).to.deep.eq(expectedIR);
   });
 }
 
 
-export async function assertOptimize(name: string, source: string, expected: { print: Array<string>, isIrDifferent: boolean }) {
+export async function assertOptimize(name: string, source: string, expected: { print: Array<string>, isIrDifferent: boolean }, optimizationSwitch: "0" | "1" | "2") {
   it(name, async () => {
     const repl = new BasicREPL(await addLibs());
-    const [ preOptimizedIr, optimizedIr ] = repl.optimize(source);
+    const [ preOptimizedIr, optimizedIr ] = repl.optimize(source, optimizationSwitch);
     
     if (!expected.isIrDifferent)
       chai.expect(preOptimizedIr).to.deep.eq(optimizedIr);

@@ -1,9 +1,9 @@
-import { BinOp, Parameter, Type, UniOp } from "../ast";
-import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "../ir";
-import { generateEnvironmentFunctions, generateEnvironmentProgram, workListAlgorithm } from "./optimization";
+import { Type } from "../ast";
+import { BasicBlock, Expr, FunDef, Program, Stmt, Value, VarInit } from "../ir";
+import { generateEnvironmentFunctions, generateEnvironmentProgram } from "./optimization";
 import { Env } from "./optimization_common_models";
+import { checkIfFoldableBinOp, checkPropagateValEquality, checkStmtEquality, checkValueEquality, duplicateEnv, evaluateBinOp, evaluateUniOp } from "./optimization_utils";
 
-import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkPropagateValEquality, checkStmtEquality, checkIfFoldableBinOp, evaluateBinOp, evaluateUniOp, duplicateEnv } from "./optimization_utils";
 
 export type propagateVal = {
     tag: "nac" | "val" | "undef", value?: Value<any>;

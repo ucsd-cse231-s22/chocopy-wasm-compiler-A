@@ -1,44 +1,10 @@
-import { BinOp, Parameter, Type, UniOp } from "../ast";
-import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "../ir";
+import { Parameter } from "../ast";
+import { BasicBlock, Class, FunDef, Program } from "../ir";
 import { constantPropagateAndFoldProgramBody, constantPropagateAndFoldProgramFuns } from "./optimizations_prop_fold";
+import { Env } from "./optimization_common_models";
 import { copyPropagateProgramBody, copyPropagateProgramFuns } from "./optimization_copy_prop";
+import { duplicateEnv } from "./optimization_utils";
 
-import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkPropagateValEquality, checkStmtEquality, duplicateEnv } from "./optimization_utils";
-
-class Env {
-
-    //General basic block environment class for dataflow analysis
-
-    get(arg: any): any {
-        // Get the value of arg from the Environment map
-        return;
-    }
-    has(arg: any): any {
-        // Check if the environment map has the arg
-        return;
-    }
-    set(arg: any, value: any) {
-        // Set the value of arg in the environment map
-        return;
-    }
-    duplicateEnv(): Env {
-        // Return a duplicate of the calling environment object
-        return;
-    }
-    checkEqual(b: Env): boolean {
-        // Check if calling environment object and arg are equal
-        return;
-    }
-    updateEnvironmentByBlock(block: BasicBlock<any>): Env {
-        // Return an updated environment
-        return;
-    }
-    mergeEnvironment(b: Env): Env {
-        // Return a new environment which merges the calling environment object and arg
-        return;
-    }
-
-}
 
 const varDefEnvTag: string = "$$VD$$";
 
@@ -103,21 +69,17 @@ function addParamsToEnv(params: Array<Parameter<any>>, env: Env, dummyEnv: boole
     });
 }
 
-export function optimizeFunction(func: FunDef<any>): FunDef<any> {
+function optimizeFunction(func: FunDef<any>, optimizationSwitch: "1" | "2"): FunDef<any> {
     var [funDef, functionOptimized] = constantPropagateAndFoldProgramFuns(func);
-    [funDef, functionOptimized] = copyPropagateProgramFuns(func);
+    [funDef, functionOptimized] = optimizationSwitch === "2" ? copyPropagateProgramFuns(func) : [funDef, false];
     // [funDef, functionOptimized] = deadCodeProgramFuns(func);
-
-    /* NOTE(joe): taking out all recursive optimization because there is no easy
-     * way to add fallthrough cases above */
-    if (functionOptimized) return optimizeFunction(funDef);
-
+    if (functionOptimized) return optimizeFunction(funDef, optimizationSwitch);
     return funDef;
 }
 
-export function optimizeClass(c: Class<any>): Class<any> {
+function optimizeClass(c: Class<any>, optimizationSwitch: "1" | "2"): Class<any> {
     var optimizedMethods: Array<FunDef<any>> = c.methods.map(m => {
-        return optimizeFunction(m);
+        return optimizeFunction(m, optimizationSwitch);
     })
     return { ...c, methods: optimizedMethods };
 }
@@ -177,36 +139,29 @@ export function generateEnvironmentFunctions(func: FunDef<any>, computeInitEnv: 
     return [inEnvMapping, outEnvMapping];
 }
 
-export function optimizeProgram(program: Program<any>): Program<any> {
-    if (program.body.length == 0) return program;
-    // var [program, programOptimized]: [Program<any>, boolean] = constantPropagateAndFoldProgramBody(program);
-    // // [program, programOptimized] = copyPropagateProgram(program);
-    // // [program, programOptimized] = eliminateDeadCodeProgram(program);
+export function optimizeProgram(program: Program<any>, optimizationSwitch: "0" | "1" | "2"): Program<any> {
+    if (program.body.length == 0 || optimizationSwitch === "0") return program;
 
-    // /* NOTE(joe): turning this off; it (a) doesn't have fallthrough cases for new
-    //  * expressions and (b) when I add fallthrough cases, it stack-overflows */
-    // if (programOptimized) program = optimizeProgram(program);
-
-    var program = optimizeProgramBody(program);
+    var program = optimizeProgramBody(program, optimizationSwitch);
 
     var newClass: Array<Class<any>> = program.classes.map(c => {
-        return optimizeClass(c);
+        return optimizeClass(c, optimizationSwitch);
     });
 
     var newFunctions: Array<FunDef<any>> = program.funs.map(f => {
-        return optimizeFunction(f);
+        return optimizeFunction(f, optimizationSwitch);
     });
 
     return { ...program, classes: newClass, funs: newFunctions };
 }
 
-function optimizeProgramBody(program: Program<any>): Program<any> {
+function optimizeProgramBody(program: Program<any>, optimizationSwitch: "1" | "2"): Program<any> {
     if (program.body.length == 0) return program;
-    var [program, programOptimized]: [Program<any>, boolean] = constantPropagateAndFoldProgramBody(program);
+    var [program, programOptimized]: [Program<any>, boolean] = optimizationSwitch >= "1" ? constantPropagateAndFoldProgramBody(program) : [program, false];
     var programOptimizedFromCopy: boolean = false;
-    [program, programOptimizedFromCopy] = copyPropagateProgramBody(program);
+    [program, programOptimizedFromCopy] = optimizationSwitch === "2" ? copyPropagateProgramBody(program) : [program, false];
     // // [program, programOptimized] = eliminateDeadCodeProgram(program);
-    if (programOptimized || programOptimizedFromCopy) program = optimizeProgramBody(program);
+    if (programOptimized || programOptimizedFromCopy) program = optimizeProgramBody(program, optimizationSwitch);
 
     return program;
 }
@@ -224,7 +179,7 @@ function mergeAllPreds(predecessorBlocks: Array<string>, outEnvMapping: Map<stri
     return inEnv;
 }
 
-export function workListAlgorithm(
+function workListAlgorithm(
     workList: Array<string>,
     inEnvMapping: Map<string, Env>,
     outEnvMapping: Map<string, Env>,

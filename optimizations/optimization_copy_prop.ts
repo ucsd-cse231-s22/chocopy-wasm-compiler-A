@@ -1,11 +1,9 @@
-import { stringify } from "querystring";
-import { BinOp, Parameter, Type, UniOp } from "../ast";
-import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "../ir";
-
-import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkCopyValEquality, checkStmtEquality, duplicateEnv } from "./optimization_utils";
-import { BasicREPL } from "../repl";
-import { Env } from "./optimization_common_models";
+import { Type } from "../ast";
+import { BasicBlock, Expr, FunDef, Program, Stmt, Value, VarInit } from "../ir";
 import { generateEnvironmentFunctions, generateEnvironmentProgram } from "./optimization";
+import { Env } from "./optimization_common_models";
+import { checkCopyValEquality, checkStmtEquality, duplicateEnv, isTagId } from "./optimization_utils";
+
 
 export class copyEnv extends Env {
     copyVars: Map<string, copyVal>;
@@ -50,11 +48,11 @@ export class copyEnv extends Env {
             if (statement === undefined) { console.log(block.stmts); }
             if (statement.tag === "assign") {
                 const optimizedExpression = optimizeExpression(statement.value, outEnv);
-                const currReverse = outEnv.get(statement.name).reverse;
+                const currReverse = outEnv.has(statement.name) ?  outEnv.get(statement.name).reverse : [];
                 if (optimizedExpression.tag === "value") {
                     if (optimizedExpression.value.tag === "id") {
                         // outEnv.vars.set(statement.name, {tag: "nac"});
-                        outEnv.updateForwardsAndBackwards(statement);
+                        outEnv.updateForwardsAndBackwards(statement, optimizedExpression.value);
                     }
                     else {
                         outEnv.copyVars.set(statement.name, { tag: "nac", reverse: currReverse });
@@ -68,9 +66,8 @@ export class copyEnv extends Env {
         return outEnv;
     }
 
-    updateForwardsAndBackwards(stmt: Stmt<any>) {
-        // const forwards: Map<string, string> = new Map<string, string>();
-        if (stmt.tag === "assign" && stmt.value.tag === "value" && isTagId(stmt.value.value)) {
+    updateForwardsAndBackwards(stmt: Stmt<any>, optimizedValue: Value<any>) {
+        if (stmt.tag === "assign" && stmt.value.tag === "value" && isTagId(stmt.value.value) && isTagId(optimizedValue)) {
             const copyFrom = stmt.value.value.name;
             const copyTo = stmt;
 
@@ -80,8 +77,8 @@ export class copyEnv extends Env {
             var oldBackwards = oldCopyFromEnv.reverse;
             backwards = [...oldBackwards, copyTo.name];
 
-            this.copyVars.set(copyFrom, { tag: "copyId", reverse: backwards, ...oldCopyFromEnv });
-            this.copyVars.set(copyTo.name, { tag: "copyId", value: stmt.value.value, reverse: [] });
+            this.copyVars.set(copyFrom, { ...oldCopyFromEnv, reverse: backwards });
+            this.copyVars.set(copyTo.name, { tag: "copyId", value: optimizedValue, reverse: [] });
         }
     }
 
@@ -124,7 +121,10 @@ export function optimizeValue(val: Value<any>, env: copyEnv): Value<any> {
 
         if (!isTagId(copyId.value)) throw new Error("Compiler Error: Unexpected tag in copy Id");
 
-        val = { name: copyId.value.name, ...val };
+        if (env.get(copyId.value.name).reverse.includes(val.name))
+            val = { ...val, name: copyId.value.name };
+        else
+            return val;
     }
     return val;
 }
@@ -138,7 +138,7 @@ export function optimizeExpression(e: Expr<Type>, env: copyEnv): Expr<Type> {
             var left = optimizeValue(e.left, env);
             var right = optimizeValue(e.right, env);
 
-            return { tag: "value", left, right, ...e };
+            return { ...e, left, right };
         case "uniop":
             var arg = optimizeValue(e.expr, env);
             if (arg.tag === "id")
@@ -174,7 +174,14 @@ export function optimizeStatements(stmt: Stmt<any>, env: copyEnv): Stmt<any> {
         case "assign":
             var optimizedExpression: Expr<any> = optimizeExpression(stmt.value, env);
             if (optimizedExpression.tag !== "value") {
-                env.copyVars.set(stmt.name, { tag: "nac" });
+                let newReverse: string[] = [];
+                if (env.has(stmt.name))
+                    newReverse = env.get(stmt.name).reverse
+
+                env.set(stmt.name, { tag: "nac", reverse: newReverse });
+            }
+            else if (optimizedExpression.value.tag === "id") {
+                env.updateForwardsAndBackwards(stmt, optimizedExpression.value);
             }
             return { ...stmt, value: optimizedExpression };
         case "return":
@@ -197,7 +204,7 @@ function computeInitEnv(varDefs: Array<VarInit<any>>, dummyEnv: boolean): Env {
     var env: copyEnv = new copyEnv(new Map<string, copyVal>());
     varDefs.forEach(def => {
         if (!dummyEnv) env.copyVars.set(def.name, { tag: "copyId", value: { tag: "id", name: def.name }, reverse: [] })
-        else env.copyVars.set(def.name, { tag: "undef" });
+        else env.copyVars.set(def.name, { tag: "undef", reverse: [] });
     });
     return env;
 }
@@ -226,8 +233,6 @@ export function optimizeFunction(func: FunDef<any>): FunDef<any> {
         return optimizedBlock;
     });
 
-    /* NOTE(joe): taking out all recursive optimization because there is no easy
-     * way to add fallthrough cases above */
     if (functionOptimized) return optimizeFunction({ ...func, body: newBody })
 
     return { ...func, body: newBody };

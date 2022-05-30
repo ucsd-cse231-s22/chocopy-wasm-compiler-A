@@ -1,8 +1,8 @@
+import { BinOp, UniOp } from "../ast";
 import { Expr, Stmt, Value } from "../ir";
-import { BinOp, Type, UniOp } from "../ast";
 import { propagateVal } from "./optimizations_prop_fold";
-import { copyVal } from "./optimization_copy_prop";
 import { Env } from "./optimization_common_models";
+import { copyVal } from "./optimization_copy_prop";
 
 export function isTagId(value: Value<any>): value is { tag: "id", name: string, a?: any } {
     return value.tag === "id";

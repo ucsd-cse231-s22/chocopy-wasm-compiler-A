@@ -1,7 +1,5 @@
-import { BinOp, Parameter, Type, UniOp } from "../ast";
-import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "../ir";
+import { BasicBlock } from "../ir";
 
-import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkPropagateValEquality, checkStmtEquality } from "./optimization_utils";
 
 
 export class Env {
