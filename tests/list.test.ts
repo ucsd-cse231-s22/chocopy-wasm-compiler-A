@@ -32,6 +32,36 @@ describe("list test", () => {
   assertTCFail("list-tc", `
   a : [int] = None
   a = [1, 2, 3, False, True]`);
+
+  assertPrint("list-class-as-entries",
+  `
+  a:[A] = None
+  class A(object):
+      a:int =1
+  entry1:A = None
+  entry2:A = None
+  entry1 = A()
+  entry2 = A()
+  entry2.a = 4
+  a = [entry1, entry2]
+  print(a[0].a)
+  print(a[1].a)`, [`1`, `4`]);
+
+  assertPrint("list-class-and-subclass-as-entries",
+  `
+  a:[A] = None
+  class A(object):
+      a:int =1
+  class Asub(A):
+      b:int = 2
+  entry1:A = None
+  entry2:Asub = None
+  entry1 = A()
+  entry2 = Asub()
+  a = [entry1, entry2]
+  print(a[0].a)
+  print(a[1].a)`, [`1`, `1`]);
+  
   assertPrint("for-loop-basic",
   `
   ans : int = 0
