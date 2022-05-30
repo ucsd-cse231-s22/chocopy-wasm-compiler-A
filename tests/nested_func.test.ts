@@ -11,7 +11,7 @@ def f(x : int) -> int:
   return g(x) + g(3)
 print(f(6))`, [`11`]);
 
-assertPrint("nested-function-nonlocal", 
+assertPrint("nested-function-nonlocal1", 
 `
 def f(x : int) -> int:
   def h(z : int) -> int:
@@ -23,7 +23,7 @@ def f(x : int) -> int:
 print(f(6))
 `, [`39`]);
 
-assertPrint("nested-function-nonlocal", 
+assertPrint("nested-function-nonlocal2", 
 `
 def f(x : int) -> int:
   def h(z : int) -> int:
