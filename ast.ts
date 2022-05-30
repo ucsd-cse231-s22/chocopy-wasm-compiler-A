@@ -64,6 +64,7 @@ export type Expr<A> =
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
+  | {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Expr<A>}
   | Lambda<A>
   | {  a?: A, tag: "if-expr", cond: Expr<A>, thn: Expr<A>, els: Expr<A> }
 
@@ -107,3 +108,4 @@ export function stringifyOp(op: Op): string {
 export type Value<A> =
     Literal<A>
   | { a?: A, tag: "object", name: string, address: number}
+  
