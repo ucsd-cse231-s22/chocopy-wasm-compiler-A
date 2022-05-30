@@ -118,7 +118,9 @@ export function optimizeExpression(e: Expr<Type>, env: Env): Expr<Type>{
             if (arg.tag === "id")
                 return {...e, expr: arg};
             var val: Value<any> = evaluateUniOp(e.op, arg);
-            return {tag: "value", value: val};
+            return e;
+            // NOTE(joe): had to skip this optimization b/c negative literals for bignums not supported
+            // return {tag: "value", value: val};
         case "builtin1":
             var arg = optimizeValue(e.arg, env);
             return {...e, arg: arg};
@@ -138,6 +140,8 @@ export function optimizeExpression(e: Expr<Type>, env: Env): Expr<Type>{
             var start = optimizeValue(e.start, env);
             var offset = optimizeValue(e.offset, env);
             return {...e, start: start, offset: offset};
+        default:
+            return e;
     }
 }
 
@@ -264,6 +268,7 @@ function mergeEnvironment(a: Env, b: Env): Env{
 function updateEnvironmentByBlock(inEnv: Env, block: BasicBlock<any>): Env{
     var outEnv: Env = {vars: new Map(inEnv.vars)};
     block.stmts.forEach(statement => {
+        if (statement === undefined) { console.log(block.stmts); }
         if (statement.tag === "assign"){
             const optimizedExpression = optimizeExpression(statement.value, outEnv);
             if (optimizedExpression.tag === "value"){
@@ -319,7 +324,9 @@ export function optimizeFunction(func: FunDef<any>): FunDef<any>{
         return optimizedBlock;
     });
 
-    if (functionOptimized) return optimizeFunction({...func, body: newBody})
+    /* NOTE(joe): taking out all recursive optimization because there is no easy
+     * way to add fallthrough cases above */
+    // if (functionOptimized) return optimizeFunction({...func, body: newBody})
 
     return {...func, body: newBody};
 }
@@ -395,7 +402,9 @@ export function optimizeProgram(program: Program<any>): Program<any>{
         if (!programOptimized && blockOptimized) programOptimized = true;
         return optimizedBlock;
     });
-    if (programOptimized) program = optimizeProgram({...program, body: newBody});
+    /* NOTE(joe): turning this off; it (a) doesn't have fallthrough cases for new
+     * expressions and (b) when I add fallthrough cases, it stack-overflows */
+    //if (programOptimized) program = optimizeProgram({...program, body: newBody});
 
     var newClass: Array<Class<any>> = program.classes.map(c => {
         return optimizeClass(c);

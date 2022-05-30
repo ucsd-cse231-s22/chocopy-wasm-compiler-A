@@ -7,6 +7,7 @@
     "build-web": "webpack && cp index.html build/",
     "build-parse": "tsc parsestart.ts --esModuleInterop --moduleResolution node --outDir cli/",
     "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' node node_modules/.bin/mocha -r ts-node/register --reporter mochawesome 'tests/**/*.test.ts'",
+    "test-coverage": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' nyc --reporter lcov node node_modules/.bin/mocha -r ts-node/register --reporter mochawesome 'tests/**/*.test.ts'",
     "build": "tsc debugstart.ts  --downlevelIteration --esModuleInterop --moduleResolution node --outDir debugger/",
     "start": "node debugger/debugstart.js",
     "prestart": "npm run build",
@@ -17,11 +18,10 @@
   "dependencies": {
     "chai-as-promised": "^7.1.1",
     "chai-exclude": "^2.1.0",
-    "lezer": "^0.13.5",
-    "lezer-python": "^0.13.7",
+    "@lezer/python": "^0.16.0",
     "mochawesome": "^7.1.2",
     "ts-loader": "^8.0.11",
-    "ts-node": "^9.1.1",
+    "ts-node": "^10.7",
     "typescript": "^4.1.2",
     "wabt": "^1.0.20",
     "webpack": "^5.72.1"
@@ -34,6 +34,7 @@
     "chai": "^4.2.0",
     "fclone":"^1.0.11",
     "mocha": "^9.2.2",
+    "nyc": "^15.1.0",
     "webpack-cli": "^4.2.0",
     "webpack-dev-server": "^4.9.0"
   }
