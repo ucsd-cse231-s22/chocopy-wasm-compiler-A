@@ -285,8 +285,8 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
             outputInits = outputInits.concat(valinits);
             pushStmtsToLastBlock(blocks, ...valstmts);
             if(va.tag === "id") {
-              const nextMethod : IR.Expr<Annotation> = { tag: "call", name: `iterator$next`, arguments: [va] }
-              const hasNextMethod : IR.Expr<Annotation> = { tag: "call", name: `iterator$hasNext`, arguments: [va] }
+              const nextMethod : IR.Expr<Annotation> = { a: {type: {tag: "number"}}, tag: "call", name: `iterator$next`, arguments: [va] }
+              const hasNextMethod : IR.Expr<Annotation> = { a: {type: {tag: "bool"}}, tag: "call", name: `iterator$hasNext`, arguments: [va] }
               s.destruct.vars.forEach(v => {
                 var [inits, stmts, val] = flattenIrExprToVal(hasNextMethod, env);
                 outputInits = outputInits.concat(inits);
@@ -323,7 +323,7 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
               // check if iterator has remainning elements
               var [inits1, stmts1, val1] = flattenIrExprToVal(hasNextMethod, env);
               outputInits = outputInits.concat(inits1);
-              var remain : IR.Expr<Annotation> = { tag: "uniop", op: UniOp.Not, expr: val1 };
+              var remain : IR.Expr<Annotation> = { a: {type: {tag: "bool"}}, tag: "uniop", op: UniOp.Not, expr: val1 };
               var [inits2, stmts2, val2] = flattenIrExprToVal(remain, env);
               outputInits = outputInits.concat(inits2);
               const runtimeCheck : IR.Expr<Annotation> = { tag: "call", name: `destructure_check`, arguments: [] }
