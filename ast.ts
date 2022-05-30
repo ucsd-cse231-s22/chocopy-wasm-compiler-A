@@ -78,6 +78,7 @@ export type Expr<A> =
   // array-expr should be plain format like 1, 2, 3 without brackets
   // TODO: should we make use of AST nodes from list and tuple groups?
   | {  a?: A; tag: "array-expr", elements: Array<Expr<A>> }
+  | {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Expr<A>}
   | Lambda<A>
   | {  a?: A, tag: "if-expr", cond: Expr<A>, thn: Expr<A>, els: Expr<A> }
 
@@ -121,3 +122,4 @@ export function stringifyOp(op: Op): string {
 export type Value<A> =
     Literal<A>
   | { a?: A, tag: "object", name: string, address: number}
+  

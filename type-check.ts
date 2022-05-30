@@ -889,6 +889,32 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
     case "array-expr":
       const arrayExpr = expr.elements.map((element) => tcExpr(env, locals, element, SRC));
       return { ...expr, a: { ...expr.a, type: NONE }, elements: arrayExpr };
+    case "list-comp":
+      // check if iterable is instance of class
+      const iterable = tcExpr(env, locals, expr.iterable,SRC);
+      if (iterable.a.type.tag === "class"){
+        const classData = env.classes.get(iterable.a.type.name);
+        // check if next and hasNext methods are there
+        if (!classData[1].has("next") || !classData[1].has("hasNext"))
+          throw new Error("TYPE ERROR: Class of the instance must have next() and hasNext() methods");
+        // need to create a local env for elem to be inside comprehension only
+        var loc = locals;
+        if (expr.elem.tag === "id"){
+          loc.vars.set(expr.elem.name, NUM);
+          const elem = {...expr.elem, a: {...expr, type: NUM}};
+          const left = tcExpr(env, loc, expr.left,SRC);
+          var cond;
+          if (expr.cond)
+            cond = tcExpr(env, loc, expr.cond,SRC);
+          if (cond && cond.a.type.tag !== "bool")
+            throw new Error("TYPE ERROR: comprehension if condition must return bool")
+          return {...expr, left, elem, cond, iterable, a: {...expr, type: CLASS(iterable.a.type.name)}};
+        }
+        else
+          throw new Error("TYPE ERROR: elem has to be an id");
+      }
+      else
+        throw new Error("TYPE ERROR: Iterable must be an instance of a class");  
     case "if-expr":
       var tThn = tcExpr(env, locals, expr.thn, SRC);
       var tCond = tcExpr(env, locals, expr.cond, SRC);
