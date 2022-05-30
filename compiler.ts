@@ -14,6 +14,7 @@ export type GlobalEnv = {
   vtableMethods: Array<[string, number]>;
   nonlocalMap: Map<string, Map<string, [ancestorList: string[], isFunction: boolean, funName: string]>>;
   lambdaStack: Array<AST.FunDef<Annotation>>;
+  ancestorMap: Map<string, Array<AST.FunDef<Annotation>>>;
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -26,7 +27,8 @@ export const emptyEnv : GlobalEnv = {
   offset: 0,
   vtableMethods: [],
   nonlocalMap: new Map(),
-  lambdaStack: []
+  lambdaStack: [],
+  ancestorMap: new Map(),
 };
 
 type CompileResult = {
