@@ -320,7 +320,8 @@ function webStart() {
           break;
         case "object":
           // elt.innerHTML = `${result.name} object at ${result.address}`
-          elt.innerHTML = stringify_object( result.address, result.name, 0, new Map(), 1,repl).join("\n");
+          generate_folded_object( result.address, result.name,repl,elt)
+          // elt.innerHTML = stringify_object( result.address, result.name, 0, new Map(), 1,repl).join("\n");
           break
         default: throw new Error(`Could not render value: ${result}`);
       }
