@@ -14,7 +14,7 @@ export type Location = {
 }
 
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
-export type Callable = {tag: "callable"; params: Array<Type>; ret: Type };
+export type Callable = {tag: "callable"; params: Array<Parameter<Annotation>>; ret: Type };
 export type Type =
   | {tag: "number"}
   | {tag: "bool"}
@@ -23,11 +23,7 @@ export type Type =
   | {tag: "either", left: Type, right: Type }
   | Callable;
 
-<<<<<<< HEAD
-export type Parameter<A> = { name: string, type: Type, value?: Expr<A> }
-=======
-export type Parameter<A> = { a?: A, name: string, type: Type }
->>>>>>> bd167027
+export type Parameter<A> = { a?: A, name: string, type: Type, value?: Expr<A> }
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>>}
 
@@ -57,11 +53,7 @@ export type Expr<A> =
   | {  a?: A, tag: "uniop", op: UniOp, expr: Expr<A> }
   | {  a?: A, tag: "builtin1", name: string, arg: Expr<A> }
   | {  a?: A, tag: "builtin2", name: string, left: Expr<A>, right: Expr<A>}
-<<<<<<< HEAD
   | {  a?: A, tag: "call", fn: Expr<A>, arguments: Array<Expr<A>>, kwarguments?: Map<string, Expr<A>> } 
-=======
-  | {  a?: A, tag: "call", fn: Expr<A>, arguments: Array<Expr<A>> } 
->>>>>>> bd167027
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>>, kwarguments?: Map<string, Expr<A>> }
