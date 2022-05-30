@@ -311,7 +311,7 @@ export function collectTypeVarsInGenericFuncDef(env: GlobalTypeEnv, type: Type) 
 
   if (type.tag === "callable") {
     // Letting return be as is, it'll throw an error if type var is not one from the params
-    type.params.map(p => collectTypeVarsInGenericFuncDef(env, p)).flat();
+    return type.params.map(p => collectTypeVarsInGenericFuncDef(env, p)).flat();
   }
 
   return [];

@@ -9,20 +9,21 @@ async function debug() {
   T = TypeVar('T')
 
   class Box(Generic[T]):
-    a: T = __ZERO__
-    
-    def callGenFunc(self: Box[T]):
-      b2 : Box[int] = None
-      b2 = Box()
-      print(genericFunc(3, 4, b2))
+    v: T = __ZERO__
 
-  def genericFunc(a: int, x: T, y: Box[T]) -> T :
-    y.a = x
-    return y.a
+    def map(self: Box[T], f: Callable[[T], T]) -> Box[T]:
+      b : Box[T] = None
+      b = Box()
 
-  b1 : Box[int] = None  
+      b.v = f(self.v)
+      return b
+
+  b1 : Box[int] = None
   b1 = Box()
-  b1.callGenFunc()
+  print(b1.v)
+  print(b1.map(mklambda(Callable[[int], int], lambda a: a + 2)).v)
+  print(b1.map(mklambda(Callable[[int], int], lambda a: (a + 1) * 10)).v)
+  print(b1.v)
   `
   // var source = `
   // class C(object):
