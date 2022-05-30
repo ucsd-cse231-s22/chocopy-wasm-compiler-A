@@ -661,16 +661,17 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       var tIterator = tcIterator(env, locals, stmt.iterator)
       var tValObject = tcExpr(env, locals, stmt.values, SRC);
       if (tValObject.a.type.tag !== "class") 
-        throw new TypeCheckError("values require an object");
+        throw new TypeCheckError(SRC, "values require an object");
       if (!env.classes.has(tValObject.a.type.name)) 
-        throw new TypeCheckError("values on an unknown class");
+        throw new TypeCheckError(SRC, "values on an unknown class");
       const [__, methods] = env.classes.get(tValObject.a.type.name);
+      getSuperclassMethods(env, tValObject.a.type.name, methods)
       if(!(methods.has("hasnext")) || methods.get("hasnext")[1].tag != BOOL.tag)
-        throw new TypeCheckError("iterable class must have hasnext method with boolean return type");
+        throw new TypeCheckError(SRC, "iterable class must have hasnext method with boolean return type");
       if(!(methods.has("next")) || !equalType(methods.get("next")[1],tIterator))
-        throw new TypeCheckError("iterable class must have next method with same return type as iterator");
+        throw new TypeCheckError(SRC, "iterable class must have next method with same return type as iterator");
       if(!(methods.has("reset")) || methods.get("reset")[1].tag != NONE.tag)
-        throw new TypeCheckError("iterable class must have reset method with none return type");
+        throw new TypeCheckError(SRC, "iterable class must have reset method with none return type");
       const tforBody = tcBlock(env, locals, stmt.body, SRC);
       return {a: {...stmt.a, type: tIterator}, tag: stmt.tag, iterator:stmt.iterator, values: tValObject, body: tforBody }
     case "field-assign":
