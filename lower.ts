@@ -502,7 +502,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         return {
           tag: "store",
           start: { tag: "id", name: newName },
-          offset: { tag: "wasmint", value: index + 1},
+          offset: { tag: "wasmint", value: index},
           value: value
         }
       });
