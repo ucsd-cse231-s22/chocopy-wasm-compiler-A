@@ -296,7 +296,7 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         name: "self"
       };
     case "ArrayExpression": // a, b, c = [1, 2, 3]
-      let arrayElements: Expr<null>[] = [];
+      let arrayElements: Expr<Annotation>[] = [];
       c.firstChild();
       c.nextSibling();
       while (s.substring(c.from, c.to).trim() !== "]") {
@@ -310,11 +310,11 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         elements: arrayElements,
       };
     case "TupleExpression": // a, b, c = (1, 2, 3)
-      let tupleElements: Expr<null>[] = [];
+      let tupleElements: Expr<Annotation>[] = [];
       c.firstChild();
       c.nextSibling();
       while (s.substring(c.from, c.to).trim() !== ")") {
-        tupleElements.push(traverseExpr(c, s));
+        tupleElements.push(traverseExpr(c, s, env));
         c.nextSibling();
         c.nextSibling();
       }
@@ -384,16 +384,15 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
       return { tag: "return", value };
     case "AssignStatement":
       c.firstChild(); // go to name
-<<<<<<< HEAD
       if (c.type.name === "MemberExpression") {
         c.nextSibling();
         // @ts-ignore
         if (c.type.name === "AssignOp") {
           c.prevSibling();
-          let target = traverseExpr(c, s);
+          let target = traverseExpr(c, s, env);
           c.nextSibling(); // go to equals
           c.nextSibling(); // go to value
-          let value = traverseExpr(c, s);
+          let value = traverseExpr(c, s, env);
           if (target.tag === "lookup") {
             c.parent();
             return {
@@ -408,14 +407,14 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
         }
         c.prevSibling();
       }
-      const destruct = traverseDestructure(c, s);
+      const destruct = traverseDestructure(c, s, env);
       c.nextSibling(); // go to equals
       c.nextSibling(); // go to value
-      var value = traverseExpr(c, s);
+      var value = traverseExpr(c, s, env);
       if (c.nextSibling()) {
         value = {tag: "array-expr", elements: [value]};
         while (c.nextSibling()) {
-          value.elements.push(traverseExpr(c, s));
+          value.elements.push(traverseExpr(c, s, env));
           c.nextSibling();
         }
       }
@@ -424,29 +423,6 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
         tag: "assign",
         destruct,
         value,
-=======
-      const target = traverseExpr(c, s, env);
-      c.nextSibling(); // go to equals
-      c.nextSibling(); // go to value
-      var value = traverseExpr(c, s, env);
-      c.parent();
-
-      if (target.tag === "lookup") {
-        return {
-          tag: "field-assign",
-          obj: target.obj,
-          field: target.field,
-          value: value
-        }
-      } else if (target.tag === "id") {
-        return {
-          tag: "assign",
-          name: target.name,
-          value: value
-        }
-      } else {
-        throw new Error("Unknown target while parsing assignment");
->>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
       }
     case "ExpressionStatement":
       c.firstChild();
@@ -556,18 +532,17 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
   }
 }
 
-<<<<<<< HEAD
-function traverseDestructure(c: TreeCursor, s: string): DestructuringAssignment<null> {
-  const vars: AssignVar<null>[] = [];
+function traverseDestructure(c: TreeCursor, s: string, env: ParserEnv): DestructuringAssignment<Annotation> {
+  const vars: AssignVar<Annotation>[] = [];
   if (c.type.name === "ArrayExpression" || c.type.name === "TupleExpression") {
     c.firstChild();
     c.nextSibling();
-    vars.push(traverseAssignVar(c, s));
+    vars.push(traverseAssignVar(c, s, env));
     c.nextSibling();
     while (c.name !== "]" && c.name !== ")") {
       c.nextSibling();
       if (c.name === "]" || c.name === ")") break;
-      let variable = traverseAssignVar(c, s);
+      let variable = traverseAssignVar(c, s, env);
       vars.push(variable);
       c.nextSibling();
     }
@@ -577,14 +552,14 @@ function traverseDestructure(c: TreeCursor, s: string): DestructuringAssignment<
       vars,
     };
   } else {
-    vars.push(traverseAssignVar(c, s));
+    vars.push(traverseAssignVar(c, s, env));
     let isSimple = true;
     c.nextSibling();
     while (c.name !== "AssignOp") {
       isSimple = false;
       c.nextSibling();
       if (c.name === "AssignOp") break;
-      let variable = traverseAssignVar(c, s);
+      let variable = traverseAssignVar(c, s, env);
       vars.push(variable);
       c.nextSibling();
     }
@@ -596,9 +571,9 @@ function traverseDestructure(c: TreeCursor, s: string): DestructuringAssignment<
   }
 }
 
-function traverseAssignVar(c: TreeCursor, s: string): AssignVar<null> {
+function traverseAssignVar(c: TreeCursor, s: string, env: ParserEnv): AssignVar<Annotation> {
   // todo check if target is *
-  let target = traverseExpr(c, s);
+  let target = traverseExpr(c, s, env);
   let ignorable = false;
   if (target.tag !== "id" && target.tag !== "lookup") {
     throw new Error("Unknown variable expression");
@@ -613,14 +588,6 @@ function traverseAssignVar(c: TreeCursor, s: string): AssignVar<null> {
   };
 }
 
-export function traverseType(c : TreeCursor, s : string) : Type {
-  // For now, always a VariableName
-  let name = s.substring(c.from, c.to);
-  switch(name) {
-    case "int": return NUM;
-    case "bool": return BOOL;
-    default: return CLASS(name);
-=======
 export function traverseType(c : TreeCursor, s : string, env: ParserEnv) : Type {
   switch (c.type.name) {
     case "VariableName":
@@ -671,7 +638,6 @@ export function traverseTypeList(c: TreeCursor, s: string, env: ParserEnv): Arra
     c.nextSibling(); // Focuses on "TypeDef", hopefully, or "," if mistake
     c.nextSibling(); // Move on to comma or ")"
     types.push(typ);
->>>>>>> 0a416e17e1eb1ee4b294dbd8f14a031422b8615a
   }
   c.parent(); // Pop to ParamList
   return types;
