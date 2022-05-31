@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { binop_bignum, binop_comp_bignum, builtin_bignum, load_bignum } from "../utils";
+import { binop_bignum, binop_comp_bignum, builtin_bignum, load_bignum, des_check, bignum_to_i32 } from "../utils";
 import { bigMath } from "../utils";
 import { importObjectErrors } from "../errors";
 
@@ -50,6 +50,7 @@ export const importObject : any = {
     print_num: (arg: number) => print(Type.Num, arg, importObject.libmemory.load),
     print_bool: (arg: number) => print(Type.Bool, arg, null),
     print_none: (arg: number) => print(Type.None, arg, null),
+    destructure_check: (hashNext: boolean) => des_check(hashNext),
     abs:  (arg: number) => builtin_bignum([arg], bigMath.abs, importObject.libmemory),
     min: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.min, importObject.libmemory),
     max: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.max, importObject.libmemory),
@@ -65,6 +66,7 @@ export const importObject : any = {
     $gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, importObject.libmemory),
     $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, importObject.libmemory),
     $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, importObject.libmemory),
+    $bignum_to_i32: (arg: number) => bignum_to_i32(arg, importObject.libmemory.load), 
   },
   errors: importObjectErrors,
 
