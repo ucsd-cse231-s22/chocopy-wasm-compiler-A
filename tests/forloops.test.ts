@@ -857,4 +857,49 @@ def checkMultiLoopFunction(min:int, max:int) ->int:
 
 print(checkMultiLoopFunction(1,6))
    
-`, [`False`,`True`,`1`,`2`,`3`,`4`,`5`,`False`,`True`, `1`,`2`,`3`,`4`,`5`,`False`,`30`])});
+`, [`False`,`True`,`1`,`2`,`3`,`4`,`5`,`False`,`True`, `1`,`2`,`3`,`4`,`5`,`False`,`30`]);
+
+assertPrint("generic for loop",
+`
+T = TypeVar("T")
+
+class Iter2(Generic[T]):
+  field1 : T = __ZERO__
+  field2 : T = __ZERO__
+  count : int = 0
+  def __init__(self : Iter2[T]):
+    pass
+  def new(self : Iter2[T], f1 : T, f2 : T) -> Iter2[T]:
+    self.field1 = f1
+    self.field2 = f2
+    return self
+  def hasnext(self : Iter2[T]) -> bool:
+    return self.count < 2
+  def next(self : Iter2[T]) -> T:
+    if self.count == 0:
+      self.count = self.count + 1
+      return self.field1
+    if self.count == 1:
+      self.count = self.count + 1
+      return self.field2
+    return self.field1
+  def reset(self : Iter2[T]):
+    self.count = 0
+
+i:bool = False
+cls: Iter2[bool] = None
+cls = Iter2()
+
+cls = cls.new(True, False)
+
+for i in cls:
+  print(i)
+
+None`,
+[`True`,`False`]
+);
+
+
+
+
+});

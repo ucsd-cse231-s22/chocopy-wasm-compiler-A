@@ -1,4 +1,4 @@
-import {parse} from "./parser";
+import { parse } from "./parser";
 
 // var result = parse(`
 // def f(x : int):
