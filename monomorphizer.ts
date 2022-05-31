@@ -174,7 +174,8 @@ export function processStmts(stmt: Stmt<Annotation>, genv: GlobalMorphEnv) : Stm
 
 export function monomorphizeClass(cname: string, canonicalName: string, classes: Array<Class<Annotation>>, genv: GlobalMorphEnv) : Class<Annotation> {
     let cClass : Class<Annotation> = classes[genv.classesInx.get(cname)];
-    let mClass : Class<Annotation> = JSON.parse(JSON.stringify(cClass))
+    // https://github.com/GoogleChromeLabs/jsbi/issues/30#issuecomment-521460510
+    let mClass : Class<Annotation> = JSON.parse(JSON.stringify(cClass, (key, value) => typeof value === "bigint" ? value.toString() : value));
     mClass.name = canonicalName;
     mClass.typeParams = [];
     mClass.fields = mClass.fields.map(field => {

@@ -523,6 +523,7 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
               value: value,
             }
           } else if (target.tag === "index") {
+            c.parent();
             return {
               tag: "index-assign",
               obj: target.obj,
