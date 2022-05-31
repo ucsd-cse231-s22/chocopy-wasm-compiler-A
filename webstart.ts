@@ -357,14 +357,21 @@ function webStart() {
           const source = replCodeElement.value;
           elt.value = source;
           replCodeElement.value = "";
+          var failed = false;
+          try{
           repl.tc(source);
-          repl.run(source).then((r) => {
+          }catch(err){
+            renderError(err); console.log("run failed", e);
+            failed = true;
+          }
+          if(! failed){          repl.run(source).then((r) => {
             renderResult(r);
             printMem();
             console.log("run finished")
           })
             .catch((e) => { renderError(e); console.log("run failed", e) });;
         }
+      }
       });
     }
 
@@ -462,7 +469,14 @@ function webStart() {
 
       resetRepl();
       const source = document.getElementById("user-code") as HTMLTextAreaElement;
+      var failed = false;
+      try{
       repl.tc(source.value);
+      }catch(err){
+        renderError(err); console.log("run failed", e);
+        failed = true;
+      }
+      if(! failed){      
       repl.run(source.value).then((r) => { renderResult(r); console.log("run finished") })
       .catch((e) => {
         renderError(e);
@@ -471,7 +485,7 @@ function webStart() {
         const errorline = 11;
         highlightLine(errorline, String(e));
         console.log("run failed", e)
-      });;
+      });}
     });
     setupRepl();
     setupCodeExample();
