@@ -197,9 +197,11 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
             ...exprStmts,
             `(local.set $$scratch)`, // bignum addr
             `(local.get $$scratch)`, // store addr
+            `(call $ref_lookup)`,
             `(i32.const 0)`, // store offset
             `(i32.const 0)`, // 0 - len
             `(local.get $$scratch)`, // load addr
+            `(call $ref_lookup)`,
             `(i32.const 0)`, // load offset
             `(call $load)`, // load bignum len
             `(i32.sub)`, // store val
@@ -292,13 +294,14 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
       
       return_val.push(`(i32.const ${n})`);
       return_val.push(`(i32.const 0)`)
-      return_val.push(`(i32.const ${n})`);
+      return_val.push(`(i32.const 1)`);
       return_val.push(`(call $alloc)`);
       return_val.push(`(local.set $$scratch)`);
       
       // store the bignum in (n+1) blocks
       // store number of blocks in the first block
       return_val.push(`(local.get $$scratch)`);
+      return_val.push(`(call $ref_lookup)`);
       return_val.push(`(i32.const ${i})`);
       return_val.push(`(i32.const ${n-1})`);
       return_val.push(`call $store`); 
@@ -307,6 +310,7 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
       // store the digits in the rest of blocks
       for (i; i < n; i++) {
         return_val.push(`(local.get $$scratch)`);
+        return_val.push(`(call $ref_lookup)`);
         return_val.push(`(i32.const ${i})`);
         return_val.push(`(i32.const ${digits[i-1]})`);
         return_val.push(`call $store`);    

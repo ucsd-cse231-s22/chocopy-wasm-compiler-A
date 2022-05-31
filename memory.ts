@@ -154,12 +154,12 @@ export function memReclaim(heap: number, amount: number): memAddr {
     const memSize = memHeap.length;
     const memfits = () => heap/4 + amount + metadataAmt < memSize;
     if (!memfits()) {
-        //heap = compact();
+        heap = compact();
         if (!memfits()) {
             throw new MemError("out of memory :(");
         }
     } else if (reclaimable > memHeap.length / 2) {
-        //heap = compact();
+        heap = compact();
     }
     return heap;
 }
