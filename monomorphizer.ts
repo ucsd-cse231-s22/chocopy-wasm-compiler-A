@@ -383,11 +383,6 @@ export function processType(t: Type, classes: Array<Class<Annotation>>, genv: Gl
         return canonicalType;
       }
 
-      // we need to monomorphize superclasses if required
-      //const cname = t.name;
-      //let cClass : Class<Annotation> = classes[genv.classesInx.get(cname)];
-      //monomorphizeSuperclasses(cClass, classes, genv, prog);
-
       return t;
     case "callable":
       const cparams = t.params.map(p => processType(p, classes, genv, prog));

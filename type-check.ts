@@ -149,9 +149,9 @@ export function isNoneOrClassOrCallable(t: Type) {
 
 export function isSubClass(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
   if (t1.tag === "class" && t2.tag === "class") {
-    const superclasses : string[] = []
-    getSuperclasses(env, t1.name, superclasses)
-    return superclasses.includes(t2.name)
+    const superclasses : Type[] = []
+    getSuperclasses(env, t1, superclasses)
+    return superclasses.some(t => equalType(t2, t));
   } else {
     return t1.tag === "none" && t2.tag === "class"
   }
@@ -406,6 +406,10 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
   const tTypeVars = program.typeVarInits.map(tv => tcTypeVars(newEnv, tv, SRC));
   const tInits = program.inits.map(init => tcInit(newEnv, init, SRC));
   resolveFuncGenericTypes(newEnv);
+
+  // Resolve generic class typevars before typechecking
+  // all classes to avoid ordering dependencies with
+  // superclasses.
   const rClasses = program.classes.map(cls => {
     if(cls.typeParams.length !== 0) {
       return resolveClassTypeParams(newEnv, cls)
@@ -648,19 +652,27 @@ export function tcFields(env: GlobalTypeEnv, cls : Class<Annotation>, tFields : 
   tFields.push(...cls.fields.map(field => tcInit(env, field, SRC)));
 }
 
-export function getSuperclasses(env: GlobalTypeEnv, subclass: string, classes: Array<string>) {
-  if (subclass === "object") {
-    classes.push("object") 
+export function getSuperclasses(env: GlobalTypeEnv, subclass: ClassT, classes: Array<Type>) {
+  if (subclass.name === "object") {
+    classes.push(CLASS("object"))
     return
   }    
 
-  env.classes.get(subclass)[2].forEach((_, cls) => {
+  const subclassEnv = env.classes.get(subclass.name);
+  const superclasses: Map<string, Array<Type>> = subclassEnv[2];
+  const typeparams = subclassEnv[3];
+  let map = new Map(zip(typeparams, subclass.params))
+
+  superclasses.forEach((params, cls) => {
     if (cls !== "object") {
-      classes.push(cls)
+      let superclass = specializeType(map, CLASS(cls, params));
+      classes.push(superclass)
     }
   })
-  env.classes.get(subclass)[2].forEach((_, cls) => {
-    getSuperclasses(env, cls, classes)
+  superclasses.forEach((params, cls) => {
+    let superclass = specializeType(map, CLASS(cls, params));
+    //@ts-ignore we know CLASS always specializes to CLASS
+    getSuperclasses(env, superclass, classes)
   })
 }
 
@@ -671,7 +683,7 @@ export function getSuperclassFields(env: GlobalTypeEnv, subclass: ClassT, fields
     const subclassEnv = env.classes.get(subclass.name);
     const superclasses: Map<string, Array<Type>> = subclassEnv[2];
     const typeparams = subclassEnv[3];
-    let map = new Map(zip(typeparams, subclass.params))
+    let map = new Map(zip(typeparams, subclass.params));
     superclasses.forEach((params, cls) => {
       if (cls !== "object") {
         let superclass = specializeType(map, CLASS(cls, params));

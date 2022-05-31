@@ -31,31 +31,39 @@ export function generateVtable(p : AST.Program<Annotation>, env : GlobalEnv) {
   var vtable : Array<[string, number]> = [];
   var classIndices = new Map(); // stores the start and end index of the class in vtable
   var methodIndex = 0;
+
+  // This loop exists to get around the assumption that superclasses occur
+  // before subclasses in p.classes. This becomes very hard to ensure with
+  // generics and monomorphization of superclasses. So, the inner loop returns
+  // early if it finds that one of it's superclasses hasn't been processed yet.
+  //
+  // TERMINATION WARNING: This should converge and terminate as long as there are 
+  // no cycles in the inheritance chain/hierarchy.
   while(classIndices.size !== p.classes.length) {
-  p.classes.forEach(cls => {
-    if(classIndices.has(cls.name)) { return; }
-    if(!Array.from(cls.super.keys()).filter(scls => scls !== 'object').every(scls => classIndices.has(scls))) { return; }
-    if ([...cls.super.keys()][0] !== "object") {
-      const superClassIndexes = classIndices.get([...cls.super.keys()][0])
-      var superClassVtable = vtable.slice(superClassIndexes[0], superClassIndexes[1])
-      cls.methods.forEach(m => {
-        const methodOffset = env.classes.get(cls.name)[1].get(m.name);
-        if (methodOffset >= superClassVtable.length) {
-          superClassVtable.push([`$${cls.name}$${m.name}`, m.parameters.length])
-        } else {
-          superClassVtable[methodOffset] = [`$${cls.name}$${m.name}`, m.parameters.length];
-        }
-      })
-      classIndices.set(cls.name, [vtable.length, vtable.length +superClassVtable.length])
-      vtable = [...vtable , ...superClassVtable]
-    } else {
-      // add methods directly and increment methodIndex
-      classIndices.set(cls.name, [vtable.length, vtable.length + cls.methods.length])
-      cls.methods.forEach(m => {
-        vtable.push([`$${cls.name}$${m.name}`, m.parameters.length])
-      })
-    }
-  })
+    p.classes.forEach(cls => {
+      if(classIndices.has(cls.name)) { return; }
+      if(!Array.from(cls.super.keys()).filter(scls => scls !== 'object').every(scls => classIndices.has(scls))) { return; }
+      if ([...cls.super.keys()][0] !== "object") {
+        const superClassIndexes = classIndices.get([...cls.super.keys()][0])
+        var superClassVtable = vtable.slice(superClassIndexes[0], superClassIndexes[1])
+        cls.methods.forEach(m => {
+          const methodOffset = env.classes.get(cls.name)[1].get(m.name);
+          if (methodOffset >= superClassVtable.length) {
+            superClassVtable.push([`$${cls.name}$${m.name}`, m.parameters.length])
+          } else {
+            superClassVtable[methodOffset] = [`$${cls.name}$${m.name}`, m.parameters.length];
+          }
+        })
+        classIndices.set(cls.name, [vtable.length, vtable.length +superClassVtable.length])
+        vtable = [...vtable , ...superClassVtable]
+      } else {
+        // add methods directly and increment methodIndex
+        classIndices.set(cls.name, [vtable.length, vtable.length + cls.methods.length])
+        cls.methods.forEach(m => {
+          vtable.push([`$${cls.name}$${m.name}`, m.parameters.length])
+        })
+      }
+    })
   }
   // add classIndices & vtable in env
   env.vtable = vtable;

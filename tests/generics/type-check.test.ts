@@ -1041,4 +1041,36 @@ describe('Generics/Inheritance introp tests', () => {
       b = Box()
       b.foo(b.bar(True, False), 5) 
     `, BOOL);
+
+    assertTCFail(`should type-check generic superclass-subclass assignability - 1`, `
+      T = TypeVar('T')
+
+      class SuperBox(Generic[T]):
+        sv: T = __ZERO__      
+
+      class Box(Generic[T], SuperBox[T]):
+        v: T = __ZERO__
+
+      sb: SuperBox[bool] = None
+      b: Box[int] = None
+
+      b = Box()
+      sb = b
+    `);
+
+    assertTCFail(`should type-check generic superclass-subclass assignability - 1`, `
+      T = TypeVar('T')
+
+      class SuperBox(Generic[T]):
+        sv: T = __ZERO__      
+
+      class Box(Generic[T], SuperBox[bool]):
+        v: T = __ZERO__
+
+      sb: SuperBox[int] = None
+      b: Box[int] = None
+
+      b = Box()
+      sb = b
+    `);
 });

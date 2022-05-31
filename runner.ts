@@ -55,48 +55,54 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
   prog.inits.forEach((v) => {
     newGlobals.set(v.name, true);
   });
-
+  
+  // This loop exists to get around the assumption that superclasses occur
+  // before subclasses in p.classes. This becomes very hard to ensure with
+  // generics and monomorphization of superclasses. So, the inner loop returns
+  // early if it finds that one of it's superclasses hasn't been processed yet.
+  //
+  // TERMINATION WARNING: This should converge and terminate as long as there are 
+  // no cycles in the inheritance chain/hierarchy.
   let initLen = newClasses.size;
-
   while(newClasses.size != initLen + prog.classes.length) {
-  prog.classes.forEach(cls => {
-    if(newClasses.has(cls.name)) { return; }
-    const classFields = new Map();
-    const classMethods = new Map();
-    var overridenMethods = 0;
-    // TODO(anuj): update to support multiple inheritance
-    var offset : number  = 0;
-    const superclasses = Array.from( cls.super.keys() )
-    if(!superclasses.filter(scls => scls !== 'object').every(scls => newClasses.has(scls))) { return; }
-    if (superclasses[0] !== "object") { 
-      newClasses.get(superclasses[0])[0].forEach((value, key) => {
-        offset = Math.max(value[0]) + 1
-      });
-    }
-
-    var superClassMethodsCount = 0;
-    if (superclasses[0] !== "object") {
-      superClassMethodsCount = newClasses.get(superclasses[0])[3];
-    }
-
-    cls.methods.forEach((method, index) => {
-
-      var methodClassOffset = superClassMethodsCount + index - overridenMethods;
-
-      if (superclasses[0] !== "object"){
-        newClasses.get(superclasses[0])[1].forEach((value, key) => {
-          if (key === method.name) {
-            overridenMethods += 1;
-            methodClassOffset = value;
-          }
-        })
+    prog.classes.forEach(cls => {
+      if(newClasses.has(cls.name)) { return; }
+      const classFields = new Map();
+      const classMethods = new Map();
+      var overridenMethods = 0;
+      // TODO(anuj): update to support multiple inheritance
+      var offset : number  = 0;
+      const superclasses = Array.from( cls.super.keys() )
+      if(!superclasses.filter(scls => scls !== 'object').every(scls => newClasses.has(scls))) { return; }
+      if (superclasses[0] !== "object") { 
+        newClasses.get(superclasses[0])[0].forEach((value, key) => {
+          offset = Math.max(value[0]) + 1
+        });
       }
-      classMethods.set(method.name, methodClassOffset)
-    })
 
-    cls.fields.forEach((field, i) => classFields.set(field.name, [offset + i, field.value]));
-    newClasses.set(cls.name, [classFields, classMethods, cls.super, superClassMethodsCount+classMethods.size - overridenMethods]);
-  });
+      var superClassMethodsCount = 0;
+      if (superclasses[0] !== "object") {
+        superClassMethodsCount = newClasses.get(superclasses[0])[3];
+      }
+
+      cls.methods.forEach((method, index) => {
+
+        var methodClassOffset = superClassMethodsCount + index - overridenMethods;
+
+        if (superclasses[0] !== "object"){
+          newClasses.get(superclasses[0])[1].forEach((value, key) => {
+            if (key === method.name) {
+              overridenMethods += 1;
+              methodClassOffset = value;
+            }
+          })
+        }
+        classMethods.set(method.name, methodClassOffset)
+      })
+
+      cls.fields.forEach((field, i) => classFields.set(field.name, [offset + i, field.value]));
+      newClasses.set(cls.name, [classFields, classMethods, cls.super, superClassMethodsCount+classMethods.size - overridenMethods]);
+    });
   }
 
   prog.funs.forEach(f => {

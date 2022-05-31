@@ -426,7 +426,8 @@ describe('e2e tests to check generics', () => {
       def map(self: Iterator[T], f: Callable[[T], T]) -> MapIterator[T]:
         iter : MapIterator[T] = None
         iter = MapIterator()
-        return iter.new(self, f)
+        iter.new(self, f)
+        return iter
 
     class MapIterator(Generic[T], Iterator[T]):
       iter: Iterator[T] = None
@@ -447,40 +448,39 @@ describe('e2e tests to check generics', () => {
       def reset(self: MapIterator[T]):
         self.iter.reset()
 
-    class Range(Generic[T], Iterator[int]):
+    class Range(Iterator[int]):
       min: int = 0
       max: int = 0
       current: int = 0
 
-      def new(self: Range[T], min: int, max: int):
+      def new(self: Range, min: int, max: int):
         self.min = min
         self.max = max
         self.current = self.min
 
-      def hasnext(self: Range[T]) -> bool:
+      def hasnext(self: Range) -> bool:
         return self.current < self.max
 
-      def next(self: Range[T]) -> int:
+      def next(self: Range) -> int:
         v: int = 0
         v = self.current
         self.current = self.current + 1
         return v
 
-      def reset(self: Range[T]):
+      def reset(self: Range):
         self.current = self.min
 
     f : Callable[[int], int] = None
     i : int = 0
-    r : Range[int] = None
+    r : Range = None
     it : Iterator[int] = None
     r = Range()
     r.new(0, 5)
-
     f = mklambda(Callable[[int], int], lambda x: x * 10)
     it = r.map(f)
 
     for i in it:
       print(i)
     `
-    assertPrint('Generic iterator interface - 1', prog16, ["0", "1", "2", "3", "4"]);
+    assertPrint('Generic iterator interface - 1', prog16, ["0", "10", "20", "30", "40"]);
 })
