@@ -72,6 +72,28 @@ a + b`,
 `Error`, 3, 1, 
 [`a + b`, ERRORS.TYPE_ERROR_STRING, `Binary operator \`+\` expects type "number" on both sides, got "number" and "bool"`]
 );
+
+assertFailWithSrc("mklambda-callable-wrong-type",
+`isZero: Callable[[int], bool] = None
+isZero = mklambda(Callable[[int], int], lambda num: num == 0)`, 
+`Error`, 2, 10, 
+[`mklambda(Callable[[int], int], lambda num: num == 0)`, ERRORS.TYPE_ERROR_STRING, `Expected type {"tag":"number"} in lambda, got type "bool"`]
+);
+
+assertFailWithSrc("mklambda-lambda-wrong-type",
+`isZero: Callable[[int], bool] = None
+isZero = mklambda(Callable[[int], bool], lambda num: num)`, 
+`Error`, 2, 10, 
+[`mklambda(Callable[[int], bool], lambda num: num)`, ERRORS.TYPE_ERROR_STRING, `Expected type {"tag":"bool"} in lambda, got type "number"`]
+);
+
+assertFailWithSrc("mklambda-wrong-type",
+`isZero: Callable[[int], bool] = None
+isZero = mklambda(Callable[[int], int], lambda num: num)`, 
+`Error`, 2, 10, 
+[`mklambda(Callable[[int], int], lambda num: num)`, ERRORS.TYPE_ERROR_STRING, `Assignment value should have assignable type to type callable[["number"], "bool"], got callable[["number"], "number"]`]
+);
+
 });
 
 // TODO: test multiple sources
