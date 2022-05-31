@@ -1,13 +1,14 @@
 import "mocha";
 import { BasicREPL } from "../repl";
 import { Value, Annotation } from "../ast";
+import { expect } from "chai";
 import { addLibs, importObject } from "./import-object.test";
 import { run, typeCheck } from "./helpers.test";
 import { fail } from 'assert'
 import {Program} from '../ir'
-import {Type} from '../ast'
 import * as chai from 'chai';
 import chaiExclude from 'chai-exclude';
+import { debugId } from "../memory";
 
 chai.use(chaiExclude);
 
@@ -101,3 +102,11 @@ export function assertTCFail(name: string, source: string) {
   });
 }
 
+export function assertMemState(name: string, source: string, pairs: Array<[number, number, number]>) {
+  it(name, async () => {
+    await run(source);
+    for (const p of pairs) {
+      expect(debugId(p[0], p[1])).to.eq(p[2])
+    }
+  });
+}

@@ -1,6 +1,7 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { Annotation, BinOp, Type, UniOp } from "./ast"
 import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
+import { getTypeInfo } from "./memory";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -88,18 +89,56 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
 function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
   switch (stmt.tag) {
     case "store":
-      return [
+      let post =  [
         ...codeGenValue(stmt.start, env),
+        `(i32.add)`,
+        `call $ref_lookup`,
         ...codeGenValue(stmt.offset, env),
         ...codeGenValue(stmt.value, env),
         `call $store`
       ]
+      let pre = [`(i32.const 0)`]
+      if (stmt.value.a && stmt.value.a.type && (stmt.value.a.type.tag === "class" || stmt.value.a.type.tag === "none")) {
+        pre = [
+          ...codeGenValue(stmt.start, env),
+          `call $ref_lookup`,
+          ...codeGenValue(stmt.offset, env),
+          `(call $load)`, // load the ref number referred to by argument ref no. and the offset
+          `(i32.const 0)`,
+          `(i32.const -1) (call $traverse_update)`,
+          `(i32.mul (i32.const 0))`, // hack to take top value of stack
+          ...codeGenValue(stmt.value, env),
+          `(i32.add)`, // hack to take top value of stack
+          ...codeGenValue(stmt.start, env),
+          `(i32.const 1) (call $traverse_update)`,
+          `(i32.mul (i32.const 0))`
+        ]
+      }
+      return pre.concat(post);
+
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
-      if (env.locals.has(stmt.name)) {
-        return valStmts.concat([`(local.set $${stmt.name})`]); 
+      if (stmt.value.a && stmt.value.a.type && (stmt.value.a.type.tag === "class" || stmt.value.a.type.tag === "none") && (stmt.value.tag !== "alloc")) { // if the assignment is object assignment
+        valStmts.push(`(i32.const 0)`, `(i32.const 1)`, `(call $traverse_update)`) // update the count of the object on the RHS
+        if (env.locals.has(stmt.name)) {
+          return [`(local.get $${stmt.name})`, // update the count of the object on the LHS
+          `(i32.const 0)`,
+          `(i32.const -1)`, 
+          `(call $traverse_update)`,
+          `(local.set $${stmt.name})`].concat(valStmts).concat([`(local.set $${stmt.name})`]); 
+        } else {
+          return [`(global.get $${stmt.name})`,
+          `(i32.const 0)`,
+          `(i32.const -1)`,
+          `(call $traverse_update)`,
+          `(global.set $${stmt.name})`].concat(valStmts).concat([`(global.set $${stmt.name})`]); 
+        }
       } else {
-        return valStmts.concat([`(global.set $${stmt.name})`]); 
+        if (env.locals.has(stmt.name)) {
+          return valStmts.concat([`(local.set $${stmt.name})`]); 
+        } else {
+          return valStmts.concat([`(global.set $${stmt.name})`]); 
+        }
       }
 
     case "return":
@@ -190,7 +229,12 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(call $${expr.name})`);
-      return valStmts;
+      // Not sure if plugging in the scope calls here is the best way to do this
+      return [
+        `(call $add_scope)`,
+        ...valStmts,
+        `(call $remove_scope)`
+      ];
 
     case "call_indirect":
       var valStmts = codeGenExpr(expr.fn, env);
@@ -198,13 +242,17 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       return [...fnStmts, ...valStmts, `(call_indirect (type ${makeWasmFunType(expr.arguments.length)}))`];
 
     case "alloc":
+      let fields = [...env.classes.get(expr.a && expr.a.type && expr.a.type.tag === "class" && expr.a.type.name).values()];
       return [
         ...codeGenValue(expr.amount, env),
-        `call $alloc`
+        `(i32.const ${getTypeInfo(fields.map(f => f[1]))})`,
+        `(i32.const ${fields.length})`,
+        `call $alloc_size`
       ];
     case "load":
       return [
         ...codeGenValue(expr.start, env),
+        `call $ref_lookup`,
         ...codeGenValue(expr.offset, env),
         `call $load`
       ]

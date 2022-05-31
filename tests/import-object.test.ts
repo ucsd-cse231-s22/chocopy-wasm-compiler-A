@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { binop_bignum, binop_comp_bignum, builtin_bignum, load_bignum } from "../utils";
 import { bigMath } from "../utils";
+import * as memMgmt from "../memory";
 import { importObjectErrors } from "../errors";
 
 enum Type { Num, Bool, None }
@@ -33,8 +34,8 @@ function print(typ: Type, arg: any, loader: WebAssembly.ExportValue): any {
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
   const memory = new WebAssembly.Memory({initial:10, maximum:100});
-  const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })
-  importObject.libmemory = memoryModule.instance.exports,
+  const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory }, libmemory: {memGenRef: memMgmt.memGenRef} })
+  importObject.libmemory = {...memoryModule.instance.exports, ...memMgmt},
   importObject.memory_values = memory;
   importObject.js = {memory};
   return importObject;

@@ -2,6 +2,7 @@ import {BasicREPL} from './repl';
 import { Type, Value, Annotation, Class } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
 import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath  } from './utils';
+import * as memMgmt from './memory';
 import { importObjectErrors } from './errors';
 
 import CodeMirror from 'codemirror';
@@ -155,8 +156,8 @@ function webStart() {
     const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
     const memoryModule = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()
-    ).then(bytes =>
-      WebAssembly.instantiate(bytes, { js: { mem: memory } })
+    ).then(bytes => 
+      WebAssembly.instantiate(bytes, { js: { mem: memory }, libmemory: {memGenRef: memMgmt.memGenRef} })
     );
     function initCodeMirror() {
 
@@ -252,8 +253,8 @@ function webStart() {
         $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
         $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
       },
+      libmemory: {...memoryModule.instance.exports, ...memMgmt},
       errors: importObjectErrors,
-      libmemory: memoryModule.instance.exports,
       memory_values: memory,
       js: { memory: memory }
     };

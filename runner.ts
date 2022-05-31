@@ -11,6 +11,7 @@ import { Annotation, FunDef, Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS, makeWasmFunType } from "./utils";
 import { closureName, lowerProgram } from './lower';
 import { monomorphizeProgram } from './monomorphizer';
+import { memInit } from './memory';
 import { optimizeProgram } from './optimization';
 import { wasmErrorImports } from './errors';
 
@@ -128,7 +129,8 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
     importObject.js = { memory: memory };
   }
-
+  memInit(new Int32Array(importObject.js.memory.buffer));
+  // memory functions are explicitly declared rn, they can be added to config.functions when implemented in WASM
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     ${wasmErrorImports}
@@ -140,6 +142,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))
     (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
+    (func $alloc_size (import "libmemory" "alloc_size") (param i32) (param i32) (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     (func $$add (import "imports" "$add") (param i32) (param i32) (result i32))
@@ -154,6 +157,10 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $$lt (import "imports" "$lt") (param i32) (param i32) (result i32))
     (func $$gt (import "imports" "$gt") (param i32) (param i32) (result i32))
     ${types}
+    (func $ref_lookup (import "libmemory" "refLookup") (param i32) (result i32))
+    (func $add_scope (import "libmemory" "addScope"))
+    (func $remove_scope (import "libmemory" "removeScope"))
+    (func $traverse_update (import "libmemory" "traverseUpdate") (param i32) (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${vtable}

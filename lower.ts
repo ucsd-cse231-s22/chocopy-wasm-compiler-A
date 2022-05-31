@@ -383,7 +383,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       }
       const className = objTyp.type.name;
       const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, objval);
-      const callMethod : IR.Expr<Annotation> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
+      const callMethod : IR.Expr<Annotation> = {a: e.a, tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
@@ -406,7 +406,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1} };
+      const alloc : IR.Expr<Annotation> = {a: e.a, tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1 } };
       const assigns : IR.Stmt<Annotation>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {
