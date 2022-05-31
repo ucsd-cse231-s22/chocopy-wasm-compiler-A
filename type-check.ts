@@ -692,7 +692,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       }
     case "lambda":
       if (expr.params.length !== expr.type.params.length) {
-        throw new TypeCheckError("Mismatch in number of parameters: " + expr.type.params.length + " != " + expr.params.length);
+        throw new TypeCheckError(SRC, "Mismatch in number of parameters: " + expr.type.params.length + " != " + expr.params.length, expr.a);
       }
       const lambdaLocals = copyLocals(locals);
       expr.params.forEach((param, i) => {
@@ -700,7 +700,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       })
       let ret = tcExpr(env, lambdaLocals, expr.expr, SRC);
       if (!isAssignable(env, ret.a.type, expr.type.ret)) {
-        throw new TypeCheckError("Expected type " + JSON.stringify(expr.type.ret) + " in lambda, got type " + JSON.stringify(ret.a.type.tag));
+        throw new TypeCheckError(SRC, "Expected type " + JSON.stringify(expr.type.ret) + " in lambda, got type " + JSON.stringify(ret.a.type.tag), expr.a);
       }
       return {a: { ...expr.a, type: expr.type }, tag: "lambda", params: expr.params, type: expr.type, expr: ret}
     case "builtin1":
