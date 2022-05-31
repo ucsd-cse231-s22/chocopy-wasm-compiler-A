@@ -95,16 +95,16 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
   if(progTyp !== NONE) {
     returnType = "(result i32)";
     returnExpr = "(local.get $$last)"
-  } 
+  }
   let globalsBefore = config.env.globals;
   // const compiled = compiler.compile(tprogram, config.env);
   const compiled = compile(irprogram, globalEnv);
 
   const globalImports = [...globalsBefore.keys()].map(name =>
-    `(import "env" "${name}" (global $${name} (mut i32)))`
+      `(import "env" "${name}" (global $${name} (mut i32)))`
   ).join("\n");
   const globalDecls = compiled.globals.map(name =>
-    `(global $${name} (export "${name}") (mut i32) (i32.const 0))`
+      `(global $${name} (export "${name}") (mut i32) (i32.const 0))`
   ).join("\n");
 
   const importObject = config.importObject;
@@ -126,12 +126,12 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
-    (func $read_str (import "libmemory" "read_str") (param i32) (result i32))
-    (func $str-concatenation (import "libmemory" "str-concatenation") (param i32) (param i32) (result i32))
-    (func $duplicate_str (import "libmemory" "duplicate_str") (param i32) (param i32))
-    (func $str_eq (import "libmemory" "str_eq") (param i32) (param i32) (result i32))
-    (func $str_ineq (import "libmemory" "str_ineq") (param i32) (param i32) (result i32))
-    (func $str_mul (import "libmemory" "str_mul") (param i32) (param i32) (result i32))
+    (func $read_str (import "strmemory" "read_str") (param i32) (result i32))
+    (func $str-concatenation (import "strmemory" "str-concatenation") (param i32) (param i32) (result i32))
+    (func $duplicate_str (import "strmemory" "duplicate_str") (param i32) (param i32))
+    (func $str_eq (import "strmemory" "str_eq") (param i32) (param i32) (result i32))
+    (func $str_ineq (import "strmemory" "str_ineq") (param i32) (param i32) (result i32))
+    (func $str_mul (import "strmemory" "str_mul") (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
