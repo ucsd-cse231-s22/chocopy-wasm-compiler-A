@@ -42,7 +42,7 @@ function webStart() {
     const memoryModule = await fetch('memory.wasm').then(response => 
       response.arrayBuffer()
     ).then(bytes => 
-      WebAssembly.instantiate(bytes, { js: { mem: memory }, libmemory: {memGenRef: memMgmt.memGenRef} })
+      WebAssembly.instantiate(bytes, { js: { mem: memory }, libmemory: {memGenRef: memMgmt.memGenRef, memReclaim: memMgmt.memReclaim} })
     );
 
     var importObject = {

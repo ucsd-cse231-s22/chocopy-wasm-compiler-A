@@ -1,12 +1,17 @@
 (module
   (memory (import "js" "mem") 1)
   (func $mem_gen_ref (import "libmemory" "memGenRef") (param i32) (result i32))
+  (func $mem_reclaim (import "libmemory" "memReclaim") (param i32) (param i32) (result i32))
   (global $heap (mut i32) (i32.const 4))
   (global $metadata_amt (mut i32) (i32.const 4))
 
   ;; Take an amount of blocks (4-byte words) to allocate, return an address
   ;; handle suitable for giving to other access methods
   (func (export "alloc") (param $amount i32) (param $types i32) (param $size i32) (result i32)
+    (global.get $heap)
+    (local.get $amount)
+    (call $mem_reclaim)
+    (global.set $heap)
     (local $addr i32)
     (local.set $addr (global.get $heap))
     ;; num reference is zero

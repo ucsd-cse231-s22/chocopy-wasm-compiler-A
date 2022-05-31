@@ -5,7 +5,7 @@ import { Value, Annotation } from "../ast";
 import { importObject } from "./import-object.test";
 import {run, typeCheck} from "./helpers.test";
 import { fail } from 'assert'
-import { debugId } from "../memory";
+import { compact, debugId, memAddr } from "../memory";
 
 
 
@@ -80,5 +80,11 @@ export function assertMemState(name: string, source: string, pairs: Array<[numbe
     for (const p of pairs) {
       expect(debugId(p[0], p[1])).to.eq(p[2])
     }
+  });
+}
+export function assertHeap(name:string, source: string, heap: memAddr) {
+  it(name, async () => {
+    await run(source);
+    expect(compact()).to.eq(heap)
   });
 }

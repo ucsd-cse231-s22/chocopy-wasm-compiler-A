@@ -1,6 +1,7 @@
-import { dataOffset, debugId, refNumOffset, sizeOffset, typeOffset } from "../memory";
-import { assertPrint, assertTCFail, assertTC, assertFail, assertMemState } from "./asserts.test";
+import { dataOffset, debugId, heapStart, metadataAmt, refNumOffset, sizeOffset, typeOffset } from "../memory";
+import { assertPrint, assertTCFail, assertTC, assertFail, assertMemState, assertHeap } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
+
 
 describe("Memory tests", () => {
 
@@ -205,3 +206,33 @@ assertMemState("simple-cycle-deletion", `
     ]);
 });
 
+/////////////////////////////////////////////////////////////////////
+// Garbage collection tests
+////////////////////////////////////////////////////////////////////
+
+assertHeap("single-delete", `
+    class Rat(object):
+        id: int = 123
+        y: int = 0
+        def __init__(self: Rat):
+            self.y = 1
+
+    x: Rat = None
+    x = Rat()
+    x = None
+  `, heapStart); 
+
+assertHeap("delete-in-a-loop", `
+    class Rat(object):
+        id: int = 123
+        y: int = 0
+        def __init__(self: Rat):
+            self.y = 1
+
+    n: int = 1124
+    a: Rat = None
+    a = Rat()
+    while n >= 0:
+        a = Rat()
+        n = n - 1
+`, heapStart + (metadataAmt + 2) * 4) // 2 ints in the object, each is 4 byte

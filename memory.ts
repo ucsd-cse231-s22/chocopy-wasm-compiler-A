@@ -4,6 +4,8 @@ import { Value } from "./ir";
 
 export type memAddr = number;
 export type ref = number;
+export const heapStart = 4;
+export const metadataAmt = 4;
 
 
 // Below can be implemented as a class and has some additonal
@@ -37,6 +39,9 @@ let refMap: Map<ref, memAddr>;
 let refNum = 0; // immutable reference number for objects
 let memHeap: Int32Array;
 let activeStack: Set<ref>[]; // maintains objects created in the local scope
+//let recRefSet: Set<ref> = new Set();
+let inactiveRefList: ref[] = [];
+let reclaimable: number = 0;
 
 // clean slate for each run
 export function memInit(memory: Int32Array) {
@@ -44,19 +49,26 @@ export function memInit(memory: Int32Array) {
     refNum = 0;
     memHeap = memory;
     activeStack = [new Set()];
+    reclaimable = 0;
+    inactiveRefList = [];
 }
 
 // generate a reference number for the memory address
 export function memGenRef(addr: memAddr): ref {
-    refNum++;
-    if (refNum > 2147483647) {
-        throw new MemError("maximum references allocated");
+    let r;
+    if (inactiveRefList.length !== 0) {
+        r = inactiveRefList.pop();
+    } else {
+        refNum++;
+        if (refNum > 2147483647) {
+            throw new MemError("maximum references allocated");
+        }
+        r = refNum;
     }
-    activeStack[activeStack.length - 1].add(refNum);
-    refMap.set(refNum, addr);
-    return refNum;
-    // TODO: add a way to recliam reference numbers.
     
+    activeStack[activeStack.length - 1].add(r);
+    refMap.set(r, addr);
+    return r;    
 }
 
 // get memory address from reference number
@@ -86,6 +98,9 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { //
         memHeap[addr + refNumOffset] += update;
         if (memHeap[addr + refNumOffset] < 0) { 
             memHeap[addr + refNumOffset] = 0;
+        }
+        if (memHeap[addr + refNumOffset] === 0) {
+            reclaimable += memHeap[addr + amountOffset] + metadataAmt;
         } 
         explored.add(curr);
 
@@ -105,6 +120,48 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { //
         }
     }
     return r
+}
+
+export function compact(): memAddr {
+    let free: memAddr = heapStart;
+    function isGarbage(r: ref): boolean {
+        const addr = refLookup(r) / 4;
+        return memHeap[addr + refNumOffset] === 0;
+    }
+    function move(fromAddr: memAddr, toAddr: memAddr, amount: number) {
+        fromAddr /= 4;
+        toAddr /= 4;
+        //const amount = memHeap[fromAddr + amountOffset];
+        for (let i = 0; i < amount + metadataAmt; i++) {
+            memHeap[toAddr + i] = memHeap[fromAddr + i];
+        }
+    }
+    for (const [r, addr] of refMap) {
+        if (!isGarbage(r)) {
+            const amount = memHeap[addr / 4 + amountOffset];
+            move(addr, free, amount);
+            refMap.set(r, free);
+            free += (amount + metadataAmt) * 4;
+        } else {
+            refMap.delete(r);
+            inactiveRefList.push(r);
+        }
+    }
+    return free;
+}
+
+export function memReclaim(heap: number, amount: number): memAddr {
+    const memSize = memHeap.length;
+    const memfits = () => heap/4 + amount + metadataAmt < memSize;
+    if (!memfits()) {
+        heap = compact();
+        if (!memfits()) {
+            throw new MemError("out of memory :(");
+        }
+    } else if (reclaimable > memHeap.length / 2) {
+        heap = compact();
+    }
+    return heap;
 }
 
 
@@ -141,4 +198,5 @@ export function debugId(id: number, offset: number) { // id should be of type in
     }
     throw new Error(`no such id: ${id}`);
 }
+
 
