@@ -338,13 +338,13 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
             } else {
               throw new Error("should not reach here");
             }
-          case "array-expr":
+          case "construct-list":
             var outputInits: Array<IR.VarInit<Annotation>> = [{ a: s.a, name: "_", type: {tag: "number"}, value: { tag: "none" } }];
             var outputClasses: Array<IR.Class<Annotation>> = [];
             var valinits : IR.VarInit<AST.Annotation>[] = [];
             var valstmts : IR.Stmt<AST.Annotation>[] = [];
             var vales : IR.Expr<AST.Annotation>[] = [];
-            for(var expr of s.value.elements) {
+            for(var expr of s.value.items) {
               var [exprinits, exprstmts, vale, classes] = flattenExprToExpr(expr, blocks, env);
               valinits = valinits.concat(exprinits);
               valstmts = valstmts.concat(exprstmts);

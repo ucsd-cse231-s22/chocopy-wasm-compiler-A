@@ -28,7 +28,7 @@ const rangeDef = `
         return it
 `
 
-xdescribe('ut for destructure', () => {
+describe('ut for destructure', () => {
 
     assertTC("simple-assignment", `
     a : int = 1

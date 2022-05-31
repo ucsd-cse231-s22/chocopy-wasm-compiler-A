@@ -584,20 +584,20 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
         if(!isAssignable(env, tValExpr.a.type, tDestruct.a.type)) {
           throw new TypeCheckError(SRC, `Assignment value should have assignable type to type ${bigintSafeStringify(tDestruct.a.type.tag)}, got ${bigintSafeStringify(tValExpr.a.type.tag)}`, tValExpr.a);
         }
-      }else if(!tDestruct.isSimple && tValExpr.tag === "array-expr") {
+      }else if(!tDestruct.isSimple && tValExpr.tag === "construct-list") {
         // for plain destructure like a, b, c = 1, 2, 3
         // we can perform type check
-        if(!hasStar && tDestruct.vars.length != tValExpr.elements.length) {
-          throw new TypeCheckError(`value number mismatch, expected ${tDestruct.vars.length} values, but got ${tValExpr.elements.length}`);
-        } else if(hasStar && tDestruct.vars.length-1 > tValExpr.elements.length) {
-          throw new TypeCheckError(`not enough values to unpack (expected at least ${tDestruct.vars.length-1}, got ${tValExpr.elements.length})`);
+        if(!hasStar && tDestruct.vars.length != tValExpr.items.length) {
+          throw new TypeCheckError(`value number mismatch, expected ${tDestruct.vars.length} values, but got ${tValExpr.items.length}`);
+        } else if(hasStar && tDestruct.vars.length-1 > tValExpr.items.length) {
+          throw new TypeCheckError(`not enough values to unpack (expected at least ${tDestruct.vars.length-1}, got ${tValExpr.items.length})`);
         }
         for(var i=0; i<tDestruct.vars.length; i++) {
           if(tDestruct.vars[i].ignorable) {
             continue;
           }
-          if(!isAssignable(env, tValExpr.elements[i].a.type, tDestruct.vars[i].a.type)) {
-            throw new TypeCheckError(`Non-assignable types: ${tValExpr.elements[i].a} to ${tDestruct.vars[i].a}`);
+          if(!isAssignable(env, tValExpr.items[i].a.type, tDestruct.vars[i].a.type)) {
+            throw new TypeCheckError(`Non-assignable types: ${tValExpr.items[i].a} to ${tDestruct.vars[i].a}`);
           }
         }
       } else if(!tDestruct.isSimple && (tValExpr.tag === "call" || tValExpr.tag === "method-call" || tValExpr.tag === "id")) {
@@ -1016,7 +1016,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         } else if(tItems.every((item) => isAssignable(env, listType.a.type, item.a.type))) {
           return { ...expr, a: {...expr.a, type: {tag: "list", itemType: listType.a.type}}, items: tItems };
         } else {
-          throw new TypeCheckError(`List constructor type mismatch` + bigintSafeStringify(listType) + bigintSafeStringify(tItems));
+          return { ...expr, a: {...expr.a, type: {tag: "list", itemType: {tag: "empty"}}}, items: tItems };
+          // throw new TypeCheckError(`List constructor type mismatch` + bigintSafeStringify(listType) + bigintSafeStringify(tItems));
         }
       }
       return { ...expr, a: {...expr.a, type: {tag: "empty"}}, items: tItems };
