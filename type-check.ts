@@ -758,7 +758,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       } else {
         const newFn = tcExpr(env, locals, expr.fn, SRC);
         if(newFn.a.type.tag !== "callable") {
-          throw new TypeCheckError("Cannot call non-callable expression");
+          throw new TypeCheckError(SRC, "Cannot call non-callable expression", expr.a);
         }
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
         
