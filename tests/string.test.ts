@@ -59,4 +59,11 @@ print(a[1 + 1])
 print(i[ind * 2])
 print((a + i)[len(a)])`, [`e`, `l`, `H`]);
 
+// 8 - String compare
+assertPrint("string-compare", `
+a:str = "Joe"
+i:str = "Joe"
+print(a == i)
+print(a[1] != i[2])`, [`True`, `True`]);
+
 });

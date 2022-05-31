@@ -70,7 +70,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
 export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
-  console.log(tprogram);
+  console.log(JSON.stringify(tprogram, null, 4));
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
   console.log(irprogram);
@@ -123,6 +123,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $print_str (import "libiter" "print_str") (param i32) (result i32))
     (func $load_char (import "libiter" "load_char") (param i32) (param i32) (result i32))
     (func $concat (import "libiter" "concat") (param i32) (param i32) (result i32))
+    (func $iter_cmp (import "libiter" "iter_cmp") (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}

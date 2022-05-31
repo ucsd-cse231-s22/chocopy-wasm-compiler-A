@@ -160,4 +160,13 @@ for iter in a:
       print(s)
 `, [`Hi`, `Joe`, `Love`, `H`, `i`, `J`, `o`, `e`, `L`, `o`, `v`, `e`])
 
+// 15 - Compare Lists
+assertTCFail("compare-list",`
+a:[int] = None
+b:[int] = None
+a = [1,2,3,4]
+b = [1,2,3,4]
+a == b
+`)
+
 });
