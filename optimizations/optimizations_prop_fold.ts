@@ -1,7 +1,6 @@
 import { Type } from "../ast";
 import { BasicBlock, Expr, FunDef, Program, Stmt, Value, VarInit } from "../ir";
-import { generateEnvironmentFunctions, generateEnvironmentProgram } from "./optimization";
-import { Env } from "./optimization_common_models";
+import { Env, generateEnvironmentFunctions, generateEnvironmentProgram } from "./optimization_common";
 import { checkIfFoldableBinOp, checkPropagateValEquality, checkStmtEquality, checkValueEquality, duplicateEnv, evaluateBinOp, evaluateUniOp } from "./optimization_utils";
 
 

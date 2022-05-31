@@ -1,7 +1,6 @@
 import { Type } from "../ast";
 import { BasicBlock, Expr, FunDef, Program, Stmt, Value, VarInit } from "../ir";
-import { generateEnvironmentFunctions, generateEnvironmentProgram } from "./optimization";
-import { Env } from "./optimization_common_models";
+import { Env, generateEnvironmentFunctions, generateEnvironmentProgram } from "./optimization_common";
 import { checkCopyValEquality, checkStmtEquality, duplicateEnv, isTagId } from "./optimization_utils";
 
 
@@ -48,37 +47,40 @@ export class copyEnv extends Env {
             if (statement === undefined) { console.log(block.stmts); }
             if (statement.tag === "assign") {
                 const optimizedExpression = optimizeExpression(statement.value, outEnv);
-                const currReverse = outEnv.has(statement.name) ?  outEnv.get(statement.name).reverse : [];
-                if (optimizedExpression.tag === "value") {
-                    if (optimizedExpression.value.tag === "id") {
-                        // outEnv.vars.set(statement.name, {tag: "nac"});
-                        outEnv.updateForwardsAndBackwards(statement, optimizedExpression.value);
-                    }
-                    else {
-                        outEnv.copyVars.set(statement.name, { tag: "nac", reverse: currReverse });
-                    }
-                }
-                else {
-                    outEnv.copyVars.set(statement.name, { tag: "nac", reverse: currReverse });
-                }
+                const currReverse = outEnv.has(statement.name) ? outEnv.get(statement.name).reverse : [];
+                outEnv.updateForwardsAndBackwards(statement, optimizedExpression);
             }
         });
         return outEnv;
     }
 
-    updateForwardsAndBackwards(stmt: Stmt<any>, optimizedValue: Value<any>) {
-        if (stmt.tag === "assign" && stmt.value.tag === "value" && isTagId(stmt.value.value) && isTagId(optimizedValue)) {
-            const copyFrom = stmt.value.value.name;
+    updateForwardsAndBackwards(stmt: Stmt<any>, optimizedExpression: Expr<any>) {
+        if (stmt.tag === "assign") {
             const copyTo = stmt;
+            this.copyVars.get(copyTo.name).reverse.forEach((id) => {
+                if (this.copyVars.has(id)) {
+                    this.copyVars.set(id, { ...this.copyVars.get(id), tag: "copyId", value: { tag: "id", name: id } })
+                }
+            });
+            
+            if (stmt.value.tag === "value" && isTagId(stmt.value.value)) {
+                const copyFrom = stmt.value.value.name;
 
-            let backwards: string[] = [];
-            const oldCopyFromEnv = this.copyVars.get(copyFrom);
+                let backwards: string[] = [];
+                const oldCopyFromEnv = this.copyVars.get(copyFrom);
 
-            var oldBackwards = oldCopyFromEnv.reverse;
-            backwards = [...oldBackwards, copyTo.name];
+                var oldBackwards = oldCopyFromEnv.reverse; 
+                backwards = [...oldBackwards, copyTo.name];
 
-            this.copyVars.set(copyFrom, { ...oldCopyFromEnv, reverse: backwards });
-            this.copyVars.set(copyTo.name, { tag: "copyId", value: optimizedValue, reverse: [] });
+                this.copyVars.set(copyFrom, { ...oldCopyFromEnv, reverse: backwards });
+
+                if (optimizedExpression.tag === "value" && isTagId(optimizedExpression.value))
+                    this.copyVars.set(copyTo.name, { tag: "copyId", value: optimizedExpression.value, reverse: [] });
+                else
+                    this.copyVars.set(stmt.name, { tag: "copyId", value: { tag: "id", name: stmt.name }, reverse: [] });
+            }
+            else
+                this.copyVars.set(stmt.name, { tag: "copyId", value: { tag: "id", name: stmt.name }, reverse: [] });
         }
     }
 
@@ -92,7 +94,7 @@ export class copyEnv extends Env {
                 returnEnv.copyVars.set(key, { tag: "undef", reverse: [...bValue.reverse, ...aValue.reverse] })
             }
             else if (aValue.tag === "undef") {
-                returnEnv.copyVars.set(key, { tag: "copyId", value: bValue.value, reverse: [...bValue.reverse ] })
+                returnEnv.copyVars.set(key, { tag: "copyId", value: bValue.value, reverse: [...bValue.reverse] })
             }
             else if (bValue.tag === "undef") {
                 returnEnv.copyVars.set(key, { tag: "copyId", value: aValue.value, reverse: [...aValue.reverse] });
@@ -180,9 +182,7 @@ export function optimizeStatements(stmt: Stmt<any>, env: copyEnv): Stmt<any> {
 
                 env.set(stmt.name, { tag: "nac", reverse: newReverse });
             }
-            else if (optimizedExpression.value.tag === "id") {
-                env.updateForwardsAndBackwards(stmt, optimizedExpression.value);
-            }
+            env.updateForwardsAndBackwards(stmt, optimizedExpression);
             return { ...stmt, value: optimizedExpression };
         case "return":
             var optimizedValue: Value<any> = optimizeValue(stmt.value, env);
@@ -219,23 +219,6 @@ function optimizeBlock(block: BasicBlock<any>, env: copyEnv): [BasicBlock<any>, 
         return optimizedstatement;
     });
     return [{ ...block, stmts: newStmts }, blockOptimized];
-}
-
-export function optimizeFunction(func: FunDef<any>): FunDef<any> {
-    if (func.body.length === 0) return func;
-    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctions(func, computeInitEnv);
-
-    var functionOptimized: boolean = false;
-    var newBody: Array<BasicBlock<any>> = func.body.map(b => {
-        var tempBlockEnv: copyEnv = duplicateEnv(inEnvMapping.get(b.label)) as copyEnv;
-        var [optimizedBlock, blockOptimized]: [BasicBlock<any>, boolean] = optimizeBlock(b, tempBlockEnv);
-        if (!functionOptimized && blockOptimized) functionOptimized = true;
-        return optimizedBlock;
-    });
-
-    if (functionOptimized) return optimizeFunction({ ...func, body: newBody })
-
-    return { ...func, body: newBody };
 }
 
 export function copyPropagateProgramBody(program: Program<any>): [Program<any>, boolean] {

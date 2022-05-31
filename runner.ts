@@ -9,7 +9,7 @@ import { compile, GlobalEnv } from './compiler';
 import { wasmErrorImports } from './errors';
 import { closureName, lowerProgram } from './lower';
 import { monomorphizeProgram } from './monomorphizer';
-import { optimizeProgram } from './optimizations/optimization';
+import { optimizeProgram } from './optimization';
 import { parse } from './parser';
 import { GlobalTypeEnv, tc } from './type-check';
 import { makeWasmFunType, NONE, PyValue } from "./utils";
