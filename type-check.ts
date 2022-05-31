@@ -164,7 +164,7 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
   tDefs.forEach(fun => newFuns.set(fun.name, [fun.parameters, fun.ret]));
   tClasses.forEach(cls => {
     const fields = new Map<string, Type>();
-    const methods = new Map<string, [Array<Parameter<Type>>, Type]>();
+    const methods = new Map<string, [Array<Parameter<Annotation>>, Type]>();
     cls.fields.forEach(field => fields.set(field.name, field.type));
     cls.methods.forEach(method => methods.set(method.name, [method.parameters, method.ret]));
     newClasses.set(cls.name, [fields, methods]);
