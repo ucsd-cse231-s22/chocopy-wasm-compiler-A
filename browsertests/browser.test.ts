@@ -11,6 +11,7 @@ var driver;
 export default driver;
 var debug = 0;
 
+
 before(async function () {
     const opts = new Options();
     if (debug===0) opts.addArguments('--headless', '--no-sandbox')
