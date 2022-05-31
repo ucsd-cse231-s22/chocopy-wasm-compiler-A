@@ -1,4 +1,4 @@
-import { Type } from "../ast";
+import { Parameter, Type } from "../ast";
 import { BasicBlock, Expr, FunDef, Program, Stmt, Value, VarInit } from "../ir";
 import { Env, generateEnvironmentFunctions, generateEnvironmentProgram } from "./optimization_common";
 import { checkCopyValEquality, checkStmtEquality, duplicateEnv, isTagId } from "./optimization_utils";
@@ -57,19 +57,21 @@ export class copyEnv extends Env {
     updateForwardsAndBackwards(stmt: Stmt<any>, optimizedExpression: Expr<any>) {
         if (stmt.tag === "assign") {
             const copyTo = stmt;
+            this.copyVars.get(copyTo.name).reverse
+
             this.copyVars.get(copyTo.name).reverse.forEach((id) => {
                 if (this.copyVars.has(id)) {
                     this.copyVars.set(id, { ...this.copyVars.get(id), tag: "copyId", value: { tag: "id", name: id } })
                 }
             });
-            
+
             if (stmt.value.tag === "value" && isTagId(stmt.value.value)) {
                 const copyFrom = stmt.value.value.name;
 
                 let backwards: string[] = [];
                 const oldCopyFromEnv = this.copyVars.get(copyFrom);
 
-                var oldBackwards = oldCopyFromEnv.reverse; 
+                var oldBackwards = oldCopyFromEnv.reverse;
                 backwards = [...oldBackwards, copyTo.name];
 
                 this.copyVars.set(copyFrom, { ...oldCopyFromEnv, reverse: backwards });
@@ -209,6 +211,17 @@ function computeInitEnv(varDefs: Array<VarInit<any>>, dummyEnv: boolean): Env {
     return env;
 }
 
+function addParamsToCopyEnv(params: Array<Parameter<any>>, env: copyEnv, dummyEnv: boolean) {
+    params.forEach(p => {
+        if (dummyEnv) {
+            env.set(p.name, { tag: "undef", reverse: [] });
+        }
+        else {
+            env.set(p.name, { tag: "copyId", value: { tag: "id", name: p.name }, reverse: [] });
+        }
+    });
+}
+
 function optimizeBlock(block: BasicBlock<any>, env: copyEnv): [BasicBlock<any>, boolean] {
     var blockOptimized: boolean = false;
     var newStmts: Stmt<any>[] = block.stmts.map(s => {
@@ -238,7 +251,7 @@ export function copyPropagateProgramBody(program: Program<any>): [Program<any>, 
 
 export function copyPropagateProgramFuns(func: FunDef<any>): [FunDef<any>, boolean] {
     if (func.body.length === 0) return [func, false];
-    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctions(func, computeInitEnv);
+    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctions(func, computeInitEnv, addParamsToCopyEnv);
 
     var functionOptimized: boolean = false;
     var newBody: Array<BasicBlock<any>> = func.body.map(b => {

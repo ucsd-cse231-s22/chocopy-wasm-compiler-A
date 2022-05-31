@@ -1,4 +1,3 @@
-import { Parameter } from "../ast";
 import { BasicBlock, FunDef, Program } from "../ir";
 import { duplicateEnv } from "./optimization_utils";
 
@@ -38,17 +37,6 @@ export class Env {
         return;
     }
 
-}
-
-function addParamsToEnv(params: Array<Parameter<any>>, env: Env, dummyEnv: boolean) {
-    params.forEach(p => {
-        if (dummyEnv) {
-            env.set(p.name, { tag: "undef" });
-        }
-        else {
-            env.set(p.name, { tag: "nac" });
-        }
-    });
 }
 
 function workListAlgorithm(
@@ -92,7 +80,7 @@ function mergeAllPreds(predecessorBlocks: Array<string>, outEnvMapping: Map<stri
     return inEnv;
 }
 
-export function generateEnvironmentFunctions(func: FunDef<any>, computeInitEnv: Function): [Map<string, Env>, Map<string, Env>] {
+export function generateEnvironmentFunctions(func: FunDef<any>, computeInitEnv: Function, addParamsToEnv: Function): [Map<string, Env>, Map<string, Env>] {
     var initialEnv = computeInitEnv(func.inits, false);
     addParamsToEnv(func.parameters, initialEnv, false);
 
