@@ -127,6 +127,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
 }
 
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
+
 export async function run(source : string, config: Config) : Promise<[Value<Annotation>, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   config.importObject.errors.src = source; // for error reporting
   const parsed = parse(source);
@@ -183,6 +184,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))
     (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
+    (func $destructure_check (import "imports" "destructure_check") (param i32) (result i32))
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
@@ -197,6 +199,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $$gte (import "imports" "$gte") (param i32) (param i32) (result i32))
     (func $$lt (import "imports" "$lt") (param i32) (param i32) (result i32))
     (func $$gt (import "imports" "$gt") (param i32) (param i32) (result i32))
+    (func $$bignum_to_i32 (import "imports" "$bignum_to_i32") (param i32) (result i32))
     ${types}
     ${globalImports}
     ${compiled.vtable}

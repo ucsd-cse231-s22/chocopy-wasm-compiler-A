@@ -29,7 +29,7 @@ export function concretizeGenericTypes(type: Type, genv: GlobalMorphEnv) : Type 
 export function resolveZero(type: Type, a: Annotation) : Literal<Annotation> {
     switch (type.tag) {
         case "number":
-            return { a: { ...a, type: NUM}, tag: "num", value: 0 };
+            return { a: { ...a, type: NUM}, tag: "num", value: 0n };
         case "bool":
             return { a: { ...a, type: BOOL}, tag: "bool", value: false };
         // TODO: should the annotation type preserve the original class/callable type ?
@@ -282,7 +282,8 @@ export function monomorphizeSuperclasses(mClass: Class<Annotation>, classes: Arr
 
 export function monomorphizeClass(cname: string, canonicalName: string, classes: Array<Class<Annotation>>, genv: GlobalMorphEnv, prog: Program<Annotation>) : Class<Annotation> {
     let cClass : Class<Annotation> = classes[genv.classesInx.get(cname)];
-    let mClass : Class<Annotation> = JSON.parse(JSON.stringify(cClass))
+    // https://github.com/GoogleChromeLabs/jsbi/issues/30#issuecomment-521460510
+    let mClass : Class<Annotation> = JSON.parse(JSON.stringify(cClass, (key, value) => typeof value === "bigint" ? value.toString() : value));
     mClass.name = canonicalName;
 
     // properly deep copy the super classes
