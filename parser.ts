@@ -136,9 +136,6 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       const callExpr = traverseExpr(c, s, env);
 
       c.nextSibling(); // go to arglist
-<<<<<<< HEAD
-      let [args, kwargs] = traverseArgumentsWithKW(c, s);
-=======
       if (callExpr.tag === "id" && callExpr.name === MKLAMBDA) {
         c.firstChild();
         c.nextSibling(); 
@@ -170,8 +167,7 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         };
       }
 
-      let args = traverseArguments(c, s, env);
->>>>>>> bd167027
+      let [args, kwargs] = traverseArgumentsWithKW(c, s, env);
       c.parent(); // pop CallExpression
 
       if (callExpr.tag === "lookup") {
@@ -198,7 +194,6 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
             left: args[0],
             right: args[1]
           }
-<<<<<<< HEAD
         }
         else {
           expr = { tag: "call", fn: callExpr, arguments: args, kwarguments: kwargs};
@@ -208,11 +203,6 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         throw new Error("Unknown target while parsing assignment");
       }
 
-=======
-        } 
-      } 
-      return { tag: "call", fn: callExpr, arguments: args};
->>>>>>> bd167027
     case "BinaryExpression":
       c.firstChild(); // go to lhs 
       const lhsExpr = traverseExpr(c, s, env);
@@ -349,20 +339,19 @@ export function traverseArguments(c: TreeCursor, s: string, env: ParserEnv): Arr
   return args;
 }
 
-<<<<<<< HEAD
-export function traverseArgumentsWithKW(c : TreeCursor, s : string) : [Array<Expr<null>>, Map<string, Expr<null>>] {
+export function traverseArgumentsWithKW(c : TreeCursor, s : string, env : ParserEnv) : [Array<Expr<Annotation>>, Map<string, Expr<Annotation>>] {
   c.firstChild();  // Focuses on open paren
   const args = [];
-  const kwargs : Map<string, Expr<null>> = new Map();
+  const kwargs : Map<string, Expr<Annotation>> = new Map();
   var keywordArgsBegin = false;
   c.nextSibling();
   while(c.type.name !== ")") {
-    let expr = traverseExpr(c, s);
+    let expr = traverseExpr(c, s, env);
     c.nextSibling(); // Focuses on either "=", "," or ")"
     if (c.type.name === "AssignOp") {
       keywordArgsBegin = true;
       c.nextSibling(); // value
-      let value = traverseExpr(c, s);
+      let value = traverseExpr(c, s, env);
       var keyword = "";
       if (expr.tag !== "id" ) { 
         throw new SyntaxError("keyword can't be an expression");
@@ -386,9 +375,6 @@ export function traverseArgumentsWithKW(c : TreeCursor, s : string) : [Array<Exp
   return [args, kwargs];
 }
 
-export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
-  switch(c.node.type.name) {
-=======
 export function traverseLambdaParams(c : TreeCursor, s : string) : Array<string> {
   let hasNext = c.firstChild();  // Focuses on open paren
   if (!hasNext) {
@@ -408,7 +394,6 @@ export function traverseLambdaParams(c : TreeCursor, s : string) : Array<string>
 export const traverseStmt = wrap_locs(traverseStmtHelper);
 export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): Stmt<Annotation> {
   switch (c.node.type.name) {
->>>>>>> bd167027
     case "ReturnStatement":
       c.firstChild();  // Focus return keyword
 
