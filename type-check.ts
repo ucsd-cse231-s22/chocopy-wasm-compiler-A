@@ -1,4 +1,4 @@
-import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Callable, TypeVar, Parameter } from './ast';
+import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Callable, ClassT, TypeVar, Parameter } from './ast';
 import { NUM, BOOL, NONE, CLASS, CALLABLE, TYPEVAR } from './utils';
 import { emptyEnv } from './compiler';
 import { fullSrcLine, drawSquiggly } from './errors';
@@ -45,7 +45,7 @@ export class TypeCheckError extends Error {
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Map<string,Array<string>>, Array<string>]>,
+  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Map<string,Array<Type>>, Array<string>]>,
   typevars: Map<string, [string]>
 }
 
@@ -303,7 +303,7 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
     cls.fields.forEach(field => fields.set(field.name, field.type));
     cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
     const typeParams = cls.typeParams;
-    newClasses.set(cls.name, [fields, methods, cls.super, [...typeParams]]);
+    newClasses.set(cls.name, [fields, methods, typifySuperclassTypeArguments(cls.super), [...typeParams]]);
     subclassTosuperclass.set(cls.name, [ ...cls.super.keys() ])
   });
 
@@ -316,6 +316,25 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
     newTypevars.set(tv.name, [tv.canonicalName]);
   });
   return { globals: newGlobs, functions: newFuns, classes: newClasses, typevars: newTypevars };
+}
+
+// Convert type-arguments to superclasses from strings to actual types. These will be checked for
+// actual validity later.
+function typifySuperclassTypeArguments(sups: Map<string, Array<string>>) : Map<string, Array<Type>> {
+  return new Map(Array.from(sups.entries()).map(([name, args]) => {
+    let tArgs = args.map(arg => {
+      switch(arg) {
+        case "int":
+          return NUM;
+        case "bool":
+          return BOOL;
+        default:
+          return CLASS(arg);
+      }
+    });
+
+    return [name, tArgs];
+  }));
 }
 
 export function collectTypeVarsInGenericFuncDef(env: GlobalTypeEnv, type: Type) : string[] {
@@ -360,7 +379,7 @@ export function resolveFuncGenericTypes(env: GlobalTypeEnv) {
   })
 }
  
-export function augmentInheritance(subclassTosuperclass : Map<string, string[]>, newClasses : Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Map<string,Array<string>>, Array<string>]>, program : Program<Annotation>) {
+export function augmentInheritance(subclassTosuperclass : Map<string, string[]>, newClasses : Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Map<string,Array<Type>>, Array<string>]>, program : Program<Annotation>) {
   for (let entry of Array.from(subclassTosuperclass.entries())) {
     let sub = entry[0];
     let sup = entry[1];
@@ -495,6 +514,25 @@ export function tcGenericClass(env: GlobalTypeEnv, cls: Class<Annotation>, SRC: 
 export function resolveClassTypeParams(env: GlobalTypeEnv, cls: Class<Annotation>) : Class<Annotation> { 
   let [fieldsTy, methodsTy, superCls, typeparams] = env.classes.get(cls.name);
 
+  let newSuperCls = new Map(Array.from(superCls.entries()).map(([name, args]) => {
+    if(name === 'object') {
+      return [name, args];
+    }
+    let nameClsEnv = env.classes.get(name);
+    if(nameClsEnv[3].length !== args.length) {
+        throw new TypeCheckError(`Incorrect number of type-arguments to superclass ${name}, expected ${nameClsEnv[3].length} got ${args.length}`);
+    }
+    let newArgs = args.map(arg => {
+      let newArg: Type = resolveTypeTypeParams(cls.typeParams, arg);
+      if(newArg.tag === "class" && !env.classes.has(newArg.name)) {
+        throw new TypeCheckError(`Class ${newArg.name} used as type-argument to superclass ${name} does not exist`);
+      }
+      return newArg;
+    });
+
+    return [name, newArgs];
+  }));
+
   let newFieldsTy = new Map(Array.from(fieldsTy.entries()).map(([name, type]) => {
     let newType = resolveTypeTypeParams(cls.typeParams, type);
     return [name, newType];
@@ -510,7 +548,7 @@ export function resolveClassTypeParams(env: GlobalTypeEnv, cls: Class<Annotation
     return [name, [newParams, newRet]];
   }));
 
-  env.classes.set(cls.name, [newFieldsTy, newMethodsTy, superCls, typeparams]);
+  env.classes.set(cls.name, [newFieldsTy, newMethodsTy, newSuperCls, typeparams]);
 
   let newFields = cls.fields.map(field => resolveVarInitTypeParams(cls.typeParams, field));
   let newMethods = cls.methods.map(method => resolveFunDefTypeParams(cls.typeParams, method));
@@ -593,7 +631,7 @@ export function tcFields(env: GlobalTypeEnv, cls : Class<Annotation>, tFields : 
 
   // Check if superclass fields are redefined in subclass
   const superclassFields = new Map()
-  getSuperclassFields(env, cls.name, superclassFields)
+  getSuperclassFields(env, CLASS(cls.name, cls.typeParams.map(TYPEVAR)), superclassFields)
 
   cls.fields.forEach(field => {
     if (superclassFields.has(field.name))
@@ -620,36 +658,49 @@ export function getSuperclasses(env: GlobalTypeEnv, subclass: string, classes: A
   })
 }
 
-export function getSuperclassFields(env: GlobalTypeEnv, subclass: string, fields: Map<string, Type>) {
-  if (subclass === "object")
+export function getSuperclassFields(env: GlobalTypeEnv, subclass: ClassT, fields: Map<string, Type>) {
+  if (subclass.name === "object")
     return
   else {
-    const superclasses = env.classes.get(subclass)[2]
-    superclasses.forEach((_, cls) => {
+    const subclassEnv = env.classes.get(subclass.name);
+    const superclasses: Map<string, Array<Type>> = subclassEnv[2];
+    const typeparams = subclassEnv[3];
+    let map = new Map(zip(typeparams, subclass.params))
+    superclasses.forEach((params, cls) => {
       if (cls !== "object") {
+        let superclass = specializeType(map, CLASS(cls, params));
         const clsfields = env.classes.get(cls)[0]
-        clsfields.forEach((value, key) => fields.set(key, value));
+        clsfields.forEach((value, key) => fields.set(key, specializeFieldType(env, superclass, value)));
       }
     })
-    superclasses.forEach((_, cls) => {
-      getSuperclassFields(env, cls, fields)
+
+    superclasses.forEach((params, cls) => {
+      let superclass = specializeType(map, CLASS(cls, params));
+      //@ts-ignore we know CLASS always specializes to CLASS
+      getSuperclassFields(env, superclass, fields)
     })
   }
 }
 
-export function getSuperclassMethods(env: GlobalTypeEnv, subclass: string, methods: Map<string, [Array<Type>, Type]>) {
-  if (subclass === "object")
+export function getSuperclassMethods(env: GlobalTypeEnv, subclass: ClassT, methods: Map<string, [Array<Type>, Type]>) {
+  if (subclass.name === "object")
     return
   else {
-    const superclasses = env.classes.get(subclass)[2]
-    superclasses.forEach((_, cls) => {
+    const subclassEnv = env.classes.get(subclass.name);
+    const superclasses: Map<string, Array<Type>> = subclassEnv[2];
+    const typeparams = subclassEnv[3];
+    let map = new Map(zip(typeparams, subclass.params))
+    superclasses.forEach((params, cls) => {
       if (cls !== "object") {
+        let superclass = specializeType(map, CLASS(cls, params));
         const clsmethods = env.classes.get(cls)[1]
-        clsmethods.forEach((value, key) => methods.set(key, value));
+        clsmethods.forEach((value, key) => methods.set(key, specializeMethodType(env, superclass, value)));
       }
     })
-    superclasses.forEach((_, cls) => {
-      getSuperclassMethods(env, cls, methods)
+    superclasses.forEach((params, cls) => {
+      let superclass = specializeType(map, CLASS(cls, params));
+      //@ts-ignore we know CLASS always specializes to CLASS
+      getSuperclassMethods(env, superclass, methods)
     })
   }
 }
@@ -733,7 +784,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       if (!env.classes.has(tValObject.a.type.name)) 
         throw new TypeCheckError(SRC, "values on an unknown class");
       const [__, methods] = env.classes.get(tValObject.a.type.name);
-      getSuperclassMethods(env, tValObject.a.type.name, methods)
+      getSuperclassMethods(env, tValObject.a.type, methods)
       if(!(methods.has("hasnext")) || methods.get("hasnext")[1].tag != BOOL.tag)
         throw new TypeCheckError(SRC, "iterable class must have hasnext method with boolean return type");
       if(!(methods.has("next"))) { throw new TypeCheckError(SRC, "No next method"); }
@@ -753,7 +804,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       if (!env.classes.has(tObj.a.type.name))
         throw new TypeCheckError(SRC, `field assignment on an unknown class \`${tObj.a.type.name}\``, tObj.a);
       const [fields, _] = env.classes.get(tObj.a.type.name);
-      getSuperclassFields(env, tObj.a.type.name, fields) // will add super class fields to 'fields' map
+      getSuperclassFields(env, tObj.a.type, fields) // will add super class fields to 'fields' map
       if (!fields.has(stmt.field))
         throw new TypeCheckError(SRC, `could not find field \`${stmt.field}\` in class \`${tObj.a.type.name}\``, stmt.a);
 
@@ -929,7 +980,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         if (env.classes.has(tObj.a.type.name)) {
           const superclassfields = new Map()
           const [fields, _, superclass] = env.classes.get(tObj.a.type.name);
-          getSuperclassFields(env, tObj.a.type.name, superclassfields)
+          getSuperclassFields(env, tObj.a.type, superclassfields)
           if (fields.has(expr.field)) {
             return { ...expr, a: { ...expr.a, type: specializeFieldType(env, tObj.a.type, fields.get(expr.field)) }, obj: tObj };
           } else if (superclassfields.has(expr.field)) {
@@ -950,7 +1001,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         if (env.classes.has(tObj.a.type.name)) {
           const [_, methods] = env.classes.get(tObj.a.type.name);
           const superclassmethods = new Map()
-          getSuperclassMethods(env, tObj.a.type.name, superclassmethods)
+          getSuperclassMethods(env, tObj.a.type, superclassmethods)
 
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = specializeMethodType(env, tObj.a.type, methods.get(expr.method));

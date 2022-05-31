@@ -1,5 +1,6 @@
 import "mocha";
 import { expect } from "chai";
+import { assertTCFail, assertTC, assertPrint } from '../asserts.test';
 import {augmentTEnv, emptyGlobalTypeEnv, tc, resolveClassTypeParams} from  '../../type-check';
 import { Annotation, Program, Type, TypeVar, BinOp } from '../../ast';
 import { NONE, NUM, BOOL, CLASS, TYPEVAR, PyZero, PyNone, PyInt } from '../../utils';
@@ -891,4 +892,138 @@ describe('Generics Type-Checker Tests', () => {
     const globals = tcGlobalEnv.globals.get('b');
     expect(globals).to.deep.equal(CLASS('Box', [CLASS('Box', [NUM])]));
   })
+});
+
+describe('Generics/Inheritance introp tests', () => {
+    assertTC('should type-check class with a generic superclass', `
+      T = TypeVar('T')
+      class SuperBox(Generic[T]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T], SuperBox[T]):
+        v: T = __ZERO__
+    `, NONE);
+
+    assertTC('should type-check class with a generic superclass with concrete instantiation - 1', `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      class SuperBox(Generic[T, U]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T], SuperBox[int, bool]):
+        v: T = __ZERO__
+    `, NONE);
+
+    assertTCFail('should check that generic superclass has correct number of type-arguments', `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      class SuperBox(Generic[T, U]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T], SuperBox[T]):
+        v: T = __ZERO__
+    `);
+
+    assertTCFail('should check that generic superclass arguments are valid classes', `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      class SuperBox(Generic[T, U]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T], SuperBox[int, Something]):
+        v: T = __ZERO__
+    `);
+
+    assertTCFail('should check that generic superclass arguments use valid type-parameters as arguments', `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      class SuperBox(Generic[T, U]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T], SuperBox[U, int]):
+        v: T = __ZERO__
+    `);
+
+    assertTC(`should type-check generic superclass field lookup - 0`, `
+      T = TypeVar('T')
+
+      class SuperBox(Generic[T]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T], SuperBox[T]):
+        v: T = __ZERO__
+
+
+      b : Box[int] = None
+      b = Box()
+      b.sv 
+    `, NUM);
+
+    assertTC(`should type-check generic superclass field lookup - 1`, `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      V = TypeVar('V')
+
+      class SuperSuperBox(Generic[V]):
+        ssv: V = __ZERO__
+
+      class SuperBox(Generic[T, V], SuperSuperBox[V]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T, U, V], SuperBox[U, T]):
+        v: T = __ZERO__
+
+
+      b : Box[int, bool, bool] = None
+      b = Box()
+      b.ssv 
+    `, NUM);
+
+    assertTC(`should type-check generic superclass method call - 0`, `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      V = TypeVar('V')
+
+      class SuperBox(Generic[T, V]):
+        sv: T = __ZERO__ 
+
+        def foo(self: SuperBox[T, V], t: T, v: V) -> T:
+          self.sv = t
+          return t
+
+      class Box(Generic[T, U, V], SuperBox[U, T]):
+        v: T = __ZERO__
+
+        def bar(self: Box[T, U, V], u: U, v: V) -> U:
+          return u
+
+
+      b : Box[int, bool, bool] = None
+      b = Box()
+      b.foo(True, 5) 
+    `, BOOL);
+
+    assertTC(`should type-check generic superclass method call - 1`, `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      V = TypeVar('V')
+
+      class SuperBox(Generic[T, V]):
+        sv: T = __ZERO__ 
+
+        def foo(self: SuperBox[T, V], t: T, v: V) -> T:
+          self.sv = t
+          return t
+
+      class Box(Generic[T, U, V], SuperBox[U, T]):
+        v: T = __ZERO__
+
+        def bar(self: Box[T, U, V], u: U, v: V) -> U:
+          return u
+
+
+      b : Box[int, bool, bool] = None
+      b = Box()
+      b.foo(b.bar(True, False), 5) 
+    `, BOOL);
 });

@@ -15,11 +15,13 @@ export type Location = {
 
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
 export type Callable = {tag: "callable"; params: Array<Type>; ret: Type };
+export type ClassT = {tag: "class", name: string, params: Array<Type> };
 export type Type =
   | {tag: "number"}
   | {tag: "bool"}
   | {tag: "none"}
-  | {tag: "class", name: string, params: Array<Type> }
+  | ClassT
+  //| {tag: "class", name: string, params: Array<Type> }
   | {tag: "either", left: Type, right: Type }
   | {tag: "typevar", name: string }
   | Callable;
