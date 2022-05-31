@@ -68,7 +68,7 @@ function lowerFunDef(
   var name = closureName(f.name, ancestors);
   var type: Type = CLASS(name);
   var self: AST.Parameter<Annotation> = { name: "self", type };
-  env.ancestorMap.set(name, [f, ...ancestors]);
+  env.ancestorMap.set(name, ancestors);
 
   var envCopy = { ...env, functionNames: new Map(env.functionNames) };
   f.children.forEach(c => envCopy.functionNames.set(c.name, closureName(c.name, [f, ...ancestors])));
@@ -344,7 +344,7 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
 
       // at least one level of function nesting
       let [ancestorNames, isFunction, funName] = nonlocals.get(s.name);
-      let parent: AST.Expr<Annotation> = { a: { ...s.a, type: CLASS(currentFun) }, tag: "id", name: "self" };
+      let parent: AST.Expr<Annotation> = { a: { ...s.a, type: CLASS(currentFun) }, tag: "id", name: "self", transform: false };
 
       ancestorNames.slice().reverse().forEach(ancestor => {
         parent = { a: {...s.a, type: CLASS(ancestor)}, tag: "lookup", obj: parent, field: "parent" }; // change
@@ -567,16 +567,17 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       ];
     }
     case "lookup": {
-      if (e.a.type.tag === "callable") {
-        let selfName = generateName("$boundSelf");
-        let initSelf = lowerVarInit({ name: selfName, type: e.obj.a.type, value: { tag: "none" } }, env);
-        let [stmtInits, stmtClass] = flattenStmt({ tag: "assign", name: selfName, value: e.obj }, blocks, env);
+      const [oinits, ostmts, oval, oclasses] = flattenExprToVal(e.obj, blocks, env);
+      if (e.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
+      const classdata = env.classes.get(e.obj.a.type.name);
 
-        let names: string[] = e.a.type.params.map((_, i) => `tmp${i}`);
-        let ids: AST.Expr<Annotation>[] = e.a.type.params.map((type, index) =>
+      if (e.a.type.tag === "callable" && !classdata.has(e.field)) {
+        let selfName = generateName("$boundSelf");
+        let names = e.a.type.params.map((_, i) => `tmp${i}`);
+        let ids: Array<AST.Expr<Annotation>> = e.a.type.params.map((type, index) =>
           ({ tag: "id", name: names[index], a: { type } })
         );
-        let self: AST.Expr<Annotation> = { tag: "id", name: selfName, a: { ...e.obj.a }, transform: false };
+        let self: AST.Expr<Annotation> = { tag: "id", name: selfName, a: { ...e.obj.a } };
         let outerLambdaType: AST.Type = { tag: "callable", params: [e.obj.a.type], ret: e.a.type };
         let lambda: AST.Expr<Annotation> = {
           tag: "call",
@@ -599,21 +600,11 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
               },
             },
           },
-          arguments: [self]
+          arguments: [e.obj]
         };
-        
-        var [linits, lstmts, lexpr, lclasses] = flattenExprToExpr(lambda, blocks, env);
-        return [
-          [initSelf, ...stmtInits, ...linits],
-          lstmts,
-          lexpr,
-          [...stmtClass,...lclasses]
-        ];
-      }
 
-      const [oinits, ostmts, oval, oclasses] = flattenExprToVal(e.obj, blocks, env);
-      if(e.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
-      const classdata = env.classes.get(e.obj.a.type.name);
+        return flattenExprToExpr(lambda, blocks, env);
+      }
 
       const [offset, _] = classdata.get(e.field);
       const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, oval);
