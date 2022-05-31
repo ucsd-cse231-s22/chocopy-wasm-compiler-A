@@ -1,6 +1,5 @@
 import { Annotation, Class, Expr, Literal, Parameter, Program, Stmt, Type, VarInit, Callable, FunDef } from './ast';
-import {CALLABLE} from './tests/helpers.test';
-import { BOOL, CLASS, NONE, NUM, TYPEVAR } from './utils';
+import { BOOL, CALLABLE, CLASS, NONE, NUM, TYPEVAR } from './utils';
 
 export type GlobalMorphEnv = {
     classesInx: Map<string, number>,
