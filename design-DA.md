@@ -1,0 +1,16 @@
+## AST
+For ast, we have to add a new representation for destructuring assignment. Meanwhile, the new representation is supposed to be compatible with the previous plain assignment statement. In this new representation, we will abstract our left expression and right expression. For left expression, we will also add a new ast representation which includes the information about each element in the left structure, such as whether the element is `_` or is marked with `*`. For the right expression, we will reuse the ast nodes of list, tuple. However, given the potential dependency relationship on other teams, we may first choose to use a plain expression array as the left expression for implementation, and then make migration to our complete design.
+
+## TC
+For type checking, we will check whether the lengths of the left and right structures are matched only for plain format like `a, b, c = 1, 2, 3`, as well as type check if possible. We have to handle the element marked with `*` here, which will introduce the issues of alignment, and `_` for ignorable as a placeholder. This element can be matched by the arbitrary length of elements in the right structure. Basically, we only need to consider plain elements on the left side, because the length of the list-like structure in Python is variable. Besides, we also need to support original simple assignment like `a = 1`.
+
+
+## CODE GEN
+For code generation, the high-level implementation is to iterate every element in the left structure and assign the correct values to them respectively from the right structure. For plain list of elements in the right hand side, we just simply assign each variable one by one. For an object whose values need to be determined in the runtime, we will use an iterator object that has `next()` and `hashNext()` interfaces to help with the assignment. This logic will be converted into corresponding intermediate representations, which will be further translated into WASM code. It's worth noting that we need to handle the element marked with `*`. For this special element, we will assign the value after assigning all the values to the plain elements.
+
+## Milestone 1
+During this week, we implemented most functions in our previous design except handling list and tuple in the right part and the element marked with `*`, which depended on other teams' work. Additionally, we added support for `range` by making it an iterator, which had not been metioned in our previous design. We mainly changed ast.ts, parser.ts, type-check.ts, and lower.ts. All this code is runnable and testable. We added new tests in a separated file called destructure.test.ts. You can run them by executing `npm run test-desdestructure`.
+
+
+## Milestone 2
+In next milestone, we plan to support destructuring assignment where the right hand side is a list or set. We should reach an agreement with the related teams on an interface to get the corresponding iterator from the list or set. We will also support bracket expressions in the left hand side, such as `l[0], l[1] = 1, 2` for the assignment of elements of list and tuple. Also, we would support elements marked with `*` in the destructure assignment. Finally, we need to adjust our current implementation to be compatiable with the new error report system.

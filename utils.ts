@@ -57,6 +57,13 @@ export const bigMath = {
   },
 }
 
+export function des_check(hashNext: boolean) : boolean {
+  if(hashNext === false) {
+    throw new Error(`invalid assignment`);
+  }
+  return hashNext;
+}
+
 export function binop_bignum(args: number[], builtin: Function, libmem: WebAssembly.Exports): number {
   var rslt : bigint = BigInt(0);
   const load = libmem.load;

@@ -1,4 +1,4 @@
-import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Callable, TypeVar, Parameter } from './ast';
+import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Callable, TypeVar, Parameter, DestructuringAssignment, Assignable, AssignVar } from './ast';
 import { NUM, BOOL, NONE, CLASS, CALLABLE, TYPEVAR } from './utils';
 import { emptyEnv } from './compiler';
 import { fullSrcLine, drawSquiggly } from './errors';
@@ -491,36 +491,122 @@ export function tcBlock(env: GlobalTypeEnv, locals: LocalTypeEnv, stmts: Array<S
   return tStmts;
 }
 
+export function tcAssignable(env : GlobalTypeEnv, locals : LocalTypeEnv, assignable : Assignable<Annotation>, SRC: string) : Assignable<Annotation> {
+  var expr : Expr<Annotation> = { ...assignable };
+  var typedExpr = tcExpr(env, locals, expr, SRC);
+  switch(typedExpr.tag) {
+    case "id":
+      var typedAss : Assignable<Annotation> = { ...typedExpr };
+      return typedAss;
+    case "lookup":
+      if (typedExpr.obj.a.type.tag !== "class") 
+        throw new TypeCheckError(SRC, "field assignments require an object");
+      if (!env.classes.has(typedExpr.obj.a.type.name)) 
+        throw new TypeCheckError(SRC, "field assignment on an unknown class");
+      const [fields, _] = env.classes.get(typedExpr.obj.a.type.name);
+      if (!fields.has(typedExpr.field)) 
+        throw new TypeCheckError(SRC, `could not find field ${typedExpr.field} in class ${typedExpr.obj.a.type.name}`);
+      var typedAss : Assignable<Annotation> = { ...typedExpr };
+      return typedAss;
+    default:
+      throw new TypeCheckError(SRC, `unimplemented type checking for assignment: ${assignable}`);
+  }
+}
+
+export function tcDestructuringAssignment(env : GlobalTypeEnv, locals : LocalTypeEnv, destruct : DestructuringAssignment<Annotation>, SRC: string) : [DestructuringAssignment<Annotation>, boolean] {
+  if(destruct.isSimple) {
+    if(destruct.vars.length != 1) {
+      throw new TypeCheckError(SRC, `variable number mismatch, expected 1, got ${destruct.vars.length}`);
+    }
+    if(destruct.vars[0].star) {
+      throw new TypeCheckError(SRC, 'starred assignment target must be in a list or tuple');
+    }
+    var typedAss : Assignable<Annotation> = tcAssignable(env, locals, destruct.vars[0].target, SRC);
+    var variable: AssignVar<Annotation> = { ...destruct.vars[0], target: typedAss, a: typedAss.a };
+    return [{ ...destruct, vars: [variable], a: variable.a }, false];
+  } else {
+    // there should be more than 0 elements at left
+    if(destruct.vars.length == 0) {
+      throw new TypeCheckError(SRC, `variable number mismatch, expected more than 1, got 0`);
+    }
+    var hasStar = false;
+    var typedVars : AssignVar<Annotation>[] = [];
+    for(var v of destruct.vars) {
+      if(v.star) {
+        if(hasStar) {
+          throw new TypeCheckError(SRC, `there could not be more than 1 star expression in assignment`);
+        }
+        hasStar = true;
+      }
+      var typedAss : Assignable<Annotation> = tcAssignable(env, locals, v.target, SRC);
+      var variable: AssignVar<Annotation> = { ...v, target: typedAss, a: typedAss.a }; 
+      typedVars.push(variable);
+    }
+    return [{ ...destruct, vars: typedVars, a: { ...destruct.a, type: NONE } }, hasStar];
+  }
+}
 
 export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Annotation>, SRC: string): Stmt<Annotation> {
-  switch (stmt.tag) {
+  switch(stmt.tag) {
     case "assign":
+      const [tDestruct, hasStar] = tcDestructuringAssignment(env, locals, stmt.destruct, SRC);
       const tValExpr = tcExpr(env, locals, stmt.value, SRC);
-      var nameTyp;
-      if (locals.vars.has(stmt.name)) {
-        nameTyp = locals.vars.get(stmt.name);
-      } else if (env.globals.has(stmt.name)) {
-        nameTyp = env.globals.get(stmt.name);
-      } else {
-        throw new TypeCheckError(SRC, "Unbound id: " + stmt.name);
+      if(tDestruct.isSimple) {
+        // TODO: this is an ugly temporary hack for generic constructor
+        // calls until explicit annotations are supported.
+        // Until then constructors for generic classes are properly checked only
+        // when directly assigned to variables and will fail in unexpected ways otherwise.
+        if(tDestruct.a.type.tag === 'class' && tDestruct.a.type.params.length !== 0 && tValExpr.a.type.tag === 'class' && tValExpr.a.type.name === tDestruct.a.type.name && tValExpr.tag === 'construct') {
+          // it would have been impossible for the inner type-checking
+          // code to properly infer and fill in the type parameters for
+          // the constructor call. So we copy it from the type of the variable
+          // we are assigning to.
+          tValExpr.a.type.params = [...tDestruct.a.type.params];
+        }
+        if(!isAssignable(env, tValExpr.a.type, tDestruct.a.type)) {
+          throw new TypeCheckError(SRC, `Assignment value should have assignable type to type ${JSON.stringify(tDestruct.a.type.tag)}, got ${JSON.stringify(tValExpr.a.type.tag)}`, tValExpr.a);
+        }
+      }else if(!tDestruct.isSimple && tValExpr.tag === "array-expr") {
+        // for plain destructure like a, b, c = 1, 2, 3
+        // we can perform type check
+        if(!hasStar && tDestruct.vars.length != tValExpr.elements.length) {
+          throw new TypeCheckError(`value number mismatch, expected ${tDestruct.vars.length} values, but got ${tValExpr.elements.length}`);
+        } else if(hasStar && tDestruct.vars.length-1 > tValExpr.elements.length) {
+          throw new TypeCheckError(`not enough values to unpack (expected at least ${tDestruct.vars.length-1}, got ${tValExpr.elements.length})`);
+        }
+        for(var i=0; i<tDestruct.vars.length; i++) {
+          if(tDestruct.vars[i].ignorable) {
+            continue;
+          }
+          if(!isAssignable(env, tValExpr.elements[i].a.type, tDestruct.vars[i].a.type)) {
+            throw new TypeCheckError(`Non-assignable types: ${tValExpr.elements[i].a} to ${tDestruct.vars[i].a}`);
+          }
+        }
+      } else if(!tDestruct.isSimple && (tValExpr.tag === "call" || tValExpr.tag === "method-call" || tValExpr.tag === "id")) {
+        // the expr should be iterable, which means the return type should be an iterator
+        // but there is no such a type currently, so
+        // TODO: add specific logic then
+        if(tValExpr.a.type.tag != "class" || tValExpr.a.type.name != "iterator") {
+          throw new TypeCheckError(`cannot unpack non-iterable ${JSON.stringify(tValExpr.a, null, 2)} object`)
+        } else {
+          var rightType = env.classes.get('iterator')[1].get('next')[1];
+          for(var i=0; i<tDestruct.vars.length; i++) {
+            if(tDestruct.vars[i].ignorable) {
+              continue;
+            }
+            if(!isAssignable(env, rightType, tDestruct.vars[i].a.type)) {
+              throw new TypeCheckError(`Non-assignable types: ${rightType} to ${tDestruct.vars[i].a}`);
+            }
+          }
+        }
+        // other checks should be pushed to runtime
+      } else if(!tDestruct.isSimple) {
+        // TODO: support other types like list, tuple, which are plain formatted, we could also perform type check
+        if(tValExpr.a != CLASS('iterator')) {
+          throw new TypeCheckError(`cannot unpack non-iterable ${tValExpr.a} object`)
+        }
       }
-
-      // TODO: this is an ugly temporary hack for generic constructor
-      // calls until explicit annotations are supported.
-      // Until then constructors for generic classes are properly checked only
-      // when directly assigned to variables and will fail in unexpected ways otherwise.
-      if(nameTyp.tag === 'class' && nameTyp.params.length !== 0 && tValExpr.a.type.tag === 'class' && tValExpr.a.type.name === nameTyp.name && tValExpr.tag === 'construct') {
-        // it would have been impossible for the inner type-checking
-        // code to properly infer and fill in the type parameters for
-        // the constructor call. So we copy it from the type of the variable
-        // we are assigning to.
-        tValExpr.a.type.params = [...nameTyp.params]; 
-      }
-
-      if (!isAssignable(env, tValExpr.a.type, nameTyp))
-        throw new TypeCheckError(SRC, `Assignment value should have assignable type to type ${JSON.stringify(nameTyp.tag)}, got ${JSON.stringify(tValExpr.a.type.tag)}`,
-        tValExpr.a);
-      return { a: { ...stmt.a, type: NONE }, tag: stmt.tag, name: stmt.name, value: tValExpr };
+      return {a: { ...stmt.a, type: NONE }, tag: stmt.tag, destruct: tDestruct, value: tValExpr};
     case "expr":
       const tExpr = tcExpr(env, locals, stmt.expr, SRC);
       return { a: tExpr.a, tag: stmt.tag, expr: tExpr };
@@ -664,6 +750,10 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
           expr.a); }
       }
     case "id":
+      if(expr.name === '_') {
+        // ignorable
+        return {a: { ...expr.a, type: NONE }, ...expr};
+      }
       if (locals.vars.has(expr.name)) {
         return { ...expr, a: { ...expr.a, type: locals.vars.get(expr.name) } };
       } else if (env.globals.has(expr.name)) {
@@ -795,32 +885,35 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       } else {
         throw new TypeCheckError(SRC, `method calls require an object of type "class", got ${JSON.stringify(tObj.a.type.tag)}`, expr.a);
       }
-      case "list-comp":
-        // check if iterable is instance of class
-        const iterable = tcExpr(env, locals, expr.iterable,SRC);
-        if (iterable.a.type.tag === "class"){
-          const classData = env.classes.get(iterable.a.type.name);
-          // check if next and hasNext methods are there
-          if (!classData[1].has("next") || !classData[1].has("hasNext"))
-            throw new Error("TYPE ERROR: Class of the instance must have next() and hasNext() methods");
-          // need to create a local env for elem to be inside comprehension only
-          var loc = locals;
-          if (expr.elem.tag === "id"){
-            loc.vars.set(expr.elem.name, NUM);
-            const elem = {...expr.elem, a: {...expr, type: NUM}};
-            const left = tcExpr(env, loc, expr.left,SRC);
-            var cond;
-            if (expr.cond)
-              cond = tcExpr(env, loc, expr.cond,SRC);
-            if (cond && cond.a.type.tag !== "bool")
-              throw new Error("TYPE ERROR: comprehension if condition must return bool")
-            return {...expr, left, elem, cond, iterable, a: {...expr, type: CLASS(iterable.a.type.name)}};
-          }
-          else
-            throw new Error("TYPE ERROR: elem has to be an id");
+    case "array-expr":
+      const arrayExpr = expr.elements.map((element) => tcExpr(env, locals, element, SRC));
+      return { ...expr, a: { ...expr.a, type: NONE }, elements: arrayExpr };
+    case "list-comp":
+      // check if iterable is instance of class
+      const iterable = tcExpr(env, locals, expr.iterable,SRC);
+      if (iterable.a.type.tag === "class"){
+        const classData = env.classes.get(iterable.a.type.name);
+        // check if next and hasNext methods are there
+        if (!classData[1].has("next") || !classData[1].has("hasNext"))
+          throw new Error("TYPE ERROR: Class of the instance must have next() and hasNext() methods");
+        // need to create a local env for elem to be inside comprehension only
+        var loc = locals;
+        if (expr.elem.tag === "id"){
+          loc.vars.set(expr.elem.name, NUM);
+          const elem = {...expr.elem, a: {...expr, type: NUM}};
+          const left = tcExpr(env, loc, expr.left,SRC);
+          var cond;
+          if (expr.cond)
+            cond = tcExpr(env, loc, expr.cond,SRC);
+          if (cond && cond.a.type.tag !== "bool")
+            throw new Error("TYPE ERROR: comprehension if condition must return bool")
+          return {...expr, left, elem, cond, iterable, a: {...expr, type: CLASS(iterable.a.type.name)}};
         }
         else
-          throw new Error("TYPE ERROR: Iterable must be an instance of a class");  
+          throw new Error("TYPE ERROR: elem has to be an id");
+      }
+      else
+        throw new Error("TYPE ERROR: Iterable must be an instance of a class");  
     case "if-expr":
       var tThn = tcExpr(env, locals, expr.thn, SRC);
       var tCond = tcExpr(env, locals, expr.cond, SRC);

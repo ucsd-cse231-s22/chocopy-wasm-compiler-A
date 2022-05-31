@@ -1,6 +1,6 @@
 import { parser } from "@lezer/python";
 import { TreeCursor } from "@lezer/common";
-import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, Annotation, Location, NonlocalVarInit, TypeVar } from "./ast";
+import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, Annotation, Location, NonlocalVarInit, TypeVar, DestructuringAssignment, AssignVar } from "./ast";
 import { NUM, BOOL, NONE, CLASS, CALLABLE } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
@@ -322,6 +322,34 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         tag: "id",
         name: "self"
       };
+    case "ArrayExpression": // a, b, c = [1, 2, 3]
+      let arrayElements: Expr<Annotation>[] = [];
+      c.firstChild();
+      c.nextSibling();
+      while (s.substring(c.from, c.to).trim() !== "]") {
+        arrayElements.push(traverseExpr(c, s, env));
+        c.nextSibling();
+        c.nextSibling();
+      }
+      c.parent();
+      return {
+        tag: "array-expr",
+        elements: arrayElements,
+      };
+    case "TupleExpression": // a, b, c = (1, 2, 3)
+      let tupleElements: Expr<Annotation>[] = [];
+      c.firstChild();
+      c.nextSibling();
+      while (s.substring(c.from, c.to).trim() !== ")") {
+        tupleElements.push(traverseExpr(c, s, env));
+        c.nextSibling();
+        c.nextSibling();
+      }
+      c.parent();
+      return {
+        tag: "array-expr",
+        elements: tupleElements,
+      };
     case "ConditionalExpression":
       c.firstChild();
       var thn = traverseExpr(c, s, env);
@@ -383,27 +411,45 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
       return { tag: "return", value };
     case "AssignStatement":
       c.firstChild(); // go to name
-      const target = traverseExpr(c, s, env);
+      if (c.type.name === "MemberExpression") {
+        c.nextSibling();
+        // @ts-ignore
+        if (c.type.name === "AssignOp") {
+          c.prevSibling();
+          let target = traverseExpr(c, s, env);
+          c.nextSibling(); // go to equals
+          c.nextSibling(); // go to value
+          let value = traverseExpr(c, s, env);
+          if (target.tag === "lookup") {
+            c.parent();
+            return {
+              tag: "field-assign",
+              obj: target.obj,
+              field: target.field,
+              value: value,
+            }
+          } else {
+            throw new Error("Unknown target while parsing assignment");
+          }
+        }
+        c.prevSibling();
+      }
+      const destruct = traverseDestructure(c, s, env);
       c.nextSibling(); // go to equals
       c.nextSibling(); // go to value
       var value = traverseExpr(c, s, env);
+      if (c.nextSibling()) {
+        value = {tag: "array-expr", elements: [value]};
+        while (c.nextSibling()) {
+          value.elements.push(traverseExpr(c, s, env));
+          c.nextSibling();
+        }
+      }
       c.parent();
-
-      if (target.tag === "lookup") {
-        return {
-          tag: "field-assign",
-          obj: target.obj,
-          field: target.field,
-          value: value
-        }
-      } else if (target.tag === "id") {
-        return {
-          tag: "assign",
-          name: target.name,
-          value: value
-        }
-      } else {
-        throw new Error("Unknown target while parsing assignment");
+      return {
+        tag: "assign",
+        destruct,
+        value,
       }
     case "ExpressionStatement":
       c.firstChild();
@@ -511,6 +557,62 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
     default:
       throw new Error("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to));
   }
+}
+
+function traverseDestructure(c: TreeCursor, s: string, env: ParserEnv): DestructuringAssignment<Annotation> {
+  const vars: AssignVar<Annotation>[] = [];
+  if (c.type.name === "ArrayExpression" || c.type.name === "TupleExpression") {
+    c.firstChild();
+    c.nextSibling();
+    vars.push(traverseAssignVar(c, s, env));
+    c.nextSibling();
+    while (c.name !== "]" && c.name !== ")") {
+      c.nextSibling();
+      if (c.name === "]" || c.name === ")") break;
+      let variable = traverseAssignVar(c, s, env);
+      vars.push(variable);
+      c.nextSibling();
+    }
+    c.parent();
+    return {
+      isSimple: false,
+      vars,
+    };
+  } else {
+    vars.push(traverseAssignVar(c, s, env));
+    let isSimple = true;
+    c.nextSibling();
+    while (c.name !== "AssignOp") {
+      isSimple = false;
+      c.nextSibling();
+      if (c.name === "AssignOp") break;
+      let variable = traverseAssignVar(c, s, env);
+      vars.push(variable);
+      c.nextSibling();
+    }
+    c.prevSibling();
+    return {
+      isSimple,
+      vars,
+    };
+  }
+}
+
+function traverseAssignVar(c: TreeCursor, s: string, env: ParserEnv): AssignVar<Annotation> {
+  // todo check if target is *
+  let target = traverseExpr(c, s, env);
+  let ignorable = false;
+  if (target.tag !== "id" && target.tag !== "lookup") {
+    throw new Error("Unknown variable expression");
+  }
+  if (target.tag === "id" && target.name === "_") {
+    ignorable = true;
+  }
+  return {
+    target,
+    ignorable,
+    star: false,
+  };
 }
 
 export function traverseType(c : TreeCursor, s : string, env: ParserEnv) : Type {
