@@ -3,6 +3,7 @@ import { Annotation, BinOp, Type, UniOp } from "./ast"
 import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
 import { equalType } from "./type-check";
 import { getTypeInfo } from "./memory";
+import exp from "constants";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -243,6 +244,14 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       return [...fnStmts, ...valStmts, `(call_indirect (type ${makeWasmFunType(expr.arguments.length)}))`];
 
     case "alloc":
+      if (expr.fixed) {
+        return [
+        ...codeGenValue(expr.amount, env),
+        `(i32.const ${parseInt(expr.fixed.map(b => b ? 1: 0).reverse().join(""), 2)})`, //parseInt(binArr.reverse().join(""), 2)
+        `(i32.const ${expr.fixed.length})`,
+        `call $alloc`
+        ]
+      }
       let fields = [...env.classes.get(expr.a && expr.a.type && expr.a.type.tag === "class" && expr.a.type.name).values()];
       return [
         ...codeGenValue(expr.amount, env),
@@ -281,6 +290,8 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
       var i = 0
       var return_val : string[] = []
       
+      return_val.push(`(i32.const ${n})`);
+      return_val.push(`(i32.const 0)`)
       return_val.push(`(i32.const ${n})`);
       return_val.push(`(call $alloc)`);
       return_val.push(`(local.set $$scratch)`);

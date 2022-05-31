@@ -34,7 +34,7 @@ export const dataOffset = 4;
 
 // mapping for reference number to actual address
 // this allows the memory management module to move memory blocks around
-let refMap: Map<ref, memAddr>; 
+export let refMap: Map<ref, memAddr> = new Map(); 
 
 let refNum = 0; // immutable reference number for objects
 let memHeap: Int32Array;
@@ -154,12 +154,12 @@ export function memReclaim(heap: number, amount: number): memAddr {
     const memSize = memHeap.length;
     const memfits = () => heap/4 + amount + metadataAmt < memSize;
     if (!memfits()) {
-        heap = compact();
+        //heap = compact();
         if (!memfits()) {
             throw new MemError("out of memory :(");
         }
     } else if (reclaimable > memHeap.length / 2) {
-        heap = compact();
+        //heap = compact();
     }
     return heap;
 }

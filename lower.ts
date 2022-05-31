@@ -3,7 +3,7 @@ import * as IR from './ir';
 import { Type, UniOp, Annotation } from './ast';
 import * as ERRORS from './errors';
 import { GlobalEnv } from './compiler';
-import { APPLY, CLASS, createMethodName, BOOL, NONE, NUM } from './utils';
+import { APPLY, CLASS, createMethodName, BOOL, NONE, NUM, getFieldType } from './utils';
 
 let nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -151,8 +151,26 @@ function lowerClass(cls: AST.Class<Annotation>, env : GlobalEnv) : Array<IR.Clas
 }
 
 function literalToVal(lit: AST.Literal<Annotation>) : IR.Value<Annotation> {
+    // function getBigNum(b: bigint): number[] {
+    //   if (b === BigInt(0))
+    //     return [0];
+    //   let digits : number[] = [];
+    //   let n = 0;
+    //   if (b < 0) {
+    //     b *= BigInt(-1);
+    //     digits.push(-1);
+    //   } else {
+    //     digits.push(1);
+    //   }
+    //   while(b != BigInt(0)) {
+    //       digits.push(Number(b & BigInt(0x7fffffff)));
+    //       b = b / BigInt(1 << 31); 
+    //   }
+    //   digits[0] *= digits.length -
+    // }
+
     switch(lit.tag) {
-        case "num":
+        case "num": 
             return { ...lit, value: BigInt((lit.value).toLocaleString('fullwide', {useGrouping:false})) }
         case "bool":
             return lit
@@ -617,7 +635,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<Annotation> = {a: e.a, tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1} };
+      const alloc : IR.Expr<Annotation> = {a: e.a, tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1}, fixed: getFieldType(fields.map(f => f[1][1])) };
       const assigns : IR.Stmt<Annotation>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {

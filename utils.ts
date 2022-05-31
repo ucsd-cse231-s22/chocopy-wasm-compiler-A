@@ -1,4 +1,6 @@
 import { Value, Type, Annotation, Literal } from "./ast";
+import { Value as IR_Value } from "./ir";
+import { metadataAmt, refMap } from "./memory";
 
 export const bigMath = {
   // https://stackoverflow.com/a/64953280
@@ -90,11 +92,11 @@ export function load_bignum(addr: number, loader: WebAssembly.ExportValue): bigi
   const load = loader as CallableFunction;
   if (addr === 0) 
     return BigInt(0);
-  const numlength = load(addr, 0);
+  const numlength = load(refMap.get(addr), 0);
   var bignum : bigint = BigInt(0);
   for (let i = Math.abs(numlength); i > 0; i--) {
     bignum <<= BigInt(31);
-    bignum += BigInt(load(addr, i) & 0x7fffffff); // mask number to 2^31
+    bignum += BigInt(load(refMap.get(addr), i) & 0x7fffffff); // mask number to 2^31
   }
   if (numlength < 0)
     bignum *= BigInt(-1);
@@ -104,14 +106,14 @@ export function load_bignum(addr: number, loader: WebAssembly.ExportValue): bigi
 export function alloc_bignum(numlength: number, allocator: WebAssembly.ExportValue): number {
   const alloc = allocator as CallableFunction;
   // allocate one extra space for metadata (length)
-  return alloc(Math.abs(numlength)+1);
+  return alloc(Math.abs(numlength)+1, 0, Math.abs(numlength)+1);
 }
 
 export function store_bignum(addr: number, numlength: number, digits: number[], storer: WebAssembly.ExportValue) {
   const store = storer as CallableFunction;
-  store(addr, 0, numlength);
+  store(refMap.get(addr), 0, numlength);
   digits.forEach((d, i) => {
-    store(addr, i+1, d);
+    store(refMap.get(addr), i+1, d);
   });
 }
 
@@ -194,4 +196,18 @@ export function createMethodName(cls: string, method: string): string{
 
 export function makeWasmFunType(paramNum: number): string {
   return `$callable${paramNum}param`;
+}
+
+export function getFieldType(fields: IR_Value<Annotation>[]): boolean[] {
+  const boolArr : boolean[] = fields.map(f => {
+      if (f.tag  === "none") {
+        return true;
+      }
+      return false;
+    });
+
+  if (boolArr.length === 0) {
+      return [false];
+  }
+  return boolArr;
 }
