@@ -2,6 +2,7 @@ import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Lite
 import { NUM, BOOL, NONE, CLASS, CALLABLE, TYPEVAR, LIST } from './utils';
 import { emptyEnv } from './compiler';
 import { fullSrcLine, drawSquiggly } from './errors';
+import { expect } from 'chai';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 
@@ -403,7 +404,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv
   const tBody = tcBlock(envCopy, locals, fun.body, SRC);
   if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))
     // TODO: what locations to be reported here?
-    throw new TypeCheckError(`expected return type of block: ${bigintSafeStringify(locals.expectedRet)} does not match actual return type: ${bigintSafeStringify(locals.actualRet)}`)
+    throw new TypeCheckError(SRC, `expected return type of block: ${bigintSafeStringify(locals.expectedRet)} does not match actual return type: ${bigintSafeStringify(locals.actualRet)}`)
   return {...fun, a: { ...fun.a, type: NONE }, body: tBody, nonlocals, children};
 }
 
@@ -731,14 +732,17 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
     case "index-assign":
       const tList = tcExpr(env, locals, stmt.obj, SRC)
       if (tList.a.type.tag !== "list")
-        throw new TypeCheckError("index assignments require an list");
+        throw new TypeCheckError(SRC, `Can only index into a list object, attempting to index into type ${bigintSafeStringify(tList.a.type.tag)}`, stmt.a);
       const tIndex = tcExpr(env, locals, stmt.index, SRC);
       if (tIndex.a.type.tag !== "number")
-        throw new TypeCheckError(`index is of non-integer type \'${tIndex.a.type.tag}\'`);
+        throw new TypeCheckError(SRC, `index is of non-integer type "${tIndex.a.type.tag}"`, stmt.a);
       const tValue = tcExpr(env, locals, stmt.value, SRC);
       const expectType = tList.a.type.itemType;
-      if (!isAssignable(env, expectType, tValue.a.type))
-        throw new TypeCheckError("Non-assignable types");
+      if (!isAssignable(env, expectType, tValue.a.type)) {
+        const expectedType = bigintSafeStringify(expectType.tag)
+        const receivedType = bigintSafeStringify(tValue.a.type.tag)
+        throw new TypeCheckError(SRC, `Cannot assign type ${receivedType} to expected type ${expectedType}`, stmt.a);
+      }
 
       return {a: { ...stmt.a, type: NONE }, tag: stmt.tag, obj: tList, index: tIndex, value: tValue}
   }
@@ -764,9 +768,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
             } else if(equalType(tLeft.a.type, tRight.a.type)) {
               return {...expr, a: tLeft.a};
             } else {
-              var leftType = tLeft.a.type.tag === "list"? tLeft.a.type.tag + "[" + tLeft.a.type.itemType + "]": tLeft.a.type.tag;
-              var rightType = tRight.a.type.tag === "list"? tRight.a.type.tag + "[" + tRight.a.type.itemType + "]": tRight.a.type.tag;
-              throw new TypeCheckError(`Cannot concatenate ${rightType} to ${leftType}`);
+              var leftType = tLeft.a.type.tag === "list" ? tLeft.a.type.tag + "[" + bigintSafeStringify(tLeft.a.type.itemType.tag) + "]": tLeft.a.type.tag;
+              var rightType = tRight.a.type.tag === "list" ? tRight.a.type.tag + "[" + bigintSafeStringify(tRight.a.type.itemType.tag) + "]": tRight.a.type.tag;
+              throw new TypeCheckError(SRC, `Cannot concatenate ${rightType} to ${leftType}`, expr.a);
             }
           }
         case BinOp.Minus:
@@ -929,12 +933,12 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       } else if(tObj.a.type.tag === "list") {
         var tIndex = tcExpr(env, locals, expr.index, SRC);
         if(tIndex.a.type !== NUM) {
-          throw new TypeCheckError(`index is of non-integer type \'${tIndex.a.type.tag}\'`);
+          throw new TypeCheckError(SRC, `list index is of non-integer type "${tIndex.a.type.tag}"`, expr.a);
         }
         return { ...expr, a: {...tObj.a, type: tObj.a.type.itemType}};
       } else {
         // For other features that use index
-        throw new TypeCheckError(`unsupported index operation`);
+        throw new TypeCheckError(SRC, `Can only index into lists. Unsupported index operation on type ${bigintSafeStringify(tObj.a.type.tag)}`, expr.a);
       }
     case "slice":
       var tObj = tcExpr(env, locals, expr.obj, SRC);
@@ -944,19 +948,19 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         if(expr.index_s !== undefined) {
           tStart = tcExpr(env, locals, expr.index_s, SRC);
           if(tStart.a.type !== NUM)
-            throw new TypeCheckError(`index is of non-integer type \'${tStart.a.type.tag}\'`);
+            throw new TypeCheckError(SRC, `index is of non-integer type "${tStart.a.type.tag}"`, expr.a);
         }
         if(expr.index_e !== undefined) {
           tEnd = tcExpr(env, locals, expr.index_e, SRC);
           if(tEnd.a.type !== NUM)
-            throw new TypeCheckError(`index is of non-integer type \'${tEnd.a.type.tag}\'`);
+            throw new TypeCheckError(SRC, `index is of non-integer type "${tEnd.a.type.tag}"`, expr.a);
         }
         return { ...expr, a: tObj.a, index_s: tStart, index_e: tEnd };
       } else if(tObj.a.type.tag === "empty") {
         return { ...expr, a: {...expr.a, type: {tag: "empty"}} };
       } else {
         // For other features that use slice syntax
-        throw new TypeCheckError(`unsupported slice operation`);
+        throw new TypeCheckError(SRC, `Can only slice on lists. Unsupported slice operation on type ${bigintSafeStringify(tObj.a.type.tag)}`, expr.a);
       }
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj, SRC);
@@ -1035,7 +1039,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         } else if(tItems.every((item) => isAssignable(env, listType.a.type, item.a.type))) {
           return { ...expr, a: {...expr.a, type: {tag: "list", itemType: listType.a.type}}, items: tItems };
         } else {
-          throw new TypeCheckError(`List constructor type mismatch` + bigintSafeStringify(listType) + bigintSafeStringify(tItems));
+          throw new TypeCheckError(SRC, `List constructor type mismatch. Expected type ` + bigintSafeStringify(listType.a.type.tag) + `, got types ` + bigintSafeStringify(tItems.map(item => item.a.type.tag)), expr.a);
         }
       }
       return { ...expr, a: {...expr.a, type: {tag: "empty"}}, items: tItems };
