@@ -338,6 +338,7 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
             } else {
               throw new Error("should not reach here");
             }
+          case "array-expr":
           case "construct-list":
             var outputInits: Array<IR.VarInit<Annotation>> = [{ a: s.a, name: "_", type: {tag: "number"}, value: { tag: "none" } }];
             var outputClasses: Array<IR.Class<Annotation>> = [];

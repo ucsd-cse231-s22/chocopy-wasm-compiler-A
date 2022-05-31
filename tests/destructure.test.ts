@@ -128,6 +128,14 @@ describe('ut for destructure', () => {
     a, _, b = func(1, 5)
     `, NONE);
 
+    assertPrint("destructure-assignment-list", `
+    a : int = 1
+    b : int = 2
+    a, b = [2, 10]
+    print(a)
+    print(b)
+    `, ['2', '10']);
+
     assertPrint("destructure-assignment-sep", `
     a : int = 1
     b : bool = True

@@ -584,7 +584,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
         if(!isAssignable(env, tValExpr.a.type, tDestruct.a.type)) {
           throw new TypeCheckError(SRC, `Assignment value should have assignable type to type ${bigintSafeStringify(tDestruct.a.type.tag)}, got ${bigintSafeStringify(tValExpr.a.type.tag)}`, tValExpr.a);
         }
-      }else if(!tDestruct.isSimple && tValExpr.tag === "construct-list") {
+      }else if(!tDestruct.isSimple && (tValExpr.tag === "construct-list" || tValExpr.tag === "array-expr")) {
         // for plain destructure like a, b, c = 1, 2, 3
         // we can perform type check
         if(!hasStar && tDestruct.vars.length != tValExpr.items.length) {
@@ -968,8 +968,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         throw new TypeCheckError(SRC, `method calls require an object of type "class", got ${bigintSafeStringify(tObj.a.type.tag)}`, expr.a);
       }
     case "array-expr":
-      const arrayExpr = expr.elements.map((element) => tcExpr(env, locals, element, SRC));
-      return { ...expr, a: { ...expr.a, type: NONE }, elements: arrayExpr };
+      const arrayExpr = expr.items.map((element) => tcExpr(env, locals, element, SRC));
+      return { ...expr, a: { ...expr.a, type: NONE }, items: arrayExpr };
     case "list-comp":
       // check if iterable is instance of class
       const iterable = tcExpr(env, locals, expr.iterable,SRC);
@@ -1016,8 +1016,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         } else if(tItems.every((item) => isAssignable(env, listType.a.type, item.a.type))) {
           return { ...expr, a: {...expr.a, type: {tag: "list", itemType: listType.a.type}}, items: tItems };
         } else {
-          return { ...expr, a: {...expr.a, type: {tag: "list", itemType: {tag: "empty"}}}, items: tItems };
-          // throw new TypeCheckError(`List constructor type mismatch` + bigintSafeStringify(listType) + bigintSafeStringify(tItems));
+          throw new TypeCheckError(`List constructor type mismatch` + bigintSafeStringify(listType) + bigintSafeStringify(tItems));
         }
       }
       return { ...expr, a: {...expr.a, type: {tag: "empty"}}, items: tItems };

@@ -382,20 +382,6 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         items: elements,
       };
 
-    // case "ArrayExpression": // a, b, c = [1, 2, 3]
-    //   let arrayElements: Expr<Annotation>[] = [];
-    //   c.firstChild();
-    //   c.nextSibling();
-    //   while (s.substring(c.from, c.to).trim() !== "]") {
-    //     arrayElements.push(traverseExpr(c, s, env));
-    //     c.nextSibling();
-    //     c.nextSibling();
-    //   }
-    //   c.parent();
-    //   return {
-    //     tag: "array-expr",
-    //     elements: arrayElements,
-    //   };
     case "TupleExpression": // a, b, c = (1, 2, 3)
       let tupleElements: Expr<Annotation>[] = [];
       c.firstChild();
@@ -406,10 +392,6 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         c.nextSibling();
       }
       c.parent();
-      // return {
-      //   tag: "array-expr",
-      //   elements: tupleElements,
-      // };
       return {
         tag: "construct-list",
         items: tupleElements,
@@ -545,7 +527,7 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
       c.nextSibling(); // go to value
       var value = traverseExpr(c, s, env);
       if (c.nextSibling()) {
-        value = {tag: "construct-list", items: [value]};
+        value = {tag: "array-expr", items: [value]};
         while (c.nextSibling()) {
           value.items.push(traverseExpr(c, s, env));
           c.nextSibling();

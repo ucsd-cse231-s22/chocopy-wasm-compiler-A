@@ -79,8 +79,7 @@ export type Expr<A> =
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
   // array-expr should be plain format like 1, 2, 3 without brackets
-  // TODO: should we make use of AST nodes from list and tuple groups?
-  | {  a?: A; tag: "array-expr", elements: Array<Expr<A>> }
+  | {  a?: A; tag: "array-expr", items: Array<Expr<A>> }
   | {  a?: A, tag: "list-comp", left: Expr<A>, elem: Expr<A>, iterable: Expr<A>, cond?: Expr<A>}
   | Lambda<A>
   | {  a?: A, tag: "if-expr", cond: Expr<A>, thn: Expr<A>, els: Expr<A> }
