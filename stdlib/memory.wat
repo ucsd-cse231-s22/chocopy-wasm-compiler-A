@@ -8,11 +8,11 @@
   ;; Take an amount of blocks (4-byte words) to allocate, return an address
   ;; handle suitable for giving to other access methods
   (func (export "alloc") (param $amount i32) (param $types i32) (param $size i32) (result i32)
+    (local $addr i32)
     (global.get $heap)
     (local.get $amount)
     (call $mem_reclaim)
     (global.set $heap)
-    (local $addr i32)
     (local.set $addr (global.get $heap))
     ;; num reference is zero
     (i32.store (i32.add (local.get $addr) (i32.mul (i32.const 0) (i32.const 4))) (i32.const 0))
