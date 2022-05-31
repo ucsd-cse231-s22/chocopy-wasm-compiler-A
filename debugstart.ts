@@ -29,8 +29,3 @@ const ast = parse(source);
 }
 
 debug();
-<<<<<<< HEAD
-=======
-
-
->>>>>>> bd167027

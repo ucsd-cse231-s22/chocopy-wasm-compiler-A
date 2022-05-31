@@ -4,21 +4,6 @@ import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Cl
 import { NUM, BOOL, NONE, CLASS, CALLABLE } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
-<<<<<<< HEAD
-export class SyntaxError extends Error {
-  __proto__: Error
-  constructor(message?: string) {
-   const trueProto = new.target.prototype;
-   super("Syntax ERROR: " + message);
-
-   // Alternatively use Object.setPrototypeOf if you have an ES6 environment.
-   this.__proto__ = trueProto;
- } 
-}
-
-export function traverseLiteral(c : TreeCursor, s : string) : Literal {
-  switch(c.type.name) {
-=======
 const MKLAMBDA = "mklambda";
 
 export type ParserEnv = {
@@ -96,7 +81,6 @@ function wrap_locs<T extends Function>(traverser: T, storeSrc: boolean = false):
 export const traverseLiteral = wrap_locs(traverseLiteralHelper);
 export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv): Literal<Annotation> {
   switch (c.type.name) {
->>>>>>> bd167027
     case "Number":
       return {
         tag: "num",

@@ -312,15 +312,6 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       const callinits = callpairs.map(cp => cp[0]).flat();
       const callstmts = callpairs.map(cp => cp[1]).flat();
       const callvals = callpairs.map(cp => cp[2]).flat();
-<<<<<<< HEAD
-      if (e.fn.tag !== "id") { throw new Error("lower cannot get the name for the call expression."); }
-      return [ callinits, callstmts,
-        {
-          ...e,
-          name: e.fn.name,
-          arguments: callvals
-        }
-=======
       const callclasses = callpairs.map(cp => cp[3]).flat();
       const checkObj: IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, fval);
       const zeroOffset: IR.Value<Annotation> = { tag: "wasmint", value: 0 };
@@ -334,7 +325,6 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
           arguments: [fval, ...callvals]
         },
         [...fclasses, ...callclasses]
->>>>>>> bd167027
       ];
     case "method-call": {
       const [objinits, objstmts, objval, objclasses] = flattenExprToVal(e.obj, blocks, env);
