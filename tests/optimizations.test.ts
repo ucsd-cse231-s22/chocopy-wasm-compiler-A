@@ -1,5 +1,4 @@
-import { assertPrint, assertFail, assertTCFail, assertTC, assertOptimize, assertOptimizeIR } from "./asserts.test";
-import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
+import { assertOptimize } from "./asserts.test";
 
 // IR team – review the valnames here – this test seems very brittle
 describe("Optimizations tests", () => {
@@ -943,7 +942,8 @@ describe("Optimizations tests", () => {
         a = 5 + 7
         print(a)
         `,
-        { print: ["0","12"], isIrDifferent: true }
+        { print: ["0","12"], isIrDifferent: true },
+        "1"
     );
 
     assertOptimize(
@@ -953,7 +953,8 @@ describe("Optimizations tests", () => {
         a=1*2-1+4
         print(a)
         `,
-        { print: ["5"], isIrDifferent: true }
+        { print: ["5"], isIrDifferent: true },
+        "1"
     );
 
     assertOptimize(
@@ -964,9 +965,10 @@ describe("Optimizations tests", () => {
         while a<10:
             a = 1
         b = a
-        print(b)
+        print(a)
         `,
-        { print: ["10"], isIrDifferent: false }
+        { print: ["10"], isIrDifferent: false },
+        "1"
     );
 
     assertOptimize(
@@ -977,7 +979,8 @@ describe("Optimizations tests", () => {
             a = 4
             print(a)
         `,
-        { print: ["4"], isIrDifferent: true }
+        { print: ["4"], isIrDifferent: true },
+        "1"
     );
 
     assertOptimize(
@@ -990,7 +993,8 @@ else:
    a = 5
 print(a)
         `,
-        { print: ["5"], isIrDifferent: false }
+        { print: ["5"], isIrDifferent: false },
+        "1"
     );
 
     assertOptimize(
@@ -1004,7 +1008,8 @@ print(a)
             print(a)
         print(b)
         `,
-        { print: ["2", "3", "5"], isIrDifferent: true }
+        { print: ["2", "3", "5"], isIrDifferent: true },
+        "1"
     );
 
     assertOptimize(
@@ -1018,7 +1023,8 @@ print(a)
       
       print(b)
       `,
-      {print: ["1340"], isIrDifferent: true}
+      {print: ["1340"], isIrDifferent: true},
+      "1"
     )
 
     assertOptimize(
@@ -1034,7 +1040,8 @@ print(a)
               b = b+a+b*a+b//a+b%a+b+a+b+a
       print(b)
       `,
-      {print: ["1340"], isIrDifferent: false}
+      {print: ["1340"], isIrDifferent: false},
+      "1"
     )
 
     assertOptimize(
@@ -1051,7 +1058,8 @@ print(a)
           i = i+1
       print(c)
       `,
-      {print: ["1340"], isIrDifferent: true}
+      {print: ["1340"], isIrDifferent: true},
+      "1"
     )
 
     assertOptimize(
@@ -1070,7 +1078,8 @@ print(a)
               b = b+a+b*a+b//a+b%a+b+a+b+a
       print(b)
       `,
-      {print: ["1340"], isIrDifferent: false}
+      {print: ["1340"], isIrDifferent: false},
+      "1"
     )
 
     assertOptimize(
@@ -1088,7 +1097,8 @@ print(a)
               b = b+a+b*a+b//a+b%a+b+a+b+a
       print(b)
       `,
-      {print: ["1340"], isIrDifferent: true}
+      {print: ["1340"], isIrDifferent: true},
+      "1"
     )
 
     assertOptimize(
@@ -1106,7 +1116,8 @@ print(a)
               b = b+a+b*a+b//a+b%a+b+a+b+a
       print(b)
       `,
-      {print: ["1340"], isIrDifferent: true}
+      {print: ["1340"], isIrDifferent: true},
+      "1"
     )
 
     assertOptimize(
@@ -1124,7 +1135,8 @@ if True:
       d = a+b+c-c-a*2+b//2
 print(d)
       `,
-      {print: ["109"], isIrDifferent: true}
+      {print: ["109"], isIrDifferent: true},
+      "1"
     )
 
     assertOptimize(
@@ -1143,7 +1155,44 @@ if True:
       d = a+b+c-c-a*2+b//2
 print(d)
       `,
-      {print: ["109"], isIrDifferent: true}
+      {print: ["109"], isIrDifferent: true},
+      "1"
     )
+
+    assertOptimize(
+        "sanity-if-copy-prop", 
+        `
+        a:int = 3
+b:int = 9
+c:int = 1
+if False:
+    a = 4
+else:
+    a = 5
+b = a
+print(b)
+c = b
+        `,
+        { print: ["5"], isIrDifferent: true },
+        "2"
+    );
+
+//     assertOptimize(
+//         "sanity-if-copy-prop", 
+//         `
+//         a:int = 3
+// b:int = 9
+// c:int = 1
+// print(1)
+// if False:
+//     a = 4
+// else:
+//     a = 5
+// b = a
+// print(b)
+// c = b
+//         `,
+//         { print: ["1", "5"], isIrDifferent: true }
+//     );
 
 });
