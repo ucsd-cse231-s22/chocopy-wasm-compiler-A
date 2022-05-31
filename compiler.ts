@@ -1,6 +1,7 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { Annotation, BinOp, Type, UniOp } from "./ast"
 import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
+import { equalType } from "./type-check";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -173,13 +174,16 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       const argTyp = expr.a.type;
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
-      if (expr.name === "print" && argTyp === NUM) {
+      if (expr.name === "print" && equalType(argTyp, NUM)) {
         callName = "print_num";
-      } else if (expr.name === "print" && argTyp === BOOL) {
+      } else if (expr.name === "print" && equalType(argTyp, BOOL)) {
         callName = "print_bool";
-      } else if (expr.name === "print" && argTyp === NONE) {
+      } else if (expr.name === "print" && equalType(argTyp, NONE)) {
         callName = "print_none";
+      } else if (expr.name === "len") {
+        return [...argStmts, "(i32.const 0)", "call $load"];
       }
+
       return argStmts.concat([`(call $${callName})`]);
 
     case "builtin2":
@@ -189,6 +193,9 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
 
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      if(expr.name === "len"){
+        return [...valStmts, "(i32.const 0)", "call $load"];
+      }
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
 
