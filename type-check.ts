@@ -900,14 +900,14 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         var loc = locals;
         if (expr.elem.tag === "id"){
           loc.vars.set(expr.elem.name, NUM);
-          const elem = {...expr.elem, a: {...expr, type: NUM}};
+          const elem = {...expr.elem, a: {...expr.a, type: NUM}};
           const left = tcExpr(env, loc, expr.left,SRC);
           var cond;
           if (expr.cond)
             cond = tcExpr(env, loc, expr.cond,SRC);
           if (cond && cond.a.type.tag !== "bool")
             throw new Error("TYPE ERROR: comprehension if condition must return bool")
-          return {...expr, left, elem, cond, iterable, a: {...expr, type: CLASS(iterable.a.type.name)}};
+          return {...expr, left, elem, cond, iterable, a: {...expr.a, type: CLASS(iterable.a.type.name)}};
         }
         else
           throw new Error("TYPE ERROR: elem has to be an id");
