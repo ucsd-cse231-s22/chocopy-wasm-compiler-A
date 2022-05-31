@@ -9,20 +9,22 @@ require('chromedriver');
 
 var driver;
 export default driver;
+var debug = 0;
 
 before(async function () {
     const opts = new Options();
-    opts.addArguments('--headless', '--no-sandbox')
+    if (debug===0) opts.addArguments('--headless', '--no-sandbox')
+    
     driver = await new webdriver.Builder().forBrowser("chrome").setChromeOptions(opts).build();
     await driver.get("http://127.0.0.1:8000");
 });
 
 afterEach(async function() {
-    await driver.get("http://127.0.0.1:8000");
+    if (debug===0) await driver.get("http://127.0.0.1:8000");
 });
 
 after(async function () {
-    await driver.quit();
+    if (debug===0) await driver.quit();
 });
 
 function emptyStatement(source: string){
@@ -34,18 +36,26 @@ function emptyStatement(source: string){
 
 function endWithColon(source: string){
     for (let i=source.length-1; i>=0; i--){
-        if (source[i]==":") return true;
-        else if (source[i]!=" ") return false;
+        if (source[i]===":") return true;
+        else if (source[i]!==" ") return false;
     }
+    return false;
 }
 
 function countWhiteSpace(source: string){
     count = 0;
     for (let i=0; i<source.length; i++){
-        if (source[i]==" ") count++;
-        else break;
+        if (source[i]===" ") count++;
+        else return count;
     }
     return count;
+}
+
+function isEmpty(source: string){
+    for (let i=0; i<source.length; i++){
+        if (source[i]!==" ") return false; 
+    }
+    return true;
 }
 
 function reverseAutoComplete(source: string){
@@ -55,15 +65,15 @@ function reverseAutoComplete(source: string){
     let preReturn = false;
     let reversedString = "";
     for (let i=0; i<sources.length; i++){
+        if (isEmpty(sources[i])) continue;
         let count = preCount;
         if (preColon) count += 2;
-        if (preReturn) count -= 2
+        if (preReturn) count -= 2;
         for(let j=0; j<count; j++) reversedString += webdriver.Key.BACK_SPACE;
-        if (endWithColon(sources[i])) preColon = true;
-        else preColon = false;
+        reversedString += sources[i]+" "+webdriver.Key.ENTER;
+        preColon = endWithColon(sources[i]);
         preCount = countWhiteSpace(sources[i]);
         preReturn = sources[i].includes("return");
-        reversedString += sources[i]+" "+webdriver.Key.ENTER;
     }
     return reversedString;
 }
@@ -94,8 +104,9 @@ export async function assertPrint(name:string, source: string, expected: Array<s
         //Check output length is equal to expected
         await driver.wait(webdriver.until.elementLocated(webdriver.By.xpath("//*[@id=\"output\"]/pre")));
         let vars = await driver.findElements(webdriver.By.xpath("//*[@id=\"output\"]/pre"));
-        expect(vars.length).to.deep.eq(expected.length+1);
-        //Retrieve output as array
+        if (vars.length!==expected.length+1 && vars.length!==expected.length){
+            expect(0).to.deep.eq(1);
+        }
         let results = [];
         for (let i=1; i<expected.length+1; i++) {
             results.push(await driver.findElement(webdriver.By.xpath(`//*[@id=\"output\"]/pre[${i}]`)).getText());
@@ -154,7 +165,9 @@ export async function assertRepr(name: string, source: string, repls: Array<stri
             await driver.wait(webdriver.until.elementLocated(webdriver.By.xpath("//*[@id=\"output\"]/pre")));
             //Retrieve output as array
             let vars = await driver.findElements(webdriver.By.xpath("//*[@id=\"output\"]/pre"));
-            expect(vars.length).to.deep.eq(expected[1].length+1);
+            if (vars.length!==expected[0].length+1 && vars.length!==expected[0].length){
+                expect(0).to.deep.eq(1);
+            }
             let results = [];
             for (let i=1; i<expected[1].length+1; i++) {
                 results.push(await driver.findElement(webdriver.By.xpath(`//*[@id=\"output\"]/pre[${i}]`)).getText());

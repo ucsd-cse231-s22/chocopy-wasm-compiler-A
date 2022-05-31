@@ -125,8 +125,8 @@ def apply(func: Callable[[int], bool], arg: int) -> bool:
 isEven: Callable[[int], bool] = None
 isEven = mklambda(
 Callable[[int], bool],
-    lambda num: num % 2 == 0
-  )
+lambda num: num % 2 == 0
+)
 print(apply(isEven, 9))`,
       ["False"]
     );
@@ -152,9 +152,9 @@ add_ref: Callable[[int, int], int] = None
 add_ref = add
 print(add_ref(5, 8))
 add_ref = mklambda(
-    Callable[[int, int], int],
-    lambda a, b: a + b + 1
-  )
+Callable[[int, int], int],
+lambda a, b: a + b + 1
+)
 print(add_ref(5, 8))`,
       ["13", "14"]
     );
@@ -276,9 +276,9 @@ print(x(2))
       `
 isEven: Callable[[int], bool] = None
 isEven = mklambda(
-    Callable[[int], bool],
-    lambda num: num + None == 0
-  )`
+Callable[[int], bool],
+lambda num: num + None == 0
+)`
     );
   
     assertTCFail(
@@ -286,8 +286,8 @@ isEven = mklambda(
       `
 isEven: Callable[[int], bool] = None
 isEven = mklambda(
-    Callable[[int], int],
-    lambda num: num
+Callable[[int], int],
+lambda num: num
 )`
     );
    });
