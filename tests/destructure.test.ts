@@ -28,7 +28,7 @@ const rangeDef = `
         return it
 `
 
-xdescribe('ut for destructure', () => {
+describe('ut for destructure', () => {
 
     assertTC("simple-assignment", `
     a : int = 1
@@ -127,6 +127,14 @@ xdescribe('ut for destructure', () => {
     b : int = 0
     a, _, b = func(1, 5)
     `, NONE);
+
+    assertPrint("destructure-assignment-list", `
+    a : int = 1
+    b : int = 2
+    a, b = [2, 10]
+    print(a)
+    print(b)
+    `, ['2', '10']);
 
     assertPrint("destructure-assignment-sep", `
     a : int = 1
