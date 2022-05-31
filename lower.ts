@@ -567,6 +567,26 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       ];
     }
     case "lookup": {
+      if (e.obj.tag === "id" && env.classes.has(e.obj.name) && e.a.type.tag === "callable") {
+        let names = e.a.type.params.map((_, i) => `tmp${i}`);
+        let ids: Array<AST.Expr<Annotation>> = e.a.type.params.map((type, index) =>
+          ({ tag: "id", name: names[index], a: { type } })
+        );
+        return flattenExprToExpr({
+          a: { type: e.a.type },
+          tag: "lambda",
+          type: e.a.type,
+          params: names,
+          expr: {
+            a: { type: e.a.type },
+            tag: "method-call",
+            obj: ids[0],
+            method: e.field,
+            arguments: ids.slice(1, ids.length),
+          },
+        }, blocks, env);
+      }
+
       const [oinits, ostmts, oval, oclasses] = flattenExprToVal(e.obj, blocks, env);
       if (e.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
       const classdata = env.classes.get(e.obj.a.type.name);

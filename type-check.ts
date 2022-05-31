@@ -758,20 +758,23 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         }
       }
     case "lookup":
+      if (expr.obj.tag === "id" && env.classes.has(expr.obj.name)) {
+        const [_, methods] = env.classes.get(expr.obj.name);
+        if (!methods.has(expr.field))
+          throw new TypeCheckError(SRC, `could not find method ${expr.field} in class ${expr.obj.name}`, expr.a);
+        const [methodArgs, methodRet] = methods.get(expr.field); // can't specialize without type hint on id
+        return { ...expr, a: {...expr.a, type: CALLABLE(methodArgs, methodRet)} };
+      }
       var tObj = tcExpr(env, locals, expr.obj, SRC);
       if (tObj.a.type.tag === "class") {
         if (env.classes.has(tObj.a.type.name)) {
           const [fields, methods] = env.classes.get(tObj.a.type.name);
-          
           if (fields.has(expr.field)) {
             return { ...expr, a: { ...expr.a, type: specializeFieldType(env, tObj.a.type, fields.get(expr.field)) }, obj: tObj };
-          } else if(methods.has(expr.field)){
-            //TODO ACTUALY TYPE CHECK STUFF
-            const [methodArgs, methodRet] = specializeMethodType(env, tObj.a.type, methods.get(expr.field))
-            return {... expr, a: {...expr.a, type: CALLABLE(methodArgs.slice(1), methodRet)}, obj: tObj}
-          }
-          else
-          {
+          } else if (methods.has(expr.field)) {
+            const [methodArgs, methodRet] = specializeMethodType(env, tObj.a.type, methods.get(expr.field));
+            return { ...expr, a: { ...expr.a, type: CALLABLE(methodArgs.slice(1), methodRet) }, obj: tObj };
+          } else {
             throw new TypeCheckError(SRC, `could not find field or method ${expr.field} in class ${tObj.a.type.name}`, expr.a);
           }
         } else {
