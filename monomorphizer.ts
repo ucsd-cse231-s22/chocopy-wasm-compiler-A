@@ -22,7 +22,7 @@ export function concretizeGenericTypes(type: Type, genv: GlobalMorphEnv) : Type 
 export function resolveZero(type: Type, a: Annotation) : Literal<Annotation> {
     switch (type.tag) {
         case "number":
-            return { a: { ...a, type: NUM}, tag: "num", value: 0 };
+            return { a: { ...a, type: NUM}, tag: "num", value: 0n };
         case "bool":
             return { a: { ...a, type: BOOL}, tag: "bool", value: false };
         case "class":
@@ -158,6 +158,15 @@ export function processStmts(stmt: Stmt<Annotation>, genv: GlobalMorphEnv) : Stm
                 return { ...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))} ,cond: wcond, body: wBody };
             }
             return { ...stmt, cond: wcond, body: wBody };
+        case "for":
+            const {body, iterator, values} = stmt;
+            const wbody = body.map(st => processStmts(st, genv));
+            const wvalues = processExprs(values, genv);
+            if (stmt.a.type.tag === "class" && stmt.a.type.params.length > 0) {
+                return { ...stmt, a: {...stmt.a, type: CLASS(getCanonicalTypeName(stmt.a.type))} , iterator, body: wbody, values: wvalues };
+            }
+            return { ...stmt, iterator, values: wvalues, body: wbody };
+
         default:
             return stmt;
     }
@@ -165,7 +174,8 @@ export function processStmts(stmt: Stmt<Annotation>, genv: GlobalMorphEnv) : Stm
 
 export function monomorphizeClass(cname: string, canonicalName: string, classes: Array<Class<Annotation>>, genv: GlobalMorphEnv) : Class<Annotation> {
     let cClass : Class<Annotation> = classes[genv.classesInx.get(cname)];
-    let mClass : Class<Annotation> = JSON.parse(JSON.stringify(cClass))
+    // https://github.com/GoogleChromeLabs/jsbi/issues/30#issuecomment-521460510
+    let mClass : Class<Annotation> = JSON.parse(JSON.stringify(cClass, (key, value) => typeof value === "bigint" ? value.toString() : value));
     mClass.name = canonicalName;
     mClass.typeParams = [];
     mClass.fields = mClass.fields.map(field => {
