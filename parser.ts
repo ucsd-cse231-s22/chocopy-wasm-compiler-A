@@ -3,6 +3,7 @@ import { TreeCursor } from "@lezer/common";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, Annotation, Location, NonlocalVarInit, TypeVar, DestructuringAssignment, AssignVar } from "./ast";
 import { NUM, BOOL, NONE, CLASS, CALLABLE, LIST } from "./utils";
 import { stringifyTree } from "./treeprinter";
+import {FileClassString, OpenFunString} from "./IO_File/FileParser";
 
 const MKLAMBDA = "mklambda";
 
@@ -1106,6 +1107,7 @@ export function traverseHelper(c: TreeCursor, s: string, env: ParserEnv): Progra
 }
 
 export function parse(source: string): Program<Annotation> {
+  source = FileClassString() + OpenFunString() + source;
   const env: ParserEnv = {
     lineBreakIndices: [],
   }
@@ -1116,6 +1118,7 @@ export function parse(source: string): Program<Annotation> {
       env.lineBreakIndices.push(i);
     }
   }
+
   const t = parser.parse(source);
   const str = stringifyTree(t.cursor(), source, 0);
   const ast = traverse(t.cursor(), source, env);

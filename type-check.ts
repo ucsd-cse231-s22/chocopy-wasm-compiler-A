@@ -2,6 +2,8 @@ import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Lite
 import { NUM, BOOL, NONE, CLASS, CALLABLE, TYPEVAR, LIST } from './utils';
 import { emptyEnv } from './compiler';
 import { fullSrcLine, drawSquiggly } from './errors';
+import { addFileBuildinFuns, addFileBuildinClass} from './IO_File/FileTypeCheck';
+
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 
@@ -139,15 +141,20 @@ export function equalTypeParams(params1: Type[], params2: Type[]) : boolean {
 
 export function equalType(t1: Type, t2: Type) : boolean {
   return (
+
     (t1.tag === t2.tag && (t1.tag === NUM.tag || t1.tag === BOOL.tag || t1.tag === NONE.tag)) ||
     (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
     (t1.tag === "callable" && t2.tag === "callable" && equalCallable(t1, t2)) ||
     (t1.tag === "typevar" && t2.tag === "typevar" && t1.name === t2.name) ||
     (t1.tag === "list" && t2.tag === "list" && equalType(t1.itemType, t2.itemType)) ||
     (t1.tag === "empty" && t2.tag === "list") ||
-    (t1.tag === "list" && t2.tag === "empty")
-
-  );
+    (t1.tag === "list" && t2.tag === "empty"));
+/*
+=======
+t1.tag === t2.tag ||
+(t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
+>>>>>>> io_week2_conflict
+*/
 }
 
 export function isNoneOrClassOrCallable(t: Type) {
@@ -298,12 +305,22 @@ export function specializeType(env: Map<string, Type>, t: Type) : Type {
 
 export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): GlobalTypeEnv {
   const newGlobs = new Map(env.globals);
-  const newFuns = new Map(env.functions);
+
+  var newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
   const newTypevars = new Map(env.typevars);
 
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
   program.funs.forEach(fun => newGlobs.set(fun.name, CALLABLE(fun.parameters.map(p => p.type), fun.ret)));
+  /*
+=======
+  var newFuns = new Map(env.functions);
+  var newClasses = new Map(env.classes);
+  program.inits.forEach(init => newGlobs.set(init.name, init.type));
+  program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
+  newFuns = addFileBuildinFuns(newFuns);
+>>>>>>> io_week2_conflict
+*/
   program.classes.forEach(cls => {
     const fields = new Map();
     const methods = new Map();
@@ -320,6 +337,12 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
     newTypevars.set(tv.name, [tv.canonicalName]);
   });
   return { globals: newGlobs, functions: newFuns, classes: newClasses, typevars: newTypevars };
+/*
+=======
+  newClasses = addFileBuildinClass(newClasses);
+  return { globals: newGlobs, functions: newFuns, classes: newClasses };
+>>>>>>> io_week2_conflict
+*/
 }
 
 export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<Annotation>, GlobalTypeEnv] {
@@ -355,6 +378,10 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
   }
 
   const aprogram = { a: { ...program.a, type: lastTyp }, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody, typeVarInits: tTypeVars };
+  /*
+  =======
+  const aprogram = {a: lastTyp, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody};
+  */
   return [aprogram, newEnv];
 }
 
@@ -871,6 +898,23 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         } else {
           return tConstruct;
         }
+  /*
+  <<<<<<< HEAD
+  =======
+      } else if(env.functions.has(expr.name)) {
+        const [argTypes, retType] = env.functions.get(expr.name);
+        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+
+        if(argTypes.length === expr.arguments.length &&
+           tArgs.every((tArg, i) => tArg.a.tag === argTypes[i].tag)) {
+             return {...expr, a: retType, arguments: tArgs};
+           } else {
+             
+             
+            throw new TypeError("Function call type mismatch: " + expr.name);
+           }
+>>>>>>> io_week2_conflict
+*/
       } else {
         const newFn = tcExpr(env, locals, expr.fn, SRC);
         if(newFn.a.type.tag !== "callable") {
@@ -1034,10 +1078,11 @@ export function tcIterator(env : GlobalTypeEnv, locals : LocalTypeEnv, iterator:
    throw new TypeCheckError(`Undefined iterator`)
 }
   
-  export function tcLiteral(literal: Literal<Annotation>) {
-    switch (literal.tag) {
-      case "bool": return BOOL;
-      case "num": return NUM;
-      case "none": return NONE;
-    }
+export function tcLiteral(literal: Literal<Annotation>) {
+  switch (literal.tag) {
+    case "bool": return BOOL;
+    case "num": return NUM;
+    case "none": return NONE;
   }
+}
+

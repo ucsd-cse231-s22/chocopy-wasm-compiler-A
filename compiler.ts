@@ -1,7 +1,9 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
+
 import { Annotation, BinOp, Type, UniOp } from "./ast"
 import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
 import { equalType } from "./type-check";
+
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -42,7 +44,7 @@ export function makeLocals(locals: Set<string>) : Array<string> {
 
 export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
-
+  
   const definedVars : Set<string> = new Set(); //getLocals(ast);
   definedVars.add("$last");
   definedVars.add("$selector");
@@ -54,6 +56,7 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
+
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
   const allFuns = funs.concat(classes).join("\n\n");
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");

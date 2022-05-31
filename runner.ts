@@ -7,12 +7,15 @@ import wabt from 'wabt';
 import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
+
 import { Annotation, FunDef, Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS, makeWasmFunType } from "./utils";
 import { closureName, lowerProgram } from './lower';
 import { monomorphizeProgram } from './monomorphizer';
 import { optimizeProgram } from './optimization';
 import { wasmErrorImports } from './errors';
+import {buildin_file_libs} from './IO_File/FileSystem';
+
 
 export type Config = {
   importObject: any;
@@ -125,6 +128,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
   ).join("\n");
 
   const importObject = config.importObject;
+  
   if(!importObject.js) {
     const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
     importObject.js = { memory: memory };
@@ -156,6 +160,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $$lt (import "imports" "$lt") (param i32) (param i32) (result i32))
     (func $$gt (import "imports" "$gt") (param i32) (param i32) (result i32))
     (func $$bignum_to_i32 (import "imports" "$bignum_to_i32") (param i32) (result i32))
+    ${buildin_file_libs}
     ${types}
     ${globalImports}
     ${globalDecls}

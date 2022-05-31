@@ -1,7 +1,9 @@
 import { readFileSync } from "fs";
+
 import { binop_bignum, binop_comp_bignum, builtin_bignum, load_bignum, des_check, bignum_to_i32 } from "../utils";
 import { bigMath } from "../utils";
 import { importObjectErrors } from "../errors";
+import {open, read, write, close, seek} from '../IO_File/FileSystem';
 
 enum Type { Num, Bool, None }
 
@@ -67,6 +69,11 @@ export const importObject : any = {
     $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, importObject.libmemory),
     $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, importObject.libmemory),
     $bignum_to_i32: (arg: number) => bignum_to_i32(arg, importObject.libmemory.load), 
+    buildin_open:  open,
+    buildin_read:  read,
+    buildin_write: write,
+    buildin_close: close,
+    buildin_seek:  seek,
   },
   errors: importObjectErrors,
 

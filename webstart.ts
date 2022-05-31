@@ -3,6 +3,7 @@ import { Type, Value, Annotation, Class } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
 import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
 import { importObjectErrors } from './errors';
+import {open, read, write, close, seek} from './IO_File/FileSystem';
 
 import CodeMirror from 'codemirror';
 import "codemirror/addon/edit/closebrackets";
@@ -253,6 +254,11 @@ function webStart() {
         $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
         $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
         $bignum_to_i32: (arg: number) => bignum_to_i32(arg, loader), 
+        buildin_open:  open,
+        buildin_read:  read,
+        buildin_write: write,
+        buildin_close: close,
+        buildin_seek:  seek
       },
       errors: importObjectErrors,
       libmemory: memoryModule.instance.exports,
