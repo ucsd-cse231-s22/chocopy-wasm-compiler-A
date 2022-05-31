@@ -21,6 +21,8 @@ export type Type =
   | {tag: "none"}
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
+  | {tag: "dict", key: Type, value: Type }
+  | {tag: "tuple", contentTypes: Array<Type> }
   | Callable;
 
 export type Parameter<A> = { a?: A, name: string, type: Type, value?: Expr<A> }
@@ -32,7 +34,7 @@ export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Literal<A> }
 export type NonlocalVarInit<A> = { a?: A, name: string };
 
-export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, ret: Type, inits: Array<VarInit<A>>, body: Array<Stmt<A>>, nonlocals: Array<NonlocalVarInit<A>>, children: Array<FunDef<A>> }
+export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, ret: Type, inits: Array<VarInit<A>>, body: Array<Stmt<A>>, nonlocals: Array<NonlocalVarInit<A>>, children: Array<FunDef<A>>, arbarg_idx?: number, kwarg_idx?: number}
 
 export type Stmt<A> =
   | {  a?: A, tag: "assign", name: string, value: Expr<A> }

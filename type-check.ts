@@ -199,14 +199,13 @@ export function tcInit(env: GlobalTypeEnv, init: VarInit<Annotation>, SRC: strin
   }
 }
 
-<<<<<<< HEAD
-export function tcPar(env: GlobalTypeEnv, par : Parameter<null>):Parameter<Type>{
+export function tcPar(env: GlobalTypeEnv, par : Parameter<Annotation>, SRC: string):Parameter<Annotation>{
   if(par.value == undefined){
     return {...par}
   }
   else{
-    var value = tcExpr(env,emptyLocalTypeEnv(), par.value)
-    if (!equalType(value.a,par.type)){
+    var value = tcExpr(env,emptyLocalTypeEnv(), par.value, SRC)
+    if (!equalType(value.a.type,par.type)){
       throw new TypeCheckError(`Expected type ${JSON.stringify(par.type)} but get value.a`);
     }
     else{
@@ -214,37 +213,26 @@ export function tcPar(env: GlobalTypeEnv, par : Parameter<null>):Parameter<Type>
     }
   }
 }
-export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
-=======
 export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv: NonlocalTypeEnv, SRC: string) : FunDef<Annotation> {
->>>>>>> bd167027
   var locals = emptyLocalTypeEnv();
   locals.vars.set(fun.name, CALLABLE(fun.parameters.map(x => x.type), fun.ret));
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
   var nonlocals = fun.nonlocals.map(init => ({ name: init.name, a: { ...init.a, type: nonlocalEnv.get(init.name) }}));
   fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
-<<<<<<< HEAD
-  const tpar = fun.parameters.map(p=>tcPar(env,p))
-  fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init).type));
-=======
+  const tpar = fun.parameters.map(p=>tcPar(env,p, SRC))
   fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init, SRC).type));
   nonlocals.forEach(init => locals.vars.set(init.name, init.a.type));
   var envCopy = copyGlobals(env);
   fun.children.forEach(f => envCopy.functions.set(f.name, [f.parameters.map(x => x.type), f.ret]));
   var children = fun.children.map(f => tcDef(envCopy, f, locals.vars, SRC));
   fun.children.forEach(child => locals.vars.set(child.name, CALLABLE(child.parameters.map(x => x.type), child.ret)));
->>>>>>> bd167027
   
   const tBody = tcBlock(envCopy, locals, fun.body, SRC);
   if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))
     // TODO: what locations to be reported here?
     throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`)
-<<<<<<< HEAD
-  return {...fun, parameters:tpar, a: NONE, body: tBody};
-=======
-  return {...fun, a: { ...fun.a, type: NONE }, body: tBody, nonlocals, children};
->>>>>>> bd167027
+  return {...fun, a: { ...fun.a, type: NONE }, body: tBody, nonlocals, children,parameters:tpar};
 }
 
 export function tcClass(env: GlobalTypeEnv, cls : Class<Annotation>, SRC: string) : Class<Annotation> {
