@@ -4,6 +4,7 @@ import "mocha";
 import { expect } from "chai";
 import { doesNotMatch } from 'assert';
 import {Options} from 'selenium-webdriver/chrome'
+import { count } from 'console';
 require('chromedriver');
 
 var driver;
@@ -31,11 +32,64 @@ function emptyStatement(source: string){
     return true;
 }
 
+function endWithColon(source: string){
+    for (let i=source.length-1; i>=0; i--){
+        if (source[i]==":") return true;
+        else if (source[i]!=" ") return false;
+    }
+}
+
+function countWhiteSpace(source: string){
+    count = 0;
+    for (let i=0; i<source.length; i++){
+        if (source[i]==" ") count++;
+        else break;
+    }
+    return count;
+}
+
+function reverseAutoComplete(source: string){
+    let sources = source.split(/\r?\n/);
+    let preColon = false;
+    let preCount = 0;
+    let preReturn = false;
+    let reversedString = "";
+    for (let i=0; i<sources.length; i++){
+        let count = preCount;
+        if (preColon) count += 2;
+        if (preReturn) count -= 2
+        for(let j=0; j<count; j++) reversedString += webdriver.Key.BACK_SPACE;
+        if (endWithColon(sources[i])) preColon = true;
+        else preColon = false;
+        preCount = countWhiteSpace(sources[i]);
+        preReturn = sources[i].includes("return");
+        reversedString += sources[i]+" "+webdriver.Key.ENTER;
+    }
+    return reversedString;
+}
+
+export async function assertFileUpload(name:string, source: string, expected: Array<string>) {
+    await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
+    await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
+    await driver.findElement(webdriver.By.id("load")).click(); 
+}
+
+export async function debug(name:string, source: string, expected: Array<string>) {
+    it(name, async function () {
+        //Send and run source
+        await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
+        await driver.findElement(webdriver.By.id("load")).click(); 
+    });
+}
+
+
 export async function assertPrint(name:string, source: string, expected: Array<string>) {
     it(name, async function () {
         //Send and run source
         await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
-        await driver.findElement(webdriver.By.id("user-code")).sendKeys(source);
+        await driver.findElement(webdriver.By.className("CodeMirror cm-s-default CodeMirror-simplescroll")).click();
+        let textAreas = await driver.findElements(webdriver.By.css("textarea"));
+        await textAreas[1].sendKeys(reverseAutoComplete(source));
         await driver.findElement(webdriver.By.id("run")).click(); 
         //Check output length is equal to expected
         await driver.wait(webdriver.until.elementLocated(webdriver.By.xpath("//*[@id=\"output\"]/pre")));
@@ -54,7 +108,9 @@ export async function assertTCFail(name: string, source: string){
     it(name, async function () {
         //Send and run source
         await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
-        await driver.findElement(webdriver.By.id("user-code")).sendKeys(source);
+        await driver.findElement(webdriver.By.className("CodeMirror cm-s-default CodeMirror-simplescroll")).click();
+        let textAreas = await driver.findElements(webdriver.By.css("textarea"));
+        await textAreas[1].sendKeys(reverseAutoComplete(source));
         await driver.findElement(webdriver.By.id("run")).click(); 
         //Check output
         await driver.wait(webdriver.until.elementLocated(webdriver.By.xpath("//*[@id=\"output\"]/pre")));
@@ -68,7 +124,9 @@ export async function assertRunTimeFail(name: string, source: string){
     it(name, async function () {
         //Send and run source
         await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
-        await driver.findElement(webdriver.By.id("user-code")).sendKeys(source);
+        await driver.findElement(webdriver.By.className("CodeMirror cm-s-default CodeMirror-simplescroll")).click();
+        let textAreas = await driver.findElements(webdriver.By.css("textarea"));
+        await textAreas[1].sendKeys(reverseAutoComplete(source));
         await driver.findElement(webdriver.By.id("run")).click(); 
         //Check output
         await driver.wait(webdriver.until.elementLocated(webdriver.By.xpath("//*[@id=\"output\"]/pre")));
@@ -88,7 +146,9 @@ export async function assertRepr(name: string, source: string, repls: Array<stri
         if (!emptyStatement(source)){
             //Send and run source
             await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
-            await driver.findElement(webdriver.By.id("user-code")).sendKeys(source);
+            await driver.findElement(webdriver.By.className("CodeMirror cm-s-default CodeMirror-simplescroll")).click();
+            let textAreas = await driver.findElements(webdriver.By.css("textarea"));
+            await textAreas[1].sendKeys(reverseAutoComplete(source));
             await driver.findElement(webdriver.By.id("run")).click(); 
             //Check run output
             await driver.wait(webdriver.until.elementLocated(webdriver.By.xpath("//*[@id=\"output\"]/pre")));

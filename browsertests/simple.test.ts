@@ -1,11 +1,14 @@
-import { assertPrint, assertRunTimeFail, assertTCFail, assertRepr } from './browser.test';
+import { assertPrint, assertRunTimeFail, assertTCFail, assertRepr, debug } from './browser.test';
 
 
 describe("Simple browser tests", () => {
+//     debug('Simple print test', `
+// print(123)
+// print(456)`, ["123", "456"]);
     assertPrint('Simple print test', `
-    print(123)
-    print(456)`, ["123", "456"]);
-    
+print(123)
+print(456)`, ["123", "456"]);
+
     assertRunTimeFail('Simple runtime fail test', `
 class C(object):
     x : int = 0        
