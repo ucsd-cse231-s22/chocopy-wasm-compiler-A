@@ -307,11 +307,13 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
   const newGlobs = new Map(env.globals);
 
   var newFuns = new Map(env.functions);
-  const newClasses = new Map(env.classes);
+  var newClasses = new Map(env.classes);
   const newTypevars = new Map(env.typevars);
-
+  
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
+  
   program.funs.forEach(fun => newGlobs.set(fun.name, CALLABLE(fun.parameters.map(p => p.type), fun.ret)));
+  newFuns = addFileBuildinFuns(newFuns);
   /*
 =======
   var newFuns = new Map(env.functions);
@@ -336,10 +338,13 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
     }
     newTypevars.set(tv.name, [tv.canonicalName]);
   });
+
+  // newClasses = addFileBuildinClass(newClasses);
+
   return { globals: newGlobs, functions: newFuns, classes: newClasses, typevars: newTypevars };
 /*
 =======
-  newClasses = addFileBuildinClass(newClasses);
+  
   return { globals: newGlobs, functions: newFuns, classes: newClasses };
 >>>>>>> io_week2_conflict
 */
@@ -898,23 +903,6 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         } else {
           return tConstruct;
         }
-  /*
-  <<<<<<< HEAD
-  =======
-      } else if(env.functions.has(expr.name)) {
-        const [argTypes, retType] = env.functions.get(expr.name);
-        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-
-        if(argTypes.length === expr.arguments.length &&
-           tArgs.every((tArg, i) => tArg.a.tag === argTypes[i].tag)) {
-             return {...expr, a: retType, arguments: tArgs};
-           } else {
-             
-             
-            throw new TypeError("Function call type mismatch: " + expr.name);
-           }
->>>>>>> io_week2_conflict
-*/
       } else {
         const newFn = tcExpr(env, locals, expr.fn, SRC);
         if(newFn.a.type.tag !== "callable") {
