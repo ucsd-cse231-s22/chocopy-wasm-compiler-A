@@ -406,12 +406,18 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
   const tTypeVars = program.typeVarInits.map(tv => tcTypeVars(newEnv, tv, SRC));
   const tInits = program.inits.map(init => tcInit(newEnv, init, SRC));
   resolveFuncGenericTypes(newEnv);
-  const tClasses = program.classes.map(cls => {
+  const rClasses = program.classes.map(cls => {
+    if(cls.typeParams.length !== 0) {
+      return resolveClassTypeParams(newEnv, cls)
+    } else {
+      return cls;
+    }
+  });
+  const tClasses = rClasses.map(cls => {
     if(cls.typeParams.length === 0) {
       return tcClass(newEnv, cls, SRC);
     } else {
-      let rCls = resolveClassTypeParams(newEnv, cls)
-      return tcGenericClass(newEnv, rCls, SRC);
+      return tcGenericClass(newEnv, cls, SRC);
     }
   });
   const tDefs = program.funs.map(fun => {
@@ -1010,8 +1016,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
               methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a.type, argTyp))) {
               return { ...expr, a: { ...expr.a, type: methodRet }, obj: tObj, arguments: tArgs };
             } else {
-              const argTypesStr = methodArgs.map(argType => JSON.stringify(argType.tag)).join(", ");
-              const tArgsStr = realArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
+              const argTypesStr = methodArgs.map(argType => JSON.stringify(argType)).join(", ");
+              const tArgsStr = realArgs.map(tArg => JSON.stringify(tArg.a.type)).join(", ");
               throw new TypeCheckError(SRC, `Method call ${expr.method} expects arguments of types [${argTypesStr}], got [${tArgsStr}]`,
               expr.a);
             }

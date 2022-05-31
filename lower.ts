@@ -31,7 +31,10 @@ export function generateVtable(p : AST.Program<Annotation>, env : GlobalEnv) {
   var vtable : Array<[string, number]> = [];
   var classIndices = new Map(); // stores the start and end index of the class in vtable
   var methodIndex = 0;
+  while(classIndices.size !== p.classes.length) {
   p.classes.forEach(cls => {
+    if(classIndices.has(cls.name)) { return; }
+    if(!Array.from(cls.super.keys()).filter(scls => scls !== 'object').every(scls => classIndices.has(scls))) { return; }
     if ([...cls.super.keys()][0] !== "object") {
       const superClassIndexes = classIndices.get([...cls.super.keys()][0])
       var superClassVtable = vtable.slice(superClassIndexes[0], superClassIndexes[1])
@@ -53,6 +56,7 @@ export function generateVtable(p : AST.Program<Annotation>, env : GlobalEnv) {
       })
     }
   })
+  }
   // add classIndices & vtable in env
   env.vtable = vtable;
   env.classIndices = classIndices;

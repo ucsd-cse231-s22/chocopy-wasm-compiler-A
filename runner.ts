@@ -56,13 +56,18 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
     newGlobals.set(v.name, true);
   });
 
+  let initLen = newClasses.size;
+
+  while(newClasses.size != initLen + prog.classes.length) {
   prog.classes.forEach(cls => {
+    if(newClasses.has(cls.name)) { return; }
     const classFields = new Map();
     const classMethods = new Map();
     var overridenMethods = 0;
     // TODO(anuj): update to support multiple inheritance
     var offset : number  = 0;
     const superclasses = Array.from( cls.super.keys() )
+    if(!superclasses.filter(scls => scls !== 'object').every(scls => newClasses.has(scls))) { return; }
     if (superclasses[0] !== "object") { 
       newClasses.get(superclasses[0])[0].forEach((value, key) => {
         offset = Math.max(value[0]) + 1
@@ -92,6 +97,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
     cls.fields.forEach((field, i) => classFields.set(field.name, [offset + i, field.value]));
     newClasses.set(cls.name, [classFields, classMethods, cls.super, superClassMethodsCount+classMethods.size - overridenMethods]);
   });
+  }
 
   prog.funs.forEach(f => {
     functionNames.set(f.name, closureName(f.name, []));

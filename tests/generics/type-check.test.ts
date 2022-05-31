@@ -979,6 +979,21 @@ describe('Generics/Inheritance introp tests', () => {
       b.ssv 
     `, NUM);
 
+    assertTC(`should type-check generic superclass field lookup - 2`, `
+      T = TypeVar('T')
+
+      class SuperBox(Generic[T]):
+        sv: T = __ZERO__ 
+
+      class Box(SuperBox[int]):
+        v: bool = False
+
+
+      b : Box = None
+      b = Box()
+      b.sv 
+    `, NUM);
+
     assertTC(`should type-check generic superclass method call - 0`, `
       T = TypeVar('T')
       U = TypeVar('U')

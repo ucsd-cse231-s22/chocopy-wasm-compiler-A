@@ -1,6 +1,6 @@
 import { Annotation, Class, Expr, Literal, Parameter, Program, Stmt, Type, VarInit, Callable, FunDef } from './ast';
 import {CALLABLE} from './tests/helpers.test';
-import { BOOL, CLASS, NONE, NUM } from './utils';
+import { BOOL, CLASS, NONE, NUM, TYPEVAR } from './utils';
 
 export type GlobalMorphEnv = {
     classesInx: Map<string, number>,
@@ -250,16 +250,52 @@ export function processStmts(stmt: Stmt<Annotation>, genv: GlobalMorphEnv, prog:
     }
 }
 
+export function typifySuperclassTypeArguments(typename: string, genv: GlobalMorphEnv) : Type {
+  switch(typename) {
+    case "int":
+      return NUM;
+    case "bool":
+      return BOOL;
+    default:
+      if(genv.classesInx.has(typename)) {
+        return CLASS(typename);
+      } else {
+        return TYPEVAR(typename);
+      }
+  }
+}
+
+export function monomorphizeSuperclasses(mClass: Class<Annotation>, classes: Array<Class<Annotation>>, genv: GlobalMorphEnv, prog: Program<Annotation>) {
+      mClass.super = new Map(Array.from(mClass.super.entries()).map(([sClassName, params]) => {
+      let sClassType = CLASS(sClassName, params.map(p => typifySuperclassTypeArguments(p, genv)));
+      let map = new Map(sClassType.params.filter(p => p.tag === "typevar").map(p => {
+        //@ts-ignore we just did a filter.. sigh
+        return [p.name, genv.typeVars.get(p.name)];
+      }));
+      let newGenv = {...genv, typeVars: map};
+
+      let msClassType = processType(concretizeGenericTypes(sClassType, newGenv), classes, newGenv, prog);
+
+      //@ts-ignore we know superclass will be processed into a type
+      return [msClassType.name, []];
+    }));
+}
+
 export function monomorphizeClass(cname: string, canonicalName: string, classes: Array<Class<Annotation>>, genv: GlobalMorphEnv, prog: Program<Annotation>) : Class<Annotation> {
     let cClass : Class<Annotation> = classes[genv.classesInx.get(cname)];
     let mClass : Class<Annotation> = JSON.parse(JSON.stringify(cClass))
     mClass.name = canonicalName;
-    mClass.super = cClass.super;
+
+    // properly deep copy the super classes
+    mClass.super = new Map(Array.from(cClass.super.entries()).map(([name, params]) => {
+      return [name, [...params]];
+    }));
+
     mClass.typeParams = [];
     mClass.fields = mClass.fields.map(field => {
-        if (field.type.tag === "typevar" || (field.type.tag === "class" && field.type.params.length > 0)) {
-            field.type = concretizeGenericTypes(field.type, genv);
-            field.value = resolveZero(field.type, field.a);
+        field.type = concretizeGenericTypes(field.type, genv);
+        if(field.value.tag === "zero") {
+          field.value = resolveZero(field.type, field.a);
         }
         return field;
     });
@@ -269,8 +305,8 @@ export function monomorphizeClass(cname: string, canonicalName: string, classes:
             return { ...p, type : ptype };
         });
         method.inits = method.inits.map(init => {
-            if (init.type.tag === "typevar" || (init.type.tag === "class" && init.type.params.length > 0)) {
-                init.type = concretizeGenericTypes(init.type, genv);
+            init.type = concretizeGenericTypes(init.type, genv);
+            if (init.value.tag === "zero") {
                 init.value = resolveZero(init.type, init.a);
             }
             return init;
@@ -329,16 +365,29 @@ export function processType(t: Type, classes: Array<Class<Annotation>>, genv: Gl
     case "either":
       return t;
     case "class":
+      if(t.name === 'object') {
+        return t;
+      }
+
+
       if(t.params.length > 0) {
         const canonicalType = getCanonicalType(t);
         if(canonicalType.tag === 'class' && !genv.morphedClasses.has(canonicalType.name)) {
           const cname = t.name;
           t.params.forEach((tv, inx) => genv.typeVars.set(classes[genv.classesInx.get(cname)].typeParams[inx], tv));
           genv.morphedClasses.add(canonicalType.name);
-          classes.push(monomorphizeClass(cname, canonicalType.name, classes, genv, prog));
+          let mClass = monomorphizeClass(cname, canonicalType.name, classes, genv, prog)
+          monomorphizeSuperclasses(mClass, classes, genv, prog);
+          classes.push(mClass);
         }
         return canonicalType;
       }
+
+      // we need to monomorphize superclasses if required
+      //const cname = t.name;
+      //let cClass : Class<Annotation> = classes[genv.classesInx.get(cname)];
+      //monomorphizeSuperclasses(cClass, classes, genv, prog);
+
       return t;
     case "callable":
       const cparams = t.params.map(p => processType(p, classes, genv, prog));
@@ -369,6 +418,11 @@ export function monomorphizeProgram(program: Program<Annotation>) : Program<Anno
     program.classes.forEach((clazz, inx) => classesInx.set(clazz.name, inx));
     program.funs.forEach((func, inx) => funcsInx.set(func.name, inx));
     let genv : GlobalMorphEnv = {classesInx, funcsInx, typeVars: new Map(), morphedClasses: new Set(), morphedFuncs: new Set(), genericFuncs: new Set()};
+    program.classes.forEach(clazz => {
+      if(clazz.typeParams.length === 0) {
+        monomorphizeSuperclasses(clazz, program.classes, genv, program);
+      } 
+    }); 
     program.funs.forEach(f => {
         if (isGenericFunc(f)) {
             genv.genericFuncs.add(f.name);
