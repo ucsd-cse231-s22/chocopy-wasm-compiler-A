@@ -381,9 +381,9 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv
   nonlocals.forEach(init => locals.vars.set(init.name, [init.a.type, true]));
   var envCopy = copyGlobals(env);
   fun.children.forEach(f => envCopy.functions.set(f.name, [f.parameters.map(x => x.type), f.ret]));
-  var children = fun.children.map(f => tcDef(envCopy, f, locals.vars, SRC));
   fun.children.forEach(child => locals.vars.set(child.name, [CALLABLE(child.parameters.map(x => x.type), child.ret), false]));
-  
+  var children = fun.children.map(f => tcDef(envCopy, f, locals.vars, SRC));
+
   const tBody = tcBlock(envCopy, locals, fun.body, SRC);
   if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))
     // TODO: what locations to be reported here?
