@@ -6,6 +6,9 @@ import { GlobalEnv } from './compiler';
 import { APPLY, CLASS, createMethodName, BOOL, NONE, NUM } from './utils';
 
 let nameCounters : Map<string, number> = new Map();
+export function resetNameCounters() {
+  nameCounters = new Map();
+}
 function generateName(base : string) : string {
   if(nameCounters.has(base)) {
     var cur = nameCounters.get(base);
@@ -28,7 +31,6 @@ export function closureName(f: string, ancestors: Array<AST.FunDef<Annotation>>)
 // }
 var blocks : Array<IR.BasicBlock<Annotation>> = [];
 export function lowerProgram(p : AST.Program<Annotation>, env : GlobalEnv) : IR.Program<Annotation> {
-    nameCounters = new Map();
     blocks = [];
     var firstBlock : IR.BasicBlock<Annotation> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
@@ -426,6 +428,60 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
         });
       return [[...oinits, ...ninits], oclasses.concat(nclasses)];
     }
+
+    case "index-assign": {
+      var [oinits, ostmts, oval, oclasses] = flattenExprToVal(s.obj, blocks, env);
+      var [iinits, istmts, ival, _ignore_use_ix_below] = flattenExprToVal(s.index, blocks, env);
+      var [ninits, nstmts, nval, nclasses] = flattenExprToVal(s.value, blocks, env);
+      if (s.obj.a.type.tag !== "list") {
+        throw new Error("Compiler's cursed, go home.");
+      }
+
+      var noneCheck: IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(s.a, oval);
+      var lenVar = generateName("listLen");
+      var lenStmt: IR.Stmt<Annotation> = {
+        a: {...ival.a, type: {tag: "number"}},
+        tag: "assign",
+        name: lenVar,
+        value: {
+          a: {...ival.a, type: {tag: "number"}},
+          tag: "load",
+          start: oval,
+          offset: {a: {...ival.a, type: {tag: "number"}}, tag: "wasmint", value: 1}
+        }
+      };
+      var boundsCheckStmt: IR.Stmt<Annotation> = ERRORS.flattenIndexOutOfBounds(s.a, ival, {a: {...ival.a, type: {tag: "number"}}, tag: "id", name: lenVar});
+
+      pushStmtsToLastBlock(blocks, ...ostmts, noneCheck, ...istmts, ...nstmts, lenStmt, boundsCheckStmt);
+
+      var indexAdd: AST.Expr<Annotation> = {
+        a: {...ival.a, type: {tag: "number"}},
+        tag: "binop",
+        op: AST.BinOp.Plus,
+        left: s.index,
+        right: {a: {...ival.a, type: {tag: "number"}}, tag: "literal", value: {tag: "num", value: 2}}
+      };
+      var [ixits, ixstmts, ixexpr, ixclasses] = flattenExprToVal(indexAdd, blocks, env);
+      var storeStmt: IR.Stmt<Annotation> = {
+        tag: "store",
+        a: {...nval.a, type: {tag: "none"}},
+        start: oval,
+        //@ts-ignore
+        offset: ixexpr,
+        value: nval,
+      };
+      pushStmtsToLastBlock(blocks, ...ixstmts, storeStmt);
+
+      return [[...oinits, ...iinits, ...ninits,
+        {
+          name: lenVar,
+          type: {tag: "number"},
+          value: { a: {...nval.a, type: {tag: "number"}}, tag: "none" },
+        },
+        ...ixits],
+        [...oclasses, ...nclasses, ...ixclasses ]
+      ];
+    }
       // return [[...oinits, ...ninits], [...ostmts, ...nstmts, {
       //   tag: "field-assign",
       //   a: s.a,
@@ -643,6 +699,112 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       ];
     case "list-comp":
       return flattenListComp(e, env, blocks);
+    case "construct-list":
+      const newListName = generateName("newList");
+      const listAlloc: IR.Expr<Annotation> = {
+        tag: "alloc",
+        amount: { tag: "wasmint", value: e.items.length + 2 },
+      };
+      var inits: Array<IR.VarInit<Annotation>> = [];
+      var stmts: Array<IR.Stmt<Annotation>> = [];
+      var classes: Array<IR.Class<Annotation>> = [];
+      var storeBigLength: IR.Stmt<Annotation> = {
+        tag: "store",
+        start: { tag: "id", name: newListName },
+        offset: { tag: "wasmint", value: 0 },
+        value: { a: null, tag: "num", value: BigInt(e.items.length) },
+      };
+      var storeLength: IR.Stmt<Annotation> = {
+        tag: "store",
+        start: { tag: "id", name: newListName },
+        offset: { tag: "wasmint", value: 1 },
+        value: { a: null, tag: "wasmint", value: e.items.length }
+      };
+      const assignsList: IR.Stmt<Annotation>[] = e.items.map((e, i) => {
+        const [init, stmt, vale, eclass] = flattenExprToVal(e, blocks, env);
+        inits = [...inits, ...init];
+        stmts = [...stmts, ...stmt];
+        classes = [...classes, ...eclass]
+        return {
+          tag: "store",
+          start: { tag: "id", name: newListName },
+          offset: { tag: "wasmint", value: i + 2 },
+          value: vale,
+        };
+      });
+      return [
+        [
+          {
+            name: newListName,
+            type: e.a.type,
+            value: { a: e.a, tag: "none" },
+          },
+          ...inits,
+        ],
+        [
+          { tag: "assign", name: newListName, value: listAlloc },
+          ...stmts,
+          storeBigLength,
+          storeLength,
+          ...assignsList,
+        ],
+        {
+          a: e.a,
+          tag: "value",
+          value: {
+            a: e.a,
+            tag: "id",
+            name: newListName
+          },
+        },
+        classes
+      ];
+    case "index":
+      var [objInit, objStmts, objExpr, objClasses] = flattenExprToVal(e.obj, blocks, env);
+      var [idxInit, idxStmts, idxExpr, ___ignore_use_below] = flattenExprToVal(e.index, blocks, env);
+
+      var noneCheck: IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, objExpr);
+
+      // Bounds check code
+      var lenVar = generateName("listLen");
+      var lenStmt: IR.Stmt<Annotation> = {
+        a: {...idxExpr.a, type: {tag: "number"}},
+        tag: "assign",
+        name: lenVar,
+        value: {
+          a: {...idxExpr.a, type: {tag: "number"}},
+          tag: "load",
+          start: objExpr,
+          offset: {a: {...idxExpr.a, type: {tag: "number"}}, tag: "wasmint", value: 1}
+        }
+      };
+      var checkBoundStmt: IR.Stmt<Annotation> = ERRORS.flattenIndexOutOfBounds(e.a, idxExpr, {a: {...idxExpr.a, type: {tag: "number"}}, tag: "id", name: lenVar});
+      var indexAdd: AST.Expr<Annotation> = {
+        a: {...idxExpr.a, type: {tag: "number"}},
+        tag: "binop",
+        op: AST.BinOp.Plus,
+        left: e.index,
+        right: {a: {...idxExpr.a, type: {tag: "number"}}, tag: "literal", value: {tag: "num", value: 2}}
+      };
+      var [idxAddInit, idxAddStmts, idxAddExpr, idxClasses] = flattenExprToVal(indexAdd, blocks, env);
+
+      return [
+        [...objInit, ...idxInit, ...idxAddInit,
+          {
+            name: lenVar,
+            type: {tag: "number"},
+            value: { a: e.a, tag: "none" },
+          }
+        ],
+        [...objStmts, noneCheck, ...idxStmts, lenStmt, checkBoundStmt, ...idxAddStmts],
+        {
+          a: {...idxExpr.a, type: {tag: "number"}},
+          tag: "load",
+          start: objExpr,
+          offset: idxAddExpr,
+        },
+        [...objClasses, ...idxClasses]
+      ];
     case "id":
       return [[], [], {tag: "value", value: { ...e }}, []];
     case "literal":

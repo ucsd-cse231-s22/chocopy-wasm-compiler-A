@@ -180,7 +180,10 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
         callName = "print_bool";
       } else if (expr.name === "print" && equalType(argTyp, NONE)) {
         callName = "print_none";
+      } else if (expr.name === "len") {
+        return [...argStmts, "(i32.const 0)", "call $load"];
       }
+
       return argStmts.concat([`(call $${callName})`]);
 
     case "builtin2":
@@ -190,6 +193,9 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
 
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      if(expr.name === "len"){
+        return [...valStmts, "(i32.const 0)", "call $load"];
+      }
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
 

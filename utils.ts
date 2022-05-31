@@ -183,6 +183,9 @@ export function PyZero(): Literal<Annotation> {
 export const NUM : Type = {tag: "number"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
+export function LIST(itemType : Type) : Type {return {tag: "list", itemType}};
+export function EMPTY(): Type {return {tag: "empty"}};
+
 export function CLASS(name : string, params: Array<Type> = []) : Type {return {tag: "class", name, params}};
 export function TYPEVAR(name: string) : Type {return {tag: "typevar", name}};
 export function CALLABLE(params: Array<Type>, ret: Type) : Type {return {tag: "callable", params, ret}};
