@@ -64,6 +64,13 @@ export function des_check(hashNext: boolean) : boolean {
   return hashNext;
 }
 
+export function bignum_to_i32(addr: number, loader: WebAssembly.ExportValue) : number {
+  const bignum = load_bignum(addr, loader);
+  if(bignum > 2**32 || bignum < -(2**32))
+    throw new Error("bignum is too large for an i32");
+  return Number(bignum);
+}
+
 export function binop_bignum(args: number[], builtin: Function, libmem: WebAssembly.Exports): number {
   var rslt : bigint = BigInt(0);
   const load = libmem.load;
