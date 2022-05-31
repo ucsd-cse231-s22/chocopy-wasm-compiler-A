@@ -140,7 +140,7 @@ class D(object):
   c : C = None
 c : C = None
 c.d
-  `, CLASS("D"));
+  `, CLASS("D", []));
   // 16
   assertTC("tc-two-classes-methods", `
 class C(object):
@@ -158,7 +158,7 @@ class D(object):
 c : C = None
 d : D = None
 c = C().new(d)
-c.d.c`, CLASS("C"));
+c.d.c`, CLASS("C", []));
   // 17
   assertTC("none-assignable-to-object", `
 class C(object):
@@ -168,13 +168,13 @@ class C(object):
 
 c : C = None
 c = C().clear()
-c`, CLASS("C"));
+c`, CLASS("C", []));
   // 18
   assertTC("constructor-type", `
 class C(object):
   x : int = 0
   
-C()`, CLASS("C"));
+C()`, CLASS("C", []));
   // 19
   assertTCFail("tc-literal", `
 x : int = None`);
