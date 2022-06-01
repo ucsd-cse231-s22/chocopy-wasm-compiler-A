@@ -215,7 +215,7 @@ export function tcPar(env: GlobalTypeEnv, par : Parameter<Annotation>, SRC: stri
 }
 export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv: NonlocalTypeEnv, SRC: string) : FunDef<Annotation> {
   var locals = emptyLocalTypeEnv();
-  locals.vars.set(fun.name, CALLABLE(fun.parameters.map(x => x.type), fun.ret));
+  locals.vars.set(fun.name, CALLABLE(fun.parameters, fun.ret));
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
   var nonlocals = fun.nonlocals.map(init => ({ name: init.name, a: { ...init.a, type: nonlocalEnv.get(init.name) }}));
@@ -224,9 +224,9 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv
   fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init, SRC).type));
   nonlocals.forEach(init => locals.vars.set(init.name, init.a.type));
   var envCopy = copyGlobals(env);
-  fun.children.forEach(f => envCopy.functions.set(f.name, [f.parameters.map(x => x.type), f.ret]));
+  fun.children.forEach(f => envCopy.functions.set(f.name, [f.parameters, f.ret]));
   var children = fun.children.map(f => tcDef(envCopy, f, locals.vars, SRC));
-  fun.children.forEach(child => locals.vars.set(child.name, CALLABLE(child.parameters.map(x => x.type), child.ret)));
+  fun.children.forEach(child => locals.vars.set(child.name, CALLABLE(child.parameters, child.ret)));
   
   const tBody = tcBlock(envCopy, locals, fun.body, SRC);
   if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))
