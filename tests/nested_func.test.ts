@@ -35,6 +35,15 @@ def f(x : int) -> int:
 print(f(6))`, [`31`]);
 
 
+assertPrint("global", 
+`
+x:int = 4
 
+def fun(a:int):
+    global x
+    x = x+a
+
+fun(3)
+print(x)`, [`7`]);
 
 });

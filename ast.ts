@@ -31,7 +31,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
   | {  a?: A; tag: "for"; name: string; iterable: Expr<A>; body: Array<Stmt<A>> }
-  | {  a?: A; tag: "nonlocal"; name: string};
+  | {  a?: A; tag: "nonlocal"; name: string}
 
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal }

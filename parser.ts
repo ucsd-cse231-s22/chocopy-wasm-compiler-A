@@ -482,7 +482,15 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
       inits.push(traverseVarInit(c, s));
     } 
     else if(isScopeDecl(c,s)){
-      nonlocals.push(traverseScopeDecl(c, s));
+      c.firstChild();
+      if(c.type.name==="nonlocal"){
+        nonlocals.push(traverseScopeDecl(c, s));
+        c.parent();
+      }
+      else{
+        c.parent();
+      }
+      
     }
     else if(isFunDef(c,s)){
       funs.push(traverseFunDef(c,s));
@@ -552,10 +560,8 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
 }
 
 export function traverseScopeDecl(c: TreeCursor, s: string): string{
-  c.firstChild();
   c.nextSibling();
   var name: string = s.substring(c.from, c.to);
-  c.parent();
   return name;
 }
 
