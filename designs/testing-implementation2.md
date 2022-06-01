@@ -4,7 +4,8 @@ Testing
 ## Change of files
 #### .github/workflows/main.yml
 Add browserTest on macOS in Chrome server
-Note: Currently the bignum test fail in Windows, and we skipped the test accordingly. In the future, we will try to fix this.
+#### tests/bignum-test.test.ts
+Comment out the bignum-test because the autograder is reported error sometimes because of this(Observe this pattern in both Window and Ubuntu).
 #### package.json
 Add "npm run test-browser" to script and incluede the needed package(chromedriver and selenium-webdriver).
 #### tests/integrated.test.ts
