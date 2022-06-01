@@ -1,5 +1,5 @@
-import { dataOffset, debugId, refNumOffset, sizeOffset, typeOffset } from "../memory";
-import { assertPrint, assertTCFail, assertTC, assertFail, assertMemState, assertMemAlloc } from "./asserts.test";
+import { dataOffset, debugId, heapStart, refNumOffset, sizeOffset, typeOffset } from "../memory";
+import { assertPrint, assertTCFail, assertTC, assertFail, assertMemState, assertMemAlloc, assertHeap } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("Memory tests", () => {
@@ -209,6 +209,33 @@ assertMemState("simple-cycle-deletion", `
     [123, refNumOffset, 1], // 1 references at the end of the program where object id is 123
     [456, refNumOffset, 1], // 1 references at the end of the program where object id is 456
     ]);
+    assertHeap("single-delete", `
+     class Rat(object):
+         id: int = 123
+         y: int = 0
+         def __init__(self: Rat):
+             self.y = 1
+     x: Rat = None
+     x = Rat()
+     x = None
+   `, heapStart); 
+
+ assertHeap("delete-in-a-loop", `
+     class Rat(object):
+        id: int = 123
+        y: int = 0
+        def __init__(self: Rat):
+            self.y = 1
+     n: int = 1124
+     a: Rat = None
+     a = Rat()
+     while n >= 0:
+         a = Rat()
+         n = n - 1
+     a = None
+     n = 0
+ `, heapStart) // 2 ints in the object, each is 4 byte
+
 
 assertMemState("less-simple-cycle", `
     class Link(object):
