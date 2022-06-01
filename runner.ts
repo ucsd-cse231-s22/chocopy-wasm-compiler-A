@@ -10,6 +10,7 @@ import { wasmErrorImports } from './errors';
 import { closureName, lowerProgram } from './lower';
 import { monomorphizeProgram } from './monomorphizer';
 import { optimizeProgram } from './optimization';
+import { OptimizationSwitch } from './optimizations/optimization_common';
 import { parse } from './parser';
 import { GlobalTypeEnv, tc } from './type-check';
 import { makeWasmFunType, NONE, PyValue } from "./utils";
@@ -82,7 +83,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>): GlobalEnv
 }
 
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
-export async function run(source: string, config: Config, optimizationSwitch: "0" | "1" | "2"): Promise<[Value<Annotation>, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
+export async function run(source: string, config: Config, optimizationSwitch: OptimizationSwitch): Promise<[Value<Annotation>, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   config.importObject.errors.src = source; // for error reporting
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);

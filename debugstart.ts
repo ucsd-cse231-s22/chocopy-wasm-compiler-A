@@ -6,12 +6,7 @@ import { addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-class C(object):
-  def f(self: C) -> int:
-    if True:
-      return 0
-    else:
-      return`
+print(100000000000000000000000)`
   // var source = `
   // class C(object):
   //   def __init__(self:C, other:D):
@@ -22,7 +17,7 @@ class C(object):
 const ast = parse(source);
 // console.log(ast);
   const repl = new BasicREPL(await addLibs());
-  const result = repl.run(source).then(result => {
+  const result = repl.run(source, "4").then(result => {
     console.log(result);    
   })  
 }
