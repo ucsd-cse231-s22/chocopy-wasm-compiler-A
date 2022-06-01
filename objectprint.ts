@@ -1,7 +1,7 @@
 import { stringify } from "./webstart";
 import { BasicREPL } from "./repl";
 
-export function addAccordionEvent(repl:BasicREPL) {
+export function addAccordionEvent(loader:WebAssembly.ExportValue,repl:BasicREPL) {
     console.log("addAccordionEvent added");
     var acc = document.getElementsByClassName("accordion");
     var i = 0;
@@ -15,7 +15,7 @@ export function addAccordionEvent(repl:BasicREPL) {
           if (ele.getAttribute("unfolded")==="no"){
             const address = parseInt(ele.getAttribute("address"));
             const classname = ele.getAttribute("classname");
-            unfold_object(address, classname,repl,ele);
+            unfold_object(address, classname,loader,repl,ele);
           }
           var panel = ele.nextElementSibling as any;
           var arrow = ele.firstChild as any;
@@ -34,7 +34,7 @@ export function addAccordionEvent(repl:BasicREPL) {
 
 
 
-  export function generate_folded_object(address:number, classname:string, repl:BasicREPL, currentEle: HTMLElement) {
+  export function generate_folded_object(address:number, classname:string, loader: WebAssembly.ExportValue,repl:BasicREPL, currentEle: HTMLElement) {
     if(address == 0){
       currentEle.innerText = `${classname} object is None`;
       return;
@@ -46,9 +46,9 @@ export function addAccordionEvent(repl:BasicREPL) {
     exp.setAttribute("unfolded","no"); 
     exp.innerHTML = "<i class='arrow' id='arrow'></i> " + classname +  ` object at addr ${address}`;
     currentEle.appendChild(exp);
-    addAccordionEvent(repl);
+    addAccordionEvent(loader,repl);
   }
-  export function unfold_object( address: number, classname: string,repl: BasicREPL, currentEle: HTMLButtonElement) {
+  export function unfold_object( address: number, classname: string,loader: WebAssembly.ExportValue,repl: BasicREPL, currentEle: HTMLButtonElement) {
     const parentNode = currentEle.parentNode;
     const div = document.createElement("div");
     div.setAttribute("class", "panel");
@@ -74,15 +74,15 @@ export function addAccordionEvent(repl:BasicREPL) {
           ele.innerHTML = "<b class='tag'>" + key + ": </b>";
 
           ele.appendChild(new_div);
-          generate_folded_object(val, thisfield_type.name,repl, new_div);
+          generate_folded_object(val, thisfield_type.name,loader,repl, new_div);
       } else {
-        ele.innerHTML = "<b class='tag'>" + key + ": </b><p class='val'>" + stringify(thisfield_type,val,repl) + "</p>";
+        ele.innerHTML = "<b class='tag'>" + key + ": </b><p class='val'>" + stringify(thisfield_type,val,loader,repl) + "</p>";
       }
       div.appendChild(ele);
       ele.setAttribute("class", "info");
     })
     currentEle.setAttribute("unfolded", "true");
-    addAccordionEvent(repl);
+    addAccordionEvent(loader,repl);
 
     parentNode.insertBefore(div, currentEle.nextSibling)
   }
