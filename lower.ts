@@ -173,24 +173,20 @@ function flattenStmts(s : Array<AST.Stmt<Annotation>>, blocks: Array<IR.BasicBlo
 }
 
 function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<Annotation>>) : [Array<IR.VarInit<Annotation>>, Array<IR.Stmt<Annotation>>, IR.Expr<Annotation>, Array<IR.Class<Annotation>>] {
-  console.log("list comp in ir", e, "----------------");
   const newListName = generateName("newList");
-
+  const newListIterator = generateName("newListIterator");
   const newListLen = generateName("newListLen");
   var lengthCall : AST.Expr<AST.Annotation> = {tag:"method-call", obj:e.iterable, method:"len", arguments:[], a:{ ...e.a, type: NUM }};
   var lengthassignable : AST.Assignable<AST.Annotation> = { tag: "id", name: newListLen };
   var lengthassignVar : AST.AssignVar<AST.Annotation> = { target: lengthassignable, ignorable: false, star: false };
   var lengthdestructureAss : AST.DestructuringAssignment<AST.Annotation> = { isSimple: true, vars: [lengthassignVar] };
-  var lengthnextAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: lengthdestructureAss, value: lengthCall,a:{ ...e.a, type: NONE }}];
+  var lengthAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: lengthdestructureAss, value: lengthCall,a:{ ...e.a, type: NONE }}];
+  var [lengthinits,lengthclasses] = flattenStmts(lengthAssign, blocks, localenv);
   
   const listAlloc: IR.Expr<Annotation> = {
     tag: "alloc",
     amount: {tag:"id",name:newListLen},
   };
-  console.log("wtf");
-  var inits: Array<IR.VarInit<Annotation>> = [];
-  var stmts: Array<IR.Stmt<Annotation>> = [];
-  var classes: Array<IR.Class<Annotation>> = [];
   var storeBigLength: IR.Stmt<Annotation> = {
     tag: "store",
     start: { tag: "id", name: newListName },
@@ -235,6 +231,13 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
   var nextAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: destructureAss, value: nextCall,a:{ ...e.a, type: NONE }}];
   var [bodyinits,bodyclasses] = flattenStmts(nextAssign, blocks, localenv);
 
+  var iterCall : AST.Expr<AST.Annotation> = {tag:"method-call", obj:e.iterable, method:"iterator", arguments:[], a:{ ...e.a, type: NUM }};
+  var iter_assignable : AST.Assignable<AST.Annotation> = { tag: "id", name: newListIterator };
+  var iter_assignVar : AST.AssignVar<AST.Annotation> = { target: iter_assignable, ignorable: false, star: false };
+  var iter_destructureAss : AST.DestructuringAssignment<AST.Annotation> = { isSimple: true, vars: [iter_assignVar] };
+  var iter_tAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: iter_destructureAss, value: iterCall,a:{ ...e.a, type: NONE }}];
+  var [iterinits,iterclasses] = flattenStmts(iter_tAssign, blocks, localenv);
+
   // cond
   if (e.cond){
     var [dinits, dstmts, dexpr, declass] = flattenExprToVal(e.cond, blocks, localenv);
@@ -256,10 +259,11 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
   var disp: AST.Stmt<AST.Annotation> = {tag:"expr", expr: displayExpr, a:{ ...e.a, type: NONE }};
   // var [einits, estmts, eexpr] = flattenExprToVal(displayExpr, localenv);
   var [body_init, body_class] = flattenStmt(disp, blocks, localenv);
+  console.log("disp",disp);
   var storeExpr : IR.Stmt<Annotation> = {
     tag: "store",
     start: { tag: "id", name: newListName },
-    offset: { tag: "wasmint", value: 0 },
+    offset: {tag:"id",name: newListIterator},
     value: e.left,
   };
   pushStmtsToLastBlock(blocks,storeExpr);
@@ -284,11 +288,21 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
         },
       },[...ceclass, ...bodyclasses, ...body_class, ...declass, ...beclass]]
   else
-    return [[...cinits, ...bodyinits, ...body_init, ...binits,
+    return [[...iterinits,...lengthinits, ...cinits, ...bodyinits, ...body_init, ...binits,
       {
         name: newListName,
         type: e.a.type,
         value: { a: e.a, tag: "none" },
+      },
+      {
+        name: newListLen,
+        type: e.a.type,
+        value: { a: e.a, tag: "none" }
+      },
+      {
+        name: newListIterator,
+        type: e.a.type,
+        value: { a: e.a, tag: "none" }
       }]
       , [...cstmts, ...bstmts,{ tag: "assign", name: newListName, value: listAlloc }]
       , {
@@ -299,12 +313,11 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
             tag: "id",
             name: newListName
         },
-      },[...ceclass, ...bodyclasses, ...body_class, ...beclass]]
+      },[...iterclasses,...lengthclasses, ...ceclass, ...bodyclasses, ...body_class, ...beclass]]
 }
 
 
 function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annotation>>, env : GlobalEnv) : [Array<IR.VarInit<Annotation>>, Array<IR.Class<Annotation>>] {
-  console.log("wakalkjl");
   switch(s.tag) {
     case "assign":
       if(s.destruct.isSimple === true) {
@@ -448,7 +461,6 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
       // ]];
   
     case "expr":
-      console.log("hi",s.expr);
       var [inits, stmts, e, classes] = flattenExprToExpr(s.expr, blocks, env);
       blocks[blocks.length - 1].stmts.push(
         ...stmts, {tag: "expr", a: s.a, expr: e }
