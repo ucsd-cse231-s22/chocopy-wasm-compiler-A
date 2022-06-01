@@ -24,7 +24,7 @@ before(function () {
 export function assert(name: string, source: string, expected: Value<Annotation>) {
   it(name, async () => {
     const repl = new BasicREPL(importObject);
-    const result = await repl.run(source);
+    const result = await repl.run(source, "2");
     chai.expect(result).to.deep.eq(expected);
   });
 }
@@ -124,7 +124,7 @@ export async function assertOptimize(name: string, source: string, expected: { p
       chai.expect(preOptimizedIr).to.deep.eq(optimizedIr);
     else
       chai.expect(preOptimizedIr).to.not.deep.eq(optimizedIr);
-    await repl.run(source);
+    await repl.run(source, optimizationSwitch);
     chai.expect(importObject.output.trim().split('\n')).to.deep.eq(expected.print);
   });
 }
@@ -135,7 +135,7 @@ export function asserts(name: string, pairs: Array<[string, Value<Annotation>]>)
 
   it(name, async () => {
     for (let i = 0; i < pairs.length; i++) {
-      const result = await repl.run(pairs[i][0]);
+      const result = await repl.run(pairs[i][0], "2");
       chai.expect(result).to.deep.eq(pairs[i][1]);
     }
   });
