@@ -7,7 +7,7 @@
     "dev": "webpack serve --mode=development --open",
     "build-web": "webpack && cp index.html build/",
     "build-parse": "tsc parsestart.ts --esModuleInterop --moduleResolution node --outDir cli/",
-    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' node node_modules/.bin/mocha -r ts-node/register --reporter mochawesome 'tests/**/*.test.ts'",
+    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' node node_modules/.bin/mocha -r ts-node/register --reporter mochawesome 'tests/**/optimizations.test.ts'",
     "test-coverage": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' nyc --reporter lcov node node_modules/.bin/mocha -r ts-node/register --reporter mochawesome 'tests/**/*.test.ts'",
     "build": "tsc debugstart.ts  --downlevelIteration --esModuleInterop --moduleResolution node --outDir debugger/",
     "start": "node debugger/debugstart.js",

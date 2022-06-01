@@ -1,4 +1,4 @@
-import { assertOptimize } from "./asserts.test";
+import { assertOptimize, assertOptimizeDCE} from "./asserts.test";
 
 // IR team – review the valnames here – this test seems very brittle
 describe("Optimizations tests", () => {
@@ -1203,6 +1203,211 @@ f()`,
         { print: ["12", "10", "12", "12"], isIrDifferent: true },
         "2"
     );
+
+    assertOptimizeDCE(
+        "sanity-if-else-true-DCE", 
+        `
+i:int=3
+if(True):
+    i=4
+else:
+    i=5
+print(i)`,
+        { print: ["4"], isIrDifferent: true },
+        
+    );
+
+    assertOptimizeDCE(
+        "sanity-if-else-false-DCE", 
+        `
+i:int=3
+if(False):
+    i=4
+else:
+    i=5
+print(i)`,
+        { print: ["5"], isIrDifferent: true },
+    );
+
+    assertOptimizeDCE(
+        "sanity-while-false-DCE", 
+        `
+i:int=3
+while(False):
+    i=4
+print(i)`,
+        { print: ["3"], isIrDifferent: true },
+    );
+
+//     assertOptimizeDCE(
+//         "sanity-while-true-DCE", 
+//         `
+// i:int=3
+// while(True):
+//     i=4
+// print(i)`,
+//         { print: [], isIrDifferent: true },
+//     );
+
+    assertOptimizeDCE(
+        "sanity-if-else-false-CF-DCE", 
+        `
+i:int=3
+if(i<=0):
+    i=4
+else:
+    i=5
+print(i)`,
+        { print: ["5"], isIrDifferent: true },
+    );
+
+    assertOptimizeDCE(
+        "sanity-if-else-true-CF-DCE", 
+        `
+i:int=3
+if(i>=0):
+    i=4
+else:
+    i=5
+print(i)`,
+        { print: ["4"], isIrDifferent: true },
+    );
+
+    assertOptimizeDCE(
+        "sanity-func-if-else-DCE",
+        `
+def fun1()->int:
+    i:int=3
+    if(False):
+        i=4
+    else:
+        i=5
+    return i
+        
+print(fun1())`,
+        {print: ["5"], isIrDifferent: true},
+      );
+
+    assertOptimizeDCE(
+        "sanity-func-while-DCE",
+        `
+def fun1()->int:
+    i:int=3
+    while(False):
+        i=4
+    return i
+        
+print(fun1())`,
+        {print: ["3"], isIrDifferent: true},
+    );
+    
+    assertOptimizeDCE(
+        "sanity-func-simple-return-DCE",
+        `
+def fun1()->int:
+    return 2
+    print(True)        
+print(fun1())`,
+        {print: ["2"], isIrDifferent: true},
+    );
+
+    assertOptimizeDCE(
+        "sanity-func-complex-return-DCE",
+        `
+def fun1()->int:
+    return 9
+    return 4
+    return 2
+    print(True)        
+print(fun1())`,
+        {print: ["9"], isIrDifferent: true},
+    );
+
+    assertOptimizeDCE(
+        "sanity-func-while-return-DCE",
+        `
+def fun1()->int:
+    i:int = 4
+    while(i<4):
+        return 7
+    return 1        
+print(fun1())`,
+        {print: ["1"], isIrDifferent: true},
+    );
+
+    assertOptimizeDCE(
+        "sanity-func-while-return-DCE",
+        `
+def fun1()->int:
+    i:int = 4
+    while(i>=4):
+        return 7
+    return 1        
+print(fun1())`,
+        {print: ["7"], isIrDifferent: true},
+    );
+
+    assertOptimizeDCE(
+        "sanity-func-if-else-return-DCE",
+        `
+def fun1()->int:
+    i:int = 4
+    if(i<4):
+        return 7
+    else:
+        return 9
+    return 1    
+print(fun1())`,
+        {print: ["9"], isIrDifferent: true},
+    );
+
+    assertOptimizeDCE(
+        "sanity-func-if-else-return-DCE",
+        `
+def fun1()->int:
+    i:int = 4
+    while(i<4):
+        i=3
+    if(i<4):
+        return 7
+    else:
+        return 6
+    return 1    
+print(fun1())`,
+        {print: ["6"], isIrDifferent: true},
+    );
+
+
+//     assertOptimizeDCE(
+//         "sanity-while-false-CF-DCE", 
+//         `
+// i:int=3
+// while(i<0):
+//     i=4
+// print(i)`,
+//         { print: ["3"], isIrDifferent: true },
+//     );
+
+//     assertOptimizeDCE(
+//         "sanity-while-true-CF-DCE", 
+//         `
+// i:int=3
+// while(i>=0):
+//     i=4
+// print(i)`,
+//         { print: [], isIrDifferent: true },
+//     );
+
+//     assertOptimizeDCE(
+//         "sanity-while-true-DCE", 
+//         `
+// i:int=3
+// while(True):
+//     i=4
+// print(i)`,
+//         { print: ["3"], isIrDifferent: true },
+//     );
+
 
 //     assertOptimize(
 //         "sanity-if-copy-prop", 
