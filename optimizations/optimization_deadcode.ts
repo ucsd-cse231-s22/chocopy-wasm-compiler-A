@@ -1,8 +1,7 @@
-import { Parameter, Type } from "../ast";
-import { BasicBlock, Expr, FunDef, Program, Stmt, Value, VarInit } from "../ir";
-import { generateEnvironmentFunctions, generateEnvironmentFunctionsForLiveness, generateEnvironmentProgram, generateEnvironmentProgramForLiveness } from "./optimization_common";
-import { Env } from "./optimization_common";
-import { checkCopyValEquality, checkLiveValEquality, checkStmtEquality, duplicateEnv, isTagId } from "./optimization_utils";
+import { Parameter } from "../ast";
+import { BasicBlock, Expr, FunDef, Program, Stmt, VarInit } from "../ir";
+import { Env, generateEnvironmentFunctionsForLiveness, generateEnvironmentProgramForLiveness } from "./optimization_common";
+import { checkLiveValEquality, duplicateEnv, isTagId } from "./optimization_utils";
 
 
 export type val = {
@@ -49,102 +48,104 @@ export class liveEnv extends Env {
     updateEnvironmentByBlock(block: BasicBlock<any>): liveEnv {
         var outEnv: liveEnv = new liveEnv(new Map(this.vars));
         block.stmts.reverse().forEach(statement => {
-            if (statement === undefined) { console.log(block.stmts); }
-            switch(statement.tag){
-                case "assign" :
-                    const expression = statement.value;
-                    outEnv.updateLiveVariables(statement, expression);
-                    break;
-
-                case "return":
-                    if(statement.value.tag === "id"){
-                        outEnv.set(statement.value.name, {tag:"alive", name: statement.value.name});
-                    }
-                    break;
-
-                case "expr":
-                    outEnv.updateLiveVariables(statement, statement.expr);
-                    break;
-
-                case "ifjmp":
-                    if(statement.cond.tag === "id"){
-                        outEnv.set(statement.cond.name, {tag:"alive", name: statement.cond.name});
-                    }
-                    break;
-
-                case "store":
-                    if(statement.start.tag === "id"){
-                        outEnv.set(statement.start.name, {tag:"alive", name: statement.start.name});
-                    }
-                    if(statement.offset.tag === "id"){
-                        outEnv.set(statement.offset.name, {tag:"alive", name: statement.offset.name});
-                    }
-                    if(statement.value.tag === "id"){
-                        outEnv.set(statement.value.name, {tag:"alive", name: statement.value.name});
-                    }
-                    break;     
-            }
-            
+            this.updateStmtLiveVariables(statement, outEnv);
         });
         return outEnv;
     }
 
-    updateLiveVariables(stmt: Stmt<any>, e: Expr<any>){
-        switch(e.tag) {
+    updateStmtLiveVariables(statement: Stmt<any>, outEnv: liveEnv) {
+        switch (statement.tag) {
+            case "assign":
+                const expression = statement.value;
+                outEnv.updateLiveVariables(statement, expression);
+                break;
+
+            case "return":
+                if (statement.value.tag === "id") {
+                    outEnv.set(statement.value.name, { tag: "alive", name: statement.value.name });
+                }
+                break;
+
+            case "expr":
+                outEnv.updateLiveVariables(statement, statement.expr);
+                break;
+
+            case "ifjmp":
+                if (statement.cond.tag === "id") {
+                    outEnv.set(statement.cond.name, { tag: "alive", name: statement.cond.name });
+                }
+                break;
+
+            case "store":
+                if (statement.start.tag === "id") {
+                    outEnv.set(statement.start.name, { tag: "alive", name: statement.start.name });
+                }
+                if (statement.offset.tag === "id") {
+                    outEnv.set(statement.offset.name, { tag: "alive", name: statement.offset.name });
+                }
+                if (statement.value.tag === "id") {
+                    outEnv.set(statement.value.name, { tag: "alive", name: statement.value.name });
+                }
+                break;
+        }
+    }
+
+    updateLiveVariables(stmt: Stmt<any>, e: Expr<any>) {
+        if (stmt.tag === "assign")
+            this.set(stmt.name, { tag: "dead", name: stmt.name });
+        switch (e.tag) {
             case "value":
-                if(isTagId(e.value)){
-                    this.set(e.value.name, {tag:"alive", name: e.value.name}); 
+                if (isTagId(e.value)) {
+                    this.set(e.value.name, { tag: "alive", name: e.value.name });
                 }
                 break;
             case "binop":
-                if(isTagId(e.left)){
-                    this.set(e.left.name, {tag:"alive", name: e.left.name});
+                if (isTagId(e.left)) {
+                    this.set(e.left.name, { tag: "alive", name: e.left.name });
                 }
-                if(isTagId(e.right)){
-                    this.set(e.right.name, {tag:"alive", name: e.right.name});
+                if (isTagId(e.right)) {
+                    this.set(e.right.name, { tag: "alive", name: e.right.name });
                 }
                 break;
             case "uniop":
-                if(isTagId(e.expr)){
-                    this.set(e.expr.name, {tag:"alive", name: e.expr.name});
+                if (isTagId(e.expr)) {
+                    this.set(e.expr.name, { tag: "alive", name: e.expr.name });
                 }
                 break;
             case "builtin1":
-                if(isTagId(e.arg)){
-                    this.set(e.arg.name, {tag:"alive", name: e.arg.name});
+                if (isTagId(e.arg)) {
+                    this.set(e.arg.name, { tag: "alive", name: e.arg.name });
                 }
                 break;
             case "builtin2":
-                if(isTagId(e.left)){
-                    this.set(e.left.name, {tag:"alive", name: e.left.name});
+                if (isTagId(e.left)) {
+                    this.set(e.left.name, { tag: "alive", name: e.left.name });
                 }
-                if(isTagId(e.right)){
-                    this.set(e.right.name, {tag:"alive", name: e.right.name});
+                if (isTagId(e.right)) {
+                    this.set(e.right.name, { tag: "alive", name: e.right.name });
                 }
                 break;
             case "call" || "call_indirect":
-                e.arguments.forEach(v =>{
-                    if(isTagId(v)){
-                        this.set(v.name, {tag:"alive", name: v.name});
+                e.arguments.forEach(v => {
+                    if (isTagId(v)) {
+                        this.set(v.name, { tag: "alive", name: v.name });
                     }
                 });
                 break;
             case "alloc":
-                if(isTagId(e.amount)){
-                    this.set(e.amount.name, {tag:"alive", name: e.amount.name});
+                if (isTagId(e.amount)) {
+                    this.set(e.amount.name, { tag: "alive", name: e.amount.name });
                 }
                 break;
             case "load":
-                if(isTagId(e.start)){
-                    this.set(e.start.name, {tag:"alive", name: e.start.name});
+                if (isTagId(e.start)) {
+                    this.set(e.start.name, { tag: "alive", name: e.start.name });
                 }
-                if(isTagId(e.offset)){
-                    this.set(e.offset.name, {tag:"alive", name: e.offset.name});
+                if (isTagId(e.offset)) {
+                    this.set(e.offset.name, { tag: "alive", name: e.offset.name });
                 }
                 break;
         }
-        if(stmt.tag === "assign")
-            this.set(stmt.name, {tag:"dead", name: stmt.name});
     }
 
     mergeEnvironment(b: liveEnv): liveEnv {
@@ -152,12 +153,12 @@ export class liveEnv extends Env {
         this.vars.forEach((aValue: val, key: string) => {
             const bValue: val = b.vars.get(key);
             if (bValue.tag === "alive" || aValue.tag === "alive")
-                returnEnv.set(key, { tag: "alive", name: key});
+                returnEnv.set(key, { tag: "alive", name: key });
             else if (aValue.tag === "undef" && bValue.tag === "undef") {
                 returnEnv.set(key, { tag: "undef", name: key })
             }
             else if (aValue.tag === "undef") {
-                returnEnv.set(key, { tag: bValue.tag, name:key })
+                returnEnv.set(key, { tag: bValue.tag, name: key })
             }
             else if (bValue.tag === "undef") {
                 returnEnv.set(key, { tag: aValue.tag, name: key });
@@ -183,7 +184,7 @@ function computeInitEnv(varDefs: Array<VarInit<any>>, dummyEnv: boolean): Env {
 function addParamsToLiveEnv(params: Array<Parameter<any>>, env: liveEnv, dummyEnv: boolean) {
     params.forEach(p => {
         if (dummyEnv) {
-            env.set(p.name, { tag: "undef", name: p.name});
+            env.set(p.name, { tag: "undef", name: p.name });
         }
         else {
             env.set(p.name, { tag: "dead", name: p.name });
@@ -193,20 +194,23 @@ function addParamsToLiveEnv(params: Array<Parameter<any>>, env: liveEnv, dummyEn
 
 function optimizeBlock(block: BasicBlock<any>, env: liveEnv): [BasicBlock<any>, boolean] {
     var blockOptimized: boolean = false;
-    var newStmts: Stmt<any>[];
+    var newStmts: Stmt<any>[] = [];
     block.stmts.reverse().forEach(s => {
         // var optimizedstatement = optimizeStatements(s, env);
-        if(s.tag === "assign"){
-            if(!env.has(s.name) || env.get(s.name).tag === "dead"){
-                env.set(s.name, {tag: "dead", name: s.name});
+        if (s.tag === "assign") {
+            if (!env.has(s.name) || env.get(s.name).tag === "dead") {
+                env.set(s.name, { tag: "dead", name: s.name });         
                 blockOptimized = true;
             }
-            else{
+            else {
                 newStmts.push(s);
             }
-            env.updateLiveVariables(s, s.value);
+        } else {
+            newStmts.push(s);
         }
+        env.updateStmtLiveVariables(s, env);
     });
+    newStmts = newStmts.reverse();
     return [{ ...block, stmts: newStmts }, blockOptimized];
 }
 

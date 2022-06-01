@@ -49,9 +49,9 @@ export function checkValueEquality(a: Value<any>, b: Value<any>): boolean {
 }
 
 export function checkLiveValEquality(a: val, b: val): boolean {
-    if (a.tag !== b.tag)
-        return false;
-    return a.name === b.name;
+    // if (a.tag !== b.tag)
+    //     return false;
+    return a.tag === b.tag;
 }
 
 export function checkCopyValEquality(a: copyVal, b: copyVal): boolean {

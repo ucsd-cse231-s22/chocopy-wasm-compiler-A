@@ -1,10 +1,9 @@
-import { Func } from "mocha";
 import { Class, FunDef, Program } from "./ir";
 import { constantPropagateAndFoldProgramBody, constantPropagateAndFoldProgramFuns } from "./optimizations/optimizations_prop_fold";
 import { OptimizationSwitch } from "./optimizations/optimization_common";
 import { copyPropagateProgramBody, copyPropagateProgramFuns } from "./optimizations/optimization_copy_prop";
+import { eliminateDeadCodeFunc, eliminateDeadCodeProgram } from "./optimizations/optimization_DCE";
 import { livenessProgramBody, livenessProgramFuns } from "./optimizations/optimization_deadcode";
-import { eliminateDeadCodeProgram, eliminateDeadCodeFunc } from "./optimizations/optimization_DCE";
 
 
 function optimizeFunction(func: FunDef<any>, optimizationSwitch: OptimizationSwitch): FunDef<any> {
@@ -48,11 +47,11 @@ export function optimizeProgram(program: Program<any>, optimizationSwitch: Optim
 
 function optimizeProgramBody(program: Program<any>, optimizationSwitch: OptimizationSwitch): Program<any> {
     if (program.body.length == 0) return program;
-    var [program, programOptimized]: [Program<any>, boolean] = optimizationSwitch >= "1" ? constantPropagateAndFoldProgramBody(program) : [program, false];
+    var [program, programOptimized]: [Program<any>, boolean] = optimizationSwitch >= "5" ? constantPropagateAndFoldProgramBody(program) : [program, false];
     var programOptimizedFromCopy: boolean = false;
-    [program, programOptimizedFromCopy] = optimizationSwitch >= "2" ? copyPropagateProgramBody(program) : [program, false];
+    [program, programOptimizedFromCopy] = optimizationSwitch >= "5" ? copyPropagateProgramBody(program) : [program, false];
     var programOptimizedFromDCE: boolean = false;
-    [program, programOptimizedFromDCE] = optimizationSwitch >= "3" ? eliminateDeadCodeProgram(program) : [program, false];
+    [program, programOptimizedFromDCE] = optimizationSwitch >= "5" ? eliminateDeadCodeProgram(program) : [program, false];
     var programOpimizedFromDeadElim: boolean = false;
     [program, programOpimizedFromDeadElim] = optimizationSwitch === "4" ? livenessProgramBody(program) : [program, false];
 
