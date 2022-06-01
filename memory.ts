@@ -200,3 +200,14 @@ export function debugId(id: number, offset: number) { // id should be of type in
 }
 
 
+export function debugMemAlloc() {
+    let x = 0;
+    for (let i = 2; i < memHeap.length; i += x) {
+        x = memHeap[i] + i + 3
+        if ( memHeap[x] === 0 ) {
+            return x - 1;
+        }
+    }
+    throw new Error('memory is full');
+}
+
