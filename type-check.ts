@@ -608,16 +608,16 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
         // for plain destructure like a, b, c = 1, 2, 3
         // we can perform type check
         if(!hasStar && tDestruct.vars.length != tValExpr.elements.length) {
-          throw new TypeCheckError(`value number mismatch, expected ${tDestruct.vars.length} values, but got ${tValExpr.elements.length}`);
+          throw new TypeCheckError(SRC, `value number mismatch, expected ${tDestruct.vars.length} values, but got ${tValExpr.elements.length}`, stmt.a);
         } else if(hasStar && tDestruct.vars.length-1 > tValExpr.elements.length) {
-          throw new TypeCheckError(`not enough values to unpack (expected at least ${tDestruct.vars.length-1}, got ${tValExpr.elements.length})`);
+          throw new TypeCheckError(SRC, `not enough values to unpack (expected at least ${tDestruct.vars.length-1}, got ${tValExpr.elements.length})`, stmt.a);
         }
         for(var i=0; i<tDestruct.vars.length; i++) {
           if(tDestruct.vars[i].ignorable) {
             continue;
           }
           if(!isAssignable(env, tValExpr.elements[i].a.type, tDestruct.vars[i].a.type)) {
-            throw new TypeCheckError(`Non-assignable types: ${tValExpr.elements[i].a} to ${tDestruct.vars[i].a}`);
+            throw new TypeCheckError(SRC, `Non-assignable types: ${tValExpr.elements[i].a.type.tag} to ${tDestruct.vars[i].a.type.tag}`, stmt.a);
           }
         }
       } else if(!tDestruct.isSimple && (tValExpr.tag === "call" || tValExpr.tag === "method-call" || tValExpr.tag === "id")) {
@@ -625,7 +625,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
         // but there is no such a type currently, so
         // TODO: add specific logic then
         if(tValExpr.a.type.tag != "class" || tValExpr.a.type.name != "iterator") {
-          throw new TypeCheckError(`cannot unpack non-iterable ${JSON.stringify(tValExpr.a, null, 2)} object`)
+          throw new TypeCheckError(SRC, `cannot unpack non-iterable ${JSON.stringify(tValExpr.a, null, 2)} object`, stmt.a)
         } else {
           var rightType = env.classes.get('iterator')[1].get('next')[1];
           for(var i=0; i<tDestruct.vars.length; i++) {
@@ -633,7 +633,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
               continue;
             }
             if(!isAssignable(env, rightType, tDestruct.vars[i].a.type)) {
-              throw new TypeCheckError(`Non-assignable types: ${rightType} to ${tDestruct.vars[i].a}`);
+              throw new TypeCheckError(SRC, `Non-assignable types: ${rightType.tag} to ${tDestruct.vars[i].a.type.tag}`, stmt.a);
             }
           }
         }
@@ -641,7 +641,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       } else if(!tDestruct.isSimple) {
         // TODO: support other types like list, tuple, which are plain formatted, we could also perform type check
         if(tValExpr.a != CLASS('iterator')) {
-          throw new TypeCheckError(`cannot unpack non-iterable ${tValExpr.a} object`)
+          throw new TypeCheckError(SRC, `cannot unpack non-iterable ${tValExpr.a.type.tag} object`, stmt.a)
         }
       }
       return {a: { ...stmt.a, type: NONE }, tag: stmt.tag, destruct: tDestruct, value: tValExpr};
@@ -682,12 +682,12 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
     case "continue":
       return {a: { ...stmt.a, type: NONE }, tag: stmt.tag};
     case "for":
-      var tIterator = tcIterator(env, locals, stmt.iterator)
+      var tIterator = tcIterator(env, locals, stmt.iterator, SRC)
       var tValObject = tcExpr(env, locals, stmt.values, SRC);
       if (tValObject.a.type.tag !== "class") 
-        throw new TypeCheckError("values require an object");
+        throw new TypeCheckError(SRC, `Can only iterate through Iterator object type, got type ${tValObject.a.type.tag}`, stmt.a);
       if (!env.classes.has(tValObject.a.type.name)) 
-        throw new TypeCheckError("values on an unknown class");
+        throw new TypeCheckError(SRC, "values on an unknown class", stmt.a);
       const [__, methods] = env.classes.get(tValObject.a.type.name);
       if(!(methods.has("hasnext")) || methods.get("hasnext")[1].tag != BOOL.tag)
         throw new TypeCheckError(SRC, "iterable class must have hasnext method with boolean return type");
@@ -1049,12 +1049,12 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
 
 // function to return the type of iterator in for-loop. Finds the string in globals/locals and returns its type
 // Will be extended to include tuples etc in later commits
-export function tcIterator(env : GlobalTypeEnv, locals : LocalTypeEnv, iterator: string): Type{
+export function tcIterator(env : GlobalTypeEnv, locals : LocalTypeEnv, iterator: string, SRC : string): Type{
   if (locals.vars.has(iterator))
    return locals.vars.get(iterator) 
   else if (env.globals.has(iterator))
      return env.globals.get(iterator)
-   throw new TypeCheckError(`Undefined iterator`)
+   throw new TypeCheckError(SRC, `Undefined iterator: ${iterator}`)
 }
   
   export function tcLiteral(literal: Literal<Annotation>) {
