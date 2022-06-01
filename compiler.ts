@@ -194,7 +194,7 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       if(expr.name === "len"){
-        return [...valStmts, "(i32.const 0)", "call $load"];
+        return [...valStmts, "(i32.const 0)", "call $load", "call $i32_to_bignum"];
       }
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
