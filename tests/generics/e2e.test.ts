@@ -479,6 +479,119 @@ describe('e2e tests to check generics', () => {
       print(i)
     `
     assertPrint('Generic iterator interface - 1', prog16, ["0", "10", "20", "30", "40"]);
+
+    const prog17 = `
+    T = TypeVar('T')
+    U = TypeVar('U')
+
+    class Iterator(Generic[T]):
+      v : T = __ZERO__
+      def hasnext(self: Iterator[T]) -> bool:
+        return False
+      
+      def next(self: Iterator[T]) -> T:
+        return self.v
+
+      def reset(self: Iterator[T]):
+        pass
+
+      def map(self: Iterator[T], f: Callable[[T], T]) -> MapIterator[T]:
+        iter : MapIterator[T] = None
+        iter = MapIterator()
+        iter.new(self, f)
+        return iter
+      
+      def filter(self: Iterator[T], f: Callable[[T], bool]) -> FilterIterator[T]:
+        iter : FilterIterator[T] = None
+        iter = FilterIterator()
+        iter.new(self, f)
+        return iter
+
+    class FilterIterator(Generic[T], Iterator[T]):
+      iter: Iterator[T] = None
+      f: Callable[[T], bool] = None
+      el: T = __ZERO__
+
+      def new(self: FilterIterator[T], iter: Iterator[T], f: Callable[[T], bool]):
+        self.iter = iter
+        self.f = f
+
+      def hasnext(self: FilterIterator[T]) -> bool:
+        el: T = __ZERO__
+        f : Callable[[T], bool] = None
+        f = self.f
+        while self.iter.hasnext():
+            el = self.iter.next()
+            if f(el):
+              self.el = el
+              return True
+            else:
+              continue
+
+        return False
+
+      def next(self: FilterIterator[T]) -> T:
+        return self.el
+
+      def reset(self: FilterIterator[T]):
+        self.iter.reset()
+
+    class MapIterator(Generic[T], Iterator[T]):
+      iter: Iterator[T] = None
+      f: Callable[[T], T] = None
+
+      def new(self: MapIterator[T], iter: Iterator[T], f: Callable[[T], T]):
+        self.iter = iter
+        self.f = f
+
+      def hasnext(self: MapIterator[T]) -> bool:
+        return self.iter.hasnext()
+
+      def next(self: MapIterator[T]) -> T:
+        f : Callable[[T], T] = None
+        f = self.f
+        return f(self.iter.next())
+
+      def reset(self: MapIterator[T]):
+        self.iter.reset()
+
+    class Range(Iterator[int]):
+      min: int = 0
+      max: int = 0
+      current: int = 0
+
+      def new(self: Range, min: int, max: int):
+        self.min = min
+        self.max = max
+        self.current = self.min
+
+      def hasnext(self: Range) -> bool:
+        return self.current < self.max
+
+      def next(self: Range) -> int:
+        v: int = 0
+        v = self.current
+        self.current = self.current + 1
+        return v
+
+      def reset(self: Range):
+        self.current = self.min
+
+    f1 : Callable[[int], bool] = None
+    f2 : Callable[[int], int] = None
+    i : int = 0
+    r : Range = None
+    it : Iterator[int] = None
+    r = Range()
+    r.new(0, 5)
+    f1 = mklambda(Callable[[int], bool], lambda x: x % 2 == 0)
+    f2 = mklambda(Callable[[int], int], lambda x: x + 10 )
+    it = r.filter(f1).map(f2)
+
+    for i in it:
+      print(i)
+    `
+    assertPrint('Generic iterator interface - 2', prog17, ["10", "12", "14"]);
 })
 
 describe('Generics and Lists - e2e tests', () => {
