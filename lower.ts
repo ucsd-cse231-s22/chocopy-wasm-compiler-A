@@ -220,6 +220,14 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
 
   // body
   blocks.push({  a: e.a, label: compbodyLbl, stmts: [] })
+
+  var iterCall : AST.Expr<AST.Annotation> = {tag:"method-call", obj:e.iterable, method:"iterator", arguments:[], a:{ ...e.a, type: NUM }};
+  var iter_assignable : AST.Assignable<AST.Annotation> = { tag: "id", name: newListIterator };
+  var iter_assignVar : AST.AssignVar<AST.Annotation> = { target: iter_assignable, ignorable: false, star: false };
+  var iter_destructureAss : AST.DestructuringAssignment<AST.Annotation> = { isSimple: true, vars: [iter_assignVar] };
+  var iter_tAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: iter_destructureAss, value: iterCall,a:{ ...e.a, type: NONE }}];
+  var [iterinits,iterclasses] = flattenStmts(iter_tAssign, blocks, localenv);
+  
   // assign a.next() to elem
   var nextCall : AST.Expr<AST.Annotation> = {tag:"method-call", obj:e.iterable, method:"next", arguments:[], a:{ ...e.a, type: NUM }};
   var elem = "";
@@ -230,13 +238,6 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
   var destructureAss : AST.DestructuringAssignment<AST.Annotation> = { isSimple: true, vars: [assignVar] };
   var nextAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: destructureAss, value: nextCall,a:{ ...e.a, type: NONE }}];
   var [bodyinits,bodyclasses] = flattenStmts(nextAssign, blocks, localenv);
-
-  var iterCall : AST.Expr<AST.Annotation> = {tag:"method-call", obj:e.iterable, method:"iterator", arguments:[], a:{ ...e.a, type: NUM }};
-  var iter_assignable : AST.Assignable<AST.Annotation> = { tag: "id", name: newListIterator };
-  var iter_assignVar : AST.AssignVar<AST.Annotation> = { target: iter_assignable, ignorable: false, star: false };
-  var iter_destructureAss : AST.DestructuringAssignment<AST.Annotation> = { isSimple: true, vars: [iter_assignVar] };
-  var iter_tAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: iter_destructureAss, value: iterCall,a:{ ...e.a, type: NONE }}];
-  var [iterinits,iterclasses] = flattenStmts(iter_tAssign, blocks, localenv);
 
   // cond
   if (e.cond){
