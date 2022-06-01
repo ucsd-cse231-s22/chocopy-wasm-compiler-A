@@ -82,7 +82,6 @@ export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv):
   switch (c.type.name) {
     case "String":
       const str_ = s.substring(c.from+1,c.to-1);
-      console.log("str_");
       let charArr = []
       for (let i = 0; i < str_.length; i++) {
         if (str_[i] != "\\"){
@@ -98,15 +97,12 @@ export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv):
           }
           else {
             charArr.push(str_[i-1] + str_[i])
-            console.log("push")
-            console.log(charArr[charArr.length-1])
           }
         }
       }
       return{
         tag: "str",
         value: charArr,
-        length: charArr.length
       }
 
     case "Number":

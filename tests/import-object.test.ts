@@ -13,8 +13,10 @@ function stringify(typ: Type, arg: any): string {
     case Type.None:
       return "None";
     case Type.String:
+      // add Enter at the end of the sentence
       if (arg as number == -2) {
         return "\n"
+      // return null when detecting the start symbol -1
       }else if (arg as number == -1) {
         return ""
       }
