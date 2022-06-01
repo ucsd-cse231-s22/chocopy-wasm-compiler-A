@@ -1177,6 +1177,33 @@ c = b
         "2"
     );
 
+    assertOptimize(
+        "sanity-if-copy-prop-2", 
+        `
+def f():
+    a:int = 3
+    b:int = 9
+    c:int = 1
+    d:int = 12
+    a = c
+    while a < 10:
+        b = a
+        c = b
+        a = a + 1
+    b = a
+    a = d
+    d = b
+    c = a
+    d = c
+    print(a)
+    print(b)
+    print(c)
+    print(d)
+f()`,
+        { print: ["12", "10", "12", "12"], isIrDifferent: true },
+        "2"
+    );
+
 //     assertOptimize(
 //         "sanity-if-copy-prop", 
 //         `

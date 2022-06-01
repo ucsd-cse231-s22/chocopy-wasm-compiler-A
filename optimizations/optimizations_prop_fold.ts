@@ -1,7 +1,6 @@
-import { Type } from "../ast";
+import { Parameter, Type } from "../ast";
 import { BasicBlock, Expr, FunDef, Program, Stmt, Value, VarInit } from "../ir";
-import { generateEnvironmentFunctions, generateEnvironmentProgram } from "./optimization";
-import { Env } from "./optimization_common_models";
+import { Env, generateEnvironmentFunctions, generateEnvironmentProgram } from "./optimization_common";
 import { checkIfFoldableBinOp, checkPropagateValEquality, checkStmtEquality, checkValueEquality, duplicateEnv, evaluateBinOp, evaluateUniOp } from "./optimization_utils";
 
 
@@ -208,6 +207,17 @@ function computeInitEnv(varDefs: Array<VarInit<any>>, dummyEnv: boolean): Env {
     return env;
 }
 
+function addParamsToEnv(params: Array<Parameter<any>>, env: constPropEnv, dummyEnv: boolean) {
+    params.forEach(p => {
+        if (dummyEnv) {
+            env.set(p.name, { tag: "undef" });
+        }
+        else {
+            env.set(p.name, { tag: "nac" });
+        }
+    });
+}
+
 export function constantPropagateAndFoldProgramBody(program: Program<any>): [Program<any>, boolean] {
     if (program.body.length == 0) return [program, false];
     var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentProgram(program, computeInitEnv);
@@ -225,7 +235,7 @@ export function constantPropagateAndFoldProgramBody(program: Program<any>): [Pro
 
 export function constantPropagateAndFoldProgramFuns(func: FunDef<any>): [FunDef<any>, boolean] {
     if (func.body.length === 0) return [func, false];
-    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctions(func, computeInitEnv);
+    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctions(func, computeInitEnv, addParamsToEnv);
 
     var functionOptimized: boolean = false;
     var newBody: Array<BasicBlock<any>> = func.body.map(b => {

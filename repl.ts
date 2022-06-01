@@ -3,7 +3,7 @@ import { Annotation, Type, Value } from "./ast";
 import { GlobalEnv } from "./compiler";
 import { Program } from "./ir";
 import { lowerProgram } from "./lower";
-import { optimizeProgram } from "./optimizations/optimization";
+import { optimizeProgram } from "./optimization";
 import { parse } from "./parser";
 import { augmentEnv, Config, run } from "./runner";
 import { defaultTypeEnv, GlobalTypeEnv, tc } from "./type-check";
@@ -39,9 +39,9 @@ export class BasicREPL {
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";
   }
-  async run(source : string) : Promise<Value<Annotation>> {
+  async run(source : string, optimizationSwitch: "0" | "1" | "2") : Promise<Value<Annotation>> {
     const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions};
-    const [result, newEnv, newTypeEnv, newFunctions, instance] = await run(source, config);
+    const [result, newEnv, newTypeEnv, newFunctions, instance] = await run(source, config, optimizationSwitch);
     this.currentEnv = newEnv;
     this.currentTypeEnv = newTypeEnv;
     this.functions += newFunctions;

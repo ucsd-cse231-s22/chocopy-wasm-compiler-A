@@ -1,8 +1,9 @@
 import { BinOp, UniOp } from "../ast";
 import { Expr, Stmt, Value } from "../ir";
 import { propagateVal } from "./optimizations_prop_fold";
-import { Env } from "./optimization_common_models";
+import { Env } from "./optimization_common";
 import { copyVal } from "./optimization_copy_prop";
+
 
 export function isTagId(value: Value<any>): value is { tag: "id", name: string, a?: any } {
     return value.tag === "id";
@@ -46,17 +47,11 @@ export function checkValueEquality(a: Value<any>, b: Value<any>): boolean {
     return false;
 }
 
-export function checkArrayEquality(a: Array<any>, b: Array<any>): boolean {
-    if (a.length !== b.length) return false;
-
-    return a.every((val) => { return b.includes(val) });
-}
-
 export function checkCopyValEquality(a: copyVal, b: copyVal): boolean {
     if (a.tag !== b.tag)
         return false;
     if (a.tag === "copyId") {
-        return checkValueEquality(a.value, b.value) && checkArrayEquality(a.reverse, b.reverse);
+        return checkValueEquality(a.value, b.value);
     }
     return true;
 }
