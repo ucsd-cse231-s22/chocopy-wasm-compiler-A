@@ -378,6 +378,14 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
         cond,
         body
       }
+    case "ScopeStatement":
+      c.firstChild(); // nonlocal
+      if (s.substring(c.from, c.to) !== "nonlocal")
+        throw new ParserError(`Unknown scopestatement ${s.substring(c.from, c.to)}`);
+      c.nextSibling(); // Variable Name
+      var name = s.substring(c.from ,c.to);
+      c.parent();
+      return { tag: "scope", name }
     case "PassStatement":
       return { tag: "pass" }
     default:
@@ -416,7 +424,7 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
     let typ = traverseType(c, s);
     c.parent();
     c.nextSibling(); // Move on to comma or ")"
-    parameters.push({name, type: typ});
+    parameters.push({name, type: typ, nonlocal: false});
     c.nextSibling(); // Focuses on a VariableName
   }
   c.parent();       // Pop to ParamList
@@ -465,12 +473,15 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   c.firstChild();  // Focus on :
   var inits = [];
   var body = [];
+  var nested = []
   
   var hasChild = c.nextSibling();
 
   while(hasChild) {
     if (isVarInit(c, s)) {
       inits.push(traverseVarInit(c, s));
+    } else if (isFunDef(c, s)) {
+      nested.push(traverseFunDef(c, s));
     } else {
       break;
     }
@@ -486,7 +497,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
   c.parent();      // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
   c.parent();      // Pop to FunctionDefinition
-  return { name, parameters, ret, inits, body, class: "" }
+  return { name, parameters, ret, inits, nested, body, class: "" }
 }
 
 export function traverseClass(c : TreeCursor, s : string) : Class<null> {
@@ -519,7 +530,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   c.parent();
 
   if (!methods.find(method => method.name === "__init__")) {
-    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [], class: className });
+    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className), nonlocal: false }], ret: NONE, nested: [], inits: [], body: [], class: className });
   }
   return {
     name: className,

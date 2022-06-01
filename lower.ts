@@ -43,10 +43,18 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
 }
 
 function lowerFunDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv) : Array<IR.FunDef<Type>> {
-    return fs.map(f => lowerFunDef(f, env)).flat();
+    // Also deal with nested functions
+    var funDefs : Array<IR.FunDef<Type>> = []
+    if (fs.length > 0) console.log(fs[0].name)
+    fs.forEach(f => {
+      funDefs.push(lowerFunDef(f, env));
+      funDefs = funDefs.concat(lowerFunDefs(f.nested, env));
+    });
+    return funDefs;
 }
 
 function lowerFunDef(f : AST.FunDef<Type>, env : GlobalEnv) : IR.FunDef<Type> {
+  console.log(`============+${f.name}`)
   var blocks : Array<IR.BasicBlock<Type>> = [];
   var firstBlock : IR.BasicBlock<Type> = {  a: f.a, label: generateName("$startFun"), stmts: [] }
   blocks.push(firstBlock);
@@ -129,6 +137,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       return inits;
     //  return [inits, [ ...stmts, {tag: "expr", a: s.a, expr: e } ]];
 
+    case "scope":
     case "comment":
     case "pass":
       return [];

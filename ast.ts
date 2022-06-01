@@ -11,7 +11,7 @@ export type Type =
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
 
-export type Parameter<A> = { name: string, type: Type }
+export type Parameter<A> = { name: string, type: Type, nonlocal: boolean }
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>>, table?: Array<ClassIndex<A>> }
 
@@ -21,10 +21,11 @@ export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Literal }
 
-export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, ret: Type, inits: Array<VarInit<A>>, nested?: FunDef<A>, body: Array<Stmt<A>>, class?: string }
+export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, ret: Type, inits: Array<VarInit<A>>, nested: Array<FunDef<A>>, body: Array<Stmt<A>>, class?: string }
 
 export type Stmt<A> =
   | {  a?: A, tag: "assign", name: string, value: Expr<A> }
+  | {  a?: A, tag: "scope", name: string }
   | {  a?: A, tag: "comment" }
   | {  a?: A, tag: "return", value: Expr<A> }
   | {  a?: A, tag: "expr", expr: Expr<A> }
