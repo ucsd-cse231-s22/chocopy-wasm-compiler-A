@@ -337,4 +337,47 @@ print(b.p)
 
 `, [`CompilerIsTheBest`, `CompilerIsTheBest`, `CompilerIsTheBestY`, `CompilerIsTheBestYY`, `CompilerIsTheBestYY`]);
 
+
+// 11 - Same method name for different inheritance
+assertPrint("same-method-name", `
+class A(object):
+  def f(self : A) -> int:
+    return 1
+    
+class B(A):
+  t:int = 2
+  def g(self : B) -> bool:
+    return False
+
+class C(object):
+  def h(self : C):
+    pass
+  
+  def x(self : C):
+    pass  
+
+  def f(self : C, y : int) -> int:
+    return 3
+    
+class D(C):
+  t:int = 4
+  def g(self : D) -> bool:
+    return True
+
+b : B = None
+d : D = None
+b = B()
+d = D()
+print(b.t)
+print(b.f())
+print(b.g())
+print(d.t)
+print(d.f(3+3))
+print(d.g())
+
+`, [`2`, `1`, `False`, `4`, `3`, `True`]);
+
+
+
+
 });
