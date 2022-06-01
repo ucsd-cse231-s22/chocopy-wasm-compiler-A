@@ -581,8 +581,11 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
           // we are assigning to.
           tValExpr.a.type.params = [...tDestruct.a.type.params];
         }
-        if(!isAssignable(env, tValExpr.a.type, tDestruct.a.type)) {
+        if(tValExpr.tag !== "list-comp" && !isAssignable(env, tValExpr.a.type, tDestruct.a.type)) {
           throw new TypeCheckError(SRC, `Assignment value should have assignable type to type ${bigintSafeStringify(tDestruct.a.type.tag)}, got ${bigintSafeStringify(tValExpr.a.type.tag)}`, tValExpr.a);
+        }
+        if(tValExpr.tag === "list-comp" && tDestruct.a.type.tag !== "list") {
+          throw new TypeCheckError(SRC, `Assignment value should have assignable type to type ${bigintSafeStringify(tDestruct.a.type.tag)}, got list comprehension`, tValExpr.a);
         }
       }else if(!tDestruct.isSimple && tValExpr.tag === "array-expr") {
         // for plain destructure like a, b, c = 1, 2, 3

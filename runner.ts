@@ -87,9 +87,12 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
   config.importObject.errors.src = source; // for error reporting
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
+  console.log("tprogram",tprogram);
+  console.log("tenv",tenv);
   const tmprogram = monomorphizeProgram(tprogram);
   const globalEnv = augmentEnv(config.env, tmprogram);
   const irprogram = lowerProgram(tmprogram, globalEnv);
+  console.log("irprogram",irprogram);
   const optIr = optimizeProgram(irprogram);
   const progTyp = tmprogram.a.type;
   var returnType = "";

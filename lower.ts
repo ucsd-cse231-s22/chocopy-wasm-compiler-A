@@ -174,6 +174,29 @@ function flattenStmts(s : Array<AST.Stmt<Annotation>>, blocks: Array<IR.BasicBlo
 
 function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<Annotation>>) : [Array<IR.VarInit<Annotation>>, Array<IR.Stmt<Annotation>>, IR.Expr<Annotation>, Array<IR.Class<Annotation>>] {
   // console.log("list comp in ir", e, "----------------");
+  const newListName = generateName("newList");
+  const listAlloc: IR.Expr<Annotation> = {
+    tag: "alloc",
+    amount: { tag: "wasmint", value: 100 },
+  };
+  var inits: Array<IR.VarInit<Annotation>> = [];
+  var stmts: Array<IR.Stmt<Annotation>> = [];
+  var classes: Array<IR.Class<Annotation>> = [];
+  var storeBigLength: IR.Stmt<Annotation> = {
+    tag: "store",
+    start: { tag: "id", name: newListName },
+    offset: { tag: "wasmint", value: 0 },
+    value: { a: null, tag: "num", value: BigInt(100) },
+  };
+  var storeLength: IR.Stmt<Annotation> = {
+    tag: "store",
+    start: { tag: "id", name: newListName },
+    offset: { tag: "wasmint", value: 1 },
+    value: { a: null, tag: "wasmint", value: 100 }
+  };
+  pushStmtsToLastBlock(blocks, { tag: "assign", name: newListName, value: listAlloc });
+  pushStmtsToLastBlock(blocks, storeBigLength);
+  pushStmtsToLastBlock(blocks, storeLength);
   var compStartLbl = generateName("$compstart");
   var compbodyLbl = generateName("$compbody");
   var compEndLbl = generateName("$compend");
@@ -224,12 +247,21 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
   var disp: AST.Stmt<AST.Annotation> = {tag:"expr", expr: displayExpr, a:{ ...e.a, type: NONE }};
   // var [einits, estmts, eexpr] = flattenExprToVal(displayExpr, localenv);
   var [body_init, body_class] = flattenStmt(disp, blocks, localenv);
+  var storeExpr : IR.Stmt<Annotation> = {
+    tag: "store",
+    start: { tag: "id", name: newListName },
+    offset: { tag: "wasmint", value: 2 },
+    value: e.left,
+  };
+  pushStmtsToLastBlock(blocks,storeExpr);
   bodyinits.concat(body_init);
   // console.log("einits", einits, "estmts", estmts, "eexpr", eexpr);
   pushStmtsToLastBlock(blocks, ...bstmts, {tag:"jmp", lbl: compStartLbl});
 
   // end
   blocks.push({  a: e.a, label: compEndLbl, stmts: [] })
+  var return_type_a = e.a;
+  return_type_a.type = {tag:"list",itemType:{tag:"number"}};
   if (e.cond)
     return [[...cinits, ...bodyinits, ...body_init, ...dinits, ...binits]
       , [...cstmts, ...dstmts, ...bstmts]
@@ -243,18 +275,24 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
         },
       },[...ceclass, ...bodyclasses, ...body_class, ...declass, ...beclass]]
   else
-    return [[...cinits, ...bodyinits, ...body_init, ...binits]
-      , [...cstmts, ...bstmts]
+    return [[...cinits, ...bodyinits, ...body_init, ...binits,
+      {
+        name: newListName,
+        type: e.a.type,
+        value: { a: e.a, tag: "none" },
+      }]
+      , [...cstmts, ...bstmts,{ tag: "assign", name: newListName, value: listAlloc }]
       , {
-        a: e.a,
-        tag: "value",
-        value: {
-          a: { ...e.a, type: NUM },
-          tag: "id",
-          name: elem
+          a: return_type_a,
+          tag: "value",
+          value: {
+            a: e.a,
+            tag: "id",
+            name: newListName
         },
       },[...ceclass, ...bodyclasses, ...body_class, ...beclass]]
 }
+
 
 function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annotation>>, env : GlobalEnv) : [Array<IR.VarInit<Annotation>>, Array<IR.Class<Annotation>>] {
   switch(s.tag) {
