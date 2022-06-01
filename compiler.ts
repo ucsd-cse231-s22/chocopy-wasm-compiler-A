@@ -166,7 +166,6 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
         callName = "load";
         return new_argStmts.concat([`(call $${callName})`]);
       }
-      //console.log(argStmts)
       return argStmts.concat([`(call $${callName})`]);
 
     case "builtin2":
