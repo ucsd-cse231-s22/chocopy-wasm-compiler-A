@@ -34,7 +34,7 @@ export async function assertOptimizeIR(name: string, source: string, expectedIR:
   it(name, async () => {
     const repl = new BasicREPL(await addLibs());
     const [ _, optimizedIr ] = repl.optimize(source);
-    chai.expect(optimizedIr).excludingEvery(['a', 'label']).to.deep.eq(expectedIR);
+    chai.expect(optimizedIr).excludingEvery(['a', 'label', 'name']).to.deep.eq(expectedIR);
   });
 }
 

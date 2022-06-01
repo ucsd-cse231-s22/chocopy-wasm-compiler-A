@@ -53,6 +53,15 @@ export function checkCompileValEquality(a: compileVal, b: compileVal): boolean{
     return true;
 }
 
+export function checkArgsEquality(a: Array<Value<any>>, b: Array<Value<any>>): boolean{
+    for (let index = 0; index < a.length; index++){
+        const argA = a[index];
+        const argB = b[index];
+        if (!checkValueEquality(argA, argB)) return false;
+    }
+    return true;
+}
+
 export function checkExprEquality(a: Expr<any>, b: Expr<any>): boolean{
     if (a.tag !== b.tag)
         return false;
@@ -79,18 +88,18 @@ export function checkExprEquality(a: Expr<any>, b: Expr<any>): boolean{
         case "call":
             if (b.tag !== "call") throw new Error(`Compiler Error!`); //Will never be executed, sanity check
             if (a.name !== b.name || a.arguments.length !== b.arguments.length) return false;
-            for (let index = 0; index < a.arguments.length; index++){
-                const argA = a.arguments[index];
-                const argB = b.arguments[index];
-                if (!checkValueEquality(argA, argB)) return false;
-            }
-            return true;
+            return checkArgsEquality(a.arguments, b.arguments);
+        case "call_indirect":
+            if (b.tag !== "call_indirect") throw new Error(`Compiler Error!`); //Will never be executed, sanity check
+            return checkExprEquality(a.fn, b.fn) && checkArgsEquality(a.arguments, b.arguments);
         case "alloc":
             if (b.tag !== "alloc") throw new Error(`Compiler Error!`); //Will never be executed, sanity check
             return checkValueEquality(a.amount, b.amount);
         case "load":
             if (b.tag !== "load") throw new Error(`Compiler Error!`); //Will never be executed, sanity check
             return checkValueEquality(a.start, b.start) && checkValueEquality(a.offset, b.offset);
+        default:
+            return true;
     }
 }
 
@@ -121,5 +130,7 @@ export function checkStmtEquality(a: Stmt<any>, b: Stmt<any>): boolean{
         case "store":
             if (b.tag !== "store") throw new Error(`Compiler Error!`); //Will never be executed, sanity check
             return checkValueEquality(a.start, b.start) && checkValueEquality(a.offset, b.offset);
+        default:
+            return true;
     }
 }
