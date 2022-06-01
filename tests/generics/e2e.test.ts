@@ -373,30 +373,30 @@ describe('e2e tests to check generics', () => {
       def reset(self: Iterator[T]):
         pass
 
-    class Range(Generic[T], Iterator[int]):
+    class Range(Iterator[int]):
       min: int = 0
       max: int = 0
       current: int = 0
 
-      def new(self: Range[T], min: int, max: int):
+      def new(self: Range, min: int, max: int):
         self.min = min
         self.max = max
         self.current = self.min
 
-      def hasnext(self: Range[T]) -> bool:
+      def hasnext(self: Range) -> bool:
         return self.current < self.max
 
-      def next(self: Range[T]) -> int:
+      def next(self: Range) -> int:
         v: int = 0
         v = self.current
         self.current = self.current + 1
         return v
 
-      def reset(self: Range[T]):
+      def reset(self: Range):
         self.current = self.min
 
     i : int = 0
-    r : Range[int] = None
+    r : Range = None
     r = Range()
     r.new(0, 5)
 
