@@ -147,6 +147,18 @@ describe('ut for destructure', () => {
     print(b)
     `, ['2', 'False']);
 
+    // currently not workable
+    // assertPrint("destructure-assignment-without-plain-format", `
+    // a : int = 0
+    // b : int = 0
+    // l : [int] = None
+    // l = [1, 2, 3]
+    // a, b, l[1] = l
+    // print(a)
+    // print(b)
+    // print(l[1])
+    // `, ['1', '2', '3']);
+
     assertPrint("destructure-assignment-func-sep", `
     def f(a: int)->int:
         return a*2
@@ -173,10 +185,13 @@ describe('ut for destructure', () => {
     ${rangeDef}
     a : int = 0
     b : int = 0
-    a, b = range(1, 3)
+    l : [int] = None
+    l = [1, 2, 3]
+    a, b, l[1] = range(1, 4)
     print(a)
     print(b)
-    `, ['1', '2']);
+    print(l[1])
+    `, ['1', '2', '3']);
 
     assertPrint("destructure-assignment-in-func-sep", `
     ${rangeDef}
@@ -257,10 +272,13 @@ describe('ut for destructure', () => {
     class cl(Object):
         f1: int = 0
     
+    l : [int] = None
+    l = [1, 2, 3]
     c = cl()
-    c.f1, _, a = range(1, 4)
+    c.f1, _, a, l[1] = range(1, 5)
     print(c.f1)
     print(a)
-    `, ['1', '3']);
+    print(l[1])
+    `, ['1', '3', '4']);
     
 });

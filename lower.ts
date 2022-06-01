@@ -325,6 +325,11 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                     if (v.target.obj.a.type.tag !== "list") {
                       throw new Error("Compiler's cursed, go home.");
                     }
+                    outputInits = outputInits.concat(oinits);
+                    outputInits = outputInits.concat(iinits);
+                    outputInits = outputInits.concat(ninits);
+                    outputClasses = outputClasses.concat(oclasses);
+                    outputClasses = outputClasses.concat(nclasses);
 
                     var noneCheck: IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(s.a, oval);
                     var lenVar = generateName("listLen");
@@ -339,6 +344,11 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                         offset: {a: {...ival.a, type: {tag: "number"}}, tag: "wasmint", value: 1}
                       }
                     };
+                    outputInits.push({
+                      name: lenVar,
+                      type: {tag: "number"},
+                      value: { a: {...nval.a, type: {tag: "number"}}, tag: "none" },
+                    });
                     var idxi32: IR.Expr<Annotation> = { a: {...ival.a, type: {tag: "number"}}, tag: "call", name: "$bignum_to_i32", arguments: [ival] } 
                     var idxi32Name = generateName("valname");
                     var setidxi32Name : IR.Stmt<Annotation> = {
@@ -347,6 +357,7 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                       name: idxi32Name,
                       value: idxi32
                     };
+                    outputInits.push({ a: ival.a, name: idxi32Name, type: ival.a.type, value: { tag: "none" } });
                     var boundsCheckStmt: IR.Stmt<Annotation> = ERRORS.flattenIndexOutOfBounds(s.a, {...ival.a, tag: "id", name: idxi32Name}, {a: {...ival.a, type: {tag: "number"}}, tag: "id", name: lenVar});
 
                     pushStmtsToLastBlock(blocks, ...ostmts, noneCheck, ...istmts, ...nstmts, lenStmt, setidxi32Name, boundsCheckStmt);
@@ -359,6 +370,8 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                       right: {a: {...ival.a, type: {tag: "number"}}, tag: "literal", value: {tag: "num", value: 2n}}
                     };
                     var [ixits, ixstmts, ixexpr, ixclasses] = flattenExprToVal(indexAdd, blocks, env);
+                    outputInits = outputInits.concat(ixits);
+                    outputClasses = outputClasses.concat(ixclasses);
                     var idxi32Add: IR.Expr<Annotation> = { a: {...ixexpr.a, type: {tag: "number"}}, tag: "call", name: "$bignum_to_i32", arguments: [ixexpr] } 
                     var idxi32AddName = generateName("valname");
                     var setidxi32AddName : IR.Stmt<Annotation> = {
@@ -367,6 +380,7 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                       name: idxi32AddName,
                       value: idxi32Add
                     };
+                    outputInits.push({ a: ixexpr.a, name: idxi32AddName, type: ixexpr.a.type, value: { tag: "none" }});
                     var storeStmt: IR.Stmt<Annotation> = {
                       tag: "store",
                       a: {...nval.a, type: {tag: "none"}},
@@ -444,6 +458,11 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                   if (v.target.obj.a.type.tag !== "list") {
                     throw new Error("Compiler's cursed, go home.");
                   }
+                  outputInits = outputInits.concat(oinits);
+                  outputInits = outputInits.concat(iinits);
+                  outputInits = outputInits.concat(ninits);
+                  outputClasses = outputClasses.concat(oclasses);
+                  outputClasses = outputClasses.concat(nclasses);
 
                   var noneCheck: IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(s.a, oval);
                   var lenVar = generateName("listLen");
@@ -458,6 +477,11 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                       offset: {a: {...ival.a, type: {tag: "number"}}, tag: "wasmint", value: 1}
                     }
                   };
+                  outputInits.push({
+                    name: lenVar,
+                    type: {tag: "number"},
+                    value: { a: {...nval.a, type: {tag: "number"}}, tag: "none" },
+                  });
                   var idxi32: IR.Expr<Annotation> = { a: {...ival.a, type: {tag: "number"}}, tag: "call", name: "$bignum_to_i32", arguments: [ival] } 
                   var idxi32Name = generateName("valname");
                   var setidxi32Name : IR.Stmt<Annotation> = {
@@ -466,6 +490,7 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                     name: idxi32Name,
                     value: idxi32
                   };
+                  outputInits.push({ a: ival.a, name: idxi32Name, type: ival.a.type, value: { tag: "none" } });
                   var boundsCheckStmt: IR.Stmt<Annotation> = ERRORS.flattenIndexOutOfBounds(s.a, {...ival.a, tag: "id", name: idxi32Name}, {a: {...ival.a, type: {tag: "number"}}, tag: "id", name: lenVar});
 
                   pushStmtsToLastBlock(blocks, ...ostmts, noneCheck, ...istmts, ...nstmts, lenStmt, setidxi32Name, boundsCheckStmt);
@@ -478,8 +503,11 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
                     right: {a: {...ival.a, type: {tag: "number"}}, tag: "literal", value: {tag: "num", value: 2n}}
                   };
                   var [ixits, ixstmts, ixexpr, ixclasses] = flattenExprToVal(indexAdd, blocks, env);
+                  outputInits = outputInits.concat(ixits);
+                  outputClasses = outputClasses.concat(ixclasses);
                   var idxi32Add: IR.Expr<Annotation> = { a: {...ixexpr.a, type: {tag: "number"}}, tag: "call", name: "$bignum_to_i32", arguments: [ixexpr] } 
                   var idxi32AddName = generateName("valname");
+                  outputInits.push({ a: ixexpr.a, name: idxi32AddName, type: ixexpr.a.type, value: { tag: "none" }});
                   var setidxi32AddName : IR.Stmt<Annotation> = {
                     tag: "assign",
                     a: ixexpr.a,
