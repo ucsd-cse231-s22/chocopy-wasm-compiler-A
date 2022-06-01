@@ -1,4 +1,4 @@
-import { assertPrint, assertRunTimeFail, assertTCFail, assertRepr } from './browser.test';
+import { assertPrint, assertRunTimeFail, assertTCFail, assertRepl } from './browser.test';
 
 export function test_print(n: bigint) {
     assertPrint("1_test_print", 

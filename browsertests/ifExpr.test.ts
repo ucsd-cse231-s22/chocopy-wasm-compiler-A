@@ -1,4 +1,4 @@
-import { assertPrint, assertRunTimeFail, assertTCFail, assertRepr } from './browser.test';
+import { assertPrint, assertRunTimeFail, assertTCFail, assertRepl } from './browser.test';
 
 describe("if-expr tests", () => {
   //Super Simple tests

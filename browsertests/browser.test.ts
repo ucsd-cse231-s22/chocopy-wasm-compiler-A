@@ -79,19 +79,6 @@ function reverseAutoComplete(source: string){
     return reversedString;
 }
 
-export async function assertFileUpload(name:string, source: string, expected: Array<string>) {
-    await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
-    await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
-    await driver.findElement(webdriver.By.id("load")).click(); 
-}
-
-export async function debug(name:string, source: string, expected: Array<string>) {
-    it(name, async function () {
-        //Send and run source
-        await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
-        await driver.findElement(webdriver.By.id("load")).click(); 
-    });
-}
 
 
 export async function assertPrint(name:string, source: string, expected: Array<string>) {
@@ -150,7 +137,7 @@ export async function assertRunTimeFail(name: string, source: string){
 
 
 // Currently repr do not support multiple lines. In the current implementation, it will directly be directly executed when the switch-line get pressed.
-export async function assertRepr(name: string, source: string, repls: Array<string>, expected: Array<Array<string>>){
+export async function assertRepl(name: string, source: string, repls: Array<string>, expected: Array<Array<string>>){
     it(name, async function () {
         expect(expected.length).to.deep.above(0);
         expect(repls.length+1).to.deep.eq(expected.length);

@@ -997,7 +997,7 @@
 // assertPrint("Case 14",`
 // test_dict : dict = {'gfg': [7, 6, 3], 'is': [2, 10, 3], 'best': [19, 4]}
 // res : dict = dict()
-// key : str = None:
+// key : str = None
 // for key in sorted(test_dict):
 //     res[key] = sorted(test_dict[key])
 // print(res)`, [`{‘best’: [4, 19], ‘gfg’: [3, 6, 7], ‘is’: [2, 3, 10]}`]);

@@ -1,4 +1,4 @@
-// import { assertPrint, assertRunTimeFail, assertTCFail, assertRepr } from './browser.test';
+// import { assertPrint, assertRunTimeFail, assertTCFail, assertRepl } from './browser.test';
 
 
 // describe("Simple browser tests", () => {
@@ -192,7 +192,7 @@
 // class Start(object):
 //   a : string = ""
 //   b : string = ""
-//   def set(self, a : string , b : string):
+//   def set1(self, a : string , b : string):
 //      self.a = a
 // 	 self.b = b
 //   def concatenate(self)-> str:
@@ -207,7 +207,7 @@
 //      return len(self.b)
 // A : Start = None
 // A = Start()
-// A.set("First","Second")
+// A.set1("First","Second")
 // print(A.concatenate())
 // print(A.RAfirst())
 // print(A.RBFirst())
@@ -421,9 +421,11 @@
 //   `);
 
 //   assertTCFail("List None Type", `
-// list1 : [int] = [1, 2]
-// list1 : [int] = list.sort(list1)
-// temp :int = list1[0]
+// list1 : [int] = None
+// temp : int = 0
+// list1 = [1, 2]
+// list1 = list1.sort(list1)
+// temp = list1[0]
 // print(temp)`);
 
 //     assertRepr("Simple repr", `print(123)`, [`print(456)`, `print(789)`], [["123"], ["456"], ["789"]])
@@ -433,7 +435,8 @@
 // print(A)`, [`A`, `print(A + 2)`,`A = A + 2`,`A`], [["50"], ["50"], ["52"],["52"]])
 
 //     assertRepr("Simple repr", `
-// A : [int] = [1,2,3]
+// A : [int] = None
+// A = [1,2,3]
 // s1 : int = 0
 // i : int = 0
 // j : int = 0

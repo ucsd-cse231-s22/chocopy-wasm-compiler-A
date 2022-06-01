@@ -1,4 +1,4 @@
-// import { assertPrint, assertRunTimeFail, assertTCFail, assertRepr } from './browser.test';
+// import { assertPrint, assertRunTimeFail, assertTCFail, assertRepl } from './browser.test';
 
 // // builtin-lib tests
 // describe("built-in library testes",()=>{
