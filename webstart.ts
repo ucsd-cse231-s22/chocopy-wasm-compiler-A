@@ -10,7 +10,7 @@ function stringify(typ: Type, arg: any) : string {
       return (arg as number).toString();
     case "bool":
       return (arg as boolean)? "True" : "False";
-    // convert from ASCII to Character
+      // convert from ASCII to Character
     case "str":
       return String.fromCharCode(arg as number);
     case "none":
@@ -24,9 +24,13 @@ function print(typ: Type, arg : number) : any {
   console.log("Logging from WASM: ", arg);
   if (typ.tag == "str") {
     //  start
-    if (arg == 256) {
+    if (arg == -1) {
       const elt = document.createElement("pre");
       document.getElementById("output").appendChild(elt);
+    }
+    //  end
+    else if (arg == -2) {
+
     }
     else {
       const elt: Element = document.getElementById("output").children[document.getElementById("output").children.length-1]
@@ -55,9 +59,15 @@ function webStart() {
 
     const memory = new WebAssembly.Memory({initial:10, maximum:100});
     const memoryModule = await fetch('memory.wasm').then(response =>
-      response.arrayBuffer()
-    ).then(bytes => 
-      WebAssembly.instantiate(bytes, { js: { mem: memory }, imports: {print_str: (arg: number) => print(STRING, arg)} })
+        response.arrayBuffer()
+    ).then(bytes =>
+        WebAssembly.instantiate(bytes, { js: { mem: memory }, imports: {} })
+    );
+
+    const stringsModule = await fetch('strings.wasm').then(response =>
+        response.arrayBuffer()
+    ).then(bytes =>
+        WebAssembly.instantiate(bytes, { js: { mem: memory }, imports: {print_str: (arg: number) => print(STRING, arg)}, libmemory: memoryModule.instance.exports })
     );
 
     var importObject = {
@@ -73,6 +83,7 @@ function webStart() {
       },
       errors: importObjectErrors,
       libmemory: memoryModule.instance.exports,
+      strmemory: stringsModule.instance.exports,
       memory_values: memory,
       js: {memory: memory}
     };

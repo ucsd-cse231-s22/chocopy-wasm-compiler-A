@@ -26,7 +26,7 @@ export function PyBool(b: boolean): Value<Annotation> {
 export function PyString(s: string): Value<Annotation> {
   const a = []
   a.push(s)
-  return { tag: "str", value: a, length: s.length};
+  return { tag: "str", value: a};
 }
 
 
