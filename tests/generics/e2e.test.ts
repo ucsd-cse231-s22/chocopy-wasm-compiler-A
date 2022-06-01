@@ -365,15 +365,13 @@ describe('e2e tests to check generics', () => {
     class Iterator(Generic[T]):
       v : T = __ZERO__
       def hasnext(self: Iterator[T]) -> bool:
-        1 // 0
         return False
       
       def next(self: Iterator[T]) -> T:
-        1 // 0
         return self.v
 
       def reset(self: Iterator[T]):
-        1 // 0     
+        pass
 
     class Range(Generic[T], Iterator[int]):
       min: int = 0
@@ -413,15 +411,13 @@ describe('e2e tests to check generics', () => {
     class Iterator(Generic[T]):
       v : T = __ZERO__
       def hasnext(self: Iterator[T]) -> bool:
-        1 // 0
         return False
       
       def next(self: Iterator[T]) -> T:
-        1 // 0
         return self.v
 
       def reset(self: Iterator[T]):
-        1 // 0     
+        pass
 
       def map(self: Iterator[T], f: Callable[[T], T]) -> MapIterator[T]:
         iter : MapIterator[T] = None

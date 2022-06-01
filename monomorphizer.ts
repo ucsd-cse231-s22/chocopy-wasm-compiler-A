@@ -1,5 +1,5 @@
 import { Annotation, Class, Expr, Literal, Parameter, Program, Stmt, Type, VarInit, Callable, FunDef } from './ast';
-import { BOOL, CALLABLE, CLASS, NONE, NUM, TYPEVAR } from './utils';
+import { BOOL, CALLABLE, CLASS, LIST, NONE, NUM, TYPEVAR } from './utils';
 
 export type GlobalMorphEnv = {
     classesInx: Map<string, number>,
@@ -32,6 +32,9 @@ export function resolveZero(type: Type, a: Annotation) : Literal<Annotation> {
             return { a: { ...a, type: NUM}, tag: "num", value: 0n };
         case "bool":
             return { a: { ...a, type: BOOL}, tag: "bool", value: false };
+        case "empty":
+        case "list":
+            return { a: { ...a, type: NONE}, tag: "none" };
         // TODO: should the annotation type preserve the original class/callable type ?
         case "class":
             return { a: { ...a, type: NONE}, tag: "none" };
@@ -101,7 +104,9 @@ export function processFuncCall(genv: GlobalMorphEnv, expr: Expr<Annotation>, pr
             });
             const mInits = func.inits.map(init => {
                 init.type = concretizeGenericTypes(init.type, genv);
-                init.value = resolveZero(init.type, init.a);
+                if(init.value.tag === "zero") {
+                  init.value = resolveZero(init.type, init.a);
+                }
                 return init;
             });
 
@@ -345,7 +350,11 @@ export function getCanonicalType(t: Type) : Type {
     case "bool":
     case "none":
     case "either":
+    case "empty":
       return t;
+    case "list":
+      const citemType = getCanonicalType(t.itemType);
+      return LIST(citemType);
     case "class":
       return CLASS(getCanonicalTypeName(t));
     case "callable":
@@ -353,7 +362,7 @@ export function getCanonicalType(t: Type) : Type {
       const cret = getCanonicalType(t.ret);
       return CALLABLE(cparams, cret);
     default:
-      throw new Error(`Invalid State Exception : unexpected type passed as a generic type ${t.tag}`);
+      return t;
   }
 }
 
@@ -363,7 +372,11 @@ export function processType(t: Type, classes: Array<Class<Annotation>>, genv: Gl
     case "bool":
     case "none":
     case "either":
+    case "empty":
       return t;
+    case "list":
+      const citemType = processType(t.itemType, classes, genv, prog);
+      return LIST(citemType);
     case "class":
       if(t.name === 'object') {
         return t;
@@ -389,7 +402,7 @@ export function processType(t: Type, classes: Array<Class<Annotation>>, genv: Gl
       const cret = processType(t.ret, classes, genv, prog);
       return CALLABLE(cparams, cret);
     default:
-      throw new Error(`Invalid State Exception : unexpected type passed as a generic type ${t.tag}`);
+      return t;
   }
 }
 

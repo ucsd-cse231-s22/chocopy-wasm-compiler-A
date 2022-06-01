@@ -1,6 +1,5 @@
-import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, ClassT, Callable, TypeVar, Parameter, DestructuringAssignment, Assignable, AssignVar } from './ast';
+import { Annotation, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, ClassT, Callable, TypeVar, Parameter, DestructuringAssignment, Assignable, AssignVar } from './ast';
 import { NUM, BOOL, NONE, CLASS, CALLABLE, TYPEVAR, LIST } from './utils';
-import { emptyEnv } from './compiler';
 import { fullSrcLine, drawSquiggly } from './errors';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
@@ -607,7 +606,11 @@ export function resolveTypeTypeParams(env: string[], type: Type) : Type {
     case "bool":
     case "none":
     case "either":
+    case "empty":
       return type;
+    case "list":
+      let ritemType = resolveTypeTypeParams(env, type.itemType);
+    return LIST(ritemType);
     case "class":
       if(env.indexOf(type.name) !== -1) {
         // TODO: throw an error here if type-params are not empty
@@ -1119,7 +1122,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         
         if (newFn.a.type.params.length === expr.arguments.length &&
           newFn.a.type.params.every((param, i) => checkAssignabilityOfFuncCallLocalParams(env, tenv, param, tArgs[i].a.type))) {
-          return {...expr, a: {...expr.a, type: newFn.a.type.ret}, arguments: tArgs, fn: newFn};
+          let ret = locals.topLevel && newFn.a.type.ret.tag === "typevar" ? tenv.get(newFn.a.type.ret.name) : newFn.a.type.ret;
+          return {...expr, a: {...expr.a, type: ret}, arguments: tArgs, fn: newFn};
         } else {
           const tArgsStr = tArgs.map(tArg => bigintSafeStringify(tArg.a.type.tag)).join(", ");
           const argTypesStr = newFn.a.type.params.map(argType => bigintSafeStringify(argType.tag)).join(", ");

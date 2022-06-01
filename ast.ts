@@ -21,7 +21,6 @@ export type Type =
   | {tag: "bool"}
   | {tag: "none"}
   | ClassT
-  //| {tag: "class", name: string, params: Array<Type> }
   | {tag: "either", left: Type, right: Type }
   | {tag: "typevar", name: string }
   | Callable
@@ -131,4 +130,3 @@ export function stringifyOp(op: Op): string {
 export type Value<A> =
     Literal<A>
   | { a?: A, tag: "object", name: string, address: number}
-  
