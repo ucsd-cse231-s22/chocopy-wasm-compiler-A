@@ -60,7 +60,8 @@ jobs:
         run: |
           npm install
           make
-          npm test
+          rm tests/bignum-test.test.ts
+          npm testWindows
 
   BrowserTest:
     # The type of runner that the job will run on
