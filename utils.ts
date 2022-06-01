@@ -1,4 +1,4 @@
-import { Value, Type, Annotation, Literal } from "./ast";
+import { Value, Type, Annotation, Literal, ClassT } from "./ast";
 
 export const bigMath = {
   // https://stackoverflow.com/a/64953280
@@ -55,6 +55,20 @@ export const bigMath = {
   gt(value1: bigint, value2: bigint) {
     return value1 > value2
   },
+}
+
+export function des_check(hashNext: boolean) : boolean {
+  if(hashNext === false) {
+    throw new Error(`invalid assignment`);
+  }
+  return hashNext;
+}
+
+export function bignum_to_i32(addr: number, loader: WebAssembly.ExportValue) : number {
+  const bignum = load_bignum(addr, loader);
+  if(bignum > 2**32 || bignum < -(2**32))
+    throw new Error("bignum is too large for an i32");
+  return Number(bignum);
 }
 
 export function binop_bignum(args: number[], builtin: Function, libmem: WebAssembly.Exports): number {
@@ -139,20 +153,20 @@ export function builtin_bignum(args: number[], builtin: Function, libmem: WebAss
   return save_bignum(rslt, libmem);
 }
 
-export function PyValue(typ: Type, result: number): Value<Annotation> {
+export function PyValue(typ: Type, result: bigint): Value<Annotation> {
   switch (typ.tag) {
     case "number":
       return PyInt(result);
     case "bool":
       return PyBool(Boolean(result));
     case "class":
-      return PyObj(typ.name, result);
+      return PyObj(typ.name, Number(result));
     case "none":
       return PyNone();
   }
 }
 
-export function PyInt(n: number): Value<Annotation> {
+export function PyInt(n: bigint): Value<Annotation> {
   return { tag: "num", value: n };
 }
 
@@ -176,7 +190,9 @@ export function PyZero(): Literal<Annotation> {
 export const NUM : Type = {tag: "number"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
-export function CLASS(name : string, params: Array<Type> = []) : Type {return {tag: "class", name, params}};
+export function CLASS(name : string, params: Array<Type> = []) : ClassT {return {tag: "class", name, params}};
+export function LIST(itemType : Type) : Type {return {tag: "list", itemType}};
+export function EMPTY(): Type {return {tag: "empty"}};
 export function TYPEVAR(name: string) : Type {return {tag: "typevar", name}};
 export function CALLABLE(params: Array<Type>, ret: Type) : Type {return {tag: "callable", params, ret}};
 

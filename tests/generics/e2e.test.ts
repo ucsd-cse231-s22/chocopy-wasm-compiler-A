@@ -270,4 +270,349 @@ describe('e2e tests to check generics', () => {
     print(g(f))
     `
     assertPrint('Generics with closures', prog10, ["6"]);
+
+
+    const prog11 = `
+    T = TypeVar('T')
+
+    class SuperBox(Generic[T]):
+      sv: T = __ZERO__ 
+
+    class Box(Generic[T], SuperBox[T]):
+      v: T = __ZERO__
+
+
+    b : Box[int] = None
+    b = Box()
+    b.sv = 1000
+    print(b.sv)
+    b.v = 50
+    print(b.v)
+    `
+    assertPrint('Generic superclass field access - 0', prog11, ["1000", "50"]);
+
+    const prog12 = `
+    T = TypeVar('T')
+    U = TypeVar('U')
+
+    class SuperBox(Generic[T, U]):
+      sv1: T = __ZERO__ 
+      sv2: U = __ZERO__ 
+
+    class Box(Generic[T, U], SuperBox[U, T]):
+      v: T = __ZERO__
+
+
+    b : Box[int, bool] = None
+    b = Box()
+    b.sv1 = True
+    b.sv2 = 1000
+    print(b.sv2)
+    print(b.sv1)
+    b.v = 50
+    print(b.v)
+    `
+    assertPrint('Generic superclass field access - 1', prog12, ["1000", "True", "50"]);
+
+    const prog13= `
+    T = TypeVar('T')
+    U = TypeVar('U')
+    V = TypeVar('V')
+
+    class SuperSuperBox(Generic[V]):
+      ssv: V = __ZERO__
+
+    class SuperBox(Generic[T, V], SuperSuperBox[V]):
+      sv: T = __ZERO__ 
+
+    class Box(Generic[T, U, V], SuperBox[U, T]):
+      v: T = __ZERO__
+
+
+    b : Box[int, bool, bool] = None
+    b = Box()
+    print(b.ssv)
+    print(b.sv)
+    print(b.v)
+    `
+    assertPrint('Generic superclass field access - 2', prog13, ["0", "False", "0"]);
+
+    const prog14 = `
+    T = TypeVar('T')
+    U = TypeVar('U')
+
+    class SuperBox(Generic[T, U]):
+      sv1: T = __ZERO__ 
+      sv2: U = __ZERO__ 
+
+    class Box(Generic[T], SuperBox[bool, T]):
+      v: T = __ZERO__
+
+    b : Box[int] = None
+    b = Box()
+    b.sv1 = True
+    b.sv2 = 1000
+    print(b.sv2)
+    print(b.sv1)
+    b.v = 50
+    print(b.v)
+    `
+    assertPrint('Generic superclass field access - 3', prog14, ["1000", "True", "50"]);
+
+    const prog15 = `
+    T = TypeVar('T')
+
+    class Iterator(Generic[T]):
+      v : T = __ZERO__
+      def hasnext(self: Iterator[T]) -> bool:
+        return False
+      
+      def next(self: Iterator[T]) -> T:
+        return self.v
+
+      def reset(self: Iterator[T]):
+        pass
+
+    class Range(Generic[T], Iterator[int]):
+      min: int = 0
+      max: int = 0
+      current: int = 0
+
+      def new(self: Range[T], min: int, max: int):
+        self.min = min
+        self.max = max
+        self.current = self.min
+
+      def hasnext(self: Range[T]) -> bool:
+        return self.current < self.max
+
+      def next(self: Range[T]) -> int:
+        v: int = 0
+        v = self.current
+        self.current = self.current + 1
+        return v
+
+      def reset(self: Range[T]):
+        self.current = self.min
+
+    i : int = 0
+    r : Range[int] = None
+    r = Range()
+    r.new(0, 5)
+
+    for i in r:
+      print(i)
+    `
+    assertPrint('Generic iterator interface - 0', prog15, ["0", "1", "2", "3", "4"]);
+
+    const prog16 = `
+    T = TypeVar('T')
+
+    class Iterator(Generic[T]):
+      v : T = __ZERO__
+      def hasnext(self: Iterator[T]) -> bool:
+        return False
+      
+      def next(self: Iterator[T]) -> T:
+        return self.v
+
+      def reset(self: Iterator[T]):
+        pass
+
+      def map(self: Iterator[T], f: Callable[[T], T]) -> MapIterator[T]:
+        iter : MapIterator[T] = None
+        iter = MapIterator()
+        iter.new(self, f)
+        return iter
+
+    class MapIterator(Generic[T], Iterator[T]):
+      iter: Iterator[T] = None
+      f: Callable[[T], T] = None
+
+      def new(self: MapIterator[T], iter: Iterator[T], f: Callable[[T], T]):
+        self.iter = iter
+        self.f = f
+
+      def hasnext(self: MapIterator[T]) -> bool:
+        return self.iter.hasnext()
+
+      def next(self: MapIterator[T]) -> T:
+        f : Callable[[T], T] = None
+        f = self.f
+        return f(self.iter.next())
+
+      def reset(self: MapIterator[T]):
+        self.iter.reset()
+
+    class Range(Iterator[int]):
+      min: int = 0
+      max: int = 0
+      current: int = 0
+
+      def new(self: Range, min: int, max: int):
+        self.min = min
+        self.max = max
+        self.current = self.min
+
+      def hasnext(self: Range) -> bool:
+        return self.current < self.max
+
+      def next(self: Range) -> int:
+        v: int = 0
+        v = self.current
+        self.current = self.current + 1
+        return v
+
+      def reset(self: Range):
+        self.current = self.min
+
+    f : Callable[[int], int] = None
+    i : int = 0
+    r : Range = None
+    it : Iterator[int] = None
+    r = Range()
+    r.new(0, 5)
+    f = mklambda(Callable[[int], int], lambda x: x * 10)
+    it = r.map(f)
+
+    for i in it:
+      print(i)
+    `
+    assertPrint('Generic iterator interface - 1', prog16, ["0", "10", "20", "30", "40"]);
+
+    const prog17 = `
+    T = TypeVar('T')
+    U = TypeVar('U')
+
+    class Iterator(Generic[T]):
+      v : T = __ZERO__
+      def hasnext(self: Iterator[T]) -> bool:
+        return False
+      
+      def next(self: Iterator[T]) -> T:
+        return self.v
+
+      def reset(self: Iterator[T]):
+        pass
+
+      def map(self: Iterator[T], f: Callable[[T], T]) -> MapIterator[T]:
+        iter : MapIterator[T] = None
+        iter = MapIterator()
+        iter.new(self, f)
+        return iter
+      
+      def filter(self: Iterator[T], f: Callable[[T], bool]) -> FilterIterator[T]:
+        iter : FilterIterator[T] = None
+        iter = FilterIterator()
+        iter.new(self, f)
+        return iter
+
+    class FilterIterator(Generic[T], Iterator[T]):
+      iter: Iterator[T] = None
+      f: Callable[[T], bool] = None
+      el: T = __ZERO__
+
+      def new(self: FilterIterator[T], iter: Iterator[T], f: Callable[[T], bool]):
+        self.iter = iter
+        self.f = f
+
+      def hasnext(self: FilterIterator[T]) -> bool:
+        el: T = __ZERO__
+        f : Callable[[T], bool] = None
+        f = self.f
+        while self.iter.hasnext():
+            el = self.iter.next()
+            if f(el):
+              self.el = el
+              return True
+            else:
+              continue
+
+        return False
+
+      def next(self: FilterIterator[T]) -> T:
+        return self.el
+
+      def reset(self: FilterIterator[T]):
+        self.iter.reset()
+
+    class MapIterator(Generic[T], Iterator[T]):
+      iter: Iterator[T] = None
+      f: Callable[[T], T] = None
+
+      def new(self: MapIterator[T], iter: Iterator[T], f: Callable[[T], T]):
+        self.iter = iter
+        self.f = f
+
+      def hasnext(self: MapIterator[T]) -> bool:
+        return self.iter.hasnext()
+
+      def next(self: MapIterator[T]) -> T:
+        f : Callable[[T], T] = None
+        f = self.f
+        return f(self.iter.next())
+
+      def reset(self: MapIterator[T]):
+        self.iter.reset()
+
+    class Range(Iterator[int]):
+      min: int = 0
+      max: int = 0
+      current: int = 0
+
+      def new(self: Range, min: int, max: int):
+        self.min = min
+        self.max = max
+        self.current = self.min
+
+      def hasnext(self: Range) -> bool:
+        return self.current < self.max
+
+      def next(self: Range) -> int:
+        v: int = 0
+        v = self.current
+        self.current = self.current + 1
+        return v
+
+      def reset(self: Range):
+        self.current = self.min
+
+    f1 : Callable[[int], bool] = None
+    f2 : Callable[[int], int] = None
+    i : int = 0
+    r : Range = None
+    it : Iterator[int] = None
+    r = Range()
+    r.new(0, 5)
+    f1 = mklambda(Callable[[int], bool], lambda x: x % 2 == 0)
+    f2 = mklambda(Callable[[int], int], lambda x: x + 10 )
+    it = r.filter(f1).map(f2)
+
+    for i in it:
+      print(i)
+    `
+    assertPrint('Generic iterator interface - 2', prog17, ["10", "12", "14"]);
 })
+
+describe('Generics and Lists - e2e tests', () => {
+  const prog0 = `
+  T = TypeVar('T')
+
+  class ListGen(Generic[T]):
+    l : [T] = None
+
+    def index(self: ListGen[T], i: int) -> T:
+      e : T = __ZERO__
+      l : [T] = None
+      l = self.l
+      e = l[i]
+      return e
+
+  o : ListGen[bool] = None
+  o = ListGen()
+  o.l = [True, False, True]
+
+  print(o.index(1))
+  `
+  assertPrint('Generics and Lists - 0', prog0, ["False"]);
+});

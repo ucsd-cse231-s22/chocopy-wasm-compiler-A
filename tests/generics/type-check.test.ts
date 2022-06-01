@@ -1,5 +1,6 @@
 import "mocha";
 import { expect } from "chai";
+import { assertTCFail, assertTC, assertPrint } from '../asserts.test';
 import {augmentTEnv, emptyGlobalTypeEnv, tc, resolveClassTypeParams} from  '../../type-check';
 import { Annotation, Program, Type, TypeVar, BinOp } from '../../ast';
 import { NONE, NUM, BOOL, CLASS, TYPEVAR, PyZero, PyNone, PyInt } from '../../utils';
@@ -49,6 +50,7 @@ describe('Generics Type-Checker Tests', () => {
           fields: [{name: 'x', type: CLASS('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
           methods: [],
           typeParams: ['T'],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -57,12 +59,13 @@ describe('Generics Type-Checker Tests', () => {
 
     const newEnv = augmentTEnv(env, program);
 
-    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
+    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0], 'test');
     expect(resolvedCls).to.deep.equal({
       name: 'Box',
       fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
       methods: [],
       typeParams: ['T'],
+      super: new Map(),
       a: {eolLoc: {row: 0, col: 0, srcIdx: 0}},
     });
 
@@ -87,6 +90,7 @@ describe('Generics Type-Checker Tests', () => {
           ],
           methods: [],
           typeParams: ['T'],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ]
@@ -94,7 +98,7 @@ describe('Generics Type-Checker Tests', () => {
 
     const newEnv = augmentTEnv(env, program);
 
-    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
+    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0], 'test');
     expect(resolvedCls).to.deep.equal({
       name: 'Box',
       fields: [
@@ -103,6 +107,7 @@ describe('Generics Type-Checker Tests', () => {
       ],
       methods: [],
       typeParams: ['T'],
+      super: new Map(),
       a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
 
@@ -137,14 +142,15 @@ describe('Generics Type-Checker Tests', () => {
               children: [],
             },
           ],
-          typeParams: ['T']
+          typeParams: ['T'],
+          super: new Map()
         }
       ]
     };
 
     const newEnv = augmentTEnv(env, program);
 
-    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
+    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0], 'test');
     expect(resolvedCls).to.deep.equal({
       name: 'Box',
       fields: [
@@ -161,7 +167,8 @@ describe('Generics Type-Checker Tests', () => {
           children: [],
         },
       ],
-      typeParams: ['T']
+      typeParams: ['T'],
+      super: new Map()
     });
 
     const [fieldsTy, methodsTy, _] = newEnv.classes.get('Box');
@@ -198,14 +205,15 @@ describe('Generics Type-Checker Tests', () => {
               children: [],
             },
           ],
-          typeParams: ['T']
+          typeParams: ['T'],
+          super: new Map()
         }
       ]
     };
 
     const newEnv = augmentTEnv(env, program);
 
-    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
+    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0], 'test');
     expect(resolvedCls).to.deep.equal({
       name: 'Box',
       fields: [
@@ -224,7 +232,8 @@ describe('Generics Type-Checker Tests', () => {
           children: [],
         },
       ],
-      typeParams: ['T']
+      typeParams: ['T'],
+      super: new Map()
     });
 
     const [fieldsTy, methodsTy, _] = newEnv.classes.get('Box');
@@ -247,6 +256,7 @@ describe('Generics Type-Checker Tests', () => {
             { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -267,6 +277,7 @@ describe('Generics Type-Checker Tests', () => {
             { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [TYPEVAR('T')]) }], ret: NONE, inits: [], body: [], nonlocals:       [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
           ],
           typeParams: ['T'],
+          super: new Map(),
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         } 
       ],
@@ -294,6 +305,7 @@ describe('Generics Type-Checker Tests', () => {
             { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [] , nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
           ],
           typeParams: ['T'],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -318,6 +330,7 @@ describe('Generics Type-Checker Tests', () => {
             { name: "__init__", parameters: [{ name: "self", type: CLASS('Box', [CLASS('T')]) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [] }
           ],
           typeParams: ['T'],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         },
       ],
@@ -345,6 +358,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -369,6 +383,7 @@ describe('Generics Type-Checker Tests', () => {
             a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
+          super: new Map(),
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         } 
       ],
@@ -399,6 +414,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -426,6 +442,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
           ],
           typeParams: ['T'],
+          super: new Map(),
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}},
         } 
       ],
@@ -461,6 +478,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -491,7 +509,7 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
@@ -520,7 +538,7 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: 'binop', op: BinOp.Is, left: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, right: { tag: "literal", value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
@@ -531,6 +549,7 @@ describe('Generics Type-Checker Tests', () => {
     expect(() => tc(env, program)).to.throw();
   });
 
+  var desAnno : Annotation = { type: { name: "Box", params: [{ tag: "number" }], tag: "class"} };
   it('should typecheck generic class object creation', () => {
     let env = emptyGlobalTypeEnv();
     let program: Program<Annotation> = {
@@ -548,14 +567,23 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", 
+          destruct: {
+            isSimple: true,
+            vars: [
+              { target: { tag: "id", name: "b" },
+                ignorable: false,
+                star: false }]
+        },
+        value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, 
+        a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
@@ -576,14 +604,23 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", destruct: {
+          a: desAnno, 
+          isSimple: true,
+          vars: [
+            { a: desAnno,
+              target: { tag: "id", name: "b", a: desAnno },
+              ignorable: false,
+              star: false }]
+        }, 
+        value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
@@ -613,15 +650,26 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
-        { tag: "field-assign", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "literal", value: {tag: "num", value: 10}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", 
+          destruct: {
+            a: desAnno,
+            isSimple: true,
+            vars: [
+              { a: desAnno,
+                target: { tag: "id", name: "b", a: desAnno },
+                ignorable: false,
+                star: false }]
+        },
+        value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, 
+        a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "field-assign", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "literal", value: {tag: "num", value: "10" as any}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
@@ -642,15 +690,24 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
-        { tag: "field-assign", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "literal", value: {tag: "num", value: 10}, a: {type: NUM, eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", destruct: {
+          a: desAnno,
+          isSimple: true,
+          vars: [
+            { a: desAnno,
+              target: { tag: "id", name: "b", a: desAnno },
+              ignorable: false,
+              star: false }]
+        }, 
+        value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "field-assign", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "literal", value: {tag: "num", value: "10" as any}, a: {type: NUM, eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
@@ -681,16 +738,39 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
-        { name: "n", type: NUM, value: {tag: "num", value: 0} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { name: "n", type: NUM, value: {tag: "num", value: "0" as any} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
-        { tag: "assign", name: "n", value: {tag: "lookup", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", 
+          destruct: {
+            a: desAnno,
+            isSimple: true,
+            vars: [
+              { a: desAnno,
+                target: { tag: "id", name: "b", a: desAnno, },
+                ignorable: false,
+                star: false }]
+          },
+        value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, 
+        a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", 
+          destruct: {
+            a: { type: { tag : "number" } },
+            isSimple: true,
+            vars: [
+              { a: { type: { tag : "number" } },
+                target: { tag: "id", name: "n", a: { type: { tag : "number" } }, },
+                ignorable: false,
+                star: false }]
+          },
+        value: {tag: "lookup", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
@@ -711,17 +791,35 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'],
+          typeParams: ['T'], super: new Map(),
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
-        { name: "n", type: NUM, value: {tag: "num", value: 0} , a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { name: "n", type: NUM, value: {tag: "num", value: "0" as any} , a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
-        { tag: "assign", name: "n", value: {tag: "lookup", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: NUM, eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", destruct: {
+          a: desAnno,
+          isSimple: true,
+          vars: [
+            { a: desAnno,
+              target: { tag: "id", name: "b", a: desAnno, },
+              ignorable: false,
+              star: false }]
+        }, 
+        value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", destruct: {
+          a: { type: { tag : "number" } },
+          isSimple: true,
+          vars: [
+            { a: { type: { tag : "number" } },
+              target: { tag: "id", name: "n", a: { type: { tag : "number" } }, },
+              ignorable: false,
+              star: false }]
+        }, 
+        value: {tag: "lookup", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: NUM, eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
@@ -751,16 +849,34 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
-        { name: "n", type: NUM, value: {tag: "num", value: 0}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+        { name: "n", type: NUM, value: {tag: "num", value: "0" as any}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
-        { tag: "assign", name: "n", value: {tag: "method-call", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, method: "get", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", 
+          destruct: {
+            isSimple: true,
+            vars: [
+              { target: { tag: "id", name: "b" },
+                ignorable: false,
+                star: false }]
+          },
+        value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, 
+        a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", 
+          destruct: {
+            isSimple: true,
+            vars: [
+              { target: { tag: "id", name: "n" },
+                ignorable: false,
+                star: false }]
+        },
+        value: {tag: "method-call", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, method: "get", arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, 
+        a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
@@ -781,16 +897,34 @@ describe('Generics Type-Checker Tests', () => {
               {tag: "return", value: {tag: "lookup", obj: {tag: "id", name: "self", a: {type: CLASS('Box', [TYPEVAR('T')]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: TYPEVAR('T'), eolLoc: {row: 0, col: 0, srcIdx: 0}}}
             ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
-          typeParams: ['T'], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
+          typeParams: ['T'], super: new Map(), a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
       inits: [
-        { name: "n", type: NUM, value: {tag: "num", value: 0}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+        { name: "n", type: NUM, value: {tag: "num", value: "0" as any}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
-        { tag: "assign", name: "n", value: {tag: "method-call", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, method: "get", arguments: [], a: {type: NUM, eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", destruct: {
+          a: desAnno,
+          isSimple: true,
+          vars: [
+            { a: desAnno,
+              target: { tag: "id", name: "b", a: desAnno },
+              ignorable: false,
+              star: false }]
+        }, 
+        value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", destruct: {
+          a: { type: { tag: "number" } },
+          isSimple: true,
+          vars: [
+            { a: { type: { tag: "number" } },
+              target: { tag: "id", name: "n", a: { type: { tag: "number" } } },
+              ignorable: false,
+              star: false }]
+        }, 
+        value: {tag: "method-call", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, method: "get", arguments: [], a: {type: NUM, eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
@@ -803,6 +937,7 @@ describe('Generics Type-Checker Tests', () => {
     expect(globals).to.deep.equal(CLASS('Box', [NUM]));
   });
 
+  var desAnnoComplex : Annotation = { type: { name: "Box", params: [{ name: "Box", params: [{ tag: "number" }], tag: "class" }], tag: "class"} };
   it('should typecheck generic class object field assignment with generic type constructor', () => {
     let env = emptyGlobalTypeEnv();
     let program: Program<Annotation> = {
@@ -821,6 +956,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
+          super: new Map(),
           a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -828,7 +964,14 @@ describe('Generics Type-Checker Tests', () => {
         { name: "b", type: CLASS('Box', [CLASS('Box', [NUM])]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", destruct: {
+          isSimple: true,
+          vars: [
+            { target: { tag: "id", name: "b" },
+              ignorable: false,
+              star: false }]
+          }, 
+        value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
         { tag: "field-assign", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "call", fn: {tag: "id", name: "Box"}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -851,6 +994,7 @@ describe('Generics Type-Checker Tests', () => {
             ], nonlocals: [], children: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} }
           ],
           typeParams: ['T'],
+          super: new Map(),
           a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
         }
       ],
@@ -858,7 +1002,16 @@ describe('Generics Type-Checker Tests', () => {
         { name: "b", type: CLASS('Box', [CLASS('Box', [NUM])]), value: {tag: "none"}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
-        { tag: "assign", name: "b", value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [CLASS('Box', [NUM])]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "assign", destruct: {
+          a: desAnnoComplex,
+          isSimple: true,
+          vars: [
+            { a: desAnnoComplex,
+              target: { tag: "id", name: "b", a: desAnnoComplex },
+              ignorable: false,
+              star: false }]
+        },
+        value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [CLASS('Box', [NUM])]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
         { tag: "field-assign", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [CLASS('Box', [NUM])]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
@@ -871,4 +1024,185 @@ describe('Generics Type-Checker Tests', () => {
     const globals = tcGlobalEnv.globals.get('b');
     expect(globals).to.deep.equal(CLASS('Box', [CLASS('Box', [NUM])]));
   })
+});
+
+describe('Generics/Inheritance introp tests', () => {
+    assertTC('should type-check class with a generic superclass', `
+      T = TypeVar('T')
+      class SuperBox(Generic[T]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T], SuperBox[T]):
+        v: T = __ZERO__
+    `, NONE);
+
+    assertTC('should type-check class with a generic superclass with concrete instantiation - 1', `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      class SuperBox(Generic[T, U]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T], SuperBox[int, bool]):
+        v: T = __ZERO__
+    `, NONE);
+
+    assertTCFail('should check that generic superclass has correct number of type-arguments', `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      class SuperBox(Generic[T, U]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T], SuperBox[T]):
+        v: T = __ZERO__
+    `);
+
+    assertTCFail('should check that generic superclass arguments are valid classes', `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      class SuperBox(Generic[T, U]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T], SuperBox[int, Something]):
+        v: T = __ZERO__
+    `);
+
+    assertTCFail('should check that generic superclass arguments use valid type-parameters as arguments', `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      class SuperBox(Generic[T, U]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T], SuperBox[U, int]):
+        v: T = __ZERO__
+    `);
+
+    assertTC(`should type-check generic superclass field lookup - 0`, `
+      T = TypeVar('T')
+
+      class SuperBox(Generic[T]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T], SuperBox[T]):
+        v: T = __ZERO__
+
+
+      b : Box[int] = None
+      b = Box()
+      b.sv 
+    `, NUM);
+
+    assertTC(`should type-check generic superclass field lookup - 1`, `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      V = TypeVar('V')
+
+      class SuperSuperBox(Generic[V]):
+        ssv: V = __ZERO__
+
+      class SuperBox(Generic[T, V], SuperSuperBox[V]):
+        sv: T = __ZERO__ 
+
+      class Box(Generic[T, U, V], SuperBox[U, T]):
+        v: T = __ZERO__
+
+
+      b : Box[int, bool, bool] = None
+      b = Box()
+      b.ssv 
+    `, NUM);
+
+    assertTC(`should type-check generic superclass field lookup - 2`, `
+      T = TypeVar('T')
+
+      class SuperBox(Generic[T]):
+        sv: T = __ZERO__ 
+
+      class Box(SuperBox[int]):
+        v: bool = False
+
+
+      b : Box = None
+      b = Box()
+      b.sv 
+    `, NUM);
+
+    assertTC(`should type-check generic superclass method call - 0`, `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      V = TypeVar('V')
+
+      class SuperBox(Generic[T, V]):
+        sv: T = __ZERO__ 
+
+        def foo(self: SuperBox[T, V], t: T, v: V) -> T:
+          self.sv = t
+          return t
+
+      class Box(Generic[T, U, V], SuperBox[U, T]):
+        v: T = __ZERO__
+
+        def bar(self: Box[T, U, V], u: U, v: V) -> U:
+          return u
+
+
+      b : Box[int, bool, bool] = None
+      b = Box()
+      b.foo(True, 5) 
+    `, BOOL);
+
+    assertTC(`should type-check generic superclass method call - 1`, `
+      T = TypeVar('T')
+      U = TypeVar('U')
+      V = TypeVar('V')
+
+      class SuperBox(Generic[T, V]):
+        sv: T = __ZERO__ 
+
+        def foo(self: SuperBox[T, V], t: T, v: V) -> T:
+          self.sv = t
+          return t
+
+      class Box(Generic[T, U, V], SuperBox[U, T]):
+        v: T = __ZERO__
+
+        def bar(self: Box[T, U, V], u: U, v: V) -> U:
+          return u
+
+
+      b : Box[int, bool, bool] = None
+      b = Box()
+      b.foo(b.bar(True, False), 5) 
+    `, BOOL);
+
+    assertTCFail(`should type-check generic superclass-subclass assignability - 1`, `
+      T = TypeVar('T')
+
+      class SuperBox(Generic[T]):
+        sv: T = __ZERO__      
+
+      class Box(Generic[T], SuperBox[T]):
+        v: T = __ZERO__
+
+      sb: SuperBox[bool] = None
+      b: Box[int] = None
+
+      b = Box()
+      sb = b
+    `);
+
+    assertTCFail(`should type-check generic superclass-subclass assignability - 1`, `
+      T = TypeVar('T')
+
+      class SuperBox(Generic[T]):
+        sv: T = __ZERO__      
+
+      class Box(Generic[T], SuperBox[bool]):
+        v: T = __ZERO__
+
+      sb: SuperBox[int] = None
+      b: Box[int] = None
+
+      b = Box()
+      sb = b
+    `);
 });

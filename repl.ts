@@ -6,7 +6,7 @@ import { Program } from "./ir";
 import { optimizeProgram } from "./optimization";
 import { Value, Type, Annotation } from "./ast";
 import { parse } from "./parser";
-import { lowerProgram } from "./lower";
+import { lowerProgram, resetNameCounters } from "./lower";
 
 interface REPL {
   run(source : string) : Promise<any>;
@@ -20,6 +20,7 @@ export class BasicREPL {
   memory: any
   constructor(importObject : any) {
     this.importObject = importObject;
+    resetNameCounters();
     if(!importObject.js) {
       const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
       const view = new Int32Array(memory.buffer);
@@ -29,12 +30,12 @@ export class BasicREPL {
     this.currentEnv = {
       globals: new Map(),
       classes: new Map(),
-      classIndices: new Map(),
       functionNames: new Map(),
       locals: new Set(),
       labels: [],
       offset: 1,
-      vtableMethods: []
+      vtable: [],
+      classIndices: new Map(),
     };
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";

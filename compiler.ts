@@ -1,27 +1,29 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { Annotation, BinOp, Type, UniOp } from "./ast"
 import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
+import { equalType } from "./type-check";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, Map<string, [number, Value<Annotation>]>>;  
-  classIndices: Map<string, number>;
-  functionNames: Map<string, string>;
+  // class name    ->   field -> field offset, value, method -> method offset, super classes, super class method count
+  classes: Map<string, [Map<string, [number, Value<Annotation>]>, Map<string, number>, Map<string,Array<string>>, number]>;
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
-  vtableMethods: Array<[string, number]>;
+  vtable: Array<[string, number]>;
+  classIndices: Map<string, [number, number]>
+  functionNames: Map<string, string>;
 }
 
 export const emptyEnv : GlobalEnv = { 
   globals: new Map(), 
   classes: new Map(),
-  classIndices: new Map(), 
   functionNames: new Map(),
   locals: new Set(),
   labels: [],
   offset: 0,
-  vtableMethods: [] 
+  vtable: [],
+  classIndices: new Map(),
 };
 
 type CompileResult = {
@@ -29,6 +31,7 @@ type CompileResult = {
   functions: string,
   mainSource: string,
   newEnv: GlobalEnv
+  vtable: string,
 };
 
 export function makeLocals(locals: Set<string>) : Array<string> {
@@ -53,8 +56,17 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
-  const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
-  const allFuns = funs.concat(classes).join("\n\n");
+  const classesMethods : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
+
+  const allFuns = funs.join("\n\n");
+
+  const vtable = `
+  (table ${env.vtable.length} funcref)
+  (elem (i32.const 0) ${env.vtable.map(method => `${method[0]}`).join(" ")})
+  ${classesMethods.join("\n")}
+  `
+
+
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
   withDefines.labels = ast.body.map(block => block.label);
@@ -81,7 +93,8 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
     globals: globalNames,
     functions: allFuns,
     mainSource: allCommands.join("\n"),
-    newEnv: withDefines
+    newEnv: withDefines,
+    vtable: vtable,
   };
 }
 
@@ -173,13 +186,16 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       const argTyp = expr.a.type;
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
-      if (expr.name === "print" && argTyp === NUM) {
+      if (expr.name === "print" && equalType(argTyp, NUM)) {
         callName = "print_num";
-      } else if (expr.name === "print" && argTyp === BOOL) {
+      } else if (expr.name === "print" && equalType(argTyp, BOOL)) {
         callName = "print_bool";
-      } else if (expr.name === "print" && argTyp === NONE) {
+      } else if (expr.name === "print" && equalType(argTyp, NONE)) {
         callName = "print_none";
+      } else if (expr.name === "len") {
+        return [...argStmts, "(i32.const 0)", "call $load"];
       }
+
       return argStmts.concat([`(call $${callName})`]);
 
     case "builtin2":
@@ -187,15 +203,25 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       const rightStmts = codeGenValue(expr.right, env);
       return [...leftStmts, ...rightStmts, `(call $${expr.name})`]
 
+    case "call_indirect":
+      var valStmts : Array<string> = codeGenExpr(expr.fn, env);
+      var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      const methodOffsetCode = codeGenValue(expr.methodOffset, env).join("");
+      return [
+        ...fnStmts, 
+        ...valStmts, 
+        methodOffsetCode,
+        `(i32.add)`,
+        `(call_indirect (type ${expr.name}))`
+      ];
+
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      if(expr.name === "len"){
+        return [...valStmts, "(i32.const 0)", "call $load"];
+      }
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
-
-    case "call_indirect":
-      var valStmts = codeGenExpr(expr.fn, env);
-      var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
-      return [...fnStmts, ...valStmts, `(call_indirect (type ${makeWasmFunType(expr.arguments.length)}))`];
 
     case "alloc":
       return [
@@ -217,14 +243,14 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
       var x = BigInt(val.value) // for division
       if (x === BigInt(0))
         return ["(i32.const 0)"]
+      const neg = x < 0
+      if (neg)
+        x *= BigInt(-1)
       var n = 0
       var digits : Number[] = []
-      while(x != BigInt(0)) {
-          if (x < 0) {
-            x *= BigInt(-1)
-          }
+      while(x > 0) {
           digits.push(Number(x & BigInt(0x7fffffff)))
-          x = x / BigInt(1 << 31) 
+          x = x >> BigInt(31)
           n = n + 1
       }
       n = n + 1 // store (n+1) blocks (n: number of digits)
@@ -240,7 +266,10 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
       // store number of blocks in the first block
       return_val.push(`(local.get $$scratch)`);
       return_val.push(`(i32.const ${i})`);
-      return_val.push(`(i32.const ${n-1})`);
+      if (neg)
+        return_val.push(`(i32.const -${n-1})`);
+      else
+        return_val.push(`(i32.const ${n-1})`);
       return_val.push(`call $store`); 
       
       i = i + 1;
@@ -351,6 +380,9 @@ function codeGenDef(def : FunDef<Annotation>, env : GlobalEnv) : Array<string> {
 function codeGenClass(cls : Class<Annotation>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = createMethodName(cls.name, method.name));
-  const result = methods.map(method => codeGenDef(method, env));
+  const result = methods.map(method => {
+    var params = method.parameters.map(p => `(param $${p.name} i32)`).join(" ");
+    return codeGenDef(method, env).flat();
+  });
   return result.flat();
   }
