@@ -1,6 +1,8 @@
 import { Template } from "webpack";
 import { Annotation, Type } from "./ast";
 import { Value } from "./ir";
+import { importObject } from "./tests/import-object.test";
+import { load_bignum } from "./utils";
 
 export type memAddr = number;
 export type ref = number;
@@ -81,6 +83,7 @@ export function refLookup(r: ref) :  ref {
 
 // traverse nodes in a BFS manner amking updates to reference counts
 export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { // returns r so that stack state can be maintained
+    //console.log(`ref: ${r}, assgnRef: ${assignRef}, update: ${update}`);
     if (r === 0) {
         return r
     }
@@ -124,6 +127,7 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { //
 
 export function compact(): memAddr {
     let free: memAddr = heapStart;
+    //console.log(refMap);
     function isGarbage(r: ref): boolean {
         const addr = refLookup(r) / 4;
         return memHeap[addr + refNumOffset] === 0;
@@ -147,6 +151,7 @@ export function compact(): memAddr {
             inactiveRefList.push(r);
         }
     }
+    //console.log(memHeap);
     return free;
 }
 
@@ -176,7 +181,7 @@ export function removeScope() {
 
 export function getTypeInfo(fields: Value<Annotation>[]): number {
     const binArr : number[] = fields.map(f => {
-        if (f.tag  === "none") {
+        if (f.tag  === "none" || f.tag === "num") {
           return 1;
         }
         return 0;
@@ -191,8 +196,14 @@ export function getTypeInfo(fields: Value<Annotation>[]): number {
 
 //debug function for tests
 export function debugId(id: number, offset: number) { // id should be of type int and the first field in the object
+    //console.log(memHeap);
+    //console.log(refMap);
+    
     for (const [_, addr] of refMap) {
-        if (memHeap[addr/4 + dataOffset] === id) {
+        //console.log("addr", memHeap[addr/4 + dataOffset + 1]);
+        let n = load_bignum(memHeap[addr/4 + dataOffset + 1], importObject.libmemory.load);
+        //console.log("n", n);
+        if (n as any == id) {
             return memHeap[addr/4 + offset];
         }
     }

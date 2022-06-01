@@ -120,7 +120,7 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
 
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
-      if (stmt.value.a && stmt.value.a.type && (stmt.value.a.type.tag === "class" || stmt.value.a.type.tag === "none") && (stmt.value.tag !== "alloc")) { // if the assignment is object assignment
+      if ((stmt.value.a?.type?.tag === "class" || stmt.value.tag === "value" && stmt.value.value.tag === "none") && (stmt.value.tag !== "alloc") || (stmt.value?.tag === "value" && stmt.value.value.tag === "num")) { // if the assignment is object assignment
         valStmts.push(`(i32.const 0)`, `(i32.const 1)`, `(call $traverse_update)`) // update the count of the object on the RHS
         if (env.locals.has(stmt.name)) {
           return [`(local.get $${stmt.name})`, // update the count of the object on the LHS
@@ -135,7 +135,11 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
           `(call $traverse_update)`,
           `(global.set $${stmt.name})`].concat(valStmts).concat([`(global.set $${stmt.name})`]); 
         }
-      } else {
+      }
+       else {
+        // if (stmt.value.tag === "value" && stmt.value.value.tag === "num"){ 
+        //   valStmts.push(`(i32.const 0)`, `(i32.const 1)`, `(call $traverse_update)`) // update the count of the object on the RHS
+        // }
         if (env.locals.has(stmt.name)) {
           return valStmts.concat([`(local.set $${stmt.name})`]); 
         } else {
@@ -243,7 +247,7 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
     case "call_indirect":
       var valStmts = codeGenExpr(expr.fn, env);
       var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
-      return [...fnStmts, ...valStmts, `(call_indirect (type ${makeWasmFunType(expr.arguments.length)}))`];
+      return [`(call $add_scope)`, ...fnStmts, ...valStmts, `(call_indirect (type ${makeWasmFunType(expr.arguments.length)}))`, `(call $remove_scope)`];
 
     case "alloc":
       if (expr.fixed) {

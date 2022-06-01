@@ -200,7 +200,7 @@ export function makeWasmFunType(paramNum: number): string {
 
 export function getFieldType(fields: IR_Value<Annotation>[]): boolean[] {
   const boolArr : boolean[] = fields.map(f => {
-      if (f.tag  === "none") {
+      if (f.tag  === "none" || f.tag == "num") {
         return true;
       }
       return false;
