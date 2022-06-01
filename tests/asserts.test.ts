@@ -5,7 +5,7 @@ import { Value, Annotation } from "../ast";
 import { importObject } from "./import-object.test";
 import {run, typeCheck} from "./helpers.test";
 import { fail } from 'assert'
-import { compact, debugId, memAddr, debugMemAlloc } from "../memory";
+import { compact, debugId, memAddr, debugMemAlloc, debugDebug } from "../memory";
 
 
 
@@ -93,5 +93,13 @@ export function assertMemAlloc(name: string, source: string, expected: number) {
   it(name, async () => {
     await run(source);
     expect(debugMemAlloc()).to.eq(expected)
+  });
+}
+
+export function assertDebug(name: string, source: string, expected:number) {
+  it(name, async () => {
+    await run(source);
+    console.log(debugDebug());
+    expect(debugDebug()).to.eq(expected)
   });
 }

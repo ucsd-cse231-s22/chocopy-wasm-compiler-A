@@ -1,5 +1,5 @@
 import { dataOffset, debugId, refNumOffset, sizeOffset, typeOffset } from "../memory";
-import { assertPrint, assertTCFail, assertTC, assertFail, assertMemState, assertMemAlloc } from "./asserts.test";
+import { assertPrint, assertTCFail, assertTC, assertFail, assertMemState, assertMemAlloc, assertDebug } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("Memory tests", () => {
@@ -252,13 +252,14 @@ assertMemState("less-simple-cycle-deletion", `
     z.next = x
     x.prev = z
     y.prev = x
+    z.prev = y
     
     y = None
     `, [
     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-    [123, refNumOffset, 3], // 3 references in the program where object id is 123
+    [123, refNumOffset, 2], // 3 references in the program where object id is 123
     [456, refNumOffset, 2], // 2 references in the program where object id is 456
-    [789, refNumOffset, 3], // 3 references in the program where object id is 789
+    [789, refNumOffset, 2], // 3 references in the program where object id is 789
     ]); // all types are values or non-references
 
 assertMemState("less-simple-cycle-complete-deletion", `
@@ -281,6 +282,7 @@ assertMemState("less-simple-cycle-complete-deletion", `
     z.next = x
     x.prev = z
     y.prev = x
+    z.prev = y
 
     y = None
     x.next = None
@@ -465,6 +467,29 @@ assertMemAlloc("self-assign-not-gc", `
     x = Rat()
     x = x
 `, 6); // Expect memory not to be garbage collected and to still be allocated (2 ints + 4 metadata blocks)
+
+assertDebug("test", `
+    class Link(object):
+        id: int = 0
+        next: Link = None
+        prev: Link = None
+
+    x: Link = None
+    y: Link = None
+    z: Link = None
+    x = Link()
+    x.id = 123
+    y = Link()
+    y.id = 456
+    z = Link()
+    z.id = 789
+    x.next = y
+    y.next = z
+    z.next = x
+    x.prev = z
+    y.prev = x
+    z.prev = y
+`, 6);
 
 });
 
