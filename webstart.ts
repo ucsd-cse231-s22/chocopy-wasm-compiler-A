@@ -1,5 +1,5 @@
 
-import {BasicREPL} from './repl';
+import { BasicREPL } from './repl';
 import { Type, Value, Annotation, Class } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
 import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
@@ -20,8 +20,8 @@ import { type } from 'os';
 import { addAccordionEvent, generate_folded_object } from './objectprint';
 
 
-export function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue,repl: BasicREPL) : string {
-  switch(typ.tag) {
+export function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue, repl: BasicREPL): string {
+  switch (typ.tag) {
     case "number":
       return load_bignum(arg, loader).toString();
     case "bool":
@@ -29,7 +29,7 @@ export function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue,r
     case "none":
       return "None";
     case "class":
-      return stringify_object( repl.importObject.js.memory.buffer, arg, typ.name, 0, new Map(), 1,loader,repl).join("\n");
+      return stringify_object(repl.importObject.js.memory.buffer, arg, typ.name, 0, new Map(), 1, loader, repl).join("\n");
   }
 }
 function makeMarker(msg: any): any {
@@ -53,7 +53,7 @@ function highlightLine(actualLineNumber: number, msg: string): void {
   editor.setGutterMarker(actualLineNumber, "error", makeMarker(msg));
   editor.addLineClass(actualLineNumber, "background", "line-error");
 }
-export function stringify_object(memory: WebAssembly.Memory, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number,loader : WebAssembly.ExportValue,repl: BasicREPL): Array<string> {
+export function stringify_object(memory: WebAssembly.Memory, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number, loader: WebAssembly.ExportValue, repl: BasicREPL): Array<string> {
 
   var fields_offset_ = repl.currentEnv.classes.get(classname);
   var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
@@ -81,11 +81,11 @@ export function stringify_object(memory: WebAssembly.Memory, pointer: number, cl
         display.push(`${space.repeat(level + 2)}${thisfield[0]} : none `);
       } else {
         display.push(`${space.repeat(level + 2)}${thisfield[0]}:{`)
-        display.push(...stringify_object(memory, mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5, met_object, object_number + 1, loader,repl));
+        display.push(...stringify_object(memory, mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5, met_object, object_number + 1, loader, repl));
         display.push(`${space.repeat(level + 2)}}`)
       }
     } else {
-      display.push(`${space.repeat(level + 2)}${thisfield[0]} : ${stringify(thisfield_type, mem[pointer / 4 + thisfield[1][0]], loader,repl)} `);
+      display.push(`${space.repeat(level + 2)}${thisfield[0]} : ${stringify(thisfield_type, mem[pointer / 4 + thisfield[1][0]], loader, repl)} `);
     }
   }
   )
@@ -96,21 +96,21 @@ export function stringify_object(memory: WebAssembly.Memory, pointer: number, cl
 
 
 
-function print(typ: Type, arg: number,loader: WebAssembly.ExportValue,repl: BasicREPL): any {
+function print(typ: Type, arg: number, loader: WebAssembly.ExportValue, repl: BasicREPL): any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
-  elt.setAttribute("class","output-success")
-  elt.innerText = stringify(typ, arg,loader,repl);
+  elt.setAttribute("class", "output-success")
+  elt.innerText = stringify(typ, arg, loader, repl);
   return arg;
 }
-function print_object(id: number, arg: number,loader: WebAssembly.ExportValue,repl: BasicREPL): any {
+function print_object(id: number, arg: number, loader: WebAssembly.ExportValue, repl: BasicREPL): any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
   var typ = repl.currentTypeEnv.classesNumber[id];
-  elt.setAttribute("class","output-success")
-  generate_folded_object(arg,typ,loader,repl,elt); 
+  elt.setAttribute("class", "output-success")
+  generate_folded_object(arg, typ, loader, repl, elt);
   // elt.innerText = stringify(CLASS(typ), arg,repl);
   return arg;
 }
@@ -232,8 +232,8 @@ function webStart() {
           isClassMethod = true;
           editor.showHint({
             hint: () =>
-            autocompleteHint(editor, [], function (e: any, cur: any) {
-              return e.getTokenAt(cur);
+              autocompleteHint(editor, [], function (e: any, cur: any) {
+                return e.getTokenAt(cur);
               }),
           });
         } else {
@@ -290,12 +290,12 @@ function webStart() {
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
-        print_num: (arg: number) => print(NUM, arg, loader,repl),
-        print_bool: (arg: number) => print(BOOL, arg, null,repl),
-        print_none: (arg: number) => print(NONE, arg, null,repl),
-        print_object:(c:number,addr:number) =>print_object(c,addr,loader,repl),
+        print_num: (arg: number) => print(NUM, arg, loader, repl),
+        print_bool: (arg: number) => print(BOOL, arg, null, repl),
+        print_none: (arg: number) => print(NONE, arg, null, repl),
+        print_object: (c: number, addr: number) => print_object(c, addr, loader, repl),
         destructure_check: (hashNext: boolean) => des_check(hashNext),
-        abs:  (arg: number) => builtin_bignum([arg], bigMath.abs, memoryModule.instance.exports),
+        abs: (arg: number) => builtin_bignum([arg], bigMath.abs, memoryModule.instance.exports),
         min: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.min, memoryModule.instance.exports),
         max: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.max, memoryModule.instance.exports),
         pow: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.pow, memoryModule.instance.exports),
@@ -310,7 +310,7 @@ function webStart() {
         $gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, memoryModule.instance.exports),
         $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
         $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
-        $bignum_to_i32: (arg: number) => bignum_to_i32(arg, loader), 
+        $bignum_to_i32: (arg: number) => bignum_to_i32(arg, loader),
       },
       errors: importObjectErrors,
       libmemory: memoryModule.instance.exports,
@@ -318,15 +318,15 @@ function webStart() {
       js: { memory: memory }
     };
     var repl = new BasicREPL(importObject);
-    
-    addAccordionEvent(loader,repl);
 
-    function renderResult(result : Value<Annotation>) : void {
-      if(result === undefined) { console.log("skip"); return; }
+    addAccordionEvent(loader, repl);
+
+    function renderResult(result: Value<Annotation>): void {
+      if (result === undefined) { console.log("skip"); return; }
       if (result.tag === "none") return;
       const elt = document.createElement("pre");
       elt.setAttribute("class", "output-success")
-      addAccordionEvent(loader,repl);
+      addAccordionEvent(loader, repl);
       document.getElementById("output").appendChild(elt);
       switch (result.tag) {
         case "num":
@@ -337,24 +337,28 @@ function webStart() {
           break;
         case "object":
           // elt.innerHTML = `${result.name} object at ${result.address}`
-          generate_folded_object( result.address, result.name,loader,repl,elt)
+          generate_folded_object(result.address, result.name, loader, repl, elt)
           // elt.innerHTML = stringify_object(memory, result.address, result.name, 0, new Map(), 1, loader,repl).join("\n");
           break
         default: throw new Error(`Could not render value: ${result}`);
       }
     }
 
-    function renderError(result : any) : void {
+    function renderError(result: any): void {
       // only `TypeCheckError` has `getA` and `getErrMsg`
       if (result instanceof TypeCheckError) {
         console.log(result.getA()); // could be undefined if no Annotation information is passed to the constructor of TypeCheckError
         console.log(result.getErrMsg());
       }
 
+      const errorline = result?.getA()?.fromLoc?.row - 1;
+      highlightLine(errorline, String(result));
+
       const elt = document.createElement("pre");
       document.getElementById("output").appendChild(elt);
       elt.setAttribute("style", "color: red");
       elt.setAttribute("class", "output-fail");
+
 
       elt.innerText = String(result);
     }
@@ -381,20 +385,21 @@ function webStart() {
           elt.value = source;
           replCodeElement.value = "";
           var failed = false;
-          try{
-          repl.tc(source);
-          }catch(err){
+          try {
+            repl.tc(source);
+          } catch (err) {
             renderError(err); console.log("run failed", e);
             failed = true;
           }
-          if(! failed){          repl.run(source).then((r) => {
-            renderResult(r);
-            printMem();
-            console.log("run finished")
-          })
-            .catch((e) => { renderError(e); console.log("run failed", e) });;
+          if (!failed) {
+            repl.run(source).then((r) => {
+              renderResult(r);
+              printMem();
+              console.log("run finished")
+            })
+              .catch((e) => { renderError(e); console.log("run failed", e) });;
+          }
         }
-      }
       });
     }
 
@@ -493,22 +498,19 @@ function webStart() {
       resetRepl();
       const source = document.getElementById("user-code") as HTMLTextAreaElement;
       var failed = false;
-      try{
-      repl.tc(source.value);
-      }catch(err){
+      try {
+        repl.tc(source.value);
+      } catch (err) {
         renderError(err); console.log("run failed", e);
         failed = true;
       }
-      if(! failed){      
-      repl.run(source.value).then((r) => { renderResult(r); console.log("run finished") })
-      .catch((e) => {
-        renderError(e);
-        //TODO get actual error
-        // const errorline = e?.getA()?.fromLoc?.row;
-        const errorline = 11;
-        highlightLine(errorline, String(e));
-        console.log("run failed", e)
-      });}
+      if (!failed) {
+        repl.run(source.value).then((r) => { renderResult(r); console.log("run finished") })
+          .catch((e) => {
+            renderError(e);
+
+          });
+      }
     });
     setupRepl();
     setupCodeExample();
