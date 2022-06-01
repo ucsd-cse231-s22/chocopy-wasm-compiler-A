@@ -44,7 +44,7 @@ export function test_param_return(des: string, c: bigint, param: bigint, res: st
         [`${res}`]);
 }
 
-describe("Project test cases", () => {
+describe("Bignums test cases", () => {
     test_print(BigInt("100000000000000000000000"));
     test_init_assign(BigInt(0), BigInt(10), BigInt("100000000000000000000000"));
     test_binop("3_test_greater_than", BigInt("100000000000000000000000"), BigInt("100000000000000000000001"), ">", "False");

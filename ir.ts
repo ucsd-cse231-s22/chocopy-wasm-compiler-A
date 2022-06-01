@@ -38,5 +38,3 @@ export type Value<A> =
   | { a?: A, tag: "bool", value: boolean }
   | { a?: A, tag: "id", name: string }
   | { a?: A, tag: "none" }
-
-

@@ -1,0 +1,97 @@
+#Test case 1:
+a : int = 1
+b : int = 2
+c : int = 3
+a,b,c = 4,5,6
+assert(a == 4)
+assert(b == 5)
+assert(c == 6)
+
+#Test case 2:
+a : bool = True
+b : bool = False
+a, b = False, True
+assert(a == False)
+assert(b == True)
+
+#Test case 3:
+a : int = 1
+b : bool = False
+a, b = 2, True
+assert(a == 2)
+assert(b == True)
+
+#Test case 4:
+a : int = 1
+b : int = 2
+a, _, b = 4, 5, 6
+assert(a == 4)
+assert(b == 6)
+
+#Test case 5:
+a : int = 1
+b : int = 2
+a, b, _ = 4, 5, 6, 7, 8
+assert(a == 4)
+assert(b == 5)
+
+#Test case 6:
+a : int = 0
+b : int = 0
+c : int = 0
+a,b,c = [1,2,3]
+assert(a == 1)
+assert(b == 2)
+assert(c == 3)
+
+#Test case 7:
+a : int = 0
+b : int = 0
+c : int = 0
+a,b,c = (1,2,3)
+assert(a == 1)
+assert(b == 2)
+assert(c == 3)
+
+
+#Test case 8:
+a : int = 0
+b : list = []
+c : int = 0
+l = [1, 2, 3, 4]
+a, *b, c = l
+assert a == 1
+assert c == 4
+assert b[0] == 2
+assert b[1] == 3
+
+#Test case 9:
+a: int = 0
+b: int = 0
+c: list = []
+(a, b, _, c) = 1, 2, 3, [1, 2]
+assert a == 1
+assert b == 2
+assert c[0] == 1
+assert c[-1] == 2
+
+
+#Test case 10:
+a: int = 0
+b: int = 0
+c: list = []
+l: list = [1, 2, 3, 4, 5, 6]
+a, b, *c = l
+assert a == 1
+assert b == 2
+assert c[0] == 3
+assert c[-1] == 6
+
+#Test case 11:
+a : int = 0
+b : list = []
+c : int = 0
+l = [1, 2, 3, 4]
+a, *_, c = l
+assert a == 1
+assert c == 4
