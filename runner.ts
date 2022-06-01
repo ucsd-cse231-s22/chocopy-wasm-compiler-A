@@ -125,6 +125,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     ${globalImports}
     ${globalDecls}
     ${config.functions}
+    ${compiled.vTable}
     ${compiled.functions}
     (func (export "exported_func") ${returnType}
       ${compiled.mainSource}

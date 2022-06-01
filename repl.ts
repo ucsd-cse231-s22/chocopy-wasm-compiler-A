@@ -5,6 +5,8 @@ import { tc, defaultTypeEnv, GlobalTypeEnv } from "./type-check";
 import { Value, Type } from "./ast";
 import { parse } from "./parser";
 
+export let addInBuiltClass: boolean = true;
+
 interface REPL {
   run(source : string) : Promise<any>;
 }
@@ -15,6 +17,7 @@ export class BasicREPL {
   functions: string
   importObject: any
   memory: any
+  addClassFlag: number
   constructor(importObject : any) {
     this.importObject = importObject;
     if(!importObject.js) {
@@ -32,8 +35,15 @@ export class BasicREPL {
     };
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";
+    this.addClassFlag = 0;
   }
   async run(source : string) : Promise<Value> {
+    if (this.addClassFlag === 0) {
+      this.addClassFlag = 1;
+      addInBuiltClass = true;
+    } else {
+      addInBuiltClass = false;
+    }
     const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions};
     const [result, newEnv, newTypeEnv, newFunctions, instance] = await run(source, config);
     this.currentEnv = newEnv;

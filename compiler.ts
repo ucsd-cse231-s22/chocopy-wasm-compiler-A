@@ -1,4 +1,4 @@
-import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
+import { Program, Stmt, Expr, Value, Class, VarInit, FunDef, Vtable } from "./ir"
 import { BinOp, Type, UniOp } from "./ast"
 import { BOOL, NONE, NUM, STR } from "./utils";
 
@@ -22,7 +22,8 @@ type CompileResult = {
   globals: string[],
   functions: string,
   mainSource: string,
-  newEnv: GlobalEnv
+  newEnv: GlobalEnv,
+  vTable: string
 };
 
 export function makeLocals(locals: Set<string>) : Array<string> {
@@ -33,8 +34,29 @@ export function makeLocals(locals: Set<string>) : Array<string> {
   return localDefines;
 }
 
+let classesdata: Class<Type>[] = [];
+let typedata: Map<number, string>;
+let object_init_defined :boolean = false;
+
+export function getTypeSignature(params: number): string {
+
+  if(typedata.has(params)) {
+    return `(type $return_args_${params})`
+  }
+  var typeParamsArr = [];
+  for(let i = 0; i < params; i++) {
+    typeParamsArr.push(`(param i32)`);
+  }
+  var typeParams = typeParamsArr.join(" ");
+  typedata.set(params, `(type $return_args_${params} (func ${typeParams} (result i32)))`);
+  return `(type $return_args_${params})`;
+}
+
 export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
+  classesdata = ast.classes;
+  typedata = new Map();
+  object_init_defined = false;
 
   const definedVars : Set<string> = new Set(); //getLocals(ast);
   definedVars.add("$last");
@@ -58,7 +80,7 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
-  const allFuns = funs.concat(classes).join("\n\n");
+  var allFuns = funs.concat(classes).join("\n\n");
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
   const strinits = ast.strinits.map(init => codeGenInit(init, withDefines)).flat();
@@ -85,12 +107,32 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
     ...inits,
     bodyCommands];
   withDefines.locals.clear();
+  const typedInfo: string[] = [];
+  typedata.forEach((data) => {
+    typedInfo.push(data);
+  });
+  allFuns += typedInfo.join("\n");
+  allFuns += "\n";
   return {
     globals: globalNames,
     functions: allFuns,
     mainSource: allCommands.join("\n"),
-    newEnv: withDefines
+    newEnv: withDefines,
+    vTable: codeGenVTable(ast.vtable)
   };
+}
+
+function codeGenVTable(vTable: Vtable) : string {
+  let elems :string[] = [];
+  let methodCnt = 0;
+  vTable.forEach((methods, offset) => {
+    elems.push(`(elem (i32.const ${offset}) ${methods.map((method) => `$${method[0]}$${method[1]}`).join(" ")})`);
+    methodCnt += methods.length;
+  });
+  return [
+    `(table ${methodCnt} funcref)`,
+    ...elems,
+  ].join("\n");
 }
 
 function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
@@ -112,10 +154,6 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
         `call $store`
       ]
     case "assign":
-      console.log("LOCALS: ", env.locals);
-      if (stmt.name === "temp" && !env.locals.has(stmt.name)) {
-        console.log("LOCALS: ", env.locals, env);
-      }
       var valStmts = codeGenExpr(stmt.value, env);
       if (env.locals.has(stmt.name)) {
         return valStmts.concat([`(local.set $${stmt.name})`]); 
@@ -351,6 +389,14 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
 
+    case "call-indirect":
+      var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      if (expr.arguments.length -1 === 2) {
+        console.log("HAHA CALL INDIRECT");
+      } 
+      valStmts.push(`(call_indirect ${getTypeSignature(expr.arguments.length-1)})`);
+      return valStmts;
+
     case "alloc":
       return [
         ...codeGenValue(expr.amount, env),
@@ -492,6 +538,11 @@ function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
 }
 
 function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
+  if (def.name === "object$__init__" && object_init_defined) {
+    return [];
+  } else if (def.name === "object$__init__") {
+    object_init_defined = true;
+  }
   var definedVars : Set<string> = new Set();
   def.inits.forEach(v => definedVars.add(v.name));
   definedVars.add("$last");
@@ -504,6 +555,7 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
   const locals = localDefines.join("\n");
   const inits = def.inits.map(init => codeGenInit(init, env)).flat().join("\n");
   var params = def.parameters.map(p => `(param $${p.name} i32)`).join(" ");
+  var typeParams = def.parameters.map(p => `(param i32)`).join(" ");
   var bodyCommands = "(local.set $$selector (i32.const 0))\n"
   bodyCommands += "(loop $loop\n"
 
@@ -519,7 +571,8 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
   bodyCommands += blockCommands;
   bodyCommands += ") ;; end $loop"
   env.locals.clear();
-  return [`(func $${def.name} ${params} (result i32)
+  return [
+    `(func $${def.name} ${params} (result i32)
     ${locals}
     ${inits}
     ${bodyCommands}

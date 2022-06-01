@@ -88,7 +88,7 @@ export function nestedStmt(stmt : Stmt<Type>, nestedEnv: NestedEnv) : Stmt<Type>
           obj: {tag: "id", name: nestedEnv.nestedRefs.get(stmt.name), a: {tag: "class", name: "RefClass"}},
           a: NONE,
           field: "value", 
-          value: stmt.value
+          value: nestedExpr(stmt.value, nestedEnv)
         };
       }
       const tValExpr = nestedExpr(stmt.value, nestedEnv);
@@ -119,7 +119,8 @@ export function nestedStmt(stmt : Stmt<Type>, nestedEnv: NestedEnv) : Stmt<Type>
     case "for":
       var nIterable = nestedExpr(stmt.iterable, nestedEnv);
       var itBody = nestedBlock(stmt.body, nestedEnv);
-      return {...stmt, iterable: nIterable, body: itBody};
+      var nIterator = nestedExpr(stmt.iterator, nestedEnv);
+      return {...stmt, iterable: nIterable, body: itBody, iterator: nIterator};
     case "pass":
       return stmt;
     case "field-assign":
@@ -158,7 +159,7 @@ export function nestedExpr(expr : Expr<Type>, nestedEnv: NestedEnv) : Expr<Type>
     case "builtin1":
       return {...expr, arg: nestedExpr(expr.arg, nestedEnv)};
     case "builtin2":
-      return {...expr, }
+      return {...expr, left: nestedExpr(expr.left, nestedEnv), right: nestedExpr(expr.right, nestedEnv) }
     case "call":
       var nArguments = expr.arguments.map((arg) => nestedExpr(arg, nestedEnv));
       if (nestedEnv.funArgs.has(expr.name)) {
