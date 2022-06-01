@@ -111,6 +111,36 @@ export function generateEnvironmentProgram(
     return [inEnvMapping, outEnvMapping];
 }
 
+
+export function generateEnvironmentProgramForLiveness(
+    program: Program<any>,
+    computeInitEnv: Function
+): [Map<string, Env>, Map<string, Env>] {
+    var initialEnv = computeInitEnv(program.inits, false);
+
+    var inEnvMapping: Map<string, Env> = new Map<string, Env>();
+    var outEnvMapping: Map<string, Env> = new Map<string, Env>();
+
+    var dummyEnv = computeInitEnv(program.inits, true);
+
+    program.body.forEach(f => {
+        inEnvMapping.set(f.label, duplicateEnv(dummyEnv));
+        outEnvMapping.set(f.label, duplicateEnv(dummyEnv));
+    });
+
+    var [preds, succs, blockMapping]: [Map<string, string[]>, Map<string, string[]>, Map<string, BasicBlock<any>>] = computePredecessorSuccessor(program.body);
+
+
+    succs.set(program.body[-1].label, [varDefEnvTag]);
+    preds.set(varDefEnvTag, [program.body[-1].label]);
+    outEnvMapping.set(varDefEnvTag, initialEnv);
+
+    workListAlgorithm([program.body[0].label], inEnvMapping, outEnvMapping, preds, succs, blockMapping);
+
+    return [inEnvMapping, outEnvMapping];
+}
+
+
 export function generateEnvironmentFunctions(func: FunDef<any>, computeInitEnv: Function): [Map<string, Env>, Map<string, Env>] {
     var initialEnv = computeInitEnv(func.inits, false);
     addParamsToEnv(func.parameters, initialEnv, false);
