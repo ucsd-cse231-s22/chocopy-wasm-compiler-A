@@ -382,20 +382,6 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         items: elements,
       };
 
-    case "ArrayExpression": // a, b, c = [1, 2, 3]
-      let arrayElements: Expr<Annotation>[] = [];
-      c.firstChild();
-      c.nextSibling();
-      while (s.substring(c.from, c.to).trim() !== "]") {
-        arrayElements.push(traverseExpr(c, s, env));
-        c.nextSibling();
-        c.nextSibling();
-      }
-      c.parent();
-      return {
-        tag: "array-expr",
-        elements: arrayElements,
-      };
     case "TupleExpression": // a, b, c = (1, 2, 3)
       let tupleElements: Expr<Annotation>[] = [];
       c.firstChild();
@@ -407,8 +393,8 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       }
       c.parent();
       return {
-        tag: "array-expr",
-        elements: tupleElements,
+        tag: "construct-list",
+        items: tupleElements,
       };
     case "ConditionalExpression":
       c.firstChild();
@@ -540,6 +526,13 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
       c.nextSibling(); // go to equals
       c.nextSibling(); // go to value
       var value = traverseExpr(c, s, env);
+      if (c.nextSibling()) {
+        value = {tag: "array-expr", items: [value]};
+        while (c.nextSibling()) {
+          value.items.push(traverseExpr(c, s, env));
+          c.nextSibling();
+        }
+      }
       c.parent();
       return {
         tag: "assign",
@@ -704,7 +697,7 @@ function traverseAssignVar(c: TreeCursor, s: string, env: ParserEnv): AssignVar<
   // todo check if target is *
   let target = traverseExpr(c, s, env);
   let ignorable = false;
-  if (target.tag !== "id" && target.tag !== "lookup") {
+  if (target.tag !== "id" && target.tag !== "lookup" && target.tag !== "index") {
     throw new Error("Unknown variable expression");
   }
   if (target.tag === "id" && target.name === "_") {

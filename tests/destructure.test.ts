@@ -28,7 +28,7 @@ const rangeDef = `
         return it
 `
 
-xdescribe('ut for destructure', () => {
+describe('ut for destructure', () => {
 
     assertTC("simple-assignment", `
     a : int = 1
@@ -52,13 +52,13 @@ xdescribe('ut for destructure', () => {
     a, _, b = 2, 3, False
     `, NONE);
 
-    // TODO: after introducing list
-    // assertTC("destructure-assignment-with-star", `
-    // a : int = 1
-    // b : bool = True
-    // c : [int] = []
-    // a, *c, b = 2, 4, 5, False
-    // `, NONE);
+    assertTC("destructure-assignment-with-index", `
+    l : [int] = None
+    a : int = 1
+    b : bool = True
+    l = [1,2,3]
+    a, l[1], b = 2, 4, False
+    `, NONE);
 
     // TODO: after introducing list
     // assertTC("destructure-assignment-with-star-empty", `
@@ -128,6 +128,17 @@ xdescribe('ut for destructure', () => {
     a, _, b = func(1, 5)
     `, NONE);
 
+    assertPrint("destructure-assignment-list", `
+    a : int = 1
+    b : int = 2
+    l : [int] = None
+    l = [1, 2, 3]
+    a, b, l[1] = [2, 10, 100]
+    print(a)
+    print(b)
+    print(l[1])
+    `, ['2', '10', '100']);
+
     assertPrint("destructure-assignment-sep", `
     a : int = 1
     b : bool = True
@@ -135,6 +146,18 @@ xdescribe('ut for destructure', () => {
     print(a)
     print(b)
     `, ['2', 'False']);
+
+    // currently not workable
+    // assertPrint("destructure-assignment-without-plain-format", `
+    // a : int = 0
+    // b : int = 0
+    // l : [int] = None
+    // l = [1, 2, 3]
+    // a, b, l[1] = l
+    // print(a)
+    // print(b)
+    // print(l[1])
+    // `, ['1', '2', '3']);
 
     assertPrint("destructure-assignment-func-sep", `
     def f(a: int)->int:
@@ -162,10 +185,13 @@ xdescribe('ut for destructure', () => {
     ${rangeDef}
     a : int = 0
     b : int = 0
-    a, b = range(1, 3)
+    l : [int] = None
+    l = [1, 2, 3]
+    a, b, l[1] = range(1, 4)
     print(a)
     print(b)
-    `, ['1', '2']);
+    print(l[1])
+    `, ['1', '2', '3']);
 
     assertPrint("destructure-assignment-in-func-sep", `
     ${rangeDef}
@@ -246,10 +272,13 @@ xdescribe('ut for destructure', () => {
     class cl(Object):
         f1: int = 0
     
+    l : [int] = None
+    l = [1, 2, 3]
     c = cl()
-    c.f1, _, a = range(1, 4)
+    c.f1, _, a, l[1] = range(1, 5)
     print(c.f1)
     print(a)
-    `, ['1', '3']);
+    print(l[1])
+    `, ['1', '3', '4']);
     
 });

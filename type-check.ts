@@ -513,6 +513,7 @@ export function tcAssignable(env : GlobalTypeEnv, locals : LocalTypeEnv, assigna
   var expr : Expr<Annotation> = { ...assignable };
   var typedExpr = tcExpr(env, locals, expr, SRC);
   switch(typedExpr.tag) {
+    case "index":
     case "id":
       var typedAss : Assignable<Annotation> = { ...typedExpr };
       return typedAss;
@@ -584,20 +585,20 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
         if(!isAssignable(env, tValExpr.a.type, tDestruct.a.type)) {
           throw new TypeCheckError(SRC, `Assignment value should have assignable type to type ${bigintSafeStringify(tDestruct.a.type.tag)}, got ${bigintSafeStringify(tValExpr.a.type.tag)}`, tValExpr.a);
         }
-      }else if(!tDestruct.isSimple && tValExpr.tag === "array-expr") {
+      }else if(!tDestruct.isSimple && (tValExpr.tag === "construct-list" || tValExpr.tag === "array-expr")) {
         // for plain destructure like a, b, c = 1, 2, 3
         // we can perform type check
-        if(!hasStar && tDestruct.vars.length != tValExpr.elements.length) {
-          throw new TypeCheckError(`value number mismatch, expected ${tDestruct.vars.length} values, but got ${tValExpr.elements.length}`);
-        } else if(hasStar && tDestruct.vars.length-1 > tValExpr.elements.length) {
-          throw new TypeCheckError(`not enough values to unpack (expected at least ${tDestruct.vars.length-1}, got ${tValExpr.elements.length})`);
+        if(!hasStar && tDestruct.vars.length != tValExpr.items.length) {
+          throw new TypeCheckError(SRC, `value number mismatch, expected ${tDestruct.vars.length} values, but got ${tValExpr.items.length}`);
+        } else if(hasStar && tDestruct.vars.length-1 > tValExpr.items.length) {
+          throw new TypeCheckError(SRC, `not enough values to unpack (expected at least ${tDestruct.vars.length-1}, got ${tValExpr.items.length})`);
         }
         for(var i=0; i<tDestruct.vars.length; i++) {
           if(tDestruct.vars[i].ignorable) {
             continue;
           }
-          if(!isAssignable(env, tValExpr.elements[i].a.type, tDestruct.vars[i].a.type)) {
-            throw new TypeCheckError(`Non-assignable types: ${tValExpr.elements[i].a} to ${tDestruct.vars[i].a}`);
+          if(!isAssignable(env, tValExpr.items[i].a.type, tDestruct.vars[i].a.type)) {
+            throw new TypeCheckError(SRC, `Non-assignable types: ${tValExpr.items[i].a} to ${tDestruct.vars[i].a}`);
           }
         }
       } else if(!tDestruct.isSimple && (tValExpr.tag === "call" || tValExpr.tag === "method-call" || tValExpr.tag === "id")) {
@@ -605,7 +606,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
         // but there is no such a type currently, so
         // TODO: add specific logic then
         if(tValExpr.a.type.tag != "class" || tValExpr.a.type.name != "iterator") {
-          throw new TypeCheckError(`cannot unpack non-iterable ${JSON.stringify(tValExpr.a, null, 2)} object`)
+          throw new TypeCheckError(SRC, `cannot unpack non-iterable ${JSON.stringify(tValExpr.a, null, 2)} object`)
         } else {
           var rightType = env.classes.get('iterator')[1].get('next')[1];
           for(var i=0; i<tDestruct.vars.length; i++) {
@@ -613,7 +614,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
               continue;
             }
             if(!isAssignable(env, rightType, tDestruct.vars[i].a.type)) {
-              throw new TypeCheckError(`Non-assignable types: ${rightType} to ${tDestruct.vars[i].a}`);
+              throw new TypeCheckError(SRC, `Non-assignable types: ${rightType} to ${tDestruct.vars[i].a}`);
             }
           }
         }
@@ -621,7 +622,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       } else if(!tDestruct.isSimple) {
         // TODO: support other types like list, tuple, which are plain formatted, we could also perform type check
         if(tValExpr.a != CLASS('iterator')) {
-          throw new TypeCheckError(`cannot unpack non-iterable ${tValExpr.a} object`)
+          throw new TypeCheckError(SRC, `cannot unpack non-iterable ${tValExpr.a} object`)
         }
       }
       return {a: { ...stmt.a, type: NONE }, tag: stmt.tag, destruct: tDestruct, value: tValExpr};
@@ -905,14 +906,15 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       }
     case "index":
       var tObj = tcExpr(env, locals, expr.obj, SRC);
+      var typedExpr = { ...expr, obj: tObj };
       if(tObj.a.type.tag === "empty") {
-        return { ...expr, a: tObj.a};
+        return { ...typedExpr, a: tObj.a};
       } else if(tObj.a.type.tag === "list") {
         var tIndex = tcExpr(env, locals, expr.index, SRC);
         if(tIndex.a.type !== NUM) {
           throw new TypeCheckError(`index is of non-integer type \'${tIndex.a.type.tag}\'`);
         }
-        return { ...expr, a: {...tObj.a, type: tObj.a.type.itemType}};
+        return { ...typedExpr, a: {...tObj.a, type: tObj.a.type.itemType}};
       } else {
         // For other features that use index
         throw new TypeCheckError(`unsupported index operation`);
@@ -968,8 +970,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         throw new TypeCheckError(SRC, `method calls require an object of type "class", got ${bigintSafeStringify(tObj.a.type.tag)}`, expr.a);
       }
     case "array-expr":
-      const arrayExpr = expr.elements.map((element) => tcExpr(env, locals, element, SRC));
-      return { ...expr, a: { ...expr.a, type: NONE }, elements: arrayExpr };
+      const arrayExpr = expr.items.map((element) => tcExpr(env, locals, element, SRC));
+      return { ...expr, a: { ...expr.a, type: NONE }, items: arrayExpr };
     case "list-comp":
       // check if iterable is instance of class
       const iterable = tcExpr(env, locals, expr.iterable,SRC);
