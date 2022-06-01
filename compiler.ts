@@ -42,6 +42,7 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
+  console.log(ast.inits, globalNames);
   const funs : Array<string> = [];
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
@@ -137,7 +138,7 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
-      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)];
+      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
@@ -177,6 +178,7 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
+
     case "alloc":
       return [
         ...codeGenValue(expr.amount, env),
@@ -245,7 +247,6 @@ function codeGenBinOp(op : BinOp) : string {
 
 function codeGenInit(init : VarInit<Annotation>, env : GlobalEnv) : Array<string> {
   const value = codeGenValue(init.value, env);
-  //console.log(value);
   if (env.locals.has(init.name)) {
     return [...value, `(local.set $${init.name})`]; 
   } else {
