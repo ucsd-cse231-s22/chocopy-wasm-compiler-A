@@ -468,29 +468,6 @@ assertMemAlloc("self-assign-not-gc", `
     x = x
 `, 6); // Expect memory not to be garbage collected and to still be allocated (2 ints + 4 metadata blocks)
 
-assertDebug("test", `
-    class Link(object):
-        id: int = 0
-        next: Link = None
-        prev: Link = None
-
-    x: Link = None
-    y: Link = None
-    z: Link = None
-    x = Link()
-    x.id = 123
-    y = Link()
-    y.id = 456
-    z = Link()
-    z.id = 789
-    x.next = y
-    y.next = z
-    z.next = x
-    x.prev = z
-    y.prev = x
-    z.prev = y
-`, 6);
-
 });
 
 

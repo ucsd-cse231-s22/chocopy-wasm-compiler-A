@@ -95,11 +95,3 @@ export function assertMemAlloc(name: string, source: string, expected: number) {
     expect(debugMemAlloc()).to.eq(expected)
   });
 }
-
-export function assertDebug(name: string, source: string, expected:number) {
-  it(name, async () => {
-    await run(source);
-    console.log(debugDebug());
-    expect(debugDebug()).to.eq(expected)
-  });
-}

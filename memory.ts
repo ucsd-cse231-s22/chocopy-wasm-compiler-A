@@ -216,7 +216,3 @@ export function debugMemAlloc() {
     }
     throw new Error('memory is full');
 }
-
-export function debugDebug() {
-    return memHeap;
-}
