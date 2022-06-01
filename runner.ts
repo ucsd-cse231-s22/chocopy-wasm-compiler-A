@@ -62,23 +62,24 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
     var overridenMethods = 0;
     // TODO(anuj): update to support multiple inheritance
     var offset : number  = 0;
-    if (cls.super[0] !== "object") { 
-      newClasses.get(cls.super[0])[0].forEach((value, key) => {
+    const superclasses = Array.from( cls.super.keys() )
+    if (superclasses[0] !== "object") { 
+      newClasses.get(superclasses[0])[0].forEach((value, key) => {
         offset = Math.max(value[0]) + 1
       });
     }
 
     var superClassMethodsCount = 0;
-    if (cls.super[0] !== "object") {
-      superClassMethodsCount = newClasses.get(cls.super[0])[3];
+    if (superclasses[0] !== "object") {
+      superClassMethodsCount = newClasses.get(superclasses[0])[3];
     }
 
     cls.methods.forEach((method, index) => {
 
       var methodClassOffset = superClassMethodsCount + index - overridenMethods;
 
-      if (cls.super[0] !== "object" ){
-        newClasses.get(cls.super[0])[1].forEach((value, key) => {
+      if (superclasses[0] !== "object"){
+        newClasses.get(superclasses[0])[1].forEach((value, key) => {
           if (key === method.name) {
             overridenMethods += 1;
             methodClassOffset = value;
@@ -95,7 +96,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
   prog.funs.forEach(f => {
     functionNames.set(f.name, closureName(f.name, []));
     const addClasses = (f: FunDef<Annotation>, ancestors: Array<FunDef<Annotation>>) => {
-      newClasses.set(closureName(f.name, ancestors), [new Map(), new Map(), [], 0]);
+      newClasses.set(closureName(f.name, ancestors), [new Map(), new Map(), new Map(), 0]);
       f.children.forEach(c => addClasses(c, [f, ...ancestors]));
     }
     addClasses(f, []);
@@ -114,6 +115,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
 }
 
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
+
 export async function run(source : string, config: Config) : Promise<[Value<Annotation>, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   config.importObject.errors.src = source; // for error reporting
   const parsed = parse(source);
@@ -170,6 +172,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))
     (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
+    (func $destructure_check (import "imports" "destructure_check") (param i32) (result i32))
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
@@ -184,6 +187,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $$gte (import "imports" "$gte") (param i32) (param i32) (result i32))
     (func $$lt (import "imports" "$lt") (param i32) (param i32) (result i32))
     (func $$gt (import "imports" "$gt") (param i32) (param i32) (result i32))
+    (func $$bignum_to_i32 (import "imports" "$bignum_to_i32") (param i32) (result i32))
     ${types}
     ${globalImports}
     ${compiled.vtable}
