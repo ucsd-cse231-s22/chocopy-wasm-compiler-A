@@ -35,6 +35,7 @@ export type LocalTypeEnv = {
   nested: Map<string, [Array<Type>, Array<string>, Type]>,
   expectedRet: Type,
   actualRet: Type,
+  className: string,
   topLevel: Boolean
 }
 
@@ -81,6 +82,7 @@ export function emptyLocalTypeEnv() : LocalTypeEnv {
     nested: new Map(),
     expectedRet: NONE,
     actualRet: NONE,
+    className: "",
     topLevel: true
   };
 }
@@ -382,17 +384,19 @@ function mergeLocalEnv(son : LocalTypeEnv, father : LocalTypeEnv) : LocalTypeEnv
   locals.name = son.name;
   locals.expectedRet = son.expectedRet;
   locals.topLevel = false;
+  locals.className = son.className;
   son.vars.forEach((typ, name) => { locals.vars.set(name, typ); });
   father.vars.forEach((typ, name) => { locals.nonlocal.set(name, typ); });
   locals.nested = son.nested;
   return locals;
 }
 
-export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>, fLocal : LocalTypeEnv = emptyLocalTypeEnv()) : FunDef<Type> {
+export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>, fLocal : LocalTypeEnv = emptyLocalTypeEnv(), className : string = "") : FunDef<Type> {
   var curlocals = emptyLocalTypeEnv();
   curlocals.name = fun.name;
   curlocals.expectedRet = fun.ret;
   curlocals.topLevel = false;
+  curlocals.className = className;
   const tNested : Array<FunDef<Type>> = [];
   fun.parameters.forEach(p => curlocals.vars.set(p.name, p.type));
   fun.inits.forEach(init => curlocals.vars.set(init.name, tcInit(env, init).type));
@@ -425,7 +429,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>, fLocal : LocalTyp
 
 export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
   const tFields = cls.fields.map(field => tcInit(env, field));
-  const tMethods = cls.methods.map(method => tcDef(env, method));
+  const tMethods = cls.methods.map(method => tcDef(env, method, emptyLocalTypeEnv(), cls.name));
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
   if (init.parameters.length !== 1 || 
     init.parameters[0].name !== "self" ||
@@ -714,8 +718,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else if (locals.nested.has(expr.name)) {
         // This is a nested function call
         const [argTypes, argNonlocal, retType] = locals.nested.get(expr.name);
-        console.log(argTypes.length)
-        console.log(argNonlocal.length)
         let argLength = argTypes.length - argNonlocal.length;
 
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
@@ -724,7 +726,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
           argNonlocal.forEach(name => {
             expr.arguments.push({ tag: "id", name })
           });
-          return {...expr, name: `${locals.name}$${expr.name}`, a: retType, arguments: expr.arguments};
+          if (locals.className === "")
+            return {...expr, name: `${locals.name}$${expr.name}`, a: retType, arguments: expr.arguments};
+          else
+            return {...expr, name: `${locals.className}$${locals.name}$${expr.name}`, a: retType, arguments: expr.arguments};
         } else {
           throw new TypeError("Function call type mismatch: " + expr.name);
         }

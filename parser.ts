@@ -523,6 +523,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
       fundef.class = className;
       methods.push(fundef);
     } else {
+      if (s.substring(c.from, c.to) === "pass") continue;
       throw new ParserError(`Could not parse the body of class: ${className}` );
     }
   } 

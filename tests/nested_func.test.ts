@@ -131,8 +131,8 @@ def g(x:int) -> int:
 print(g(4))
 `, [`4`, `6`, `4`])
 
-// 11 - Nested method call
-assertPrint("nested-func-method-call",`
+// 11 - Nested func in class method call
+assertPrint("nested-class-method-call",`
 class B(object):
   x:int = 4
   def printB(self : B, y:int):
@@ -144,6 +144,25 @@ class B(object):
 
 b:B = None
 b = B()
+b.printB(12)
+`, [`12`, `4`])
+
+// 12 - Nested Inheritance Method call
+assertPrint("nested-inheir-method-call",`
+class B(object):
+  x:int = 4
+  def printB(self : B, y:int):
+    def printB1():
+      nonlocal y
+      print(y)
+    printB1()
+    print(self.x)
+
+class A(B):
+  pass
+
+b:B = None
+b = A()
 b.printB(12)
 `, [`12`, `4`])
 
