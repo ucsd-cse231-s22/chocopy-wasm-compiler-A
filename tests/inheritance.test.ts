@@ -328,7 +328,7 @@ l : A = None
 l = B()
 print(l.get_a())
 `,[`1`]);
-assertPrint("multiple-inheritance-method-access", `
+assertPrint("multiple-inheritance-method-access-first-superclass", `
 class Pet(object):
     def speak(self : Pet):
         print(0)
@@ -344,6 +344,24 @@ kitten : Kitten = None
 kitten = Kitten()
 kitten.speak()
 `,[`0`]);
+assertPrint("multiple-inheritance-method-access-second-superclass", `
+class Pet(object):
+  def speak1(self : Pet):
+      print(0)
+
+class Cat(object):
+  def speak2(self : Cat):
+      print(1)
+
+class Kitten(Pet, Cat):
+  a : int = 6
+  def speak3(self : Cat):
+      print(2)
+
+kitten : Kitten = None
+kitten = Kitten()
+kitten.speak2()
+`,[`1`]);
 // assertPrint("multiple-inheritance-field-access", `
 // class Pet(object):
 // 	y : int = 1
