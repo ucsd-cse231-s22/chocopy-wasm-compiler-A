@@ -49,35 +49,68 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
-  const newClassIndices = new Map(env.classIndices);
   const functionNames = new Map(env.functionNames);
 
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
     newGlobals.set(v.name, true);
   });
+
+  prog.classes.forEach(cls => {
+    const classFields = new Map();
+    const classMethods = new Map();
+    var overridenMethods = 0;
+    // TODO(anuj): update to support multiple inheritance
+    var offset : number  = 0;
+    const superclasses = Array.from( cls.super.keys() )
+    if (superclasses[0] !== "object") { 
+      newClasses.get(superclasses[0])[0].forEach((value, key) => {
+        offset = Math.max(value[0]) + 1
+      });
+    }
+
+    var superClassMethodsCount = 0;
+    if (superclasses[0] !== "object") {
+      superClassMethodsCount = newClasses.get(superclasses[0])[3];
+    }
+
+    cls.methods.forEach((method, index) => {
+
+      var methodClassOffset = superClassMethodsCount + index - overridenMethods;
+
+      if (superclasses[0] !== "object"){
+        newClasses.get(superclasses[0])[1].forEach((value, key) => {
+          if (key === method.name) {
+            overridenMethods += 1;
+            methodClassOffset = value;
+          }
+        })
+      }
+      classMethods.set(method.name, methodClassOffset)
+    })
+
+    cls.fields.forEach((field, i) => classFields.set(field.name, [offset + i, field.value]));
+    newClasses.set(cls.name, [classFields, classMethods, cls.super, superClassMethodsCount+classMethods.size - overridenMethods]);
+  });
+
   prog.funs.forEach(f => {
     functionNames.set(f.name, closureName(f.name, []));
     const addClasses = (f: FunDef<Annotation>, ancestors: Array<FunDef<Annotation>>) => {
-      newClasses.set(closureName(f.name, ancestors), new Map());
+      newClasses.set(closureName(f.name, ancestors), [new Map(), new Map(), new Map(), 0]);
       f.children.forEach(c => addClasses(c, [f, ...ancestors]));
     }
     addClasses(f, []);
   });
-  prog.classes.forEach(cls => {
-    const classFields = new Map();
-    cls.fields.forEach((field, i) => classFields.set(field.name, [i + 1, field.value]));
-    newClasses.set(cls.name, classFields);
-  });
+  
   return {
     globals: newGlobals,
     classes: newClasses,
-    classIndices: newClassIndices,
     functionNames,
     locals: env.locals,
     labels: env.labels,
     offset: newOffset,
-    vtableMethods: env.vtableMethods,
+    vtable: env.vtable,
+    classIndices: env.classIndices,
   }
 }
 
@@ -105,10 +138,9 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
   // const compiled = compiler.compile(tprogram, config.env);
   const compiled = compile(optIr, globalEnv);
 
-  const vtable = `(table ${globalEnv.vtableMethods.length} funcref)
-    (elem (i32.const 0) ${globalEnv.vtableMethods.map(method => `$${method[0]}`).join(" ")})`;
+
   const typeSet = new Set<number>();
-  globalEnv.vtableMethods.forEach(([_, paramNum])=>typeSet.add(paramNum));
+  globalEnv.vtable.forEach(([_, paramNum])=>typeSet.add(paramNum));
   let types = "";
   typeSet.forEach(paramNum => {
     let paramType = "";
@@ -158,8 +190,8 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $$bignum_to_i32 (import "imports" "$bignum_to_i32") (param i32) (result i32))
     ${types}
     ${globalImports}
+    ${compiled.vtable}
     ${globalDecls}
-    ${vtable}
     ${config.functions}
     ${compiled.functions}
     (func (export "exported_func") ${returnType}
