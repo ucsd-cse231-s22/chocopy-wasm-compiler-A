@@ -519,7 +519,7 @@ export function traverseType(c: TreeCursor, s: string, env: ParserEnv): Type {
       const ret = traverseType(c, s, env);
       c.parent();
       // return NONE;
-      return CALLABLE(params, ret);
+      return CALLABLE(params.map(p => { return {type: p.type}}), ret);
     default:
       return CLASS(name);
   }
