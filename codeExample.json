@@ -1,0 +1,7 @@
+{
+  "basic class": "class C:\n    a : int = 1\n    b : int = 2\nc : C = None\nc = C()",
+  "nested class": "class E(object):\n    a : int = 1\nclass C(object):\n    a : bool = True\n    e : E = None\n    def __init__(self: C):\n        self.e = E()\n    def d(self: C) -> int:\n        return 1\nc : C = None\nc = C()",
+  "linkedlist class": "class C(object):\n  next:C = None\nc1:C = None\nc2:C = None\nc3:C = None\nc1 = C()\nc2 = C()\nc3 = C()\nc1.next = c2\nc2.next = c3\n    ",
+  "cyclic linkedlist class": "class C(object):\n  next:C = None\nc1:C = None\nc2:C = None\nc3:C = None\nc1 = C()\nc2 = C()\nc3 = C()\nc1.next = c2\nc2.next = c3\nc3.next = c1    ",
+  "uninitialized member variable": "class E(object):\n    a : int = 1\n\nclass C(E):\n    a : int = 2\n    e : E = None\n    def d(self: C) -> int:\n        return 1\nc : C = None\nc = C()"
+}

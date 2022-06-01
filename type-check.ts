@@ -48,7 +48,8 @@ export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
   classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>, Array<string>]>,
-  typevars: Map<string, [string]>
+  typevars: Map<string, [string]>,
+  classesNumber: Array<string>,
 }
 
 export type LocalTypeEnv = {
@@ -69,7 +70,8 @@ const copyGlobals = (env: GlobalTypeEnv): GlobalTypeEnv => {
     globals: new Map(env.globals),
     functions: new Map(env.functions),
     classes: new Map(env.classes),
-    typevars: new Map(env.typevars)
+    typevars: new Map(env.typevars),
+    classesNumber:[]
   };
 }
 
@@ -87,7 +89,9 @@ export const defaultTypeEnv = {
   globals: new Map(),
   functions: defaultGlobalFunctions,
   classes: new Map(),
-  typevars: new Map()
+  typevars: new Map(),
+  classesNumber:new Array<string>()
+
 };
 
 export function emptyGlobalTypeEnv(): GlobalTypeEnv {
@@ -95,7 +99,9 @@ export function emptyGlobalTypeEnv(): GlobalTypeEnv {
     globals: new Map(),
     functions: new Map(),
     classes: new Map(),
-    typevars: new Map()
+    typevars: new Map(),
+    classesNumber:[]
+
   };
 }
 
@@ -300,11 +306,13 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
   const newGlobs = new Map(env.globals);
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
+  const newOrderedClass = new Array<String>();
   const newTypevars = new Map(env.typevars);
 
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
   program.funs.forEach(fun => newGlobs.set(fun.name, CALLABLE(fun.parameters.map(p => p.type), fun.ret)));
   program.classes.forEach(cls => {
+    newOrderedClass.push(cls.name);
     const fields = new Map();
     const methods = new Map();
     cls.fields.forEach(field => fields.set(field.name, field.type));
@@ -313,13 +321,17 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
     newClasses.set(cls.name, [fields, methods, [...typeParams]]);
   });
 
+
   program.typeVarInits.forEach(tv => {
     if(newGlobs.has(tv.name) || newTypevars.has(tv.name) || newClasses.has(tv.name)) {
       throw new TypeCheckError(`Duplicate identifier '${tv.name}' for type-variable`);
     }
     newTypevars.set(tv.name, [tv.canonicalName]);
   });
-  return { globals: newGlobs, functions: newFuns, classes: newClasses, typevars: newTypevars };
+  var classnames =  Array.from(newClasses.keys());
+  classnames.sort();
+  return { globals: newGlobs, functions: newFuns, classes: newClasses, typevars: newTypevars,classesNumber: classnames };
+
 }
 
 export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<Annotation>, GlobalTypeEnv] {
@@ -824,12 +836,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       // TODO: type check `len` after lists are implemented
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg, SRC);
-        
-        if (!equalType(tArg.a.type, NUM) && !equalType(tArg.a.type, BOOL) && !equalType(tArg.a.type, NONE)) {
-           throw new TypeCheckError(SRC, `print() expects types "int" or "bool" or "none" as the argument, got ${bigintSafeStringify(tArg.a.type.tag)}`, tArg.a);
-        }
-        return { ...expr, a: tArg.a, arg: tArg };
-      } else if (env.functions.has(expr.name)) {
+        return {...expr, a: tArg.a, arg: tArg};
+      }  else if (env.functions.has(expr.name)) {
         const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
         const tArg = tcExpr(env, locals, expr.arg, SRC);
 
