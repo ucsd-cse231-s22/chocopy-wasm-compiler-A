@@ -8,6 +8,7 @@ export type GlobalEnv = {
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
+  inheritanceTable: Array<ClassIndex<Type>>;
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -15,7 +16,8 @@ export const emptyEnv : GlobalEnv = {
   classes: new Map(),
   locals: new Set(),
   labels: [],
-  offset: 0 
+  offset: 0,
+  inheritanceTable: []
 };
 
 type CompileResult = {
@@ -25,7 +27,7 @@ type CompileResult = {
   newEnv: GlobalEnv
 };
 
-var inheritanceTable: Array<ClassIndex<Type>> = [];
+// var inheritanceTable: Array<ClassIndex<Type>> = [];
 
 export function makeLocals(locals: Set<string>) : Array<string> {
   const localDefines : Array<string> = [];
@@ -101,7 +103,8 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const funs : Array<string> = [];
   const typelist: Array<string> = getTypeList(ast.table, 0);
   const tablelist: Array<string> = getTableList(ast.table);
-  inheritanceTable = ast.table;
+  if (ast.table.length != 0)
+    env.inheritanceTable = ast.table;
   typelist.forEach(t => {
     funs.push(t);
   })
@@ -262,8 +265,8 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts = valStmts.concat(codeGenValue(expr.arguments[0], env));
       valStmts.push(`i32.load`);
-      valStmts.push(`(i32.add (i32.const ${getIndex(expr.name, expr.class, inheritanceTable)}))`);
-      valStmts.push(`(call_indirect (type ${getType(expr.name, expr.class, inheritanceTable)}))`);
+      valStmts.push(`(i32.add (i32.const ${getIndex(expr.name, expr.class, env.inheritanceTable)}))`);
+      valStmts.push(`(call_indirect (type ${getType(expr.name, expr.class, env.inheritanceTable)}))`);
       return valStmts;
     case "alloc":
       return [

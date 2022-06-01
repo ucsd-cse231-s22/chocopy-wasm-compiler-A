@@ -61,7 +61,8 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
     classes: newClasses,
     locals: env.locals,
     labels: env.labels,
-    offset: newOffset
+    offset: newOffset,
+    inheritanceTable: env.inheritanceTable
   }
 }
 
