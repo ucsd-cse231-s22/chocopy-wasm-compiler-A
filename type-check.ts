@@ -108,7 +108,7 @@ export type TypeError = {
 
 export function equalCallable(t1: Callable, t2: Callable): boolean {
   return t1.params.length === t2.params.length &&
-    t1.params.every((param, i) => equalType(param.type, t2.params[i].type)) && equalType(t1.ret, t2.ret);
+    t1.params.every((param, i) => equalType(param, t2.params[i])) && equalType(t1.ret, t2.ret);
 }
 
 export function equalType(t1: Type, t2: Type) {
@@ -140,7 +140,7 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
-  program.funs.forEach(fun => newGlobs.set(fun.name, CALLABLE(fun.parameters, fun.ret)));
+  program.funs.forEach(fun => newGlobs.set(fun.name, CALLABLE(fun.parameters.map(p=>p.type), fun.ret)));
   program.classes.forEach(cls => {
     const fields = new Map();
     const methods = new Map();
@@ -215,7 +215,7 @@ export function tcPar(env: GlobalTypeEnv, par : Parameter<Annotation>, SRC: stri
 }
 export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv: NonlocalTypeEnv, SRC: string) : FunDef<Annotation> {
   var locals = emptyLocalTypeEnv();
-  locals.vars.set(fun.name, CALLABLE(fun.parameters, fun.ret));
+  locals.vars.set(fun.name, CALLABLE(fun.parameters.map(p=>p.type), fun.ret));
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
   var nonlocals = fun.nonlocals.map(init => ({ name: init.name, a: { ...init.a, type: nonlocalEnv.get(init.name) }}));
@@ -226,7 +226,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv
   var envCopy = copyGlobals(env);
   fun.children.forEach(f => envCopy.functions.set(f.name, [f.parameters, f.ret]));
   var children = fun.children.map(f => tcDef(envCopy, f, locals.vars, SRC));
-  fun.children.forEach(child => locals.vars.set(child.name, CALLABLE(child.parameters, child.ret)));
+  fun.children.forEach(child => locals.vars.set(child.name, CALLABLE(child.parameters.map(p=>p.type), child.ret)));
   
   const tBody = tcBlock(envCopy, locals, fun.body, SRC);
   if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))
@@ -393,7 +393,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       }
       const lambdaLocals = copyLocals(locals);
       expr.params.forEach((param, i) => {
-        lambdaLocals.vars.set(param, expr.type.params[i].type);
+        lambdaLocals.vars.set(param, expr.type.params[i]);
       })
       let ret = tcExpr(env, lambdaLocals, expr.expr, SRC);
       if (!isAssignable(env, ret.a.type, expr.type.ret)) {
@@ -460,7 +460,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         if(newFn.a.type.tag !== "callable") {
           throw new TypeCheckError("Cannot call non-callable expression");
         }
-        const tArgs = tcCallOrMethod("???", newFn.a.type.params, expr.arguments, expr.kwarguments, env, locals, SRC);
+        // TODO: find a way to type check the arguments with keyword and default
+        // const tArgs = tcCallOrMethod("???", newFn.a.type.params, expr.arguments, expr.kwarguments, env, locals, SRC);
+        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
         return {...expr, a: {...expr.a, type: newFn.a.type.ret}, arguments: tArgs, fn: newFn};
       }
     case "lookup":

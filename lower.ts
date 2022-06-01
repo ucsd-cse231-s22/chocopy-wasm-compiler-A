@@ -445,7 +445,7 @@ function lambdaToClass(lambda: AST.Lambda<Annotation>) : [AST.Class<Annotation>,
   var lambdaClassName = generateName("lambda");
   var params = lambda.params.map((param, i) => ({
     name: param, 
-    type: lambda.type.params[i].type
+    type: lambda.type.params[i]
   }));
   return [
     {

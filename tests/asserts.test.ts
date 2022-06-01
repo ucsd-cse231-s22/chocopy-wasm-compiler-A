@@ -8,6 +8,7 @@ import {Program} from '../ir'
 import {Type} from '../ast'
 import * as chai from 'chai';
 import chaiExclude from 'chai-exclude';
+import { expect } from 'chai';
 
 chai.use(chaiExclude);
 

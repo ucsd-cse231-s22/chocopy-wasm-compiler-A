@@ -519,13 +519,13 @@ export function traverseType(c: TreeCursor, s: string, env: ParserEnv): Type {
       const ret = traverseType(c, s, env);
       c.parent();
       // return NONE;
-      return CALLABLE(params.map(p => { return {type: p.type}}), ret);
+      return CALLABLE(params, ret);
     default:
       return CLASS(name);
   }
 }
 
-export function traverseTypeList(c: TreeCursor, s: string, env: ParserEnv): Array<Annotation> {
+export function traverseTypeList(c: TreeCursor, s: string, env: ParserEnv): Array<Type> {
   // console.error(s.substring(c.from, c.to));
   c.firstChild(); // Focuses on open paren
   const types = [];
@@ -534,7 +534,7 @@ export function traverseTypeList(c: TreeCursor, s: string, env: ParserEnv): Arra
     let typ = traverseType(c, s, env);
     c.nextSibling(); // Focuses on "TypeDef", hopefully, or "," if mistake
     c.nextSibling(); // Move on to comma or ")"
-    types.push({type: typ});
+    types.push(typ);
   }
   c.parent(); // Pop to ParamList
   return types;

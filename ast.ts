@@ -14,7 +14,7 @@ export type Location = {
 }
 
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
-export type Callable = {tag: "callable"; params: Array<Parameter<Annotation>>; ret: Type };
+export type Callable = {tag: "callable"; params: Array<Type>; ret: Type };
 export type Type =
   | {tag: "number"}
   | {tag: "bool"}
@@ -25,7 +25,7 @@ export type Type =
   | {tag: "tuple", contentTypes: Array<Type> }
   | Callable;
 
-export type Parameter<A> = { a?: A, name?: string, type: Type, value?: Expr<A> }
+export type Parameter<A> = { a?: A, name: string, type: Type, value?: Expr<A> }
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>>}
 
