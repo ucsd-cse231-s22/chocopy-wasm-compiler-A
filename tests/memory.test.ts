@@ -1,5 +1,5 @@
 import { dataOffset, debugId, refNumOffset, sizeOffset, typeOffset } from "../memory";
-import { assertPrint, assertTCFail, assertTC, assertFail, assertMemState, assertMemAlloc, assertDebug } from "./asserts.test";
+import { assertPrint, assertTCFail, assertTC, assertFail, assertMemState, assertMemAlloc } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("Memory tests", () => {

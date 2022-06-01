@@ -81,7 +81,6 @@ export function refLookup(r: ref) :  ref {
 
 // traverse nodes in a BFS manner amking updates to reference counts
 export function traverseUpdate(r: ref, assignRef: ref, update: number, fromAssign: number): ref { // returns r so that stack state can be maintained
-    console.log("TRAVERSE CALLED", r, assignRef);
     if (r === 0) {
         return r
     }
@@ -122,9 +121,7 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number, fromAssig
                 }
             }
         }
-        console.log('explored!!!:', explored);
     }
-    console.log("memHeap:", memHeap);
     return r
 }
 

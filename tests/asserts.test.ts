@@ -5,7 +5,7 @@ import { Value, Annotation } from "../ast";
 import { importObject } from "./import-object.test";
 import {run, typeCheck} from "./helpers.test";
 import { fail } from 'assert'
-import { compact, debugId, memAddr, debugMemAlloc, debugDebug } from "../memory";
+import { compact, debugId, memAddr, debugMemAlloc } from "../memory";
 
 
 
