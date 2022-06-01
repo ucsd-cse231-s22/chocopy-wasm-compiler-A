@@ -193,7 +193,7 @@ function addParamsToLiveEnv(params: Array<Parameter<any>>, env: liveEnv, dummyEn
 
 function optimizeBlock(block: BasicBlock<any>, env: liveEnv): [BasicBlock<any>, boolean] {
     var blockOptimized: boolean = false;
-    var newStmts: Stmt<any>[];
+    var newStmts: Stmt<any>[] = [];
     block.stmts.reverse().forEach(s => {
         // var optimizedstatement = optimizeStatements(s, env);
         if(s.tag === "assign"){
@@ -205,6 +205,9 @@ function optimizeBlock(block: BasicBlock<any>, env: liveEnv): [BasicBlock<any>, 
                 newStmts.push(s);
             }
             env.updateLiveVariables(s, s.value);
+        }
+        else{
+            newStmts.push(s);
         }
     });
     return [{ ...block, stmts: newStmts }, blockOptimized];
@@ -222,7 +225,7 @@ export function livenessProgramBody(program: Program<any>): [Program<any>, boole
         if (!programOptimized && blockOptimized) programOptimized = true;
         return optimizedBlock;
     });
-    return [{ ...program, body: newBody }, programOptimized]
+    return [{ ...program, body: newBody }, programOptimized];
 }
 
 export function livenessProgramFuns(func: FunDef<any>): [FunDef<any>, boolean] {

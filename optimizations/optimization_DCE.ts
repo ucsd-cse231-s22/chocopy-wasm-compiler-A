@@ -5,10 +5,6 @@ import { checkCopyValEquality, checkStmtEquality, duplicateEnv, isTagId } from "
 
 const varDefEnvTag: string = "$$VD$$";
 
-function eliminateUselessVariables(program: Program<any>): Program<any> {
-    return program;
-}
-
 function eliminateIfJmp(stmt: Stmt<any>,
     block: string,
     preds: string[], 
@@ -69,13 +65,6 @@ function eliminateBlockUnreachableCode(block: BasicBlock<any>,
         index += 1;
     }
     return block;
-}
-
-function eliminateBlockDeadVariables(block: BasicBlock<any>,
-    preds: Map<string, string[]>, 
-    succs: Map<string, string[]>, 
-    blockMapping: Map<string, BasicBlock<any>>) : BasicBlock<any> {
-    return;
 }
 
 function getReachableBlocks(body: BasicBlock<any>[],
