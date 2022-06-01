@@ -2,7 +2,7 @@ import { Annotation, Type, Value } from "./ast";
 // import { GlobalEnv } from "./compiler";
 import { GlobalEnv } from "./compiler";
 import { Program } from "./ir";
-import { lowerProgram } from "./lower";
+import { lowerProgram, resetNameCounters} from "./lower";
 import { optimizeProgram } from "./optimization";
 import { parse } from "./parser";
 import { augmentEnv, Config, run } from "./runner";
@@ -20,6 +20,7 @@ export class BasicREPL {
   memory: any
   constructor(importObject : any) {
     this.importObject = importObject;
+    resetNameCounters();
     if(!importObject.js) {
       const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
       const view = new Int32Array(memory.buffer);
