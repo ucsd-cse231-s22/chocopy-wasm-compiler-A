@@ -93,7 +93,7 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number, fromAssig
     if (update > 0) {
         activeStack[activeStack.length - 1].add(r);
     }
-    memHeap[(refLookup(travQueue[0])/4) + refNumOffset] += update;
+    memHeap[(refLookup(r)/4) + refNumOffset] += update;
     while (travQueue.length > 0) {
         const curr = travQueue.shift();
         const addr = refLookup(curr) / 4;
