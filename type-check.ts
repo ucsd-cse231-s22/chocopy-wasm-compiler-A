@@ -180,7 +180,7 @@ export function join(env: GlobalTypeEnv, t1: Type, t2: Type): Type {
 // classes and that all instantiated type-parameters are valid.
 export function isValidType(env: GlobalTypeEnv, t: Type) : boolean {
   // primitive types are valid types.
-  if(t.tag === "number" || t.tag === "bool" || t.tag === "none") {
+  if(t.tag === "number" || t.tag === "bool" || t.tag === "none" || t.tag === "empty") {
     return true;
   }
 
@@ -199,9 +199,8 @@ export function isValidType(env: GlobalTypeEnv, t: Type) : boolean {
     return t.params.every(p => isValidType(env, p)) && isValidType(env, t.ret);
   }
 
-  if(t.tag === "list" || t.tag === "empty") {
-    // TODO: actually check if list is valid
-    return true;
+  if(t.tag === "list") {
+    return isValidType(env, t.itemType);
   }
 
   // TODO: handle all other newer non-class types here
