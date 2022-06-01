@@ -1,6 +1,6 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, ClassIndex, Type, UniOp } from "./ast"
-import { BOOL, NONE, NUM } from "./utils";
+import { BOOL, NONE, NUM, STR } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -202,7 +202,13 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
-      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+      if (expr.left.a === STR && expr.right.a === STR &&
+          (expr.op === BinOp.Eq || expr.op === BinOp.Neq)) {
+        return [...lhsStmts, ...rhsStmts, `(call $iter_cmp)`,
+          expr.op === BinOp.Neq ? `(i32.const 0)\n(i32.eq)` : ``]
+      } else {
+        return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+      }
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
@@ -420,7 +426,9 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
 
 function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
-  methods.forEach(method => method.name = `${cls.name}$${method.name}`);
-  const result = methods.map(method => method.class === cls.name ? codeGenDef(method, env) : []);
+  methods.forEach(method => {
+    method.name = `${cls.name}$${method.name}`;
+  });
+  const result = methods.map(method => method.nest || method.class === cls.name ? codeGenDef(method, env) : []);
   return result.flat();
-  }
+}

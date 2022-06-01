@@ -42,16 +42,24 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
     }
 }
 
-function lowerFunDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv) : Array<IR.FunDef<Type>> {
-    return fs.map(f => lowerFunDef(f, env)).flat();
+function lowerFunDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv, nested : boolean = false) : Array<IR.FunDef<Type>> {
+    // Also deal with nested functions
+    var funDefs : Array<IR.FunDef<Type>> = []
+    if (fs.length > 0) console.log(fs[0].name)
+    fs.forEach(f => {
+      funDefs.push(lowerFunDef(f, env, nested));
+      funDefs = funDefs.concat(lowerFunDefs(f.nested, env, true));
+    });
+    return funDefs;
 }
 
-function lowerFunDef(f : AST.FunDef<Type>, env : GlobalEnv) : IR.FunDef<Type> {
+function lowerFunDef(f : AST.FunDef<Type>, env : GlobalEnv, nested : boolean = false) : IR.FunDef<Type> {
+  console.log(`============+${f.name}`)
   var blocks : Array<IR.BasicBlock<Type>> = [];
   var firstBlock : IR.BasicBlock<Type> = {  a: f.a, label: generateName("$startFun"), stmts: [] }
   blocks.push(firstBlock);
   var bodyinits = flattenStmts(f.body, blocks, env);
-    return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks}
+    return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks, nest : nested};
 }
 
 function lowerVarInits(inits: Array<AST.VarInit<Type>>, env: GlobalEnv) : Array<IR.VarInit<Type>> {
@@ -84,7 +92,7 @@ function literalToVal(lit: AST.Literal) : IR.Value<Type> {
         case "bool":
             return lit
         case "str":
-            return { ...lit }
+            return { ...lit, a: STR }
         case "none":
             return lit        
     }
@@ -129,6 +137,7 @@ function flattenStmt(s : AST.Stmt<Type>, blocks: Array<IR.BasicBlock<Type>>, env
       return inits;
     //  return [inits, [ ...stmts, {tag: "expr", a: s.a, expr: e } ]];
 
+    case "scope":
     case "comment":
     case "pass":
       return [];
@@ -373,6 +382,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
             { tag: "store", start: { tag: "id", name: itvval }, offset: { tag: "wasmint", value: 1 }, value: { tag: "id", name: tmpValue } });
         return [
           [...linits, ...vinits], [...lstmts, ...vstmts], {
+            a: STR,
             tag: "value",
             value: { tag: "id", name: itvval }
           }
@@ -454,7 +464,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "id":
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
-      return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+      return [[], [], {tag: "value", value: literalToVal(e.value), a: e.a } ];
   }
 }
 

@@ -29,9 +29,13 @@ export type GlobalTypeEnv = {
 // }
 
 export type LocalTypeEnv = {
+  name: string,
   vars: Map<string, Type>,
+  nonlocal: Map<string, Type>,
+  nested: Map<string, [Array<Type>, Array<string>, Type]>,
   expectedRet: Type,
   actualRet: Type,
+  className: string,
   topLevel: Boolean
 }
 
@@ -72,9 +76,13 @@ export function emptyGlobalTypeEnv() : GlobalTypeEnv {
 
 export function emptyLocalTypeEnv() : LocalTypeEnv {
   return {
+    name: "",
     vars: new Map(),
+    nonlocal: new Map(),
+    nested: new Map(),
     expectedRet: NONE,
     actualRet: NONE,
+    className: "",
     topLevel: true
   };
 }
@@ -233,7 +241,11 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
   // fields: {key: field name, value: VarInit<A>}
   // method-class: {key: method name, value: class last defined}
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
-  program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
+  program.funs.forEach(fun => {
+    if (newFuns.has(fun.name))
+      throw new TypeCheckError(`Redefinition of function ${fun.name}`);
+    newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret])
+  });
   // program.classes.forEach(cls => {
   //   const fields = new Map();
   //   const methods = new Map();
@@ -288,7 +300,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
               throw new TypeCheckError("different param type of inherited method " + entry[0] + " in class " + cls.name)
             }
           } else {
-            cls.methods.push({name: entry[0], parameters: [], ret: NONE, inits: [], body: [], class: methodCla.get(entry[0])})
+            cls.methods.push({name: entry[0], parameters: [], ret: NONE, inits: [], nested: [], body: [], class: methodCla.get(entry[0])})
             methodClass.set(entry[0], methodCla.get(entry[0]));
             currMethods.set(entry[0], entry[1]);
           }
@@ -367,22 +379,57 @@ export function tcInit(env: GlobalTypeEnv, init : VarInit<null>) : VarInit<Type>
   }
 }
 
-export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
+function mergeLocalEnv(son : LocalTypeEnv, father : LocalTypeEnv) : LocalTypeEnv {
   var locals = emptyLocalTypeEnv();
-  locals.expectedRet = fun.ret;
+  locals.name = son.name;
+  locals.expectedRet = son.expectedRet;
   locals.topLevel = false;
-  fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
-  fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init).type));
-  
-  const tBody = tcBlock(env, locals, fun.body);
-  if (!isAssignable(env, locals.actualRet, locals.expectedRet))
-    throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`)
-  return {...fun, a: NONE, body: tBody};
+  locals.className = son.className;
+  son.vars.forEach((typ, name) => { locals.vars.set(name, typ); });
+  father.vars.forEach((typ, name) => { locals.nonlocal.set(name, typ); });
+  locals.nested = son.nested;
+  return locals;
+}
+
+export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>, fLocal : LocalTypeEnv = emptyLocalTypeEnv(), className : string = "") : FunDef<Type> {
+  var curlocals = emptyLocalTypeEnv();
+  curlocals.name = fun.name;
+  curlocals.expectedRet = fun.ret;
+  curlocals.topLevel = false;
+  curlocals.className = className;
+  const tNested : Array<FunDef<Type>> = [];
+  fun.parameters.forEach(p => curlocals.vars.set(p.name, p.type));
+  fun.inits.forEach(init => curlocals.vars.set(init.name, tcInit(env, init).type));
+  if (fLocal.name !== "")
+    curlocals = mergeLocalEnv(curlocals, fLocal);
+  fun.nested.forEach(nest => {
+    const tNest : FunDef<Type> = tcDef(env, nest, curlocals);
+    tNest.name = `${fun.name}$${tNest.name}`;
+    tNested.push(tNest);
+    if (curlocals.nested.has(nest.name) || nest.name === fun.name)
+      throw new TypeCheckError(`Invalid Name of nested function ${nest.name}`);
+    curlocals.nested.set(nest.name, [tNest.parameters.map(param => param.type),
+      tNest.parameters.map(param => {
+        if (param.nonlocal) return param.name;}).filter(r => r !== undefined), tNest.ret]);
+  });
+
+  // view nonlocal as parameters
+  fun.body.forEach(stmt => {
+    if (stmt.tag === "scope") {
+      fun.parameters.push({ name: stmt.name, type: curlocals.nonlocal.get(stmt.name), nonlocal: true });
+      console.log(fun.parameters);
+    }
+  });
+
+  const tBody = tcBlock(env, curlocals, fun.body);
+  if (!isAssignable(env, curlocals.actualRet, curlocals.expectedRet))
+    throw new TypeCheckError(`expected return type of block: ${JSON.stringify(curlocals.expectedRet)} does not match actual return type: ${JSON.stringify(curlocals.actualRet)}`)
+  return {...fun, a: NONE, nested: tNested, body: tBody};
 }
 
 export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
   const tFields = cls.fields.map(field => tcInit(env, field));
-  const tMethods = cls.methods.map(method => tcDef(env, method));
+  const tMethods = cls.methods.map(method => tcDef(env, method, emptyLocalTypeEnv(), cls.name));
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
   if (init.parameters.length !== 1 || 
     init.parameters[0].name !== "self" ||
@@ -465,6 +512,13 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
   switch(stmt.tag) {
     case "comment":
       return { a: NONE, tag: "comment" }
+    case "scope":
+      if (locals.topLevel)
+        throw new TypeCheckError("Cannot use nonlocal without function body");
+      if (!locals.nonlocal.has(stmt.name))
+        throw new TypeCheckError(`Unknown variable ${stmt.name} declared with nonlocal`);
+      locals.vars.set(stmt.name, locals.nonlocal.get(stmt.name));
+      return { ...stmt, a: locals.vars.get(stmt.name) }
     case "assign":
       const tValExpr = tcExpr(env, locals, stmt.value);
       var nameTyp;
@@ -661,16 +715,34 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         } else {
           return tConstruct;
         }
+      } else if (locals.nested.has(expr.name)) {
+        // This is a nested function call
+        const [argTypes, argNonlocal, retType] = locals.nested.get(expr.name);
+        let argLength = argTypes.length - argNonlocal.length;
+
+        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        if(argLength === expr.arguments.length &&
+          tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
+          argNonlocal.forEach(name => {
+            expr.arguments.push({ tag: "id", name })
+          });
+          if (locals.className === "")
+            return {...expr, name: `${locals.name}$${expr.name}`, a: retType, arguments: expr.arguments};
+          else
+            return {...expr, name: `${locals.className}$${locals.name}$${expr.name}`, a: retType, arguments: expr.arguments};
+        } else {
+          throw new TypeError("Function call type mismatch: " + expr.name);
+        }
       } else if(env.functions.has(expr.name)) {
         const [argTypes, retType] = env.functions.get(expr.name);
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
 
         if(argTypes.length === expr.arguments.length &&
            tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
-             return {...expr, a: retType, arguments: expr.arguments};
-           } else {
-            throw new TypeError("Function call type mismatch: " + expr.name);
-           }
+           return {...expr, a: retType, arguments: expr.arguments};
+         } else {
+          throw new TypeError("Function call type mismatch: " + expr.name);
+         }
       } else {
         throw new TypeError("Undefined function: " + expr.name);
       }

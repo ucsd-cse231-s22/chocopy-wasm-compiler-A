@@ -277,40 +277,39 @@ ac = C()
 `);
 
 // 9 - Composition with Inheritance
-// assertPrint("composition-inheir", `
-// class A(object):
-//   def f(self : A) -> int:
-//     return 9
+assertPrint("composition-inheir", `
+class A(object):
+  def f(self : A) -> int:
+    return 9
     
-// class B(A):
-//   t:int = 5
-//   a:A = None
-//   def superM(self : B) -> int:
-//     self.a = A()
-//     return self.a.f()
-//   def f(self : B) -> int:
-//     return 16
+class B(A):
+  t:int = 5
+  a:A = None
+  def superM(self : B) -> int:
+    self.a = A()
+    return self.a.f()
+  def f(self : B) -> int:
+    return 16
 
-// class C(B):
-//   fi:int = 94
-//   def g(self : C) -> bool:
-//     return False
+class C(B):
+  fi:int = 94
+  def g(self : C) -> bool:
+    return False
 
-// a : A = None
-// ac : A = None
-// b : B = None
-// c : B = None
-// a = A()
-// ac = C()
-// b = B()
-// c = C()
+a : A = None
+ac : A = None
+b : B = None
+c : B = None
+a = A()
+ac = C()
+b = B()
+c = C()
 
-// print(b.superM())
-// print(b.f())
-// print(c.superM())
-// print(ac.superM())
+print(b.superM())
+print(b.f())
+print(c.superM())
 
-// `, [`9`, `16`, `9`]);
+`, [`9`, `16`, `9`]);
 
 // 10 - Changing parent fields
 assertPrint("change-parent-fields", `

@@ -222,4 +222,11 @@ def f() -> int:
       return 7
     elif (False):
       return 12`);
+
+// 26
+assertTCFail("redef a function", `
+def f() -> int:
+  return 5
+def f() -> bool:
+  return True`);
 });

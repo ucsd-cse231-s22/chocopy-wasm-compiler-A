@@ -7,6 +7,51 @@
   (func (export "len") (param $iter i32) (result i32)
     (i32.load (local.get $iter)))
 
+  ;; Take two iterable, compare the value
+  (func (export "iter_cmp") (param $iter1 i32) (param $iter2 i32) (result i32)
+    (local $len1 i32)
+    (local $len2 i32)
+    (local $i i32)
+
+    (i32.eq (local.get $iter1) (local.get $iter2))
+    (if
+      (then
+        (i32.const 1)
+        return
+      )
+      (else
+        (local.set $len1 (i32.load (local.get $iter1)))
+        (local.set $len2 (i32.load (local.get $iter2)))
+        (i32.ne (local.get $len1) (local.get $len2))
+        (if
+          (local.set $i (i32.const 1))
+          (then
+            (i32.const 0)
+            return
+          )
+          (else
+            (loop $iter_cmping
+              (i32.le_s (local.get $i) (local.get $len1))
+              if
+                (i32.load (i32.add (local.get $iter1) (i32.mul (local.get $i) (i32.const 4))))
+                (i32.load (i32.add (local.get $iter2) (i32.mul (local.get $i) (i32.const 4))))
+                (local.set $i (i32.add (local.get $i) (i32.const 1)))
+                (i32.eq)
+                if
+                  br $iter_cmping
+                end
+              end
+            )
+            (i32.gt_s (local.get $i) (local.get $len1))
+            return
+          )
+        )
+      )
+    )
+    (i32.const 0)
+    return
+  )
+
   ;; Take an iterable string, print it
   (func (export "print_str") (param $addr i32) (result i32)
     (local $len i32)
