@@ -3,6 +3,7 @@ import { Expr, Stmt, Value } from "../ir";
 import { propagateVal } from "./optimizations_prop_fold";
 import { Env } from "./optimization_common";
 import { copyVal } from "./optimization_copy_prop";
+import { val } from "./optimization_deadcode";
 
 
 export function isTagId(value: Value<any>): value is { tag: "id", name: string, a?: any } {
@@ -45,6 +46,12 @@ export function checkValueEquality(a: Value<any>, b: Value<any>): boolean {
     else if (a.value === b.value)
         return true;
     return false;
+}
+
+export function checkLiveValEquality(a: val, b: val): boolean {
+    if (a.tag !== b.tag)
+        return false;
+    return a.name === b.name;
 }
 
 export function checkCopyValEquality(a: copyVal, b: copyVal): boolean {

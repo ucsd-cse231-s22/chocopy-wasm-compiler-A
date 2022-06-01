@@ -4,6 +4,7 @@ import { GlobalEnv } from "./compiler";
 import { Program } from "./ir";
 import { lowerProgram } from "./lower";
 import { optimizeProgram } from "./optimization";
+import { OptimizationSwitch } from "./optimizations/optimization_common";
 import { parse } from "./parser";
 import { augmentEnv, Config, run } from "./runner";
 import { defaultTypeEnv, GlobalTypeEnv, tc } from "./type-check";
@@ -39,7 +40,7 @@ export class BasicREPL {
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";
   }
-  async run(source : string, optimizationSwitch: "0" | "1" | "2" | "3" = "0") : Promise<Value<Annotation>> {
+  async run(source : string, optimizationSwitch: OptimizationSwitch) : Promise<Value<Annotation>> {
     const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions};
     const [result, newEnv, newTypeEnv, newFunctions, instance] = await run(source, config, optimizationSwitch);
     this.currentEnv = newEnv;
@@ -55,7 +56,7 @@ export class BasicREPL {
     this.importObject.env = currentGlobals;
     return result;
   }
-  optimize(source: string, optimizationSwitch: "0" | "1" | "2" | "3"): [ Program<Annotation>, Program<Annotation> ] {
+  optimize(source: string, optimizationSwitch: OptimizationSwitch): [ Program<Annotation>, Program<Annotation> ] {
     const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions};
     const parsed = parse(source);
     const [tprogram, tenv] = tc(config.typeEnv, parsed);
