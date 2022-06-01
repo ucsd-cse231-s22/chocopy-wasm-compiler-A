@@ -37,9 +37,8 @@ export const dataOffset = 4;
 let refMap: Map<ref, memAddr>; 
 
 let refNum = 0; // immutable reference number for objects
-let memHeap: Int32Array;
+export let memHeap: Int32Array;
 let activeStack: Set<ref>[]; // maintains objects created in the local scope
-let exploredSupp: Map<ref, ref[]>;
 //let recRefSet: Set<ref> = new Set();
 let inactiveRefList: ref[] = [];
 let reclaimable: number = 0;
@@ -49,7 +48,6 @@ export function memInit(memory: Int32Array) {
     refMap = new Map();
     refNum = 0;
     memHeap = memory;
-    exploredSupp = new Map();
     activeStack = [new Set()];
     reclaimable = 0;
     inactiveRefList = [];
@@ -82,27 +80,22 @@ export function refLookup(r: ref) :  ref {
 }
 
 // traverse nodes in a BFS manner amking updates to reference counts
-export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { // returns r so that stack state can be maintained
+export function traverseUpdate(r: ref, assignRef: ref, update: number, fromAssign: number): ref { // returns r so that stack state can be maintained
     console.log("TRAVERSE CALLED", r, assignRef);
     if (r === 0) {
         return r
     }
     let explored : Set<number>;
-    if (update < 0) {
-        explored = new Set();
-    } else {
-        explored = new Set(exploredSupp.get(r));
-    }
+    explored = new Set();
     explored.add(assignRef); // assignRef fixes issues for cycles in the ref chain
     let travQueue = [r];
     if (update > 0) {
         activeStack[activeStack.length - 1].add(r);
     }
+    memHeap[(refLookup(travQueue[0])/4) + refNumOffset] += update;
     while (travQueue.length > 0) {
         const curr = travQueue.shift();
         const addr = refLookup(curr) / 4;
-        console.log("refnum: ", curr, "added: ", update);
-        memHeap[addr + refNumOffset] += update;
         if (memHeap[addr + refNumOffset] < 0) { 
             memHeap[addr + refNumOffset] = 0;
         }
@@ -121,21 +114,17 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { //
                     let temp = memHeap[addr + dataOffset + size*a + i];
                     if (temp !== 0 && !explored.has(temp)) { // 0 is None
                         explored.add(temp);
-                        travQueue.push(temp); 
+                        travQueue.push(temp);
+                        if (update < 0 && fromAssign) {
+                            memHeap[(refLookup(temp)/4) + refNumOffset] += update;
+                        } 
                     }
                 }
             }
         }
         console.log('explored!!!:', explored);
     }
-    if (exploredSupp.has(assignRef)) {
-        exploredSupp.get(assignRef).push(r);
-    } else {
-        exploredSupp.set(assignRef, [r]);
-    }
-    
     console.log("memHeap:", memHeap);
-    console.log(exploredSupp);
     return r
 }
 
@@ -187,7 +176,7 @@ export function addScope() {
 }
 
 export function removeScope() {
-    activeStack[activeStack.length - 1].forEach(r => traverseUpdate(r, 0, -1));
+    activeStack[activeStack.length - 1].forEach(r => traverseUpdate(r, 0, -1, 1));
     activeStack.pop();
 }
 
