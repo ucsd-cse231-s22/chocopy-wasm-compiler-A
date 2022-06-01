@@ -71,13 +71,6 @@ function eliminateBlockUnreachableCode(block: BasicBlock<any>,
     return block;
 }
 
-function eliminateBlockDeadVariables(block: BasicBlock<any>,
-    preds: Map<string, string[]>, 
-    succs: Map<string, string[]>, 
-    blockMapping: Map<string, BasicBlock<any>>) : BasicBlock<any> {
-    return;
-}
-
 function getReachableBlocks(body: BasicBlock<any>[],
     blockMapping: Map<string, BasicBlock<any>>) : BasicBlock<any>[]{
     const reachableBlocks : BasicBlock<any>[] = [];
@@ -142,9 +135,26 @@ export function eliminateDeadCodeFunc(func: FunDef<any>): [FunDef<any>, boolean]
     });
     succs.set(varDefEnvTag, [func.body[0].label]);
 
+    const preOptimizedBody = func.body;
     func.body = eliminateUnreachableCode(func.body, preds, succs, blockMapping);
 
-    return [func, false];
+    return [func, checkIfBodyChanged(preOptimizedBody, func.body)];
+}
+
+function checkIfBodyChanged(preOptimizedBody: BasicBlock<any>[], optimizedBody: BasicBlock<any>[]): boolean {
+    var preOptimizedBodyStmtCount = 0;
+    var optimizedBodyStmtCount = 0;
+
+    preOptimizedBody.forEach(block => {
+        preOptimizedBodyStmtCount += block.stmts.length;
+    })
+
+    optimizedBody.forEach(block => {
+        optimizedBodyStmtCount += block.stmts.length;
+    })
+
+    return preOptimizedBodyStmtCount < optimizedBodyStmtCount;
+
 }
 
 export function eliminateDeadCodeProgram(program: Program<any>): [Program<any>, boolean] {
@@ -160,7 +170,8 @@ export function eliminateDeadCodeProgram(program: Program<any>): [Program<any>, 
     succs.set(varDefEnvTag, [program.body[0].label]);
     
     // program = eliminateUselessVariables(program);
+    const preOptimizedBody = program.body;
     program.body = eliminateUnreachableCode(program.body, preds, succs, blockMapping);
 
-    return [program, false];
+    return [program, checkIfBodyChanged(preOptimizedBody, program.body)];
 }
