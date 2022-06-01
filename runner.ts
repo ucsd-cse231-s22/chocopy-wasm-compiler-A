@@ -55,18 +55,6 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
   prog.classes.forEach(cls => {
     const classFields = new Map();
     cls.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
-    // var count = 0;
-    // cls.fields.forEach((field, i) => {
-    //   if (field.type != STRING){
-    //   classFields.set(field.name, [count, field.value]);
-    //   count++;
-    //   }else{
-    //     if (field.value.tag !== "str") throw new Error ("ERROR: Unexpected field value");
-    //     var length = field.value.length;
-    //     classFields.set(field.name, [count, field.value]);
-    //     count += length+2; // We need to store adress and length
-    //   }
-    // });
     newClasses.set(cls.name, classFields);
   });
   return {
