@@ -39,7 +39,7 @@ export const dataOffset = 4;
 export let refMap: Map<ref, memAddr> = new Map(); 
 
 let refNum = 0; // immutable reference number for objects
-let memHeap: Int32Array;
+export let memHeap: Int32Array;
 let activeStack: Set<ref>[]; // maintains objects created in the local scope
 //let recRefSet: Set<ref> = new Set();
 let inactiveRefList: ref[] = [];
@@ -82,23 +82,21 @@ export function refLookup(r: ref) :  ref {
 }
 
 // traverse nodes in a BFS manner amking updates to reference counts
-export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { // returns r so that stack state can be maintained
-    //console.log(`ref: ${r}, assgnRef: ${assignRef}, update: ${update}`);
+export function traverseUpdate(r: ref, assignRef: ref, update: number, fromAssign: number): ref { // returns r so that stack state can be maintained
     if (r === 0 || (assignRef !== 0 && memHeap[(refLookup(assignRef) / 4) + refNumOffset] <= 0)) {
         return r
     }
-    let explored = new Set();
+    let explored : Set<number>;
+    explored = new Set();
     explored.add(assignRef); // assignRef fixes issues for cycles in the ref chain
     let travQueue = [r];
     if (update > 0) {
         activeStack[activeStack.length - 1].add(r);
     }
-
+    memHeap[(refLookup(travQueue[0])/4) + refNumOffset] += update;
     while (travQueue.length > 0) {
         const curr = travQueue.shift();
         const addr = refLookup(curr) / 4;
-
-        memHeap[addr + refNumOffset] += update;
         if (memHeap[addr + refNumOffset] < 0) { 
             memHeap[addr + refNumOffset] = 0;
         }
@@ -116,7 +114,11 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { //
                 for (let a = 0; a < amt / size; a++) {
                     let temp = memHeap[addr + dataOffset + size*a + i];
                     if (temp !== 0 && !explored.has(temp)) { // 0 is None
-                        travQueue.push(temp); 
+                        explored.add(temp);
+                        travQueue.push(temp);
+                        if (update < 0 && fromAssign) {
+                            memHeap[(refLookup(temp)/4) + refNumOffset] += update;
+                        } 
                     }
                 }
             }
@@ -176,7 +178,7 @@ export function addScope() {
 }
 
 export function removeScope() {
-    activeStack[activeStack.length - 1].forEach(r => traverseUpdate(r, 0, -1));
+    activeStack[activeStack.length - 1].forEach(r => traverseUpdate(r, 0, -1, 1));
     activeStack.pop();
 }
 
@@ -212,3 +214,13 @@ export function debugId(id: number, offset: number) { // id should be of type in
 }
 
 
+export function debugMemAlloc() {
+    let x = 0;
+    for (let i = 2; i < memHeap.length; i += x) {
+        x = memHeap[i] + i + 3
+        if ( memHeap[x] === 0 ) {
+            return x - 1;
+        }
+    }
+    throw new Error('memory is full');
+}

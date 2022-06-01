@@ -110,18 +110,43 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
           ...codeGenValue(stmt.offset, env),
           `(call $load)`, // load the ref number referred to by argument ref no. and the offset
           `(i32.const 0)`,
-          `(i32.const -1) (call $traverse_update)`,
+          `(i32.const -1)`,
+          `(i32.const 0)`,  
+          `(call $traverse_update)`,
           `(i32.mul (i32.const 0))`, // hack to take top value of stack
           `(local.get $$scratch)`,
           `(i32.add)`, // hack to take top value of stack
           ...codeGenValue(stmt.start, env),
-          `(i32.const 1) (call $traverse_update)`,
+          `(i32.const 1)`, 
+          `(i32.const 0)`, 
+          `(call $traverse_update)`,
           `(i32.mul (i32.const 0))`
         ]
       } 
+      // else if (stmt.value && stmt.value.a.type.tag === "none") {
+      //   pre = [
+      //     ...codeGenValue(stmt.start, env),
+      //     `call $ref_lookup`,
+      //     ...codeGenValue(stmt.offset, env),
+      //     `(call $load)`, // load the ref number referred to by argument ref no. and the offset
+      //     `(i32.const 0)`,
+      //     `(i32.const -1)`,
+      //     `(i32.const 0)`, 
+      //     `(call $traverse_update)`,
+      //     `(i32.mul (i32.const 0))`, // hack to take top value of stack
+      //     ...codeGenValue(stmt.value, env),
+      //     `(i32.add)`, // hack to take top value of stack
+      //     `(i32.const 0)`,
+      //     `(i32.const -1)`, 
+      //     `(i32.const 0)`, 
+      //     `(call $traverse_update)`,
+      //     `(i32.mul (i32.const 0))`
+      //   ]
+      // } 
       return pre.concat(post);
 
     case "assign":
+      console.log(stmt);
       var valStmts = codeGenExpr(stmt.value, env);
       //console.log("stmt",stmt);
       if (((stmt.value.a?.type?.tag === "class" || (stmt.value.tag === "value" && stmt.value.value.tag === "none")) || (stmt.value?.tag === "value" && stmt.value.value.tag === "num")) && (stmt.value.tag !== "alloc")) { // if the assignment is object assignment
@@ -129,13 +154,15 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
         if (env.locals.has(stmt.name)) {
           return [`(local.get $${stmt.name})`, // update the count of the object on the LHS
           `(i32.const 0)`,
-          `(i32.const -1)`, 
+          `(i32.const -1)`,
+          `(i32.const 1)`,  
           `(call $traverse_update)`,
           `(local.set $${stmt.name})`].concat(valStmts).concat([`(local.set $${stmt.name})`]); 
         } else {
           return [`(global.get $${stmt.name})`,
           `(i32.const 0)`,
           `(i32.const -1)`,
+          `(i32.const 1)`, 
           `(call $traverse_update)`,
           `(global.set $${stmt.name})`].concat(valStmts).concat([`(global.set $${stmt.name})`]); 
         }

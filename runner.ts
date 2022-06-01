@@ -148,7 +148,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $ref_lookup (import "libmemory" "refLookup") (param i32) (result i32))
     (func $add_scope (import "libmemory" "addScope"))
     (func $remove_scope (import "libmemory" "removeScope"))
-    (func $traverse_update (import "libmemory" "traverseUpdate") (param i32) (param i32) (param i32) (result i32))
+    (func $traverse_update (import "libmemory" "traverseUpdate") (param i32) (param i32) (param i32) (param i32) (result i32))
     (func $destructure_check (import "imports" "destructure_check") (param i32) (result i32))
     (func $$add (import "imports" "$add") (param i32) (param i32) (result i32))
     (func $$sub (import "imports" "$sub") (param i32) (param i32) (result i32))
