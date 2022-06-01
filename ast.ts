@@ -61,6 +61,7 @@ export type DestructuringAssignment<A> = { a?: A, isSimple: boolean, vars: Assig
 export type Assignable<A> =
   | { a?: A; tag: "id"; name: string }
   | { a?: A; tag: "lookup"; obj: Expr<A>; field: string }
+  | { a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
 
 export type AssignVar<A> = { a?: A, target: Assignable<A>, ignorable: boolean, star: boolean }
 

@@ -697,7 +697,7 @@ function traverseAssignVar(c: TreeCursor, s: string, env: ParserEnv): AssignVar<
   // todo check if target is *
   let target = traverseExpr(c, s, env);
   let ignorable = false;
-  if (target.tag !== "id" && target.tag !== "lookup") {
+  if (target.tag !== "id" && target.tag !== "lookup" && target.tag !== "index") {
     throw new Error("Unknown variable expression");
   }
   if (target.tag === "id" && target.name === "_") {

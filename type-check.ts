@@ -513,6 +513,7 @@ export function tcAssignable(env : GlobalTypeEnv, locals : LocalTypeEnv, assigna
   var expr : Expr<Annotation> = { ...assignable };
   var typedExpr = tcExpr(env, locals, expr, SRC);
   switch(typedExpr.tag) {
+    case "index":
     case "id":
       var typedAss : Assignable<Annotation> = { ...typedExpr };
       return typedAss;
@@ -905,14 +906,15 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       }
     case "index":
       var tObj = tcExpr(env, locals, expr.obj, SRC);
+      var typedExpr = { ...expr, obj: tObj };
       if(tObj.a.type.tag === "empty") {
-        return { ...expr, a: tObj.a};
+        return { ...typedExpr, a: tObj.a};
       } else if(tObj.a.type.tag === "list") {
         var tIndex = tcExpr(env, locals, expr.index, SRC);
         if(tIndex.a.type !== NUM) {
           throw new TypeCheckError(`index is of non-integer type \'${tIndex.a.type.tag}\'`);
         }
-        return { ...expr, a: {...tObj.a, type: tObj.a.type.itemType}};
+        return { ...typedExpr, a: {...tObj.a, type: tObj.a.type.itemType}};
       } else {
         // For other features that use index
         throw new TypeCheckError(`unsupported index operation`);

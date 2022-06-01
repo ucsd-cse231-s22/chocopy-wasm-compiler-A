@@ -52,13 +52,13 @@ describe('ut for destructure', () => {
     a, _, b = 2, 3, False
     `, NONE);
 
-    // TODO: after introducing list
-    // assertTC("destructure-assignment-with-star", `
-    // a : int = 1
-    // b : bool = True
-    // c : [int] = []
-    // a, *c, b = 2, 4, 5, False
-    // `, NONE);
+    assertTC("destructure-assignment-with-index", `
+    l : [int] = None
+    a : int = 1
+    b : bool = True
+    l = [1,2,3]
+    a, l[1], b = 2, 4, False
+    `, NONE);
 
     // TODO: after introducing list
     // assertTC("destructure-assignment-with-star-empty", `
@@ -131,10 +131,13 @@ describe('ut for destructure', () => {
     assertPrint("destructure-assignment-list", `
     a : int = 1
     b : int = 2
-    a, b = [2, 10]
+    l : [int] = None
+    l = [1, 2, 3]
+    a, b, l[1] = [2, 10, 100]
     print(a)
     print(b)
-    `, ['2', '10']);
+    print(l[1])
+    `, ['2', '10', '100']);
 
     assertPrint("destructure-assignment-sep", `
     a : int = 1
