@@ -355,3 +355,257 @@ We were able to pass all the test cases we had committed to in week 7. Below we 
 
 
 	
+</br>
+
+# Milestone 2
+
+</br>
+
+## Features:
+
+### Integration with other features:
+
+ - Class fields of type lists, sets, strings, etc.
+ - Inheritance with generics
+ - Closures/first class/anonymous functions
+
+</br>
+
+### Multiple Inheritance:
+Along with dynamic dispatch, we plan to finally leverage the Array<string> superclasses that we have defined in our ast.ts and ir.ts to support multiple inheritance. We expect the v-table structure for it to be similar with added pointers to the multiple superclasses, keeping the overall skeleton of the feature to be the same.
+
+</br>
+</br>
+
+## Test Cases:
+
+### 1. Dynamic dispatch with function (Passes):
+
+    class Pet(object):
+        def speak(self):
+            print(0)
+    
+    class Cat(Pet):
+        def speak(self: Cat):
+            print(1)
+
+    class Dog(Pet):
+        def speak(self: Dog):
+            print(2)
+
+
+    def speak(pet : Pet):
+        pet.speak()
+
+    cat : Cat = None
+    cat = Cat()
+    speak(cat)  # prints 1
+    dog : Dog = None
+    dog = Dog()
+    speak(dog)  # prints 2
+
+
+### 2. Dynamic dispatch with function (Throws Error):
+
+    class Pet(object):
+        def speak(self):
+            print(0)
+    
+    class Cat(Pet):
+        def speak(self: Cat):
+            print(1)
+
+    class Dog(object):
+        def speak(self: Dog):
+            print(2)
+
+
+    def speak(pet : Pet):
+        pet.speak()
+
+    cat : Cat = None
+    cat = Cat()
+    speak(cat)  # prints 1
+    dog : Dog = None
+    dog = Dog()
+    speak(dog)  # TypeError: Object of class 'Dog' cannot be assigned to class 'Pet'
+
+### 3. Multiple Inheritance (Passes):
+
+    class Pet(object):
+        def speak(self):
+            print(0)
+    
+    class Cat(object):
+        def speak(self):
+            print(1)
+
+    class Kitten(Pet, Cat):
+        pass
+
+    kitten : Kitten = None
+    kitten = Kitten()
+    kitten.speak()  # prints 0
+    
+### 4. Multiple Inheritance Field Access (Passes):
+
+	class Pet(object):
+	    y : int = 1
+	    def speak(self):
+		print(0)
+
+	class Cat(object):
+	    x : int = 0
+	    def speak(self):
+		print(1)
+
+	class Kitten(Pet, Cat):
+	    pass
+
+	kitten : Kitten = None
+	kitten = Kitten()
+	kitten.speak()   # prints 0
+	print(kitten.y)  # prints 1
+	print(kitten.x)  # prints 0
+	
+### 5. Inheritance with sets
+
+	class A(object): 
+	    a : int = 1 
+	    s1:set = set()
+	    def __init__(self: A):
+		s1 = {3,5,7}
+	    def get(self: A) -> int: 
+		return self.s1 
+
+	class B(A): 
+	    c : int = 3 
+
+	x : B = None 
+	x = B() 
+	print(x.s1) # prints {3,5,7}
+	x.s1.add(8)
+	print(x.s1) # prints {3,5,8}
+	
+### 6. Inheritance with lists (Passes)
+
+	class A(object): 
+	    a : int = 1 
+	    itemsa: [int] = None
+	    itemsa = [0, 1, 2]
+	    def get(self: A) -> int: 
+		return self.a 
+	class B(A): 
+	    itemsb: [int] = None
+	    itemsb = [3, 4, 5]
+	    c : int = 3 
+
+	x : B = None 
+	x = B() 
+	print(x.itemsa) # prints [0, 1, 2]
+	print(x.itemsb) # prints [3, 4, 5]
+	print(x.c) # prints 3
+	print(x.a) # prints 1
+	
+### 7. Inheritance with Strings (Passes)
+
+	class A(object): 
+	    a : int = 1 
+	    d:  str = “hello A”
+	    def get(self: A) -> int: 
+		return self.a 
+	class B(A): 
+	    b : str = “hello B”
+	    c : int = 3 
+
+	x : B = None 
+	x = B() 
+	print(x.b) # prints hello B
+	print(x.d) # prints hello A
+	print(x.d[0]) # prints h
+	print(x.c) # prints 3
+	print(x.a) # prints 1
+	
+
+### 8. Testing Inheritance with For Loops and Continue (Passes)  
+    
+	class Range():
+	  current : int = 0
+	  min : int = 0
+	  max : int = 0
+	  def new(self:Range, min:int, max:int)->Range:
+	    self.min = min
+	    self.current = min
+	    self.max = max
+	    return self
+	  def next(self:Range)->int:
+	    c : int = 0
+	    c = self.current
+	    self.current = self.current + 1
+	    return c
+	  def hasnext(self:Range)->bool:
+	    return self.current < self.max
+
+	class NumberIterator(Range):
+	   len: int = 0
+	   
+	   def new(self:NumberIterator, len: int)->NumberIterator:
+	    self.len = len
+	    self.min = 0
+	    self.current = 0
+	    self.max = len
+	    return self
+	   
+
+
+	cls:NumberIterator = None
+	i:int = 0
+	cls = NumberIterator().new(8)
+
+	for i in cls:
+	   print(i)
+	   continue 
+   	   print(i)
+
+### 9. Testing Inheritance with Fancy Calling (Passes)
+	class A():
+	    x = 0
+	    def __init__(self : A, x: int  = 5):
+		self.x = x
+		
+	class B(A):
+	    y = 0
+	    def __init__(self : B, x: int = 8, y: int = 2):
+	        self.y = y
+		self.x = x
+	    
+	a1: A = None
+	a1 = A()
+	a2: B = None
+	a2 = B()
+	print(a1.x) // Should print 5
+	print(a2.x) // SHould print 8
+	print(a2.y) // Should print 2
+	
+### 10. Testing Inheritance with Generics (Passes)  
+	
+    L = TypeVar('L')
+    R = TypeVar('R')
+    
+    class A():
+    	a: int = 5
+	def __init__(self):
+	    pass
+	    
+    class Pair(Generic[L, R], A):
+	left: L = __ZERO__
+	right: R = __ZERO__
+    
+    p1 : Pair[int, int] = None
+    p1 = Pair()
+    p1.left = 10
+    p1.right = 20
+    
+    print(p1.left) // Should print 10
+    print(p1.right) // Should print 20
+    print(p1.a) // Should print 5
