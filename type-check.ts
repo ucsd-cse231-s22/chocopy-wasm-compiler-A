@@ -2,6 +2,7 @@ import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Lite
 import { NUM, BOOL, NONE, CLASS, CALLABLE, TYPEVAR, LIST } from './utils';
 import { emptyEnv } from './compiler';
 import { fullSrcLine, drawSquiggly } from './errors';
+import { expect } from 'chai';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 
@@ -403,7 +404,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv
   const tBody = tcBlock(envCopy, locals, fun.body, SRC);
   if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))
     // TODO: what locations to be reported here?
-    throw new TypeCheckError(`expected return type of block: ${bigintSafeStringify(locals.expectedRet)} does not match actual return type: ${bigintSafeStringify(locals.actualRet)}`)
+    throw new TypeCheckError(SRC, `expected return type of block: ${bigintSafeStringify(locals.expectedRet)} does not match actual return type: ${bigintSafeStringify(locals.actualRet)}`)
   return {...fun, a: { ...fun.a, type: NONE }, body: tBody, nonlocals, children};
 }
 
@@ -582,22 +583,41 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
           tValExpr.a.type.params = [...tDestruct.a.type.params];
         }
         if(!isAssignable(env, tValExpr.a.type, tDestruct.a.type)) {
-          throw new TypeCheckError(SRC, `Assignment value should have assignable type to type ${bigintSafeStringify(tDestruct.a.type.tag)}, got ${bigintSafeStringify(tValExpr.a.type.tag)}`, tValExpr.a);
+          var typeToMatch = bigintSafeStringify(tDestruct.a.type.tag);
+          var typeReceived = bigintSafeStringify(tValExpr.a.type.tag);
+          if ( tDestruct.a.type.tag == "callable") {
+            let callableParamTypes : Array<string> = [];
+            let callableRetType = bigintSafeStringify(tDestruct.a.type.ret.tag);
+            tDestruct.a.type.params.forEach(t => {
+              callableParamTypes.push(bigintSafeStringify(t.tag));
+            });
+            typeToMatch = `callable[[${callableParamTypes}], ${callableRetType}]`
+          }
+          if (tValExpr.a.type.tag == "callable") {
+            let callableParamTypes : Array<string> = [];
+            let callableRetType = bigintSafeStringify(tValExpr.a.type.ret.tag);
+            tValExpr.a.type.params.forEach(t => {
+              callableParamTypes.push(bigintSafeStringify(t.tag));
+            });
+            typeReceived = `callable[[${callableParamTypes}], ${callableRetType}]`
+          }
+          const errorMsg = `Assignment value should have assignable type to type ${typeToMatch}, got ${typeReceived}`;
+          throw new TypeCheckError(SRC, errorMsg, tValExpr.a);
         }
       }else if(!tDestruct.isSimple && tValExpr.tag === "array-expr") {
         // for plain destructure like a, b, c = 1, 2, 3
         // we can perform type check
         if(!hasStar && tDestruct.vars.length != tValExpr.elements.length) {
-          throw new TypeCheckError(`value number mismatch, expected ${tDestruct.vars.length} values, but got ${tValExpr.elements.length}`);
+          throw new TypeCheckError(SRC, `value number mismatch, expected ${tDestruct.vars.length} values, but got ${tValExpr.elements.length}`, stmt.a);
         } else if(hasStar && tDestruct.vars.length-1 > tValExpr.elements.length) {
-          throw new TypeCheckError(`not enough values to unpack (expected at least ${tDestruct.vars.length-1}, got ${tValExpr.elements.length})`);
+          throw new TypeCheckError(SRC, `not enough values to unpack (expected at least ${tDestruct.vars.length-1}, got ${tValExpr.elements.length})`, stmt.a);
         }
         for(var i=0; i<tDestruct.vars.length; i++) {
           if(tDestruct.vars[i].ignorable) {
             continue;
           }
           if(!isAssignable(env, tValExpr.elements[i].a.type, tDestruct.vars[i].a.type)) {
-            throw new TypeCheckError(`Non-assignable types: ${tValExpr.elements[i].a} to ${tDestruct.vars[i].a}`);
+            throw new TypeCheckError(SRC, `Non-assignable types: ${tValExpr.elements[i].a.type.tag} to ${tDestruct.vars[i].a.type.tag}`, stmt.a);
           }
         }
       } else if(!tDestruct.isSimple && (tValExpr.tag === "call" || tValExpr.tag === "method-call" || tValExpr.tag === "id")) {
@@ -605,7 +625,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
         // but there is no such a type currently, so
         // TODO: add specific logic then
         if(tValExpr.a.type.tag != "class" || tValExpr.a.type.name != "iterator") {
-          throw new TypeCheckError(`cannot unpack non-iterable ${JSON.stringify(tValExpr.a, null, 2)} object`)
+          throw new TypeCheckError(SRC, `cannot unpack non-iterable ${JSON.stringify(tValExpr.a, null, 2)} object`, stmt.a)
         } else {
           var rightType = env.classes.get('iterator')[1].get('next')[1];
           for(var i=0; i<tDestruct.vars.length; i++) {
@@ -613,7 +633,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
               continue;
             }
             if(!isAssignable(env, rightType, tDestruct.vars[i].a.type)) {
-              throw new TypeCheckError(`Non-assignable types: ${rightType} to ${tDestruct.vars[i].a}`);
+              throw new TypeCheckError(SRC, `Non-assignable types: ${rightType.tag} to ${tDestruct.vars[i].a.type.tag}`, stmt.a);
             }
           }
         }
@@ -621,7 +641,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       } else if(!tDestruct.isSimple) {
         // TODO: support other types like list, tuple, which are plain formatted, we could also perform type check
         if(tValExpr.a != CLASS('iterator')) {
-          throw new TypeCheckError(`cannot unpack non-iterable ${tValExpr.a} object`)
+          throw new TypeCheckError(SRC, `cannot unpack non-iterable ${tValExpr.a.type.tag} object`, stmt.a)
         }
       }
       return {a: { ...stmt.a, type: NONE }, tag: stmt.tag, destruct: tDestruct, value: tValExpr};
@@ -662,12 +682,12 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
     case "continue":
       return {a: { ...stmt.a, type: NONE }, tag: stmt.tag};
     case "for":
-      var tIterator = tcIterator(env, locals, stmt.iterator)
+      var tIterator = tcIterator(env, locals, stmt.iterator, SRC)
       var tValObject = tcExpr(env, locals, stmt.values, SRC);
       if (tValObject.a.type.tag !== "class") 
-        throw new TypeCheckError("values require an object");
+        throw new TypeCheckError(SRC, `Can only iterate through Iterator object type, got type ${tValObject.a.type.tag}`, stmt.a);
       if (!env.classes.has(tValObject.a.type.name)) 
-        throw new TypeCheckError("values on an unknown class");
+        throw new TypeCheckError(SRC, "values on an unknown class", stmt.a);
       const [__, methods] = env.classes.get(tValObject.a.type.name);
       if(!(methods.has("hasnext")) || methods.get("hasnext")[1].tag != BOOL.tag)
         throw new TypeCheckError(SRC, "iterable class must have hasnext method with boolean return type");
@@ -712,14 +732,17 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
     case "index-assign":
       const tList = tcExpr(env, locals, stmt.obj, SRC)
       if (tList.a.type.tag !== "list")
-        throw new TypeCheckError("index assignments require an list");
+        throw new TypeCheckError(SRC, `Can only index into a list object, attempting to index into type ${bigintSafeStringify(tList.a.type.tag)}`, stmt.a);
       const tIndex = tcExpr(env, locals, stmt.index, SRC);
       if (tIndex.a.type.tag !== "number")
-        throw new TypeCheckError(`index is of non-integer type \'${tIndex.a.type.tag}\'`);
+        throw new TypeCheckError(SRC, `index is of non-integer type "${tIndex.a.type.tag}"`, stmt.a);
       const tValue = tcExpr(env, locals, stmt.value, SRC);
       const expectType = tList.a.type.itemType;
-      if (!isAssignable(env, expectType, tValue.a.type))
-        throw new TypeCheckError("Non-assignable types");
+      if (!isAssignable(env, expectType, tValue.a.type)) {
+        const expectedType = bigintSafeStringify(expectType.tag)
+        const receivedType = bigintSafeStringify(tValue.a.type.tag)
+        throw new TypeCheckError(SRC, `Cannot assign type ${receivedType} to expected type ${expectedType}`, stmt.a);
+      }
 
       return {a: { ...stmt.a, type: NONE }, tag: stmt.tag, obj: tList, index: tIndex, value: tValue}
   }
@@ -745,9 +768,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
             } else if(equalType(tLeft.a.type, tRight.a.type)) {
               return {...expr, a: tLeft.a};
             } else {
-              var leftType = tLeft.a.type.tag === "list"? tLeft.a.type.tag + "[" + tLeft.a.type.itemType + "]": tLeft.a.type.tag;
-              var rightType = tRight.a.type.tag === "list"? tRight.a.type.tag + "[" + tRight.a.type.itemType + "]": tRight.a.type.tag;
-              throw new TypeCheckError(`Cannot concatenate ${rightType} to ${leftType}`);
+              var leftType = tLeft.a.type.tag === "list" ? tLeft.a.type.tag + "[" + bigintSafeStringify(tLeft.a.type.itemType.tag) + "]": tLeft.a.type.tag;
+              var rightType = tRight.a.type.tag === "list" ? tRight.a.type.tag + "[" + bigintSafeStringify(tRight.a.type.itemType.tag) + "]": tRight.a.type.tag;
+              throw new TypeCheckError(SRC, `Cannot concatenate ${rightType} to ${leftType}`, expr.a);
             }
           }
         case BinOp.Minus:
@@ -809,7 +832,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       }
     case "lambda":
       if (expr.params.length !== expr.type.params.length) {
-        throw new TypeCheckError("Mismatch in number of parameters: " + expr.type.params.length + " != " + expr.params.length);
+        throw new TypeCheckError(SRC, "Mismatch in number of parameters: " + expr.type.params.length + " != " + expr.params.length, expr.a);
       }
       const lambdaLocals = copyLocals(locals);
       expr.params.forEach((param, i) => {
@@ -817,7 +840,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       })
       let ret = tcExpr(env, lambdaLocals, expr.expr, SRC);
       if (!isAssignable(env, ret.a.type, expr.type.ret)) {
-        throw new TypeCheckError("Expected type " + bigintSafeStringify(expr.type.ret) + " in lambda, got type " + bigintSafeStringify(ret.a.type.tag));
+        throw new TypeCheckError(SRC, "Expected type " + bigintSafeStringify(expr.type.ret) + " in lambda, got type " + bigintSafeStringify(ret.a.type.tag), expr.a);
       }
       return {a: { ...expr.a, type: expr.type }, tag: "lambda", params: expr.params, type: expr.type, expr: ret}
     case "builtin1":
@@ -874,7 +897,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       } else {
         const newFn = tcExpr(env, locals, expr.fn, SRC);
         if(newFn.a.type.tag !== "callable") {
-          throw new TypeCheckError("Cannot call non-callable expression");
+          throw new TypeCheckError(SRC, "Cannot call non-callable expression", expr.a);
         }
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
         
@@ -910,12 +933,12 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       } else if(tObj.a.type.tag === "list") {
         var tIndex = tcExpr(env, locals, expr.index, SRC);
         if(tIndex.a.type !== NUM) {
-          throw new TypeCheckError(`index is of non-integer type \'${tIndex.a.type.tag}\'`);
+          throw new TypeCheckError(SRC, `list index is of non-integer type "${tIndex.a.type.tag}"`, expr.a);
         }
         return { ...expr, a: {...tObj.a, type: tObj.a.type.itemType}};
       } else {
         // For other features that use index
-        throw new TypeCheckError(`unsupported index operation`);
+        throw new TypeCheckError(SRC, `Can only index into lists. Unsupported index operation on type ${bigintSafeStringify(tObj.a.type.tag)}`, expr.a);
       }
     case "slice":
       var tObj = tcExpr(env, locals, expr.obj, SRC);
@@ -925,19 +948,19 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         if(expr.index_s !== undefined) {
           tStart = tcExpr(env, locals, expr.index_s, SRC);
           if(tStart.a.type !== NUM)
-            throw new TypeCheckError(`index is of non-integer type \'${tStart.a.type.tag}\'`);
+            throw new TypeCheckError(SRC, `index is of non-integer type "${tStart.a.type.tag}"`, expr.a);
         }
         if(expr.index_e !== undefined) {
           tEnd = tcExpr(env, locals, expr.index_e, SRC);
           if(tEnd.a.type !== NUM)
-            throw new TypeCheckError(`index is of non-integer type \'${tEnd.a.type.tag}\'`);
+            throw new TypeCheckError(SRC, `index is of non-integer type "${tEnd.a.type.tag}"`, expr.a);
         }
         return { ...expr, a: tObj.a, index_s: tStart, index_e: tEnd };
       } else if(tObj.a.type.tag === "empty") {
         return { ...expr, a: {...expr.a, type: {tag: "empty"}} };
       } else {
         // For other features that use slice syntax
-        throw new TypeCheckError(`unsupported slice operation`);
+        throw new TypeCheckError(SRC, `Can only slice on lists. Unsupported slice operation on type ${bigintSafeStringify(tObj.a.type.tag)}`, expr.a);
       }
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj, SRC);
@@ -1016,7 +1039,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         } else if(tItems.every((item) => isAssignable(env, listType.a.type, item.a.type))) {
           return { ...expr, a: {...expr.a, type: {tag: "list", itemType: listType.a.type}}, items: tItems };
         } else {
-          throw new TypeCheckError(`List constructor type mismatch` + bigintSafeStringify(listType) + bigintSafeStringify(tItems));
+          throw new TypeCheckError(SRC, `List constructor type mismatch. Expected type ` + bigintSafeStringify(listType.a.type.tag) + `, got types ` + bigintSafeStringify(tItems.map(item => item.a.type.tag)), expr.a);
         }
       }
       return { ...expr, a: {...expr.a, type: {tag: "empty"}}, items: tItems };
@@ -1026,12 +1049,12 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
 
 // function to return the type of iterator in for-loop. Finds the string in globals/locals and returns its type
 // Will be extended to include tuples etc in later commits
-export function tcIterator(env : GlobalTypeEnv, locals : LocalTypeEnv, iterator: string): Type{
+export function tcIterator(env : GlobalTypeEnv, locals : LocalTypeEnv, iterator: string, SRC : string): Type{
   if (locals.vars.has(iterator))
    return locals.vars.get(iterator) 
   else if (env.globals.has(iterator))
      return env.globals.get(iterator)
-   throw new TypeCheckError(`Undefined iterator`)
+   throw new TypeCheckError(SRC, `Undefined iterator: ${iterator}`)
 }
   
   export function tcLiteral(literal: Literal<Annotation>) {
