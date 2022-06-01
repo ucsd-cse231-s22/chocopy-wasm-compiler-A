@@ -92,7 +92,7 @@ function literalToVal(lit: AST.Literal) : IR.Value<Type> {
         case "bool":
             return lit
         case "str":
-            return { ...lit }
+            return { ...lit, a: STR }
         case "none":
             return lit        
     }
@@ -382,6 +382,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
             { tag: "store", start: { tag: "id", name: itvval }, offset: { tag: "wasmint", value: 1 }, value: { tag: "id", name: tmpValue } });
         return [
           [...linits, ...vinits], [...lstmts, ...vstmts], {
+            a: STR,
             tag: "value",
             value: { tag: "id", name: itvval }
           }
@@ -463,7 +464,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "id":
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
-      return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+      return [[], [], {tag: "value", value: literalToVal(e.value), a: e.a } ];
   }
 }
 

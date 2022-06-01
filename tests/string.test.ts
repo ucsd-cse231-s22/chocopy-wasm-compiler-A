@@ -64,6 +64,7 @@ assertPrint("string-compare", `
 a:str = "Joe"
 i:str = "Joe"
 print(a == i)
-print(a[1] != i[2])`, [`True`, `True`]);
+print(a != "Joe")
+print(a[1] == i[2])`, [`True`, `False`, `False`]);
 
 });
