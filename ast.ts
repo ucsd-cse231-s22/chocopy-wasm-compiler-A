@@ -6,6 +6,7 @@ export type Type =
   | {tag: "bool"}
   | {tag: "none"}
   | {tag: "str"}
+  | {tag: "emptyList"}
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
   | { tag: 'list', type: Type }
@@ -35,8 +36,8 @@ export type Stmt<A> =
   | {  a?: A, tag: "field-assign", obj: Expr<A>, field: string, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els?: Stmt<A>|Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
-  | {  a?: A, tag: "for", iterator: string, iterable: Expr<A>, body: Array<Stmt<A>> }
-  | {  a?: A, tag: "for-str", iterator: string, iterable: Expr<A>, body: Array<Stmt<A>> }
+  | {  a?: A, tag: "for", iterator: Expr<A>, iterable: Expr<A>, body: Array<Stmt<A>> }
+  | {  a?: A, tag: "for-str", iterator: Expr<A>, iterable: Expr<A>, body: Array<Stmt<A>> }
   | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
 
 export type Expr<A> =
