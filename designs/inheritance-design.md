@@ -317,43 +317,6 @@ We were able to pass all the test cases we had committed to in week 7. Below we 
   5. Added code generation for generating table in WAT.
 
 
-
-# Update Week 9 - 10
-
-### Closure Merge:
-
-  1. Both inheritance (our) and closure group had added the `classIndices` and `Vtable` in the global environment. The definition of the variables were slightly different according to the requirements of each group. First, closures had added the information about number of parameters for each method in the vtable. Second, we added both start and end index of a class methods in the vtable in `classIndices` but closures group only had the start index. We merged these definitions to create the below:
-
-	vtable: Array<[string, number]> // stores method name and number of parameters in the method
-	classIndices: Map<string, [number, number]> // stores the start and end index of a class methods in the vtable
-	
-  2. Merged the definition of call indirect in the IR and compiler.ts.
-
-
-  3. Updated the working of our code and closure code so that they work with the new definitions of classIndices and Vtable
-
-
-  4. Closures group did not have closure or lambda constructors in the vtable, this conflicted with our design of class constructors which were called using the vtable and also made it difficult to handle constructors separately. We updated the code to store closure and lambda constructor in the vtable.
-
-
-  5. Updated runner.ts `augmentEnv` method to accomodate changes for adding method and field offsets for each class as well as adding closure/lambda as classes in the environment. It would be necesaary to put the method and field information of the closure/lambda in the environment at this point to make sure free and nonlocal variables work when added.
-
-
-### Generics Merge:
-
-  1. Updated parser to skip generic member expression while parsing class arguements.
-
-
-  2. Updated generic test cases to have super field in class definition.
-
-
-  3. Merged definition of class in AST.
-
-	export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, typeParams: Array<string>, super: Array<string> }
-
-  4. Updated type checker environment to store both typeParams and super class information.
-
-
 	
 </br>
 
@@ -609,3 +572,72 @@ Along with dynamic dispatch, we plan to finally leverage the Array<string> super
     print(p1.left) // Should print 10
     print(p1.right) // Should print 20
     print(p1.a) // Should print 5
+    
+    
+
+# Update Week 9 - 10
+
+### Integration with other features:
+
+### Closure Merge:
+
+  1. Both inheritance (our) and closure group had added the `classIndices` and `Vtable` in the global environment. The definition of the variables were slightly different according to the requirements of each group. First, closures had added the information about number of parameters for each method in the vtable. Second, we added both start and end index of a class methods in the vtable in `classIndices` but closures group only had the start index. We merged these definitions to create the below:
+
+	vtable: Array<[string, number]> // stores method name and number of parameters in the method
+	classIndices: Map<string, [number, number]> // stores the start and end index of a class methods in the vtable
+	
+  2. Merged the definition of call indirect in the IR and compiler.ts.
+
+
+  3. Updated the working of our code and closure code so that they work with the new definitions of classIndices and Vtable
+
+
+  4. Closures group did not have closure or lambda constructors in the vtable, this conflicted with our design of class constructors which were called using the vtable and also made it difficult to handle constructors separately. We updated the code to store closure and lambda constructor in the vtable.
+
+
+  5. Updated runner.ts `augmentEnv` method to accomodate changes for adding method and field offsets for each class as well as adding closure/lambda as classes in the environment. It would be necesaary to put the method and field information of the closure/lambda in the environment at this point to make sure free and nonlocal variables work when added.
+
+
+### Generics Merge:
+
+  1. Updated parser to skip generic member expression while parsing class arguements.
+
+
+  2. Updated generic test cases to have super field in class definition.
+
+
+  3. Merged definition of class in AST.
+
+	export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, typeParams: Array<string>, super: Array<string> }
+
+  4. Updated type checker environment to store both typeParams and super class information.
+
+
+### Multiple Inheritance:
+
+
+#### Things that work:
+
+   1. **Constructor**: Constructing objects of a class that inherits from multiple classes works. This involved dynamically calculating the offsets for the superclass fields in lower.ts. We first traverse the multiple superclasses from left to right and recursively add the fields for each of the superclasses to lay out the fields in the memory correctly.
+
+        For example: Let class A have a1,a2 fields, class B have b1,b2 fields, and class C inherits from A & B (in this order) and has c1, c2 fields. Then memory would look like this: 
+     
+     		Memory Layout -> vtable_offset | a1 | a2 | b1 | b2 | c1 | c2 |
+
+       If class C inherits in order B & A then memory would look like this: 
+  
+     		Memory Layout -> vtable_offset | b1 | b2 | a1 | a2 | c1 | c2 |
+
+2. **Field Lookup**: for the case of field lookup in multiple inheritance we need to dynamically calculate the correct offset of the given field to access it at the correct location in memory. We looked up the documentation of python to see how python searches and resolves field mapping in case of multiple inheritance. We follow the same strategy of searching i.e we check the derived class first, and if the field is not found in the derived class we then search the superclasses recursively in depth-first - left to right order. 
+
+
+3. **Parsing, IR, and Type Checking**: our code can parse multiple classes as arguments in a class definition and represent them in the AST and IR. We are also able to type check each of the superclasses (whether superclass exist) in case of multiple inheritance. 
+
+
+#### Things that don't work:
+
+   1. **Diamond Problem**: this refers to an ambiguity that arises when two classes B and C inherit from A, and class D inherits from both B and C. If there is a method in A that B and C have overridden, and D does not override it, then which version of the method does D inherit: that of B, or that of C? We looked up the specific ways to resolve this but couldn't accommodate these changes due to time constraints. 
+
+
+	
+
