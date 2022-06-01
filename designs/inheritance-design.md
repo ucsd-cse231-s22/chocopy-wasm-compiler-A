@@ -316,7 +316,6 @@ We were able to pass all the test cases we had committed to in week 7. Below we 
 
   5. Added code generation for generating table in WAT.
 
-
 	
 </br>
 
@@ -335,9 +334,58 @@ We were able to pass all the test cases we had committed to in week 7. Below we 
 </br>
 
 ### Multiple Inheritance:
-Along with dynamic dispatch, we plan to finally leverage the Array<string> superclasses that we have defined in our ast.ts and ir.ts to support multiple inheritance. We expect the v-table structure for it to be similar with added pointers to the multiple superclasses, keeping the overall skeleton of the feature to be the same.
+Along with dynamic dispatch, we finally leverage the Map<string, Array<string>> superclasses that we have defined in our ast.ts and ir.ts to support multiple inheritance. The v-table structure for it is similar to milestone 1 with added pointers to the multiple superclasses, keeping the overall skeleton of the feature to be the same.
 
 </br>
+
+# Updates Week 9 - 10: Integration with other features
+
+### Closure Merge:
+
+  1. Both inheritance (our) and closure group had added the `classIndices` and `Vtable` in the global environment. The definition of the variables were slightly different according to the requirements of each group. First, closures had added the information about number of parameters for each method in the vtable. Second, we added both start and end index of a class methods in the vtable in `classIndices` but closures group only had the start index. We merged these definitions to create the below:
+
+	vtable: Array<[string, number]> // stores method name and number of parameters in the method
+	classIndices: Map<string, [number, number]> // stores the start and end index of a class methods in the vtable
+	
+  2. Merged the definition of call indirect in the IR and compiler.ts.
+
+
+  3. Updated the working of our code and closure code so that they work with the new definitions of classIndices and Vtable
+
+
+  4. Closures group did not have closure or lambda constructors in the vtable, this conflicted with our design of class constructors which were called using the vtable and also made it difficult to handle constructors separately. We updated the code to store closure and lambda constructor in the vtable.
+
+
+  5. Updated runner.ts `augmentEnv` method to accomodate changes for adding method and field offsets for each class as well as adding closure/lambda as classes in the environment. It would be necesaary to put the method and field information of the closure/lambda in the environment at this point to make sure free and nonlocal variables work when added.
+
+
+### Generics Merge:
+
+  1. Changed the definition of super class data in order to support Generics. Generics group needed information about the type of generic superclass used, so instead of an array with just the superclass names, we agreed on storing this type information as a map with entries containing super class names as key and an array of storing type information as value. The Class definition in the ast is now:
+    
+	export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, typeParams: Array<string>, super: Map<string, Array<string>> }
+
+
+  2. Updated parser to store generic member expression for all valid superclasses (whose names are not 'Generic') while parsing class arguments.
+
+
+  3. Updated type checker environment to store both typeParams and super class information. Also, accomodated the ast change.
+
+
+  4. Updated monomorphizer to pass on the super class metadata along when the new classes are created.
+
+
+  5. As the order of class definitions is not maintained after monomorphizing the program, we accomodated super class checks and references in lower.ts and runner.ts to be done in a loop until super class data is found, unlike comparing it directly to super class references created after typechecking.
+
+  6. Changed webstart.ts to pick the first Map when the 'print_class' method is invoked.
+
+
+### For loops merge:
+
+  1. Changed type checker to look for 'hasnext', 'next' and 'reset' methods in superclass along with the check in current class. This is important for use cases of creating a custom iterator/ inheriting from the Range class.
+
+
+
 </br>
 
 ## Test Cases:
