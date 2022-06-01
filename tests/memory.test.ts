@@ -211,17 +211,16 @@ assertMemState("simple-cycle-deletion", `
     [456, refNumOffset, 1], // 1 references at the end of the program where object id is 456
     ]);
 
-    assertHeap("single-delete", `
+assertHeap("single-delete", `
     class Rat(object):
         id: int = 123
-        y: int = 0
+        y: int = 456
         def __init__(self: Rat):
-            self.y = 1
-
+            pass
     x: Rat = None
     x = Rat()
     x = None
-  `, heapStart); 
+    `, heapStart); 
 
 assertHeap("delete-in-a-loop", `
     class Rat(object):
@@ -230,15 +229,16 @@ assertHeap("delete-in-a-loop", `
         def __init__(self: Rat):
             self.y = 1
 
-    n: int = 1124
+
     a: Rat = None
+    n: int = 1124
     a = Rat()
     while n >= 0:
         a = Rat()
         n = n - 1
     a = None
     n = 0
-`, heapStart) // 2 ints in the object, each is 4 byte
+`, heapStart) 
 
 });
 

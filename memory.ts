@@ -84,7 +84,7 @@ export function refLookup(r: ref) :  ref {
 // traverse nodes in a BFS manner amking updates to reference counts
 export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { // returns r so that stack state can be maintained
     //console.log(`ref: ${r}, assgnRef: ${assignRef}, update: ${update}`);
-    if (r === 0) {
+    if (r === 0 || (assignRef !== 0 && memHeap[(refLookup(assignRef) / 4) + refNumOffset] <= 0)) {
         return r
     }
     let explored = new Set();
@@ -128,6 +128,7 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number): ref { //
 export function compact(): memAddr {
     let free: memAddr = heapStart;
     //console.log(refMap);
+    //console.log(memHeap);
     function isGarbage(r: ref): boolean {
         const addr = refLookup(r) / 4;
         return memHeap[addr + refNumOffset] === 0;
@@ -151,7 +152,7 @@ export function compact(): memAddr {
             inactiveRefList.push(r);
         }
     }
-    //console.log(memHeap);
+    
     return free;
 }
 
