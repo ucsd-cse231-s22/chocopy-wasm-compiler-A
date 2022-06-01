@@ -1,8 +1,10 @@
 import {Type, BinOp, UniOp, Parameter} from './ast';
 
-export type Program<A> = { a?: A, strinits: Array<VarInit<A>>, strstmts: Array<Stmt<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, fundefs: Array<FunDef<A>>, body: Array<BasicBlock<A>> }
+export type Program<A> = { a?: A, strinits: Array<VarInit<A>>, strstmts: Array<Stmt<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, fundefs: Array<FunDef<A>>, body: Array<BasicBlock<A>>, vtable: Vtable}
 
-export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
+export type Vtable = Map<number,Array<[string, string]>>;
+
+export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, superclass: string}
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Value<A> }
 
@@ -37,6 +39,7 @@ export type Expr<A> =
   | {  a?: A, tag: "builtin1", name: string, arg: Value<A> }
   | {  a?: A, tag: "builtin2", name: string, left: Value<A>, right: Value<A>}
   | {  a?: A, tag: "call", name: string, arguments: Array<Value<A>> } 
+  | {  a?: A, tag: "call-indirect", arguments: Array<Value<A>> }
 
   | {  a?: A, tag: "alloc", amount: Value<A> }
   | {  a?: A, tag: "load", start: Value<A>, offset: Value<A> }
