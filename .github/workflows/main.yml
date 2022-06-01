@@ -78,7 +78,7 @@ jobs:
           make
           npm run build-web
           cd build/
-          nohup python3 -m http.server 8000 &> /dev/null &
+          python3 -m http.server 8000 &
           pid=$!
           cd ..
           sleep 3
