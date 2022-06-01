@@ -1,17 +1,26 @@
+import { Func } from "mocha";
 import { Class, FunDef, Program } from "./ir";
 import { constantPropagateAndFoldProgramBody, constantPropagateAndFoldProgramFuns } from "./optimizations/optimizations_prop_fold";
 import { OptimizationSwitch } from "./optimizations/optimization_common";
 import { copyPropagateProgramBody, copyPropagateProgramFuns } from "./optimizations/optimization_copy_prop";
 import { livenessProgramBody, livenessProgramFuns } from "./optimizations/optimization_deadcode";
+import { eliminateDeadCodeProgram, eliminateDeadCodeFunc } from "./optimizations/optimization_DCE";
 
 
 function optimizeFunction(func: FunDef<any>, optimizationSwitch: OptimizationSwitch): FunDef<any> {
-    var [funDef, functionOptimized] = constantPropagateAndFoldProgramFuns(func);
-    [funDef, functionOptimized] = optimizationSwitch === "2" ? copyPropagateProgramFuns(func) : [funDef, false];
-    // [funDef, functionOptimized] = deadCodeProgramFuns(func);
-    [funDef, functionOptimized] = optimizationSwitch === "4" ? livenessProgramFuns(func) : [funDef, false];
-    if (functionOptimized) return optimizeFunction(funDef, optimizationSwitch);
-    return funDef;
+    if (func.body.length == 0) return func;
+    var [func, funcOptimized]: [FunDef<any>, boolean] = optimizationSwitch >= "1" ? constantPropagateAndFoldProgramFuns(func) : [func, false];
+    var funcOptimizedFromCopy: boolean = false;
+    [func, funcOptimizedFromCopy] = optimizationSwitch >= "2" ? copyPropagateProgramFuns(func) : [func, false];
+    var funcOptimizedFromDCE: boolean = false;
+    [func, funcOptimizedFromDCE] = optimizationSwitch >= "3" ? eliminateDeadCodeFunc(func) : [func, false];
+
+    var functionOptimizedFromLiveness: boolean = false;
+    [func, functionOptimizedFromLiveness] = optimizationSwitch === "4" ? livenessProgramFuns(func) : [func, false];
+
+    if (funcOptimized || funcOptimizedFromCopy || funcOptimizedFromDCE || functionOptimizedFromLiveness) func = optimizeFunction(func, optimizationSwitch);
+
+    return func;
 }
 
 function optimizeClass(c: Class<any>, optimizationSwitch: OptimizationSwitch): Class<any> {
@@ -41,12 +50,13 @@ function optimizeProgramBody(program: Program<any>, optimizationSwitch: Optimiza
     if (program.body.length == 0) return program;
     var [program, programOptimized]: [Program<any>, boolean] = optimizationSwitch >= "1" ? constantPropagateAndFoldProgramBody(program) : [program, false];
     var programOptimizedFromCopy: boolean = false;
-    [program, programOptimizedFromCopy] = optimizationSwitch === "2" ? copyPropagateProgramBody(program) : [program, false];
-    // // [program, programOptimized] = eliminateDeadCodeProgram(program);
+    [program, programOptimizedFromCopy] = optimizationSwitch >= "2" ? copyPropagateProgramBody(program) : [program, false];
+    var programOptimizedFromDCE: boolean = false;
+    [program, programOptimizedFromDCE] = optimizationSwitch >= "3" ? eliminateDeadCodeProgram(program) : [program, false];
     var programOpimizedFromDeadElim: boolean = false;
     [program, programOpimizedFromDeadElim] = optimizationSwitch === "4" ? livenessProgramBody(program) : [program, false];
 
-    if (programOptimized || programOptimizedFromCopy) program = optimizeProgramBody(program, optimizationSwitch);
+    if (programOptimized || programOptimizedFromCopy || programOptimizedFromDCE || programOpimizedFromDeadElim) program = optimizeProgramBody(program, optimizationSwitch);
 
     return program;
 }

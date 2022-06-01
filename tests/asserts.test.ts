@@ -38,6 +38,83 @@ export async function assertOptimizeIR(name: string, source: string, expectedIR:
   });
 }
 
+// export async function assertOptimizeDCE(name: string, source: string, expected: { print: Array<string>, isIrDifferent: boolean }) {
+//   it(name, async () => {
+//     const repl = new BasicREPL(await addLibs());
+//     var [ preOptimizedIr, preDCEOptimizedIr ] = repl.optimize(source, "2");
+//     var [ preOptimizedIr, DCEOptimizedIr ] = repl.optimize(source, "3");
+//     // if (!expected.isIrDifferent)
+//     //   chai.expect(preDCEOptimizedIr.body.length).to.deep.eq(DCEOptimizedIr.body.length);
+//     // else
+//     //   chai.expect(preDCEOptimizedIr.body.length).greaterThan(DCEOptimizedIr.body.length);
+//     throw new Error(`
+//     ${JSON.stringify(preDCEOptimizedIr.body.map(stmt => {return stmt.label}))}\n
+//     ${JSON.stringify(DCEOptimizedIr.body.map(stmt => {return stmt.label}))}\n`);
+//     // await repl.run(source, "3");
+    
+//     // chai.expect(importObject.output.trim().split('\n')).to.deep.eq(expected.print);
+//   });
+// }
+
+export async function assertOptimizeDCE(name: string, source: string, expected: { print: Array<string>, isIrDifferent: boolean }) {
+  it(name, async () => {
+    const repl = new BasicREPL(await addLibs());
+    var [ preOptimizedIr, preDCEOptimizedIr ] = repl.optimize(source, "2");
+    var [ preOptimizedIr, DCEOptimizedIr ] = repl.optimize(source, "3");
+    
+    var preDCEOptimizedIrStmtCount = 0;
+    var DCEOptimizedIrStmtCount = 0;
+    
+    preDCEOptimizedIr.body.forEach(block => {
+      preDCEOptimizedIrStmtCount += block.stmts.length;
+    })
+    preDCEOptimizedIr.funs.forEach(fun => {
+      fun.body.forEach(block => {
+        preDCEOptimizedIrStmtCount += block.stmts.length;
+      })
+    })
+    preDCEOptimizedIr.classes.forEach(classDef => {
+      classDef.methods.forEach(method => {
+        method.body.forEach(block => {
+          preDCEOptimizedIrStmtCount += block.stmts.length;
+        })
+      })
+    })
+    // var DCEOptimizedIrBody = [];
+    var DCEOptimizedIrFuns = new Map();
+
+    DCEOptimizedIr.body.forEach(block => {
+      DCEOptimizedIrStmtCount += block.stmts.length;
+    })
+    DCEOptimizedIr.funs.forEach(fun => {
+      DCEOptimizedIrFuns.set(fun.name, []);
+      fun.body.forEach(block => {
+        DCEOptimizedIrFuns.get(fun.name).push(...block.stmts);
+        DCEOptimizedIrStmtCount += block.stmts.length;
+      })
+    })
+    DCEOptimizedIr.classes.forEach(classDef => {
+      classDef.methods.forEach(method => {
+        method.body.forEach(block => {
+          DCEOptimizedIrStmtCount += block.stmts.length;
+        })
+      })
+    })
+      
+    if (!expected.isIrDifferent)
+      chai.expect(preDCEOptimizedIrStmtCount).to.deep.eq(DCEOptimizedIrStmtCount);
+    else
+      chai.expect(preDCEOptimizedIrStmtCount).greaterThan(DCEOptimizedIrStmtCount);
+    // throw new Error(`
+    // ${JSON.stringify(preDCEOptimizedIrStmtCount)},
+    // ${JSON.stringify(DCEOptimizedIrStmtCount)}`);
+    // ${JSON.stringify(preDCEOptimizedIr.body.map(stmt => {return stmt.label}))}\n
+    // ${JSON.stringify(DCEOptimizedIr.body.map(stmt => {return stmt.label}))}\n`);
+    await repl.run(source, "3");
+    
+    chai.expect(importObject.output.trim().split('\n')).to.deep.eq(expected.print);
+  });
+}
 
 export async function assertOptimize(name: string, source: string, expected: { print: Array<string>, isIrDifferent: boolean }, optimizationSwitch: OptimizationSwitch) {
   it(name, async () => {
