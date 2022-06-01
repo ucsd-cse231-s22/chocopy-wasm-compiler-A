@@ -13,7 +13,7 @@
     "start": "node debugger/debugstart.js",
     "prestart": "npm run build",
     "test-desdestructure": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' node node_modules/.bin/mocha -r ts-node/register --reporter mochawesome 'tests/**/destructure.test.ts'",
-    "dev": "npx webpack serve --mode=development"
+    "parse": "ts-node parsestart.ts"
   },
   "author": "",
   "license": "ISC",

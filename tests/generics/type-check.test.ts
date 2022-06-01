@@ -651,7 +651,7 @@ describe('Generics Type-Checker Tests', () => {
         },
         value: {tag: "call", fn: {tag: "id", name: "Box", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, arguments: [], a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, 
         a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
-        { tag: "field-assign", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "literal", value: {tag: "num", value: 10}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "field-assign", obj: {tag: "id", name: "b", a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "literal", value: {tag: "num", value: "10" as any}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}}
     }; 
@@ -689,7 +689,7 @@ describe('Generics Type-Checker Tests', () => {
               star: false }]
         }, 
         value: {tag: "construct", name: "Box", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
-        { tag: "field-assign", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "literal", value: {tag: "num", value: 10}, a: {type: NUM, eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { tag: "field-assign", obj: {tag: "id", name: "b", a: {type: CLASS('Box', [NUM]), eolLoc: {row: 0, col: 0, srcIdx: 0}}}, field: "x", value: {tag: "literal", value: {tag: "num", value: "10" as any}, a: {type: NUM, eolLoc: {row: 0, col: 0, srcIdx: 0}}}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       a: {src: 'test', type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}
     });
@@ -724,7 +724,7 @@ describe('Generics Type-Checker Tests', () => {
         }
       ],
       inits: [
-        { name: "n", type: NUM, value: {tag: "num", value: 0} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { name: "n", type: NUM, value: {tag: "num", value: "0" as any} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
@@ -777,7 +777,7 @@ describe('Generics Type-Checker Tests', () => {
         }
       ],
       inits: [
-        { name: "n", type: NUM, value: {tag: "num", value: 0} , a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
+        { name: "n", type: NUM, value: {tag: "num", value: "0" as any} , a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"} , a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
       ],
       stmts: [
@@ -834,7 +834,7 @@ describe('Generics Type-Checker Tests', () => {
         }
       ],
       inits: [
-        { name: "n", type: NUM, value: {tag: "num", value: 0}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+        { name: "n", type: NUM, value: {tag: "num", value: "0" as any}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
@@ -882,7 +882,7 @@ describe('Generics Type-Checker Tests', () => {
         }
       ],
       inits: [
-        { name: "n", type: NUM, value: {tag: "num", value: 0}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
+        { name: "n", type: NUM, value: {tag: "num", value: "0" as any}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
         { name: "b", type: CLASS('Box', [NUM]), value: {tag: "none"}, a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}} },
       ],
       stmts: [
