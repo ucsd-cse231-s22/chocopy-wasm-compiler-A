@@ -78,6 +78,9 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
     labels: env.labels,
     offset: newOffset,
     vtableMethods: env.vtableMethods,
+    nonlocalMap: env.nonlocalMap,
+    lambdaStack: env.lambdaStack,
+    ancestorMap: env.ancestorMap,
   }
 }
 

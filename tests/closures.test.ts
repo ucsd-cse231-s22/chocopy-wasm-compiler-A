@@ -16,19 +16,62 @@ describe("Closure tests", () => {
 print(f(2))`,
     ["6"]
   );
+  assertPrint("Nested function2",
+`
+def a():
+    x: int = 10
+    def b():
+        x: int = 20
+        def c():
+            x: int = 30
+            print(x)
+        print(x)
+        c()
+        print(x)
+    print(x)
+    b()
+    print(x)
+a()`,["10","20","30","20","10"])
+assertPrint("Nested function call sibling",
+`
+def a(x: int, y: int, z: int) -> Callable[[int, int], int]:
+    def b(r: int, l: int) -> int:
+        def getR() -> int:
+            return r
 
-//   assertPrint(
-//     "Nonlocal Design doc #1",
-//     `def f(x: int):
-//   def g():
-//     nonlocal x
-//     x = x + 1
-//     print(x)
-//   g()
-//   g()
-// f(5)`,
-//     ["6", "7"]
-//   );
+        def getSomething() -> int:
+            return getR()
+
+        return l if l > 1 else getSomething()
+
+    def q(f: int, m: int) -> int:
+        if f > m:
+            return b(x, y)
+        if f < m:
+            return b(y, z)
+        return m
+
+    return q
+
+
+print(a(1, 2, 3)(0, 0))
+print(a(1, 2, 3)(1, 0))
+print(a(1, 2, 3)(0, 1))
+`,["0","2","3"])
+
+  assertPrint(
+    "Nonlocal Design doc #1",
+    `
+def f(x: int):
+  def g():
+    nonlocal x
+    x = x + 1
+    print(x)
+  g()
+  g()
+f(5)`,
+    ["6", "7"]
+  );
 
   assertPrint(
     "Assign a function to var and call - Design doc #6",
@@ -65,57 +108,59 @@ print(x(2))
     ["2"]
   );
 
-//   assertPrint(
-//     "Global refrence - Design doc #10",
-//     `a: int = 4
-// def f():
-//   def g():
-//     print(a + 1)
-//   print(a)
-//   return g
-// f()()`,
-//     ["4", "5"]
-//   );
-
   assertPrint(
-    "is check",
-    `def g(y: int) -> int:
-    return y
-x : Callable[[int], int] = None
-y : Callable[[int], int] = None
-x = g
-y = g
-print(x is y)`,
-    ["True"]
+    "Global reference - Design doc #10",
+    `a: int = 4
+def f() -> Callable[[], None]:
+  def g():
+    print(a + 1)
+  print(a)
+  return g
+f()()`,
+    ["4", "5"]
   );
 
-  assertPrint(
-    "is check",
-    `def g(y: int) -> int:
-    return y
-x : Callable[[int], int] = None
-y : Callable[[int], int] = None
-x = g
-y = mklambda(Callable[[int], int], lambda a: a+2)
-print(x is y)`,
-    ["False"]
-  );
+  xit("is pending because of how internal representations changed", () => {
+    assertPrint(
+      "is check",
+      `def g(y: int) -> int:
+      return y
+  x : Callable[[int], int] = None
+  y : Callable[[int], int] = None
+  x = g
+  y = g
+  print(x is y)`,
+      ["True"]
+    );
 
-//   assertPrint(
-//     "Currying - Design doc #5",
-//     `add: Callable[[int], Callable[[int], int]] = None
-// add_5: Callable[[int], int] = None
-// add = mklambda(
-//   Callable[[int], Callable[[int], int]],
-//   lambda a: mklambda(
-//     Callable[[int], int],
-//     lambda b: a + b
-//   )
-// )
-// add_5 = add(5)
-// print(add_5(6))`,
-//     ["11"]
-//   );
+    assertPrint(
+      "is check",
+      `def g(y: int) -> int:
+      return y
+  x : Callable[[int], int] = None
+  y : Callable[[int], int] = None
+  x = g
+  y = mklambda(Callable[[int], int], lambda a: a+2)
+  print(x is y)`,
+      ["False"]
+    );
+  });
+
+  assertPrint(
+    "Currying - Design doc #5",
+    `add: Callable[[int], Callable[[int], int]] = None
+add_5: Callable[[int], int] = None
+add = mklambda(
+  Callable[[int], Callable[[int], int]],
+  lambda a: mklambda(
+    Callable[[int], int],
+    lambda b: a + b
+  )
+)
+add_5 = add(5)
+print(add_5(6))`,
+    ["11"]
+  );
 
   assertPrint(
     "Lambda as argument - Design doc #2",
@@ -283,4 +328,22 @@ isEven = mklambda(
   lambda num: num
 )`
   );
+//Compatibility 
+assertPrint("Test with bignums",`
+x: int = 9083477983
+y: int = 8717419218
+def a(x: int, y: int) -> Callable[[int], int]:
+    def foo(q: int) -> int:
+        return q + x
+    def bar(q: int) -> int:
+        return q + y
+    return foo if x >= y else bar
+g: Callable[[int], int] = None
+q: Callable[[int], int] = None
+g = a(x,y)
+q = a(0,1)
+print(g(5682193026))
+print(q(5682193026))`,["14765671009","5682193027"])
 });
+
+

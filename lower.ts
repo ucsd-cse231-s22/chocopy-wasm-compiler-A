@@ -3,7 +3,7 @@ import * as IR from './ir';
 import { Type, UniOp, Annotation } from './ast';
 import * as ERRORS from './errors';
 import { GlobalEnv } from './compiler';
-import { APPLY, CLASS, createMethodName, BOOL, NONE, NUM } from './utils';
+import { APPLY, CLASS, createMethodName, BOOL, NONE, NUM, SET_PARENT, defaultLiteral, CALLABLE } from './utils';
 
 let nameCounters : Map<string, number> = new Map();
 export function resetNameCounters() {
@@ -70,41 +70,119 @@ function lowerFunDef(
   var name = closureName(f.name, ancestors);
   var type: Type = CLASS(name);
   var self: AST.Parameter<Annotation> = { name: "self", type };
+  env.ancestorMap.set(name, ancestors);
 
   var envCopy = { ...env, functionNames: new Map(env.functionNames) };
   f.children.forEach(c => envCopy.functionNames.set(c.name, closureName(c.name, [f, ...ancestors])));
 
   var defs = f.children.map(x => lowerFunDef(x, envCopy, [f, ...ancestors]));
-  var assignable : AST.Assignable<Annotation> = { tag: "id", name: f.name };
-  var assignVar : AST.AssignVar<Annotation> = { target: assignable, ignorable: false, star: false };
-  var destructureAss : AST.DestructuringAssignment<Annotation> = { isSimple: true, vars: [assignVar] };
-  var assignStmt: AST.Stmt<Annotation> = { tag: "assign", destruct: destructureAss, value: { a: { type }, tag: "construct", name } }
-  var varInit: AST.VarInit<Annotation> = { name: f.name, type, value: { tag: "none" } }
-  // TODO(pashabou): children, populate fields and methods of closure class
-  return [
-    [{
-      name,
-      fields: [],
-      methods: [
+  var assignStmt: AST.Stmt<Annotation> = {
+    tag: "assign",
+    destruct: { isSimple: true, vars: [{ target: { tag: "id", name: f.name }, ignorable: false, star: false }] },
+    value: { a: { type }, tag: "construct", name }
+  };
+  var varInit: AST.VarInit<Annotation> = { name: f.name, type, value: { tag: "none" } };
+  var fields: Array<AST.VarInit<Annotation>> = [
+    ...f.parameters.map((param): AST.VarInit<Annotation> => ({
+      name: param.name, type: param.type, value: defaultLiteral(param.type)
+    })),
+    ...f.inits,
+    ...f.children.map((child): AST.VarInit<Annotation> => ({
+      name: child.name, 
+      type: CLASS(closureName(child.name, [f, ...ancestors])), 
+      value: { tag: "none" }
+    })),
+    { name: f.name, type, value: { tag: "none" } },
+    { name: "parent", type: NONE, value: { tag: "none" } }
+  ];
+
+  const scopedVars: Map<string, [string[], boolean, string]> = new Map();
+  const ancestorNames = ancestors.map((ancestor, i) => 
+    closureName(ancestor.name, ancestors.slice(i + 1, ancestors.length))
+  );
+  [f, ...ancestors].reverse().forEach((ancestor, i) => {
+    var j = ancestors.length - i;
+    let childAncestors = [f, ...ancestors].slice(j, ancestors.length + 1);
+    [...ancestor.parameters, ...ancestor.inits].forEach(x => 
+      scopedVars.set(x.name, [ancestorNames.slice(0, j), false, ""])
+    );
+    ancestor.children.forEach(child => 
+      scopedVars.set(child.name, [ancestorNames.slice(0, j), true, closureName(child.name, childAncestors)])
+    );
+  });
+  // setting by closure name
+  env.nonlocalMap.set(name, scopedVars);
+
+  const classFields = new Map();
+  fields.forEach((field, i) => classFields.set(field.name, [i + 1, field.value]));
+  env.classes.set(name, classFields);
+
+  var assignFields = [...f.parameters, ...f.inits].map((x): AST.Stmt<Annotation> => ({ 
+    tag: "field-assign",
+    obj: { a: { type: CLASS(name) }, tag: "id", name: "self"},
+    field: x.name, 
+    value: { a: { type: x.type }, tag: "id", name: x.name, transform: false },
+  }));
+  var assignParent: AST.Stmt<Annotation> = {
+    tag: "field-assign",
+    obj: { a: { type: CLASS(name) }, tag: "id", name: "copy"},
+    field: "parent",
+    value: { tag: "id", name: "parent" }
+  };
+
+  var assignChildren: Array<AST.Stmt<Annotation>> = f.children.map((child): AST.Stmt<Annotation> => {
+    let childClass = closureName(child.name, [f, ...ancestors]);
+    return {
+      tag: "field-assign",
+      obj: { tag: "id", name: "copy", a: { type: CLASS(name) } },
+      field: child.name,
+      value: { a: { type: CLASS(childClass) }, tag: "construct", name: childClass}
+    }
+  });
+
+  var methods: Array<AST.FunDef<Annotation>> = [
+    {
+      name: "__init__",
+      parameters: [self],
+      ret: type,
+      inits: [],
+      body: [],
+      nonlocals: [],
+      children: []
+    },
+    {
+      name: APPLY,
+      parameters: [self, ...f.parameters],
+      ret: f.ret,
+      inits: [...f.inits],
+      body: [...assignFields, ...f.body],
+      nonlocals: [],
+      children: []
+    },
+    {
+      name: SET_PARENT,
+      parameters: [self, { name: "parent", type: NONE }],
+      ret: type,
+      inits: [{ name: "copy", type, value: { tag: "none" } }],  // here we copy self
+      body: [
         {
-          name: "__init__",
-          parameters: [self],
-          ret: f.ret,
-          inits: [],
-          body: [],
-          nonlocals: [],
-          children: []
+          tag: "assign",
+          destruct: { isSimple: true, vars: [{ target: { tag: "id", name: "copy" }, ignorable: false, star: false }] },
+          value: { a: { type }, tag: "construct", name }
         },
-        {
-          ...f,
-          name: APPLY,
-          parameters: [self, ...f.parameters],
-          inits: [varInit, ...defs.map(x => x[1]), ...f.inits],
-          body: [assignStmt, ...defs.map(x => x[2]), ...f.body]
-        }
+        ...assignChildren,
+        assignParent,
+        { tag: "return", value: { tag: "id", name: "copy" } }
       ],
-      typeParams: []
-    }, ...defs.map(x => x[0]).flat()],
+      nonlocals: [],
+      children: []
+    }
+  ];
+  return [
+    [
+      { name, fields, methods, typeParams: [] },
+      ...defs.map(x => x[0]).flat()
+    ],
     varInit,
     assignStmt
   ];
@@ -141,7 +219,9 @@ function lowerClasses(classes: Array<AST.Class<Annotation>>, env : GlobalEnv) : 
 function lowerClass(cls: AST.Class<Annotation>, env : GlobalEnv) : Array<IR.Class<Annotation>> {
   // init not in vtable 
   // (we currently do no reordering, we leave that to inheritance team)
+  env.functionNames.set("$current", cls.name); // hack so we know what function we are in
   const [classes, methods] = lowerMethodDefs(cls.methods, env);
+  env.functionNames.delete("$current");
   return [
     ...classes,
     {
@@ -260,21 +340,25 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
   switch(s.tag) {
     case "assign":
       if(s.destruct.isSimple === true) {
-        var [valinits, valstmts, vale, classes] = flattenExprToExpr(s.value, blocks, env);
         var left = s.destruct.vars[0].target;
-        switch(left.tag) {
-          case "id":
-            blocks[blocks.length - 1].stmts.push(...valstmts, { a: s.a, tag: "assign", name: left.name, value: vale});
-            return [valinits, classes];
-            // return [valinits, [
-            //   ...valstmts,
-            //   { a: s.a, tag: "assign", name: s.name, value: vale}
-            // ]];
-          case "lookup":
-            throw new Error("should not reach here");
-          default:
-            throw new Error("should not reach here");
+        if (left.tag !== "id") throw new Error("should not reach here");
+        
+        let currentFun = env.functionNames.get("$current");
+        let nonlocals = env.nonlocalMap.get(currentFun);
+        if (currentFun === undefined || !env.nonlocalMap.has(currentFun) || !nonlocals.has(left.name)) {
+          let [valinits, valstmts, vale, classes] = flattenExprToExpr(s.value, blocks, env);
+          blocks[blocks.length - 1].stmts.push(...valstmts, { a: s.a, tag: "assign", name: left.name, value: vale });
+          return [valinits, classes];
         }
+
+        // at least one level of function nesting
+        let parent: AST.Expr<Annotation> = { a: { ...s.a, type: CLASS(currentFun) }, tag: "id", name: "self", transform: false };
+        let ancestorNames = nonlocals.get(left.name)[0];
+        ancestorNames.slice().reverse().forEach(ancestor => {
+          parent = { a: {...s.a, type: CLASS(ancestor)}, tag: "lookup", obj: parent, field: "parent" }; // change
+        });
+
+        return flattenStmt({ tag: "field-assign", obj: parent, field: left.name, value: s.value }, blocks, env);
       } else {
         // desturcturing assignment
         switch(s.value.tag) {
@@ -571,7 +655,7 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
       // reset the values class to the original state at the start of the loop - nested loops use case
       var resetCall : AST.Expr<AST.Annotation> =  {tag:"method-call", obj:s.values, method:"reset", arguments:[], a:{...s.a, type: NONE}};
       var resetStmt : AST.Stmt<AST.Annotation>[] = [{ tag: "expr", expr: resetCall , a:{ ...s.a, type: NONE }}];
-      flattenStmts(resetStmt, blocks, localenv); 
+      var [rinits, rclasses] = flattenStmts(resetStmt, blocks, localenv); 
       
       pushStmtsToLastBlock(blocks, {tag:"jmp", lbl: forStartLbl })
       blocks.push({  a: s.a, label: forStartLbl, stmts: [] })
@@ -588,14 +672,17 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
       var destructureAss : AST.DestructuringAssignment<AST.Annotation> = { isSimple: true, vars: [assignVar] };
       var nextAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: destructureAss, value: nextCall,a:s.a }]
       
-      flattenStmts(nextAssign, blocks, localenv); // to add wasm code for i = c.next(). has no inits 
+      var [ninits, nclasses] = flattenStmts(nextAssign, blocks, localenv); // to add wasm code for i = c.next(). has no inits 
       
       var [bodyinits, bodyclasses] = flattenStmts(s.body, blocks, localenv)
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl });
     
       blocks.push({  a: s.a, label: forEndLbl, stmts: [] })
     
-      return [[...cinits, ...bodyinits], [...bodyclasses]];
+      return [
+        [...rinits, ...cinits, ...ninits, ...bodyinits],
+        [...rclasses, ...nclasses, ...bodyclasses]
+      ];
   }
 }
 
@@ -672,9 +759,65 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       ];
     }
     case "lookup": {
+      if (e.obj.tag === "id" && env.classes.has(e.obj.name) && e.a.type.tag === "callable") {
+        let names = e.a.type.params.map((_, i) => `tmp${i}`);
+        let ids: Array<AST.Expr<Annotation>> = e.a.type.params.map((type, index) =>
+          ({ tag: "id", name: names[index], a: { type } })
+        );
+        return flattenExprToExpr({
+          a: { type: e.a.type },
+          tag: "lambda",
+          type: e.a.type,
+          params: names,
+          expr: {
+            a: { type: e.a.type },
+            tag: "method-call",
+            obj: ids[0],
+            method: e.field,
+            arguments: ids.slice(1, ids.length),
+          },
+        }, blocks, env);
+      }
+
       const [oinits, ostmts, oval, oclasses] = flattenExprToVal(e.obj, blocks, env);
-      if(e.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
+      if (e.obj.a.type.tag !== "class") { throw new Error("Compiler's cursed, go home"); }
       const classdata = env.classes.get(e.obj.a.type.name);
+
+      if (e.a.type.tag === "callable" && !classdata.has(e.field)) {
+        let selfName = generateName("$boundSelf");
+        let names = e.a.type.params.map((_, i) => `tmp${i}`);
+        let ids: Array<AST.Expr<Annotation>> = e.a.type.params.map((type, index) =>
+          ({ tag: "id", name: names[index], a: { type } })
+        );
+        let self: AST.Expr<Annotation> = { tag: "id", name: selfName, a: { ...e.obj.a } };
+        let outerLambdaType: AST.Type = { tag: "callable", params: [e.obj.a.type], ret: e.a.type };
+        let lambda: AST.Expr<Annotation> = {
+          tag: "call",
+          fn: {
+            a: { type: outerLambdaType },
+            tag: "lambda",
+            type: outerLambdaType,
+            params: [selfName],
+            expr: {
+              a: { type: e.a.type },
+              tag: "lambda",
+              type: e.a.type,
+              params: names,
+              expr: {
+                a: { type: e.a.type },
+                tag: "method-call",
+                obj: self,
+                method: e.field,
+                arguments: [self, ...ids],
+              },
+            },
+          },
+          arguments: [e.obj]
+        };
+
+        return flattenExprToExpr(lambda, blocks, env);
+      }
+
       const [offset, _] = classdata.get(e.field);
       const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, oval);
       return [oinits, [...ostmts, checkObj], {
@@ -687,13 +830,13 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1} };
+      const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1 } };
       const assigns : IR.Stmt<Annotation>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {
           tag: "store",
           start: { tag: "id", name: newName },
-          offset: { tag: "wasmint", value: index },
+          offset: { tag: "wasmint", value: index},
           value: value
         }
       });
@@ -835,7 +978,46 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         [...objClasses, ...idxClasses]
       ];
     case "id":
-      return [[], [], {tag: "value", value: { ...e }}, []];
+      let localLower: ReturnType<typeof flattenExprToExpr> = [[], [], { tag: "value", value: { ...e } }, []];
+      if (e.transform === false)
+        return localLower;
+      let currentFun = env.functionNames.get("$current");
+      let nonlocals = env.nonlocalMap.get(currentFun);
+      if (currentFun === undefined || !env.nonlocalMap.has(currentFun) || !nonlocals.has(e.name)) {
+        if(env.functionNames.has(e.name) && e.a.type.tag === "callable") {
+          let idExpr: AST.Expr<Annotation> = {  // call set_parent with none to copy
+            tag: "method-call", 
+            obj: { ...e, a: {...e.a, type: { tag: "class", name: closureName(e.name, []), params: [] }} }, 
+            method: SET_PARENT, 
+            arguments: [{ a: e.a, tag: "literal", value: { tag: "none" }}] 
+          };
+          return flattenExprToExpr(idExpr, blocks, env);
+        }
+        return localLower;
+      }
+
+      // at least one level of function nesting
+      let [ancestorNames, isFunction, funName] = nonlocals.get(e.name);
+      let parent: AST.Expr<Annotation> = { a: { ...e.a, type: CLASS(currentFun) }, tag: "id", name: "self" };
+
+      ancestorNames.forEach(ancestor => {
+        parent = { a: {...e.a, type: CLASS(ancestor)}, tag: "lookup", obj: parent, field: "parent" }; // change
+      })
+      let expr: AST.Expr<Annotation> = { a: e.a, tag: "lookup", obj: parent, field: e.name};
+
+      if (isFunction && e.a.type.tag === "callable") {
+        return flattenExprToExpr({
+          tag: "method-call",
+          obj: {...expr, a: {...e.a, type: CLASS(funName)}},
+          method: SET_PARENT,
+          arguments: [parent]
+        }, blocks, env);
+      }
+
+      // if (ancestorNames.length === 0) { // if it is local to the current function
+      //   return [[], [], { tag: "value", value: { ...e } }, []];
+      // }
+      return flattenExprToExpr(expr, blocks, env);
     case "literal":
       return [[], [], {tag: "value", value: literalToVal(e.value) }, [] ];
     case "if-expr": {
@@ -868,61 +1050,54 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         [...cclasses, ...thnclasses, ...elseclasses]
       ];
     }
-    case "lambda":
-      var [classDef, constrExpr] = lambdaToClass(e);
+    case "lambda": {
+      var name = generateName("$lambda");
+      var funDef: AST.FunDef<Annotation> = {
+        name,
+        parameters: e.params.map((param, i) => ({
+          name: param, 
+          type: e.type.params[i]
+        })),
+        ret: e.type.ret,
+        inits: [],
+        body: [{ a: { type: e.type.ret }, tag: "return", value: e.expr }],
+        nonlocals: [],
+        children: []
+      };
 
-      const classFields = new Map();
-      classDef.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
-      env.classes.set(classDef.name, classFields);
-      env.classIndices.set(classDef.name, env.vtableMethods.length);
-      env.vtableMethods.push(...classDef.methods
-        .filter(method => !method.name.includes("__init__"))
-        .map((method): [string, number] => [
-          createMethodName(classDef.name, method.name), method.parameters.length
-        ])
-      );
-      const irClass = lowerClass(classDef, env);
-      irClass[0].a = e.a;
+      let currentFun = env.functionNames.get("$current");
+      var ancestors = [
+        ...env.lambdaStack.reverse(),
+        ...(env.ancestorMap.get(currentFun) ?? [])
+      ];
+      var astClasses = lowerFunDef(funDef, env, ancestors)[0];
+      astClasses.forEach(cls => {
+        env.classIndices.set(cls.name, env.vtableMethods.length);
+        env.vtableMethods.push(...cls.methods
+          .filter(method => !method.name.includes("__init__"))
+          .map((method): [string, number] => [createMethodName(cls.name, method.name), method.parameters.length])
+        );
+      });
 
-      const [cinits, cstmts, cval, cclasses] = flattenExprToExpr(constrExpr, blocks, env);
-      return [cinits, cstmts, cval, [...irClass, ...cclasses]];
+      let lambdaName = closureName(name, ancestors);
+      var astExpr: AST.Expr<Annotation> = {
+        tag: "method-call", 
+        obj: { a: { type: CLASS(lambdaName) }, tag: "construct", name: lambdaName }, 
+        method: SET_PARENT, 
+        arguments: [
+          currentFun
+            ? { a: { ...e.a, type: CLASS(currentFun) }, tag: "id", name: "self" }
+            : { a: e.a, tag: "literal", value: { tag: "none" }}
+        ] 
+      };
+
+      env.lambdaStack.push(funDef);
+      var classes = lowerClasses(astClasses, env);
+      env.lambdaStack.pop();
+      var [cinits, cstmts, cexpr, cclasses] = flattenExprToExpr(astExpr, blocks, env);
+      return [cinits, cstmts, cexpr, [...classes, ...cclasses]];
+    }
   }
-}
-
-function lambdaToClass(lambda: AST.Lambda<Annotation>) : [AST.Class<Annotation>, AST.Expr<Annotation>] {
-  var lambdaClassName = generateName("lambda");
-  var params = lambda.params.map((param, i) => ({
-    name: param, 
-    type: lambda.type.params[i]
-  }));
-  return [
-    {
-      name: lambdaClassName,
-      fields: [],
-      methods: [
-        { 
-          name: "__init__", 
-          parameters: [{ name: "self", type: CLASS(lambdaClassName) }], 
-          ret: NONE, 
-          inits: [], 
-          body: [],
-          nonlocals: [],
-          children: []
-        },
-        { 
-          name: APPLY, 
-          parameters: [{ name: "self", type: CLASS(lambdaClassName) }, ...params], 
-          ret: lambda.type.ret, 
-          inits: [], 
-          body: [{ a: { type: lambda.type.ret }, tag: "return", value: lambda.expr }],
-          nonlocals: [],
-          children: []
-        }
-      ],
-      typeParams: [],
-    },
-    { a: lambda.a, tag: "construct", name: lambdaClassName }
-  ];
 }
 
 function flattenExprToVal(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock<Annotation>>, env : GlobalEnv) : [Array<IR.VarInit<Annotation>>, Array<IR.Stmt<Annotation>>, IR.Value<Annotation>, Array<IR.Class<Annotation>>] {

@@ -52,11 +52,11 @@ export type GlobalTypeEnv = {
 }
 
 export type LocalTypeEnv = {
-  vars: Map<string, Type>;
-  expectedRet: Type;
-  actualRet: Type;
-  topLevel: Boolean;
-};
+  vars: Map<string, [type: Type, mutable: boolean]>,
+  expectedRet: Type,
+  actualRet: Type,
+  topLevel: Boolean
+}
 
 const copyLocals = (locals: LocalTypeEnv): LocalTypeEnv => {
   return {
@@ -351,7 +351,7 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
   // TODO(joe): check for assignment in existing env vs. new declaration
   // and look for assignment consistency
   for (let name of locals.vars.keys()) {
-    newEnv.globals.set(name, locals.vars.get(name));
+    newEnv.globals.set(name, locals.vars.get(name)[0]);
   }
 
   const aprogram = { a: { ...program.a, type: lastTyp }, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody, typeVarInits: tTypeVars };
@@ -381,7 +381,7 @@ export function tcInit(env: GlobalTypeEnv, init: VarInit<Annotation>, SRC: strin
 
 export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv: NonlocalTypeEnv, SRC: string) : FunDef<Annotation> {
   var locals = emptyLocalTypeEnv();
-  locals.vars.set(fun.name, CALLABLE(fun.parameters.map(x => x.type), fun.ret));
+  locals.vars.set(fun.name, [CALLABLE(fun.parameters.map(x => x.type), fun.ret), false]);
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
 
@@ -389,21 +389,23 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv
     if(!isValidType(env, p.type)) {
       throw new TypeCheckError(SRC, `Invalid type annotation '${bigintSafeStringify(p.type)}' for parameter '${p.name}' in function '${fun.name}'`);
     }
-    locals.vars.set(p.name, p.type)
+    locals.vars.set(p.name, [p.type, true])
   });
-  var nonlocals = fun.nonlocals.map(init => ({ name: init.name, a: { ...init.a, type: nonlocalEnv.get(init.name) }}));
-  fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
-  fun.inits.forEach(init => locals.vars.set(init.name, tcInit(env, init, SRC).type));
-  nonlocals.forEach(init => locals.vars.set(init.name, init.a.type));
+  nonlocalEnv.forEach(([value], name) => {
+    locals.vars.set(name, [value, false]);
+  })
+  var nonlocals = fun.nonlocals.map(init => ({ name: init.name, a: { ...init.a, type: nonlocalEnv.get(init.name)[0] }}));
+  fun.inits.forEach(init => locals.vars.set(init.name, [tcInit(env, init, SRC).type, true]));
+  nonlocals.forEach(init => locals.vars.set(init.name, [init.a.type, true]));
   var envCopy = copyGlobals(env);
   fun.children.forEach(f => envCopy.functions.set(f.name, [f.parameters.map(x => x.type), f.ret]));
+  fun.children.forEach(child => locals.vars.set(child.name, [CALLABLE(child.parameters.map(x => x.type), child.ret), false]));
   var children = fun.children.map(f => tcDef(envCopy, f, locals.vars, SRC));
-  fun.children.forEach(child => locals.vars.set(child.name, CALLABLE(child.parameters.map(x => x.type), child.ret)));
-  
+
   const tBody = tcBlock(envCopy, locals, fun.body, SRC);
   if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))
     // TODO: what locations to be reported here?
-    throw new TypeCheckError(`expected return type of block: ${bigintSafeStringify(locals.expectedRet)} does not match actual return type: ${bigintSafeStringify(locals.actualRet)}`)
+    throw new TypeCheckError(SRC, `expected return type of block: ${bigintSafeStringify(locals.expectedRet)} does not match actual return type: ${bigintSafeStringify(locals.actualRet)}`);
   return {...fun, a: { ...fun.a, type: NONE }, body: tBody, nonlocals, children};
 }
 
@@ -515,6 +517,8 @@ export function tcAssignable(env : GlobalTypeEnv, locals : LocalTypeEnv, assigna
   switch(typedExpr.tag) {
     case "id":
       var typedAss : Assignable<Annotation> = { ...typedExpr };
+      if (locals.vars.has(typedExpr.name) && !locals.vars.get(typedExpr.name)[1])
+        throw new TypeCheckError(SRC, "Unbound id: " + typedExpr.name, typedExpr.a);
       return typedAss;
     case "lookup":
       if (typedExpr.obj.a.type.tag !== "class") 
@@ -801,7 +805,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         return {a: { ...expr.a, type: NONE }, ...expr};
       }
       if (locals.vars.has(expr.name)) {
-        return { ...expr, a: { ...expr.a, type: locals.vars.get(expr.name) } };
+        return { ...expr, a: { ...expr.a, type: locals.vars.get(expr.name)[0] } };
       } else if (env.globals.has(expr.name)) {
         return { ...expr, a: { ...expr.a, type: env.globals.get(expr.name) } };
       } else {
@@ -809,15 +813,15 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       }
     case "lambda":
       if (expr.params.length !== expr.type.params.length) {
-        throw new TypeCheckError("Mismatch in number of parameters: " + expr.type.params.length + " != " + expr.params.length);
+        throw new TypeCheckError(SRC, "Mismatch in number of parameters: " + expr.type.params.length + " != " + expr.params.length);
       }
       const lambdaLocals = copyLocals(locals);
       expr.params.forEach((param, i) => {
-        lambdaLocals.vars.set(param, expr.type.params[i]);
+        lambdaLocals.vars.set(param, [expr.type.params[i], true]);
       })
       let ret = tcExpr(env, lambdaLocals, expr.expr, SRC);
       if (!isAssignable(env, ret.a.type, expr.type.ret)) {
-        throw new TypeCheckError("Expected type " + bigintSafeStringify(expr.type.ret) + " in lambda, got type " + bigintSafeStringify(ret.a.type.tag));
+        throw new TypeCheckError(SRC, "Expected type " + bigintSafeStringify(expr.type.ret) + " in lambda, got type " + bigintSafeStringify(ret.a.type.tag));
       }
       return {a: { ...expr.a, type: expr.type }, tag: "lambda", params: expr.params, type: expr.type, expr: ret}
     case "builtin1":
@@ -874,7 +878,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       } else {
         const newFn = tcExpr(env, locals, expr.fn, SRC);
         if(newFn.a.type.tag !== "callable") {
-          throw new TypeCheckError("Cannot call non-callable expression");
+          throw new TypeCheckError(SRC, "Cannot call non-callable expression", newFn.a);
         }
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
         
@@ -888,14 +892,24 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         }
       }
     case "lookup":
+      if (expr.obj.tag === "id" && env.classes.has(expr.obj.name)) {
+        const [_, methods] = env.classes.get(expr.obj.name);
+        if (!methods.has(expr.field))
+          throw new TypeCheckError(SRC, `could not find method ${expr.field} in class ${expr.obj.name}`, expr.a);
+        const [methodArgs, methodRet] = methods.get(expr.field); // can't specialize without type hint on id
+        return { ...expr, a: {...expr.a, type: CALLABLE(methodArgs, methodRet)} };
+      }
       var tObj = tcExpr(env, locals, expr.obj, SRC);
       if (tObj.a.type.tag === "class") {
         if (env.classes.has(tObj.a.type.name)) {
-          const [fields, _] = env.classes.get(tObj.a.type.name);
+          const [fields, methods] = env.classes.get(tObj.a.type.name);
           if (fields.has(expr.field)) {
             return { ...expr, a: { ...expr.a, type: specializeFieldType(env, tObj.a.type, fields.get(expr.field)) }, obj: tObj };
+          } else if (methods.has(expr.field)) {
+            const [methodArgs, methodRet] = specializeMethodType(env, tObj.a.type, methods.get(expr.field));
+            return { ...expr, a: { ...expr.a, type: CALLABLE(methodArgs.slice(1), methodRet) }, obj: tObj };
           } else {
-            throw new TypeCheckError(SRC, `could not find field ${expr.field} in class ${tObj.a.type.name}`, expr.a);
+            throw new TypeCheckError(SRC, `could not find field or method ${expr.field} in class ${tObj.a.type.name}`, expr.a);
           }
         } else {
           throw new TypeCheckError(SRC, `field lookup on an unknown class ${tObj.a.type.name}`, expr.a);
@@ -906,13 +920,13 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
     case "index":
       var tObj = tcExpr(env, locals, expr.obj, SRC);
       if(tObj.a.type.tag === "empty") {
-        return { ...expr, a: tObj.a};
+        return { ...expr, a: tObj.a, obj: tObj };
       } else if(tObj.a.type.tag === "list") {
         var tIndex = tcExpr(env, locals, expr.index, SRC);
         if(tIndex.a.type !== NUM) {
           throw new TypeCheckError(`index is of non-integer type \'${tIndex.a.type.tag}\'`);
         }
-        return { ...expr, a: {...tObj.a, type: tObj.a.type.itemType}};
+        return { ...expr, a: { ...expr.a, type: tObj.a.type.itemType }, obj: tObj, index: tIndex };
       } else {
         // For other features that use index
         throw new TypeCheckError(`unsupported index operation`);
@@ -944,7 +958,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
       if (tObj.a.type.tag === "class") {
         if (env.classes.has(tObj.a.type.name)) {
-          const [_, methods] = env.classes.get(tObj.a.type.name);
+          const [fields, methods] = env.classes.get(tObj.a.type.name);
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = specializeMethodType(env, tObj.a.type, methods.get(expr.method));
             const realArgs = [tObj].concat(tArgs);
@@ -954,6 +968,24 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
             } else {
               const argTypesStr = methodArgs.map(argType => bigintSafeStringify(argType.tag)).join(", ");
               const tArgsStr = realArgs.map(tArg => bigintSafeStringify(tArg.a.type.tag)).join(", ");
+              throw new TypeCheckError(SRC, `Method call ${expr.method} expects arguments of types [${argTypesStr}], got [${tArgsStr}]`,
+              expr.a);
+            }
+          } else if (fields.has(expr.method)) {
+            const fieldType = specializeFieldType(env, tObj.a.type, fields.get(expr.method));
+            if (fieldType.tag !== "callable")
+              throw new TypeCheckError(SRC, `Field ${expr.method} of ${tObj.a.type.name} not a callable`, expr.a);
+            if (fieldType.params.length === tArgs.length &&
+              fieldType.params.every((argTyp, i) => isAssignable(env, tArgs[i].a.type, argTyp))) {
+              return {
+                tag: "call",
+                fn: { tag: "lookup", obj: tObj, field: expr.method, a: { ...expr.a, type: fieldType } },
+                arguments: tArgs,
+                a: { ...expr.a, type: fieldType.ret }
+              };
+            } else {
+              const argTypesStr = fieldType.params.map(argType => JSON.stringify(argType.tag)).join(", ");
+              const tArgsStr = tArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
               throw new TypeCheckError(SRC, `Method call ${expr.method} expects arguments of types [${argTypesStr}], got [${tArgsStr}]`,
               expr.a);
             }
@@ -981,7 +1013,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         // need to create a local env for elem to be inside comprehension only
         var loc = locals;
         if (expr.elem.tag === "id"){
-          loc.vars.set(expr.elem.name, NUM);
+          loc.vars.set(expr.elem.name, [NUM, true]);
           const elem = {...expr.elem, a: {...expr, type: NUM}};
           const left = tcExpr(env, loc, expr.left,SRC);
           var cond;
@@ -1028,7 +1060,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
 // Will be extended to include tuples etc in later commits
 export function tcIterator(env : GlobalTypeEnv, locals : LocalTypeEnv, iterator: string): Type{
   if (locals.vars.has(iterator))
-   return locals.vars.get(iterator) 
+   return locals.vars.get(iterator)[0]
   else if (env.globals.has(iterator))
      return env.globals.get(iterator)
    throw new TypeCheckError(`Undefined iterator`)

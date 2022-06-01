@@ -1,5 +1,6 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { Annotation, BinOp, Type, UniOp } from "./ast"
+import * as AST from "./ast";
 import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
 import { equalType } from "./type-check";
 
@@ -12,6 +13,9 @@ export type GlobalEnv = {
   labels: Array<string>;
   offset: number;
   vtableMethods: Array<[string, number]>;
+  nonlocalMap: Map<string, Map<string, [ancestorList: string[], isFunction: boolean, funName: string]>>;
+  lambdaStack: Array<AST.FunDef<Annotation>>;
+  ancestorMap: Map<string, Array<AST.FunDef<Annotation>>>;
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -22,7 +26,10 @@ export const emptyEnv : GlobalEnv = {
   locals: new Set(),
   labels: [],
   offset: 0,
-  vtableMethods: [] 
+  vtableMethods: [],
+  nonlocalMap: new Map(),
+  lambdaStack: [],
+  ancestorMap: new Map(),
 };
 
 type CompileResult = {

@@ -67,7 +67,7 @@ export type AssignVar<A> = { a?: A, target: Assignable<A>, ignorable: boolean, s
 export type Lambda<A> = {  a?: A, tag: "lambda", params: Array<string>, type: Callable, expr: Expr<A> };
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal<A> }
-  | {  a?: A, tag: "id", name: string }
+  | {  a?: A, tag: "id", name: string, transform?: boolean }
   | {  a?: A, tag: "binop", op: BinOp, left: Expr<A>, right: Expr<A>}
   | {  a?: A, tag: "uniop", op: UniOp, expr: Expr<A> }
   | {  a?: A, tag: "builtin1", name: string, arg: Expr<A> }
