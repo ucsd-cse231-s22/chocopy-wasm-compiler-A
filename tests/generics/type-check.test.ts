@@ -59,7 +59,7 @@ describe('Generics Type-Checker Tests', () => {
 
     const newEnv = augmentTEnv(env, program);
 
-    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
+    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0], 'test');
     expect(resolvedCls).to.deep.equal({
       name: 'Box',
       fields: [{name: 'x', type: TYPEVAR('T'), value: PyZero(), a: {eolLoc: {row: 0, col: 0, srcIdx: 0}}}],
@@ -98,7 +98,7 @@ describe('Generics Type-Checker Tests', () => {
 
     const newEnv = augmentTEnv(env, program);
 
-    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
+    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0], 'test');
     expect(resolvedCls).to.deep.equal({
       name: 'Box',
       fields: [
@@ -150,7 +150,7 @@ describe('Generics Type-Checker Tests', () => {
 
     const newEnv = augmentTEnv(env, program);
 
-    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
+    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0], 'test');
     expect(resolvedCls).to.deep.equal({
       name: 'Box',
       fields: [
@@ -213,7 +213,7 @@ describe('Generics Type-Checker Tests', () => {
 
     const newEnv = augmentTEnv(env, program);
 
-    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0]);
+    let resolvedCls = resolveClassTypeParams(newEnv, program.classes[0], 'test');
     expect(resolvedCls).to.deep.equal({
       name: 'Box',
       fields: [

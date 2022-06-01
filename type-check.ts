@@ -264,7 +264,7 @@ export function specializeMethodType(env: GlobalTypeEnv, objTy: Type, [argTypes,
   }
 
   let [_fields, _methods, _, typeparams] = env.classes.get(objTy.name);
-  let map = new Map(zip(typeparams, objTy.params));  //.filter(([_typevar, typeparam]) => typeparam.tag !== "typevar"));
+  let map = new Map(zip(typeparams, objTy.params));
 
   let specializedRetType = specializeType(map, retType);
   let specializedArgTypes = argTypes.map(argType => specializeType(map, argType));
@@ -276,7 +276,7 @@ export function specializeMethodType(env: GlobalTypeEnv, objTy: Type, [argTypes,
 // to their current instantiated types.
 export function specializeType(env: Map<string, Type>, t: Type) : Type {
   // primitive types cannot be specialized any further.
-  if(t.tag === "either" || t.tag === "none" || t.tag === "bool" || t.tag === "number") {
+  if(t.tag === "either" || t.tag === "none" || t.tag === "bool" || t.tag === "number" || t.tag === "empty") {
     return t;
   } 
 
@@ -294,9 +294,9 @@ export function specializeType(env: Map<string, Type>, t: Type) : Type {
     return CALLABLE(specializedParams, specializedRet);
   }
 
-  if(t.tag === "list" || t.tag === "empty") {
-    // TODO: Actually specialize the callable
-    return t;
+  if(t.tag === "list") {
+    let specializedItemType = specializeType(env, t.itemType);
+    return LIST(specializedItemType);
   }
 
   // at this point t has to be a class type
@@ -428,7 +428,7 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
   // superclasses.
   const rClasses = program.classes.map(cls => {
     if(cls.typeParams.length !== 0) {
-      return resolveClassTypeParams(newEnv, cls)
+      return resolveClassTypeParams(newEnv, cls, SRC)
     } else {
       return cls;
     }
@@ -471,12 +471,12 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
 
 export function tcInit(env: GlobalTypeEnv, init: VarInit<Annotation>, SRC: string): VarInit<Annotation> {
   if(!isValidType(env, init.type)) {
-    throw new TypeCheckError(SRC, `Invalid type annotation '${bigintSafeStringify(init.type)}' for '${init.name}'`);
+    throw new TypeCheckError(SRC, `Invalid type annotation '${bigintSafeStringify(init.type)}' for '${init.name}'`, init.a);
   }
 
   if(init.type.tag === "typevar") {
     if(init.value.tag !== "zero") {
-      throw new TypeCheckError(SRC, `Generic variables must be initialized with __ZERO__`);
+      throw new TypeCheckError(SRC, `Generic variables must be initialized with __ZERO__`, init.value.a);
     }
 
     return { ...init, a: { ...init.a, type: NONE } };
@@ -504,7 +504,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv
 
   fun.parameters.forEach(p => {
     if(!isValidType(env, p.type)) {
-      throw new TypeCheckError(SRC, `Invalid type annotation '${bigintSafeStringify(p.type)}' for parameter '${p.name}' in function '${fun.name}'`);
+      throw new TypeCheckError(SRC, `Invalid type annotation '${bigintSafeStringify(p.type)}' for parameter '${p.name}' in function '${fun.name}'`, p.a);
     }
     locals.vars.set(p.name, p.type)
   });
@@ -520,7 +520,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<Annotation>, nonlocalEnv
   const tBody = tcBlock(envCopy, locals, fun.body, SRC);
   if (!isAssignable(envCopy, locals.actualRet, locals.expectedRet))
     // TODO: what locations to be reported here?
-    throw new TypeCheckError(`expected return type of block: ${bigintSafeStringify(locals.expectedRet)} does not match actual return type: ${bigintSafeStringify(locals.actualRet)}`)
+    throw new TypeCheckError(SRC, `expected return type of block: ${bigintSafeStringify(locals.expectedRet)} does not match actual return type: ${bigintSafeStringify(locals.actualRet)}`)
   return {...fun, a: { ...fun.a, type: NONE }, body: tBody, nonlocals, children};
 }
 
@@ -530,14 +530,14 @@ export function tcGenericClass(env: GlobalTypeEnv, cls: Class<Annotation>, SRC: 
   // ensure all type parameters are defined as type variables
   cls.typeParams.forEach(param => {
     if(!env.typevars.has(param)) {
-      throw new TypeCheckError(SRC, `undefined type variable ${param} used in definition of class ${cls.name}`);
+      throw new TypeCheckError(SRC, `undefined type variable ${param} used in definition of class ${cls.name}`, cls.a);
     }
   });
 
   return tcClass(env, cls, SRC);
 }
 
-export function resolveClassTypeParams(env: GlobalTypeEnv, cls: Class<Annotation>) : Class<Annotation> { 
+export function resolveClassTypeParams(env: GlobalTypeEnv, cls: Class<Annotation>, SRC: string) : Class<Annotation> { 
   let [fieldsTy, methodsTy, superCls, typeparams] = env.classes.get(cls.name);
 
   let newSuperCls = new Map(Array.from(superCls.entries()).map(([name, args]) => {
@@ -546,12 +546,12 @@ export function resolveClassTypeParams(env: GlobalTypeEnv, cls: Class<Annotation
     }
     let nameClsEnv = env.classes.get(name);
     if(nameClsEnv[3].length !== args.length) {
-        throw new TypeCheckError(`Incorrect number of type-arguments to superclass ${name}, expected ${nameClsEnv[3].length} got ${args.length}`);
+        throw new TypeCheckError(SRC, `Incorrect number of type-arguments to superclass ${name}, expected ${nameClsEnv[3].length} got ${args.length}`, cls.a);
     }
     let newArgs = args.map(arg => {
       let newArg: Type = resolveTypeTypeParams(cls.typeParams, arg);
       if(newArg.tag === "class" && !env.classes.has(newArg.name)) {
-        throw new TypeCheckError(`Class ${newArg.name} used as type-argument to superclass ${name} does not exist`);
+        throw new TypeCheckError(SRC, `Class ${newArg.name} used as type-argument to superclass ${name} does not exist`, cls.a);
       }
       return newArg;
     });

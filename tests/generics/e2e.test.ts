@@ -480,3 +480,26 @@ describe('e2e tests to check generics', () => {
     `
     assertPrint('Generic iterator interface - 1', prog16, ["0", "10", "20", "30", "40"]);
 })
+
+describe('Generics and Lists - e2e tests', () => {
+  const prog0 = `
+  T = TypeVar('T')
+
+  class ListGen(Generic[T]):
+    l : [T] = None
+
+    def index(self: ListGen[T], i: int) -> T:
+      e : T = __ZERO__
+      l : [T] = None
+      l = self.l
+      e = l[i]
+      return e
+
+  o : ListGen[bool] = None
+  o = ListGen()
+  o.l = [True, False, True]
+
+  print(o.index(1))
+  `
+  assertPrint('Generics and Lists - 0', prog0, ["False"]);
+});
