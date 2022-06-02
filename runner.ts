@@ -72,28 +72,23 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
         offset = superClassOffset + offset;
       })
     }
-    offset += 1;
 
     var superClassMethodsCount = 0;
-    for (let i = 0; i < superclasses.length; i++){
-      if (superclasses[i] !== "object") {
-        superClassMethodsCount += newClasses.get(superclasses[i])[3];
-      }
+    if (superclasses[0] !== "object") {
+      superClassMethodsCount = newClasses.get(superclasses[0])[3];
     }
 
     cls.methods.forEach((method, index) => {
 
       var methodClassOffset = superClassMethodsCount + index - overridenMethods;
 
-      for (let i = 0; i < superclasses.length; i++){
-        if (superclasses[i] !== "object"){
-          newClasses.get(superclasses[i])[1].forEach((value, key) => {
-            if (key === method.name) {
-              overridenMethods += 1;
-              methodClassOffset = value;
-            }
-          })
-        }
+      if (superclasses[0] !== "object"){
+        newClasses.get(superclasses[0])[1].forEach((value, key) => {
+          if (key === method.name) {
+            overridenMethods += 1;
+            methodClassOffset = value;
+          }
+        })
       }
       classMethods.set(method.name, methodClassOffset)
     })
