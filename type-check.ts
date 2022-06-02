@@ -872,7 +872,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg, SRC);
         
-        if (!equalType(tArg.a.type, NUM) && !equalType(tArg.a.type, BOOL) && !equalType(tArg.a.type, NONE)) {
+        if (!equalType(tArg.a.type, NUM) && !equalType(tArg.a.type, FLOAT) && !equalType(tArg.a.type, BOOL) && !equalType(tArg.a.type, NONE)) {
            throw new TypeCheckError(SRC, `print() expects types "int" or "bool" or "none" as the argument, got ${bigintSafeStringify(tArg.a.type.tag)}`, tArg.a);
         }
         return { ...expr, a: tArg.a, arg: tArg };

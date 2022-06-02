@@ -1,6 +1,6 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { Annotation, BinOp, Type, UniOp } from "./ast"
-import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
+import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM, FLOAT } from "./utils";
 import { equalType } from "./type-check";
 
 export type GlobalEnv = {
@@ -200,6 +200,8 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       var callName = expr.name;
       if (expr.name === "print" && equalType(argTyp, NUM)) {
         callName = "print_num";
+      } else if (expr.name === "print" && equalType(argTyp, FLOAT)) {
+        callName = "print_float"; 
       } else if (expr.name === "print" && equalType(argTyp, BOOL)) {
         callName = "print_bool";
       } else if (expr.name === "print" && equalType(argTyp, NONE)) {

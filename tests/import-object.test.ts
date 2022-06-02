@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { binop_bignum, binop_comp_bignum, builtin_bignum, load_bignum, des_check, bignum_to_i32 } from "../utils";
+import { binop_bignum, binop_comp_bignum, builtin_bignum, load_bignum, des_check, bignum_to_i32, load_float } from "../utils";
 import { bigMath } from "../utils";
 import { importObjectErrors } from "../errors";
 import { generateImportMap } from "../builtins";
@@ -22,6 +22,8 @@ function print(typ: Type, arg: any, loader: WebAssembly.ExportValue): any {
   importObject.output += "\n";
   if(typ === Type.Num)
     return Number(load_bignum(arg, loader));
+  else if(typ === Type.Float)
+    return Number(load_float(arg, loader));
   return arg;
 }
 
@@ -52,6 +54,7 @@ export const importObject : any = {
     //  console.
     //assert_not_none: (arg: any) => assert_not_none(arg),
     print_num: (arg: number) => print(Type.Num, arg, importObject.libmemory.load),
+    print_float: (arg: number) => print(Type.Float, arg, importObject.libmemory.load_float),
     print_bool: (arg: number) => print(Type.Bool, arg, null),
     print_none: (arg: number) => print(Type.None, arg, null),
     destructure_check: (hashNext: boolean) => des_check(hashNext),

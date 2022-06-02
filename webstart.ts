@@ -1,7 +1,7 @@
 import {BasicREPL} from './repl';
 import { Type, Value, Annotation, Class } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
-import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
+import { NUM, FLOAT, BOOL, NONE, load_bignum, load_float, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
 import { importObjectErrors } from './errors';
 import { generateImportMap } from './builtins';
 
@@ -21,6 +21,8 @@ function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : strin
   switch(typ.tag) {
     case "number":
       return load_bignum(arg, loader).toString();
+    case "float":
+      return load_float(arg, loader).toString();
     case "bool":
       return (arg as boolean) ? "True" : "False";
     case "none":
@@ -231,10 +233,12 @@ function webStart() {
     const editorBox = initCodeMirror();
 
     const loader = memoryModule.instance.exports.load;
+    const loader_float = memoryModule.instance.exports.load_float;
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
         print_num: (arg: number) => print(NUM, arg, loader),
+        print_float: (arg: number) => print(FLOAT, arg, loader_float),
         print_bool: (arg: number) => print(BOOL, arg, null),
         print_none: (arg: number) => print(NONE, arg, null),
         destructure_check: (hashNext: boolean) => des_check(hashNext),
@@ -266,6 +270,9 @@ function webStart() {
       document.getElementById("output").appendChild(elt);
       switch (result.tag) {
         case "num":
+          elt.innerText = String(result.value);
+          break;
+        case "float":
           elt.innerText = String(result.value);
           break;
         case "bool":

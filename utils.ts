@@ -108,6 +108,11 @@ export function load_bignum(addr: number, loader: WebAssembly.ExportValue): bigi
   return bignum;
 }
 
+export function load_float(addr: number, loader: WebAssembly.ExportValue): number {
+  const load_float = loader as CallableFunction;
+  return Number(load_float(addr,0));
+}
+
 export function alloc_bignum(numlength: number, allocator: WebAssembly.ExportValue): number {
   const alloc = allocator as CallableFunction;
   // allocate one extra space for metadata (length)
@@ -157,8 +162,8 @@ export function PyValue(typ: Type, result: bigint): Value<Annotation> {
   switch (typ.tag) {
     case "number":
       return PyInt(result);
-    // case "float":
-    //   return PyFloat(result);
+    case "float":
+      return PyFloat(result);
     case "bool":
       return PyBool(Boolean(result));
     case "class":
