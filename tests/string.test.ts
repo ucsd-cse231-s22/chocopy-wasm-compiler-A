@@ -259,4 +259,27 @@ describe("String tests", () => {
   c = C()
   print(c.s * c.x)
   `,['abcabcabc'])
+
+
+  assertPrint("String-Slicing",`
+  s:str = "abc"
+  print(s[1:3])  
+  `,['bc'])
+
+
+  assertPrint("String-Slicing-In-Function",`
+  def f(s:str, x:int) -> str:
+     return s[1:3]
+  print(f("bcasadfas", 3))
+  `,['ca'])
+
+  assertPrint("String-Slicing-In-Class",`
+  class C(object):
+    s:str = "abc"
+    x:int = 3
+  c:C = None
+  c = C()
+  print(c.s[0:2])
+  `,['ab'])
+
 });
