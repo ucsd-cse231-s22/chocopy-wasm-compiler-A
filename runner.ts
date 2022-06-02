@@ -63,12 +63,14 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
     // TODO(anuj): update to support multiple inheritance
     var offset : number  = 0;
     const superclasses = Array.from( cls.super.keys() )
-    for (let i = 0; i < superclasses.length; i++){
-      if (superclasses[i] !== "object") {
-        newClasses.get(superclasses[i])[0].forEach((value, key) => {
-          offset += Math.max(value[0]);
+    if (superclasses[0] !== "object") { 
+      superclasses.forEach(cls => {
+        var superClassOffset = 0;
+        newClasses.get(cls)[0].forEach((value, key) => {
+          superClassOffset = Math.max(value[0]) + 1
         });
-      }
+        offset = superClassOffset + offset;
+      })
     }
     offset += 1;
 
