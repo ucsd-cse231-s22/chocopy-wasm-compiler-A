@@ -49,6 +49,8 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
+  var classesList = new Array<string>();
+  classesList = classesList.concat( Array.from(newClasses.keys()));
   const newClassIndices = new Map(env.classIndices);
   const functionNames = new Map(env.functionNames);
 
@@ -68,7 +70,9 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
     const classFields = new Map();
     cls.fields.forEach((field, i) => classFields.set(field.name, [i + 1, field.value]));
     newClasses.set(cls.name, classFields);
+    classesList.push(cls.name);
   });
+  classesList.sort();
   return {
     globals: newGlobals,
     classes: newClasses,
@@ -77,6 +81,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
     locals: env.locals,
     labels: env.labels,
     offset: newOffset,
+    classesList:classesList,
     vtableMethods: env.vtableMethods,
   }
 }
@@ -136,6 +141,8 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
+    (func $print_object (import "imports" "print_object") (param i32) (param i32)(result i32))
+
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))

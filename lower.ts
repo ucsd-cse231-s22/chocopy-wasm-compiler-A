@@ -620,7 +620,22 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
           right: rval
         }, [...lclasses, ...rclasses]];
     case "builtin1":
-      var [inits, stmts, val, classes] = flattenExprToVal(e.arg, blocks, env);
+var [inits, stmts, val, classes] = flattenExprToVal(e.arg, blocks, env);
+if(e.name === "print" && e.arg.a.type.tag === "class"){
+        //find the index of the object
+        
+        const id = env.classesList.indexOf(e.arg.a.type.name);
+        // const b21 = {a:e.a, name:"print_object", tag:"builtin2",left:{a:NUM, literal:{ tag: "num", value: id }},right:e.arg}
+      
+        const b2:AST.Expr<Annotation> = {
+          a: e.a,
+          tag: "builtin2",
+          name: "print_object",
+          left: {a:{type:NUM},tag: "literal", value:{ tag: "num", value: BigInt(id) }},
+          right: e.arg
+        }
+        return flattenExprToExpr(b2,blocks,env)
+      }
       return [inits, stmts, {tag: "builtin1", a: e.a, name: e.name, arg: val}, classes];
     case "builtin2":
       var [linits, lstmts, lval, lclasses] = flattenExprToVal(e.left, blocks, env);
@@ -663,7 +678,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       }
       const className = objTyp.type.name;
       const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, objval);
-      const callMethod : IR.Expr<Annotation> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
+      const callMethod : IR.Expr<Annotation> = {a:e.a, tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
@@ -677,7 +692,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       const classdata = env.classes.get(e.obj.a.type.name);
       const [offset, _] = classdata.get(e.field);
       const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, oval);
-      return [oinits, [...ostmts, checkObj], {
+      return [oinits, [...ostmts, checkObj], {a:e.a,
         tag: "load",
         start: oval,
         offset: { tag: "wasmint", value: offset }}, oclasses];
@@ -690,7 +705,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1} };
       const assigns : IR.Stmt<Annotation>[] = fields.map(f => {
         const [_, [index, value]] = f;
-        return {
+        return {a:e.a,
           tag: "store",
           start: { tag: "id", name: newName },
           offset: { tag: "wasmint", value: index },
@@ -835,9 +850,9 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         [...objClasses, ...idxClasses]
       ];
     case "id":
-      return [[], [], {tag: "value", value: { ...e }}, []];
+      return [[], [], {a:e.a,tag: "value", value: { ...e }}, []];
     case "literal":
-      return [[], [], {tag: "value", value: literalToVal(e.value) }, [] ];
+      return [[], [], {a:e.a,tag: "value", value: literalToVal(e.value) }, [] ];
     case "if-expr": {
       var thenLbl = generateName("$ifExprThen");
       var elseLbl = generateName("$ifExprElse");
@@ -928,7 +943,7 @@ function lambdaToClass(lambda: AST.Lambda<Annotation>) : [AST.Class<Annotation>,
 function flattenExprToVal(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock<Annotation>>, env : GlobalEnv) : [Array<IR.VarInit<Annotation>>, Array<IR.Stmt<Annotation>>, IR.Value<Annotation>, Array<IR.Class<Annotation>>] {
   var [binits, bstmts, bexpr, bclasses] = flattenExprToExpr(e, blocks, env);
   if(bexpr.tag === "value") {
-    return [binits, bstmts, bexpr.value, bclasses];
+    return [binits, bstmts, {...bexpr.value}, bclasses];
   }
   else {
     var newName = generateName("valname");

@@ -12,6 +12,8 @@ export type GlobalEnv = {
   labels: Array<string>;
   offset: number;
   vtableMethods: Array<[string, number]>;
+  classesList: Array<string> ; 
+
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -22,7 +24,8 @@ export const emptyEnv : GlobalEnv = {
   locals: new Set(),
   labels: [],
   offset: 0,
-  vtableMethods: [] 
+  vtableMethods: [], 
+  classesList: [],
 };
 
 type CompileResult = {
@@ -180,15 +183,20 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
         callName = "print_bool";
       } else if (expr.name === "print" && equalType(argTyp, NONE)) {
         callName = "print_none";
-      } else if (expr.name === "len") {
+      } 
+       else if (expr.name === "len") {
         return [...argStmts, "(i32.const 0)", "call $load"];
       }
 
       return argStmts.concat([`(call $${callName})`]);
 
     case "builtin2":
+
       const leftStmts = codeGenValue(expr.left, env);
       const rightStmts = codeGenValue(expr.right, env);
+      if(expr.name === "print_object") {
+        return  [...leftStmts, ...rightStmts, `(call $print_object)`] 
+      }
       return [...leftStmts, ...rightStmts, `(call $${expr.name})`]
 
     case "call":

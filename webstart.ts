@@ -1,4 +1,5 @@
-import {BasicREPL} from './repl';
+
+import { BasicREPL } from './repl';
 import { Type, Value, Annotation, Class } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
 import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
@@ -15,9 +16,12 @@ import "./style.scss";
 
 import { autocompleteHint } from "./autocomplete";
 import { default_keywords, default_functions } from "./const";
+import { type } from 'os';
+import { addAccordionEvent, generate_folded_object } from './objectprint';
 
-function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : string {
-  switch(typ.tag) {
+
+export function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue, repl: BasicREPL): string {
+  switch (typ.tag) {
     case "number":
       return load_bignum(arg, loader).toString();
     case "bool":
@@ -25,15 +29,35 @@ function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : strin
     case "none":
       return "None";
     case "class":
-      return typ.name;
+      return stringify_object(repl.importObject.js.memory.buffer, arg, typ.name, 0, new Map(), 1, loader, repl).join("\n");
   }
 }
+function makeMarker(msg: any): any {
+  const marker = document.createElement("div");
+  marker.classList.add("error-marker");
+  marker.innerHTML = "&nbsp;";
 
-export function print_class(memory: WebAssembly.Memory, repl: BasicREPL, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number, loader : WebAssembly.ExportValue): Array<string> {
+  const error = document.createElement("div");
+  error.innerHTML = msg;
+  error.classList.add("error-message");
+  marker.appendChild(error);
+
+  return marker;
+}
+
+
+// Simple helper to highlight line given line number
+function highlightLine(actualLineNumber: number, msg: string): void {
+  var ele = document.querySelector(".CodeMirror") as any;
+  var editor = ele.CodeMirror;
+  editor.setGutterMarker(actualLineNumber, "error", makeMarker(msg));
+  editor.addLineClass(actualLineNumber, "background", "line-error");
+}
+export function stringify_object(memory: WebAssembly.Memory, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number, loader: WebAssembly.ExportValue, repl: BasicREPL): Array<string> {
 
   var fields_offset_ = repl.currentEnv.classes.get(classname);
   var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
-  var mem = new Uint32Array(memory.buffer);
+  var mem = new Uint32Array(repl.importObject.js.memory.buffer);
   var display: Array<string> = [];
   // A[1][0] refers to the offset value of field A, sorted by the offset value to ensure the iteration has a consistent order. 
   var fields_offset = Array.from(fields_offset_.entries());
@@ -57,11 +81,11 @@ export function print_class(memory: WebAssembly.Memory, repl: BasicREPL, pointer
         display.push(`${space.repeat(level + 2)}${thisfield[0]} : none `);
       } else {
         display.push(`${space.repeat(level + 2)}${thisfield[0]}:{`)
-        display.push(...print_class(memory, repl, mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5, met_object, object_number + 1, loader));
+        display.push(...stringify_object(memory, mem[pointer / 4 + thisfield[1][0]], thisfield_type.name, level + 5, met_object, object_number + 1, loader, repl));
         display.push(`${space.repeat(level + 2)}}`)
       }
     } else {
-      display.push(`${space.repeat(level + 2)}${thisfield[0]} : ${stringify(thisfield_type, mem[pointer / 4 + thisfield[1][0]], loader)} `);
+      display.push(`${space.repeat(level + 2)}${thisfield[0]} : ${stringify(thisfield_type, mem[pointer / 4 + thisfield[1][0]], loader, repl)} `);
     }
   }
   )
@@ -70,14 +94,26 @@ export function print_class(memory: WebAssembly.Memory, repl: BasicREPL, pointer
   return display;
 }
 
-function print(typ: Type, arg : number, loader: WebAssembly.ExportValue) : any {
+
+
+function print(typ: Type, arg: number, loader: WebAssembly.ExportValue, repl: BasicREPL): any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
-  elt.innerText = stringify(typ, arg, loader);
+  elt.setAttribute("class", "output-success")
+  elt.innerText = stringify(typ, arg, loader, repl);
   return arg;
 }
-
+function print_object(id: number, arg: number, loader: WebAssembly.ExportValue, repl: BasicREPL): any {
+  console.log("Logging from WASM: ", arg);
+  const elt = document.createElement("pre");
+  document.getElementById("output").appendChild(elt);
+  var typ = repl.currentTypeEnv.classesNumber[id];
+  elt.setAttribute("class", "output-success")
+  generate_folded_object(arg, typ, loader, repl, elt);
+  // elt.innerText = stringify(CLASS(typ), arg,repl);
+  return arg;
+}
 function assert_not_none(arg: any): any {
   if (arg === 0)
     throw new Error("RUNTIME ERROR: cannot perform operation on none");
@@ -148,9 +184,9 @@ c2.next = c3
 // setup codeMirror instance and events
 
 function webStart() {
-  document.addEventListener("DOMContentLoaded", async function () {
+  const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
 
-    // https://github.com/mdn/webassembly-examples/issues/5
+  document.addEventListener("DOMContentLoaded", async function () {
     var codeContent: string | ArrayBuffer
     const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
     const memoryModule = await fetch('memory.wasm').then(response =>
@@ -158,9 +194,14 @@ function webStart() {
     ).then(bytes =>
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
+    // https://github.com/mdn/webassembly-examples/issues/5
+    var codeContent: string | ArrayBuffer
+    // const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
+
     function initCodeMirror() {
 
       let isClassMethod = false;
+
 
       const userCode = document.getElementById("user-code") as HTMLTextAreaElement;
       const editorBox = CodeMirror.fromTextArea(userCode, {
@@ -215,6 +256,22 @@ function webStart() {
           //reset isClassMethod variable based on enter or space or backspace
           case "Enter":
             isClassMethod = false;
+            //compile code in background to get populate environment for autocomplete
+            // var importObject = {
+            //   imports: {
+            //     print: print,
+            //     abs: Math.abs,
+            //     min: Math.min,
+            //     max: Math.max,
+            //     pow: Math.pow,
+            //   },
+            // };
+            //  repl = new BasicREPL(importObject);
+
+            // const source = document.getElementById("user-code") as HTMLTextAreaElement;
+            // repl.run(source.value).then((r) => {
+            //   [defList, classMethodList] = populateAutoCompleteSrc(repl);
+            // });
             return;
           case "Space":
             isClassMethod = false;
@@ -233,11 +290,12 @@ function webStart() {
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
-        print_num: (arg: number) => print(NUM, arg, loader),
-        print_bool: (arg: number) => print(BOOL, arg, null),
-        print_none: (arg: number) => print(NONE, arg, null),
+        print_num: (arg: number) => print(NUM, arg, loader, repl),
+        print_bool: (arg: number) => print(BOOL, arg, null, repl),
+        print_none: (arg: number) => print(NONE, arg, null, repl),
+        print_object: (c: number, addr: number) => print_object(c, addr, loader, repl),
         destructure_check: (hashNext: boolean) => des_check(hashNext),
-        abs:  (arg: number) => builtin_bignum([arg], bigMath.abs, memoryModule.instance.exports),
+        abs: (arg: number) => builtin_bignum([arg], bigMath.abs, memoryModule.instance.exports),
         min: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.min, memoryModule.instance.exports),
         max: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.max, memoryModule.instance.exports),
         pow: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.pow, memoryModule.instance.exports),
@@ -252,7 +310,7 @@ function webStart() {
         $gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, memoryModule.instance.exports),
         $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
         $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
-        $bignum_to_i32: (arg: number) => bignum_to_i32(arg, loader), 
+        $bignum_to_i32: (arg: number) => bignum_to_i32(arg, loader),
       },
       errors: importObjectErrors,
       libmemory: memoryModule.instance.exports,
@@ -261,10 +319,14 @@ function webStart() {
     };
     var repl = new BasicREPL(importObject);
 
-    function renderResult(result : Value<Annotation>) : void {
-      if(result === undefined) { console.log("skip"); return; }
+    addAccordionEvent(loader, repl);
+
+    function renderResult(result: Value<Annotation>): void {
+      if (result === undefined) { console.log("skip"); return; }
       if (result.tag === "none") return;
       const elt = document.createElement("pre");
+      elt.setAttribute("class", "output-success")
+      addAccordionEvent(loader, repl);
       document.getElementById("output").appendChild(elt);
       switch (result.tag) {
         case "num":
@@ -275,22 +337,29 @@ function webStart() {
           break;
         case "object":
           // elt.innerHTML = `${result.name} object at ${result.address}`
-          elt.innerHTML = print_class(memory, repl, result.address, result.name, 0, new Map(), 1, loader).join("\n");
+          generate_folded_object(result.address, result.name, loader, repl, elt)
+          // elt.innerHTML = stringify_object(memory, result.address, result.name, 0, new Map(), 1, loader,repl).join("\n");
           break
         default: throw new Error(`Could not render value: ${result}`);
       }
     }
 
-    function renderError(result : any) : void {
+    function renderError(result: any): void {
       // only `TypeCheckError` has `getA` and `getErrMsg`
       if (result instanceof TypeCheckError) {
         console.log(result.getA()); // could be undefined if no Annotation information is passed to the constructor of TypeCheckError
         console.log(result.getErrMsg());
       }
 
+      const errorline = result?.getA()?.fromLoc?.row - 1;
+      highlightLine(errorline, String(result));
+
       const elt = document.createElement("pre");
       document.getElementById("output").appendChild(elt);
       elt.setAttribute("style", "color: red");
+      elt.setAttribute("class", "output-fail");
+
+
       elt.innerText = String(result);
     }
 
@@ -315,12 +384,21 @@ function webStart() {
           const source = replCodeElement.value;
           elt.value = source;
           replCodeElement.value = "";
-          repl.run(source).then((r) => {
-            renderResult(r);
-            printMem();
-            console.log("run finished")
-          })
-            .catch((e) => { renderError(e); console.log("run failed", e) });;
+          var failed = false;
+          try {
+            repl.tc(source);
+          } catch (err) {
+            renderError(err); console.log("run failed", e);
+            failed = true;
+          }
+          if (!failed) {
+            repl.run(source).then((r) => {
+              renderResult(r);
+              printMem();
+              console.log("run finished")
+            })
+              .catch((e) => { renderError(e); console.log("run failed", e) });;
+          }
         }
       });
     }
@@ -338,10 +416,12 @@ function webStart() {
 
     function setupCodeExample() {
       const sel = document.querySelector("#exampleSelect") as HTMLSelectElement;
+      const codeExampleData = require("./codeExample.json");
+
       console.log('editorBox: ', editorBox);
       sel.addEventListener("change", (e) => {
-        const code = get_code_example(sel.value);
-        if (code !== "") {
+        const code = codeExampleData[sel.value];
+        if (code !== undefined) {
           // const usercode = document.getElementById("user-code") as HTMLTextAreaElement;
           editorBox.setValue(code);
         }
@@ -414,10 +494,23 @@ function webStart() {
 
     document.getElementById("run").addEventListener("click", function (e) {
       repl = new BasicREPL(importObject);
-      const source = document.getElementById("user-code") as HTMLTextAreaElement;
+
       resetRepl();
-      repl.run(source.value).then((r) => { renderResult(r); console.log("run finished") })
-        .catch((e) => { renderError(e); console.log("run failed", e) });;
+      const source = document.getElementById("user-code") as HTMLTextAreaElement;
+      var failed = false;
+      try {
+        repl.tc(source.value);
+      } catch (err) {
+        renderError(err); console.log("run failed", e);
+        failed = true;
+      }
+      if (!failed) {
+        repl.run(source.value).then((r) => { renderResult(r); console.log("run finished") })
+          .catch((e) => {
+            renderError(e);
+
+          });
+      }
     });
     setupRepl();
     setupCodeExample();
@@ -425,3 +518,7 @@ function webStart() {
 }
 
 webStart();
+function str(address: number): string {
+  throw new Error('Function not implemented.');
+}
+
