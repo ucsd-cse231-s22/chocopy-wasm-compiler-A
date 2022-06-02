@@ -774,7 +774,12 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         []
       ];
     case "list-comp":
-      return flattenListComp(e, env, blocks);
+      if (e.typ === "list") // for lists
+        return flattenListComp(e, env, blocks);
+      if (e.typ === "set/dict") // for sets and dictionaries
+        return flattenListComp(e, env, blocks);  // func call to be changed based on the implementation of sets and dictionaries
+      else // for generators
+        return flattenListComp(e, env, blocks); // func call to be changed based on the implementation of generators
     case "construct-list":
       const newListName = generateName("newList");
       const listAlloc: IR.Expr<Annotation> = {
