@@ -70,8 +70,9 @@
 // print(s1)`, ["108"]);
 
 // assertPrint("List+Strings", `
-// genre : [str]= ['pop', 'rock', 'jazz']
-// i: str = None
+// genre : [str]= None
+// i: int = 0
+// genre = ['pop', 'rock', 'jazz']
 // for i in range(len(genre)):
 //     print("I like", genre[i])`, ["I like pop", "I like rock","I like jazz" ]);
 
@@ -340,8 +341,10 @@
 
 // assertRunTimeFail("Convert 2", `
 // def method1():
-//   x : [str] = ["One"]
-//   y : int = int(x)
+//   x : [str] = None
+//   y : int = 0
+//   x = ["One"]
+//   y = int(x)
 // method1()
 // `);
 
@@ -399,7 +402,9 @@
 // print("Total number of days: " + days[0] + " in a month")`);
 
 // assertTCFail("Fail1", `
-// spam : [str] = ['cat', 'dog', 'mouse']
+// spam : [str] = None
+// i : int = 0
+// spam = ['cat', 'dog', 'mouse']
 // for i in range(spam):
 //     print(spam[i])`);
 

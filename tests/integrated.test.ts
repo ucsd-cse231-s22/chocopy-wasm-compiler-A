@@ -283,7 +283,8 @@
 
 //   //32, 
 //   assertPrint("String + Lists", `
-// f1 : [str] = ["UCSD","Compiler","Tritons","Library"]
+// f1 : [str] = None
+// f1 = ["UCSD","Compiler","Tritons","Library"]
 // print(f1[1])
 // print(f1[0])
 // `, [`Compiler`, `UCSD`]);
@@ -352,8 +353,10 @@
 
 // //40
 //   assertPrint("String + Comprehensions", `
-// names : [str] = ['Steve', 'Bill', 'Ram', 'Mohan', 'Abdul']
+// names : [str] = None
+// names2 : [str] = None
 // s : str = None
+// names = ['Steve', 'Bill', 'Ram', 'Mohan', 'Abdul']
 // names2 = [s for s in names if 'a' in s]
 // print(names2)
 // `,[`Ram`,`Mohan`]);
@@ -643,11 +646,13 @@
 // yelling('State')`, [`Fri`,`State`]);
 
 // assertPrint("Diff10",`
-// fruits : [str] = ["apple", "banana", "cherry", "kiwi", "mango"]
-// days : [str] = ["Mon","Tues","Wed","Thurs","Fri"]
-// newlist : [str] = []
-// newlist1: [str] = []
+// fruits : [str] = None
+// days : [str] = None
+// newlist : [str] = None
+// newlist1: [str] = None
 // x : str = None
+// fruits = ["apple", "banana", "cherry", "kiwi", "mango"]
+// days = ["Mon","Tues","Wed","Thurs","Fri"]
 // newlist,newlist1 = [x for x in fruits if "a" in x],[x for x in days if "T" in x]
 // print(newlist)
 // print(newlist1)`, [`["apple", "banana","mango"]`,`["Tues","Thurs"]`]);
@@ -833,11 +838,12 @@
 //     print('Invalid Operation!')`, [`210`,`190`,`2000`,`20`]);
 
 //     assertPrint("Case 2",`
-// vowels : [str] = ['a', 'e']
+// vowels : [str] = None
+// i : int = 0
+// k : str = None
+// vowels = ['a', 'e']
 // vowels.append('i')
 // vowels.extend(['o', 'u'])
-// i : str = None
-// k : str = None
 // k = vowels.pop()
 // print(k)
 // for i in range(len(vowels),-1,-1):
@@ -988,8 +994,10 @@
 // arr : [int]= [2, 3, 4, 10, 40]
 // x : int = 10
 // y : int = 50
-// result1 : int = binarySearch(arr, 0, len(arr)-1, x)
-// result2 : int = binarySearch(arr, 0, len(arr)-1, x)
+// result1 : int = 0
+// result2 : int = 0
+// result1 = binarySearch(arr, 0, len(arr)-1, x)
+// result2 = binarySearch(arr, 0, len(arr)-1, x)
 // print(result1)
 // print(result2)`, [`3`,`-1`]);
 
@@ -1002,7 +1010,7 @@
 
 // assertPrint("Case 12",`
 // def UncommonWords(A : str, B : str) -> [str]:
-//     count : dict = {}
+//     count : dict = dict()
 //     word : str = None
 //     for word in A.split():
 //         count[word] = count.get(word, 0) + 1
@@ -1011,8 +1019,9 @@
 //     return [word for word in count if count[word] == 1]
 // A : str = "Peeks for Peeks"
 // B : str = "Learning from Peeks for Peeks"
-// C : [str] = UncommonWords(A, B)
+// C : [str] = None
 // i : int = 0
+// C = UncommonWords(A, B)
 // for i in range(0,len(C):
 //   print(C[i]))`, [`from`,`Learning`]);
 
@@ -1048,6 +1057,7 @@
 //                 tup[j]= tup[j + 1]
 //                 tup[j + 1]= temp
 //     return tup
+// tup : [tuple]
 // tup =[('for', 24), ('is', 10), ('Prop', 28),('Frown', 5), ('portal', 20), ('a', 15)]
        
 // print(Sort_Tuple(tup))`, [`[('Frown', 5), ('is', 10), ('a', 15), ('portal', 20), ('for', 24), ('Prop', 28)]`]);
@@ -1114,10 +1124,12 @@
 // import math
 // list1 : [int] = None
 // list2 : [int] = None
+// result1 : int = 0
+// result2 : int = 0
 // list1  = [1, 2, 3]
 // list2  = [3, 2, 4]
-// result1 : int = math.prod(list1)
-// result2 : int = math.prod(list2)
+// result1 = math.prod(list1)
+// result2 = math.prod(list2)
 // print(result1)
 // print(result2)`, [`6`,`24`]);
 
