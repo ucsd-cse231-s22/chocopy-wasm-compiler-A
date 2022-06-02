@@ -1,6 +1,5 @@
 import { Annotation, Type } from "./ast";
 import { Value } from "./ir";
-import { importObject } from "./tests/import-object.test";
 import { load_bignum } from "./utils";
 
 export type memAddr = number;
@@ -191,14 +190,5 @@ export function getTypeInfo(fields: Value<Annotation>[]): number {
 }
 
 
-//debug function for tests
-export function debugId(id: number, offset: number) { // id should be of type int and the first field in the object
-    for (const [_, addr] of refMap) {
-        let n = load_bignum(memHeap[addr/4 + dataOffset + 1], importObject.libmemory.load);
-        if (n as any == id) {
-            return memHeap[addr/4 + offset];
-        }
-    }
-    throw new Error(`no such id: ${id}`);
-}
+
 

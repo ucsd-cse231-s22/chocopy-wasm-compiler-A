@@ -1,6 +1,19 @@
-import { dataOffset, debugId, heapStart, refNumOffset, sizeOffset, typeOffset } from "../memory";
+import { dataOffset, heapStart, memHeap, refMap, refNumOffset, sizeOffset, typeOffset } from "../memory";
+import { load_bignum } from "../utils";
 import { assertPrint, assertTCFail, assertTC, assertFail, assertMemState, assertHeap } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
+import { importObject } from "./import-object.test";
+
+//debug function for tests
+function debugId(id: number, offset: number) { // id should be of type int and the first field in the object
+    for (const [_, addr] of refMap) {
+        let n = load_bignum(memHeap[addr/4 + dataOffset + 1], importObject.libmemory.load);
+        if (n as any == id) {
+            return memHeap[addr/4 + offset];
+        }
+    }
+    throw new Error(`no such id: ${id}`);
+}
 
 describe("Memory tests", () => {
 // NOTE: all tests other than refNumOffset are commented rn because with additional metadata from groups

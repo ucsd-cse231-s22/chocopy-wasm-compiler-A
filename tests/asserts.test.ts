@@ -4,7 +4,7 @@ import { Value, Annotation } from "../ast";
 import { addLibs, importObject } from "./import-object.test";
 import { run, typeCheck } from "./helpers.test";
 import { fail } from 'assert'
-import { compact, debugId, memAddr } from "../memory";
+import { compact, memAddr } from "../memory";
 import {Program} from '../ir'
 import {Type} from '../ast'
 import * as chai from 'chai';
@@ -116,3 +116,7 @@ export function assertHeap(name:string, source: string, heap: memAddr) {
     chai.expect(compact()).to.eq(heap)
   });
 }
+function debugId(arg0: number, arg1: number): any {
+  throw new Error("Function not implemented.");
+}
+
