@@ -992,7 +992,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
             cond = tcExpr(env, loc, expr.cond,SRC);
           if (cond && cond.a.type.tag !== "bool")
             throw new Error("TYPE ERROR: comprehension if condition must return bool")
-          return {...expr, left, elem, cond, iterable, a: {...expr.a, type: CLASS(iterable.a.type.name)}};
+          return {...expr, left, elem, cond, iterable, a: {...expr.a, type: LIST(NUM)}};
         }
         else
           throw new Error("TYPE ERROR: elem has to be an id");

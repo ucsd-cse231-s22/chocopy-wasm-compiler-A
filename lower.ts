@@ -214,7 +214,7 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
   // start
   blocks.push({  a: e.a, label: compStartLbl, stmts: [] })
   // a.hasNext() call
-  var hasNextCall : AST.Expr<AST.Annotation> = {tag:"method-call", obj:e.iterable, method:"hasNext", arguments:[], a:{...e.a,tag:BOOL}};
+  var hasNextCall : AST.Expr<AST.Annotation> = {tag:"method-call", obj:e.iterable, method:"hasNext", arguments:[], a:{...e.a,type:BOOL}};
   var [cinits, cstmts, cexpr, ceclass] = flattenExprToVal(hasNextCall, blocks, localenv);
   pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: compbodyLbl, els: compEndLbl });
   // console.log(cinits, cstmts, cexpr);
@@ -266,12 +266,11 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
     tag: "store",
     start: { tag: "id", name: newListName },
     offset: {tag:"id",name: newListIterator},
-    value: e.left,
+    value: bexpr,
   };
-  pushStmtsToLastBlock(blocks,storeExpr);
   bodyinits.concat(body_init);
   // console.log("einits", einits, "estmts", estmts, "eexpr", eexpr);
-  pushStmtsToLastBlock(blocks, ...bstmts, {tag:"jmp", lbl: compStartLbl});
+  pushStmtsToLastBlock(blocks, ...bstmts, storeExpr, {tag:"jmp", lbl: compStartLbl});
 
   // end
   blocks.push({  a: e.a, label: compEndLbl, stmts: [] })
@@ -306,7 +305,7 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
         type: e.a.type,
         value: { a: e.a, tag: "none" }
       }]
-      , [...cstmts, ...bstmts,{ tag: "assign", name: newListName, value: listAlloc }]
+      , [...cstmts, ...bstmts]
       , {
           a: return_type_a,
           tag: "value",
