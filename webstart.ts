@@ -4,6 +4,7 @@ import { defaultTypeEnv, TypeCheckError } from './type-check';
 import { NUM, BOOL, NONE,STRING } from './utils';
 import { importObjectErrors } from './errors';
 
+
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
     case "number":

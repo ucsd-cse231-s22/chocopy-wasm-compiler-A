@@ -99,7 +99,6 @@ export function isNoneOrClass(t: Type) {
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
   return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
-
 }
 
 export function isAssignable(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
@@ -152,7 +151,6 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
   const aprogram = { a: { ...program.a, type: lastTyp }, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody };
   return [aprogram, newEnv];
 }
-
 
 export function tcInit(env: GlobalTypeEnv, init: VarInit<Annotation>, SRC: string): VarInit<Annotation> {
   const valTyp = tcLiteral(init.value);
@@ -266,7 +264,6 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
       return { ...stmt, a: { ...stmt.a, type: NONE }, obj: tObj, value: tVal };
   }
 }
-
 
 export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Annotation>, SRC: string): Expr<Annotation> {
   switch (expr.tag) {
