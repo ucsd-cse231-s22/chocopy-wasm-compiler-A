@@ -1,4 +1,4 @@
-import { assertOptimize, assertOptimizeDCE} from "./asserts.test";
+import { assertOptimize, assertOptimizeDCE } from "./asserts.test";
 
 // IR team – review the valnames here – this test seems very brittle
 describe("Optimizations tests", () => {
@@ -1138,6 +1138,21 @@ print(d)
       {print: ["109"], isIrDifferent: true},
       "1"
     )
+
+    assertOptimize(
+        "sanity-many-variables-liveness-dce",
+        `
+  a:int = 1
+  b:int = 10
+  c:int = 1000
+  d:int = 109
+  if True:
+    c = a+9
+    c = a+1
+        `,
+        {print: [""], isIrDifferent: true},
+        "1"
+      )
 
     assertOptimize(
       "sanity-many-variables-constant-fold",

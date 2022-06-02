@@ -1,6 +1,4 @@
-import { sensitiveHeaders } from "http2";
 import { BinOp, Parameter } from "../ast";
-import { emptyEnv } from "../compiler";
 import { BasicBlock, Expr, FunDef, Program, Stmt, VarInit } from "../ir";
 import { Env, generateEnvironmentFunctionsForLiveness, generateEnvironmentProgramForLiveness } from "./optimization_common";
 import { checkLiveValEquality, duplicateEnv, isTagId } from "./optimization_utils";

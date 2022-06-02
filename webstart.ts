@@ -150,7 +150,7 @@ function webStart() {
 
     // https://github.com/mdn/webassembly-examples/issues/5
     var codeContent: string | ArrayBuffer
-    let optmizationSwtich: OptimizationSwitch = "4";
+    let optmizationSwtich: OptimizationSwitch = "3";
     const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
     const memoryModule = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()

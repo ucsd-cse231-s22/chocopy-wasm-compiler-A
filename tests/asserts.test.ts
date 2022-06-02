@@ -22,10 +22,12 @@ before(function () {
 //  console.log = function () {};
 });
 
+const optimizationsSwitch = "3";
+
 export function assert(name: string, source: string, expected: Value<Annotation>) {
   it(name, async () => {
     const repl = new BasicREPL(importObject);
-    const result = await repl.run(source, "4");
+    const result = await repl.run(source, optimizationsSwitch);
     chai.expect(result).to.deep.eq(expected);
   });
 }
@@ -59,8 +61,8 @@ export async function assertOptimizeIR(name: string, source: string, expectedIR:
 export async function assertOptimizeDCE(name: string, source: string, expected: { print: Array<string>, isIrDifferent: boolean }) {
   it(name, async () => {
     const repl = new BasicREPL(await addLibs());
-    var [ preOptimizedIr, preDCEOptimizedIr ] = repl.optimize(source, "2");
-    var [ preOptimizedIr, DCEOptimizedIr ] = repl.optimize(source, "3");
+    var [ _, preDCEOptimizedIr ] = repl.optimize(source, optimizationsSwitch);
+    var [ _, DCEOptimizedIr ] = repl.optimize(source, optimizationsSwitch);
     
     var preDCEOptimizedIrStmtCount = 0;
     var DCEOptimizedIrStmtCount = 0;
@@ -111,7 +113,7 @@ export async function assertOptimizeDCE(name: string, source: string, expected: 
     // ${JSON.stringify(DCEOptimizedIrStmtCount)}`);
     // ${JSON.stringify(preDCEOptimizedIr.body.map(stmt => {return stmt.label}))}\n
     // ${JSON.stringify(DCEOptimizedIr.body.map(stmt => {return stmt.label}))}\n`);
-    await repl.run(source, "3");
+    await repl.run(source, optimizationsSwitch);
     
     chai.expect(importObject.output.trim().split('\n')).to.deep.eq(expected.print);
   });
@@ -138,7 +140,7 @@ export function asserts(name: string, pairs: Array<[string, Value<Annotation>]>)
 
   it(name, async () => {
     for (let i = 0; i < pairs.length; i++) {
-      const result = await repl.run(pairs[i][0], "4");
+      const result = await repl.run(pairs[i][0], optimizationsSwitch);
       chai.expect(result).to.deep.eq(pairs[i][1]);
     }
   });
