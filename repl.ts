@@ -7,6 +7,7 @@ import { optimizeProgram } from "./optimization";
 import { Value, Type, Annotation } from "./ast";
 import { parse } from "./parser";
 import { lowerProgram, resetNameCounters } from "./lower";
+import { generateImportMap } from "./builtins";
 
 interface REPL {
   run(source : string) : Promise<any>;
@@ -67,6 +68,7 @@ export class BasicREPL {
       const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
       this.importObject.js = { memory: memory };
     }
+    generateImportMap(irprogram.imports, this.importObject);
     return [ irprogram, optimizeProgram(irprogram) ];
   }
   tc(source: string): Type {

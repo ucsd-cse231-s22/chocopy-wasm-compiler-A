@@ -13,6 +13,7 @@ import { closureName, lowerProgram } from './lower';
 import { monomorphizeProgram } from './monomorphizer';
 import { optimizeProgram } from './optimization';
 import { wasmErrorImports } from './errors';
+import { generateImportMap, generateWasmSource } from './builtins';
 
 export type Config = {
   importObject: any;
@@ -124,22 +125,21 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     `(global $${name} (export "${name}") (mut i32) (i32.const 0))`
   ).join("\n");
 
+  const builtins_wasm = generateWasmSource(tprogram.imports);
+
   const importObject = config.importObject;
   if(!importObject.js) {
     const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
     importObject.js = { memory: memory };
   }
-
+  generateImportMap(tprogram.imports, importObject);
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     ${wasmErrorImports}
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
-    (func $abs (import "imports" "abs") (param i32) (result i32))
-    (func $min (import "imports" "min") (param i32) (param i32) (result i32))
-    (func $max (import "imports" "max") (param i32) (param i32) (result i32))
-    (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
+    ${builtins_wasm}
     (func $destructure_check (import "imports" "destructure_check") (param i32) (result i32))
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))

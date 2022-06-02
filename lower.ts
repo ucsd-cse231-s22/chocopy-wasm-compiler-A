@@ -47,6 +47,7 @@ export function lowerProgram(p : AST.Program<Annotation>, env : GlobalEnv) : IR.
     var [inits, generatedClasses] = flattenStmts([...cstmts, ...p.stmts], blocks, env);
     return {
         a: p.a,
+        imports: p.imports,
         funs: [],
         inits: [...inits, ...lowerVarInits([...cinits, ...p.inits], env)],
         classes: [...classes, ...generatedClasses],
