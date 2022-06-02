@@ -565,37 +565,34 @@ function flattenStmt(s : AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annot
       var forStartLbl = generateName("$forstart");
       var forbodyLbl = generateName("$forbody");
       var forEndLbl = generateName("$forend");
+      var forListName = generateName("forlistname");
+      var forIndexLbl = generateName("forindex"); // initalize and assign index to zero
       var localenv = env
 
       localenv.labels.push(forStartLbl,forbodyLbl,forEndLbl)
-      // reset the values class to the original state at the start of the loop - nested loops use case
-      var resetCall : AST.Expr<AST.Annotation> =  {tag:"method-call", obj:s.values, method:"reset", arguments:[], a:{...s.a, type: NONE}};
-      var resetStmt : AST.Stmt<AST.Annotation>[] = [{ tag: "expr", expr: resetCall , a:{ ...s.a, type: NONE }}];
-      flattenStmts(resetStmt, blocks, localenv); 
       
+      var [preprocessinits, preprocessclasses] = preProcessForLoop(s, blocks, localenv, forListName, forIndexLbl);
+           
       pushStmtsToLastBlock(blocks, {tag:"jmp", lbl: forStartLbl })
       blocks.push({  a: s.a, label: forStartLbl, stmts: [] })
       
-      var hasnextCall : AST.Expr<AST.Annotation> = {tag:"method-call", obj:s.values, method:"hasnext", arguments:[], a:{...s.a, type: BOOL}}
-      var nextCall : AST.Expr<AST.Annotation> = {tag:"method-call", obj:s.values, method:"next", arguments:[], a: s.a}
+      var [hasnextCall, nextAssign] = generateNextandHasNextCallsForLoops(s, blocks, localenv, forIndexLbl)
       
       var [cinits, cstmts, cexpr] = flattenExprToVal(hasnextCall, blocks, localenv); 
       pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: forbodyLbl, els: forEndLbl });
-    
+
       blocks.push({  a: s.a, label: forbodyLbl, stmts: [] })
-      var assignable : AST.Assignable<AST.Annotation> = { tag: "id", name: s.iterator };
-      var assignVar : AST.AssignVar<AST.Annotation> = { target: assignable, ignorable: false, star: false };
-      var destructureAss : AST.DestructuringAssignment<AST.Annotation> = { isSimple: true, vars: [assignVar] };
-      var nextAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: destructureAss, value: nextCall,a:s.a }]
       
-      flattenStmts(nextAssign, blocks, localenv); // to add wasm code for i = c.next(). has no inits 
-      
+      // to add wasm code for i = c.next(). has no inits. List stmts i = items[index] have
+      var [nextinits, nextclasses] = flattenStmts(nextAssign, blocks, localenv); 
+
       var [bodyinits, bodyclasses] = flattenStmts(s.body, blocks, localenv)
+      
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl });
     
       blocks.push({  a: s.a, label: forEndLbl, stmts: [] })
     
-      return [[...cinits, ...bodyinits], [...bodyclasses]];
+      return [[...preprocessinits,...cinits, ...nextinits, ...bodyinits], [...preprocessclasses,...nextclasses,...bodyclasses]]; 
   }
 }
 
@@ -979,3 +976,79 @@ function pushStmtsToLastBlock(blocks: Array<IR.BasicBlock<Annotation>>, ...stmts
 export function flattenWasmInt(val: number): IR.Value<Annotation>{
   return { tag: "wasmint", value: val }
 }
+
+/// function to modify the loop values(iterable class/lists) or the iterator before the start of the loop
+export function preProcessForLoop(s: AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annotation>>, localenv: GlobalEnv, forListName:string, forIndexLbl:string): [Array<IR.VarInit<Annotation>>, Array<IR.Class<Annotation>>] {
+  if(s.tag!=="for")
+   return [[],[]]
+  switch(s.values.a.type.tag){
+    case "class":
+       // reset the values class to the original state at the start of the loop - nested loops use case
+      var resetCall : AST.Expr<AST.Annotation> =  {tag:"method-call", obj:s.values, method:"reset", arguments:[], a:{...s.a, type: NONE}};
+      var resetStmt : AST.Stmt<AST.Annotation>[] = [{ tag: "expr", expr: resetCall , a:{ ...s.a, type: NONE }}];
+      flattenStmts(resetStmt, blocks, localenv); 
+      break
+    case "list":
+      // converting construct-list [1,2,3,4] to forlistname : List = None , forlistname = [1,2,3,4] and changing values to forlistname
+      if(["call","construct-list","index","id"].includes(s.values.tag)) 
+      {
+        var varDefForListandIndex : IR.VarInit<Annotation>[] = [
+          { a: {type:NUM}, name: forIndexLbl, type: NUM, value: {tag:"num", value:0n} },
+          { a: s.values.a, name: forListName, type: s.values.a.type, value: { a: { type: { tag: "none"} }, tag: "none" } }
+        ];
+        var listAssignable : AST.Assignable<AST.Annotation> = { tag: "id", name: forListName };
+        var listassignVar : AST.AssignVar<AST.Annotation>   = { target: listAssignable, ignorable: false, star: false };
+        var listdestructureAss : AST.DestructuringAssignment<AST.Annotation> = { isSimple: true, vars: [listassignVar] };
+        var updateList : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: listdestructureAss, value: s.values , a:{type:NONE} }]
+        var [updateinits, updateclasses] = flattenStmts(updateList, blocks, localenv) 
+        s.values = { tag: "id", name: forListName, a:s.values.a }
+        return [[...varDefForListandIndex, ...updateinits],[...updateclasses]]
+      }
+      break;
+  }
+  return [[],[]]
+}
+/// function to generate code for next and has next equivalent stmts in case of iterable class/list
+export function generateNextandHasNextCallsForLoops(s: AST.Stmt<Annotation>, blocks: Array<IR.BasicBlock<Annotation>>, localenv: GlobalEnv, forIndexName:string):[AST.Expr<AST.Annotation>, AST.Stmt<AST.Annotation>[]]{
+  if(s.tag!=="for")
+   return
+  var hasnextCall : AST.Expr<AST.Annotation> , nextAssign : AST.Stmt<AST.Annotation>[]
+
+  var assignable : AST.Assignable<AST.Annotation> = { tag: "id", name: s.iterator };
+  var assignVar : AST.AssignVar<AST.Annotation> = { target: assignable, ignorable: false, star: false };
+  var destructureAss : AST.DestructuringAssignment<AST.Annotation> = { isSimple: true, vars: [assignVar] };
+
+  switch(s.values.a.type.tag){
+    case "class":
+      hasnextCall = {tag:"method-call", obj:s.values, method:"hasnext", arguments:[], a:{...s.a, type: BOOL}}
+      var nextCall : AST.Expr<AST.Annotation> = {tag:"method-call", obj:s.values, method:"next", arguments:[], a: s.a}
+      nextAssign  = [{tag:"assign", destruct: destructureAss, value: nextCall,a:s.a }]
+      break
+    case "list":
+      if(s.values.tag === "id")
+      {
+        // if(index<len(items))
+        hasnextCall = {tag:"binop", a:{type:BOOL}, op: 9,
+                                                    left:{tag:"id", name:forIndexName, a:{type:NUM}} , 
+                                                    right:{a:{type:NUM}, tag:"builtin1", name:"len", arg:{a:s.values.a, name: s.values.name, tag:"id"}} }
+
+        // i = items[index]
+        var indexCall : AST.Expr<AST.Annotation> = {tag:"index", obj:s.values, index: {tag:"id", name:forIndexName, a:{type:NUM}}, a: {type:NONE}}
+        
+        nextAssign  = [{tag:"assign", destruct: destructureAss, value: indexCall, a:s.a }]
+        assignable  = { tag: "id", name: forIndexName };
+        assignVar  = { target: assignable, ignorable: false, star: false };
+        destructureAss = { isSimple: true, vars: [assignVar] };
+
+        //index = index+1
+        var incrementIndexCall : AST.Expr<AST.Annotation> = {tag:"binop", a:{type:NUM}, op: 0,
+                                                    left:{tag:"id", name:forIndexName, a:{type:NUM}} , 
+                                                    right:{a:{type:NUM}, tag:"literal", value:{tag:"num", value:1n}} }
+        // adding  code for index = index+1 
+        nextAssign.push({tag:"assign", destruct: destructureAss, value: incrementIndexCall, a:{type:NONE} })
+      }
+      break;
+  }
+  return [hasnextCall, nextAssign]
+}
+

@@ -858,7 +858,7 @@ def checkMultiLoopFunction(min:int, max:int) ->int:
 print(checkMultiLoopFunction(1,6))
    
 `, [`False`,`True`,`1`,`2`,`3`,`4`,`5`,`False`,`True`, `1`,`2`,`3`,`4`,`5`,`False`,`30`]);
-
+//30
 assertPrint("generic for loop",
 `
 T = TypeVar("T")
@@ -899,7 +899,154 @@ None`,
 [`True`,`False`]
 );
 
+//31
+assertPrint("for-loop lists-int",
+`
+items:[int] = None
+index:int = 0
+i:int = 0
 
+items = [1,2,5,60]
+for i in items:
+  print(i)
+`,
+[`1`,`2`,`5`,`60`]
+);
 
+//32
+assertPrint("for-loop lists-bool",
+`
+items:[bool] = None
+index:int = 0
+i:bool = True
+
+items = [True, False, True, False]
+for i in items:
+  print(i)
+`,
+[`True`,`False`,`True`,`False`]
+);
+
+//33
+assertPrint("for-loop lists-empty",
+`
+items:[bool] = None
+index:int = 0
+i:bool = True
+for i in items:
+  print(i)
+  
+print(not(i))
+`,[`False`]
+);
+
+//34
+assertPrint("for-loop lists-ifcondn",
+`
+items:[int] = None
+index:int = 0
+i:int = 0
+items = [1,2,3,4]
+for i in items:
+  if(i%2==0):
+    print(i)
+`,
+[`2`,`4`]
+);
+
+//35
+assertPrint("for-loop lists-continue",
+`
+items:[int] = None
+index:int = 0
+i:int = 0
+items = [1,2,3,4]
+for i in items:
+  if(i%2==0):
+    continue
+  print(i)
+`,
+[`1`,`3`]
+);
+
+//36
+assertPrint("for-loop lists-break",
+`
+items:[int] = None
+index:int = 0
+i:int = 0
+items = [1,2,3,4]
+for i in items:
+  print(i)
+  if(i%2==0):
+    break
+`,
+[`1`,`2`]
+);
+
+//37
+assertPrint("for-loop lists-direct",
+`
+index:int = 0
+i:int = 0
+for i in [10,20,30,40]:
+  print(i)
+  
+`,
+[`10`,`20`,`30`,`40`]
+);
+
+//38
+assertPrint("for-loop lists-function",
+`
+def returnList(n:int)->[int]:
+  return [n, n+1, n+2,n+3,n+4]
+
+i:int = 0
+for i in returnList(9):
+  print(i)
+  
+`,
+[`9`,`10`,`11`,`12`,`13`]
+);
+
+//39
+assertPrint("for-loop lists-within-function",
+`
+def loopList():
+  i:int = 0
+  for i in [2,3,4,5]:
+    print(i)
+
+loopList()
+`,
+[`2`,`3`,`4`,`5`]
+);
+
+//40
+assertPrint("for-loop lists-changingvalues",
+`
+i:int = 0
+items:[int] = None
+items = [1,2,3,5]
+for i in items:
+  print(i)
+  items = [2,3]
+`,
+[`1`,`2`,`3`,`5`]
+);
+
+//41
+assertPrint("for-loop basic-nestedLists",
+`
+a :[[int]] = None
+i:[int] = None
+j:int = 0
+a = [[1,2,3,4], [10,20]]
+for j in a[0]:
+  print(j)
+`,
+[`1`,`2`,`3`,`4`]
+);
 
 });
