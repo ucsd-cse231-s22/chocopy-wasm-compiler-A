@@ -3,7 +3,17 @@ import { TreeCursor } from "@lezer/common";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, Annotation, Location, NonlocalVarInit } from "./ast";
 import { NUM, BOOL, NONE, CLASS, CALLABLE } from "./utils";
 import { stringifyTree } from "./treeprinter";
-import { env } from "process";
+
+export class SyntaxError extends Error {
+  __proto__: Error
+  constructor(message?: string) {
+   const trueProto = new.target.prototype;
+   super("Syntax ERROR: " + message);
+
+   // Alternatively use Object.setPrototypeOf if you have an ES6 environment.
+   this.__proto__ = trueProto;
+ } 
+}
 
 const MKLAMBDA = "mklambda";
 
@@ -180,14 +190,8 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
             right: args[1]
           }
         }
-        else {
-          expr = { tag: "call", fn: callExpr, arguments: args, kwarguments: kwargs};
-        }
-        return expr;  
-      } else {
-        throw new Error("Unknown target while parsing assignment");
       }
-
+      return { tag: "call", fn: callExpr, arguments: args, kwarguments: kwargs};
     case "BinaryExpression":
       c.firstChild(); // go to lhs 
       const lhsExpr = traverseExpr(c, s, env);

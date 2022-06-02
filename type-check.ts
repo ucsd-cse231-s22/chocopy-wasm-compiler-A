@@ -3,6 +3,7 @@ import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Lite
 import { NUM, BOOL, NONE, CLASS, CALLABLE } from './utils';
 import { emptyEnv } from './compiler';
 import { fullSrcLine, drawSquiggly } from './errors';
+import exp from 'constants';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 
@@ -140,6 +141,7 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
+  program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters, fun.ret]));
   program.funs.forEach(fun => newGlobs.set(fun.name, CALLABLE(fun.parameters.map(p=>p.type), fun.ret)));
   program.classes.forEach(cls => {
     const fields = new Map();
@@ -455,15 +457,26 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         } else {
           return tConstruct;
         }
-      } else {
+      } else if (expr.fn.tag === "id" && env.functions.has(expr.fn.name)){
+        const [expectedParams, retType] = env.functions.get(expr.fn.name);
+        const tArgs = tcCallOrMethod(expr.fn.name, expectedParams, expr.arguments, expr.kwarguments, env, locals, SRC);
+        return {...expr, a: {type: retType}, arguments: tArgs, kwarguments: undefined };
+      }
+      else {
         const newFn = tcExpr(env, locals, expr.fn, SRC);
         if(newFn.a.type.tag !== "callable") {
           throw new TypeCheckError("Cannot call non-callable expression");
         }
-        // TODO: find a way to type check the arguments with keyword and default
-        // const tArgs = tcCallOrMethod("???", newFn.a.type.params, expr.arguments, expr.kwarguments, env, locals, SRC);
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg, SRC));
-        return {...expr, a: {...expr.a, type: newFn.a.type.ret}, arguments: tArgs, fn: newFn};
+        
+        if(newFn.a.type.params.length === expr.arguments.length &&
+          newFn.a.type.params.every((param, i) => isAssignable(env, tArgs[i].a.type, param))) {
+          return {...expr, a: {...expr.a, type: newFn.a.type.ret}, arguments: tArgs, fn: newFn};
+        } else {
+          const tArgsStr = tArgs.map(tArg => JSON.stringify(tArg.a.type.tag)).join(", ");
+          const argTypesStr = newFn.a.type.params.map(argType => JSON.stringify(argType.tag)).join(", ");
+          throw new TypeCheckError(SRC, `Function call expects arguments of types [${argTypesStr}], got [${tArgsStr}]`, expr.a);
+        }
       }
     case "lookup":
       var tObj = tcExpr(env, locals, expr.obj, SRC);
@@ -489,7 +502,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
           const [_, methods] = env.classes.get(tObj.a.type.name);
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = methods.get(expr.method);
-            const realArgs = [tObj].concat(expr.arguments);
+            const realArgs = [expr.obj].concat(expr.arguments);
             const tArgs = tcCallOrMethod(expr.method, methodArgs, realArgs, expr.kwarguments, env, locals, SRC);
             // Remove self from arguments
             tArgs.shift();
