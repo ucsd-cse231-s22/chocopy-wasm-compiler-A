@@ -1,7 +1,7 @@
 import { bigMath } from "./utils";
 import { builtin_bignum } from "./utils";
-import { gcd, lcm, factorial } from "./stdlib/math";
-import { NUM, BOOL, NONE, CLASS, CALLABLE, TYPEVAR, LIST } from './utils';
+import { comb, factorial, gcd, lcm, perm } from "./stdlib/math";
+import { NUM, FLOAT } from "./utils";
 import { Type } from "./ast";
 import { randint, randrange } from "./stdlib/random";
 
@@ -54,7 +54,24 @@ export const builtins: Array<BuiltinFunction> = [
     need_import: false,
     is_bignum: true,
   },
-  // Math Module
+  {
+    name: "comb",
+    mod: "math",
+    args: [NUM, NUM],
+    ret: NUM,
+    fn: comb,
+    need_import: true,
+    is_bignum: true,
+  },
+  {
+    name: "perm",
+    mod: "math",
+    args: [NUM, NUM],
+    ret: NUM,
+    fn: perm,
+    need_import: true,
+    is_bignum: true,
+  },
   {
     name: "gcd",
     mod: "math",
@@ -99,7 +116,7 @@ export const builtins: Array<BuiltinFunction> = [
     fn: randrange,
     need_import: true,
     is_bignum: true,
-  }
+  },
 ];
 
 export function isBuiltin(name: string): boolean {
