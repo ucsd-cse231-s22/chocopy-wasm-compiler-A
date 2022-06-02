@@ -1,7 +1,7 @@
 import {BasicREPL} from './repl';
 import { Type, Value, Annotation, Class } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
-import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
+import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32, save_bignum } from './utils';
 import { importObjectErrors } from './errors';
 
 import CodeMirror from 'codemirror';
@@ -253,6 +253,7 @@ function webStart() {
         $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
         $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
         $bignum_to_i32: (arg: number) => bignum_to_i32(arg, loader), 
+        $i32_to_bignum: (arg: number) => save_bignum(BigInt(arg), memoryModule.instance.exports), 
       },
       errors: importObjectErrors,
       libmemory: memoryModule.instance.exports,

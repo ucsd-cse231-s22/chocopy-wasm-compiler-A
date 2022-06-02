@@ -4,12 +4,17 @@
 - All integer numbers are bignums.
 - We use `load`, `alloc` and `store` from `memory.wat` to interact with the memory.
 - We change `print` in the `built-in library` to print bignums from the heap.
-- We modify the `built-in library` to have JavaScript functions support all the unary and binary operations of bignums. This way we can first support the behavior of Python, and then improve the efficiency by writing the functions in WASM.
+- We modify the `built-in library` to have JavaScript functions support all the unary and binary operations of bignums. This way we can emulate the behavior of Python.
 
 ## New Functions, Datatypes, and/or Files
+### `utils.ts`
+- We create multiple helper functions to allow memory access of bignums, including `alloc_bignum`, `load_bignum`, `store_bignum`, and `store_bignum` (a wrapper function that allocates and stores digits into memory).
+- We add a `bigMath` library for builtin functions and binary operations of bignums.
+- We add `i32_to_bignum` to convert the return value of `len(list_var)` from i32 number to bignum, so it supports the binary operations of `len` with other bignums (ex. `len(list_var) + 2`).
+- We add `bignum_to_i32` to convert bignum to i32 to allow list indexing (ex. `print(list_var[0])`).
+### `compiler.ts`
 - We change `codeGenValue` to allocate bignums in the memory. This will store the bignum in memory and leave the address on the stack.
 - We modify `codeGenUniOp` and `codeGenBinOp` to support operations.
-- We could either write a WASM or JavaScript function to assist the memory management group to access a list or string lookup with bignums as indices, or leave it to them to calculate the offset themselves.
 
 ## Value Representation and Memory Layout
 
@@ -18,15 +23,14 @@
     | n digits | digit(0) | digit(1) | ... | digit(n-1) |
     | -------- | -------- | -------- | -------- | -------- |
 - The sign of the bignum is determined by the sign of the number of digits. With negative number of digits means the bignum is negative.
-- Zero is as `None`, which is a reserved address `0`.
+- Zero is as `None`, which is a reserved address `0`. This allows error reporting of division of zero simplier to detect by just observing the address.
 
 ## Code References
-- Converting scientific notation to string (and then cast to BigInt): https://stackoverflow.com/a/10944025
 - BigInt builtin functions:
 https://stackoverflow.com/a/64953280
 
 
-## Testcases
+## Bignums Testcases
 ### 1. print
 ```python
 print(100000000000000000000000)
@@ -47,217 +51,219 @@ expected output: `0\n100000000000000000000000\n0\n`
 
 ### 3. > (greater than)
 ```python
-x : int = 100000000000000000000000
-y : int = 100000000000000000000001
-print(x > y)
+def f(x:int, y:int):
+    print(x > y)
+f(100000000000000000000000, 100000000000000000000001)
 ```
 expected output: `False\n`
 
 ### 4. < (less than)
 ```python
-x : int = 100000000000000000000000
-y : int = 100000000000000000000001
-print(x < y)
+def f(x:int, y:int):
+    print(x < y)
+f(100000000000000000000000, 100000000000000000000001)
 ```
 expected output: `True\n`
 
 ### 5. >= (greater equal)
 ```python
-x : int = 100000000000000000000000
-y : int = 100000000000000000000001
-print(x >= y)
+def f(x:int, y:int):
+    print(x >= y)
+f(100000000000000000000000, 100000000000000000000001)
 ```
 expected output: `False\n`
 
 ### 6. <= (less equal)
 ```python
-x : int = 100000000000000000000000
-y : int = 100000000000000000000001
-print(x <= y)
+def f(x:int, y:int):
+    print(x <= y)
+f(100000000000000000000000, 100000000000000000000001)
 ```
 expected output: `True\n`
 
 ### 7. <= (less equal / equal)
 ```python
-x : int = 100000000000000000000000
-y : int = 100000000000000000000000
-print(x <= y)
+def f(x:int, y:int):
+    print(x <= y)
+f(100000000000000000000000, 100000000000000000000000)
 ```
 expected output: `True\n`
 
 ### 8. >= (greater equal / equal)
 ```python
-x : int = 100000000000000000000000
-y : int = 100000000000000000000000
-print(x >= y)
+def f(x:int, y:int):
+    print(x >= y)
+f(100000000000000000000000, 100000000000000000000000)
 ```
 expected output: `True\n`
 
 
 ### 9. == (equal)
 ```python
-x : int = 100000000000000000000000
-y : int = 100000000000000000000000
-print(x == y)
+def f(x:int, y:int):
+    print(x == y)
+f(100000000000000000000000, 100000000000000000000000)
 ```
 expected output: `True\n`
 
 ### 10. == (equal, negate)
 ```python
-x : int = -123456789012345678901234567890
-y : int = -123456789012345678901234567890
-print(x == y)
+def f(x:int, y:int):
+    print(x == y)
+f(-123456789012345678901234567890, -123456789012345678901234567890)
 ```
 expected output: `True\n`
 
 ### 11. == (equal, negate)
 ```python
-x : int = -2147483648
-y : int = 2147483648
-print(x == y)
+def f(x:int, y:int):
+    print(x == y)
+f(-2147483648, 2147483648)
 ```
 expected output: `False\n`
 
 ### 12. != (not equal)
 ```python
-x : int = 100000000000000000000000
-y : int = 100000000000000000000001
-print(x != y)
+def f(x:int, y:int):
+    print(x != y)
+f(100000000000000000000000, 100000000000000000000001)
 ```
 expected output: `True\n`
 
 ### 13. != (not equal)
 ```python
-x : int = 123456789012345678901234567890
-y : int = 123456789012345678901234567890
-print(x != y)
+def f(x:int, y:int):
+    print(x != y)
+f(123456789012345678901234567890, 123456789012345678901234567890)
 ```
 expected output: `False\n`
 
 
 ### 14. * (mul)
 ```python
-x : int = 4294967291
-y : int = 4294967291
-print(x * y)
+def f(x:int, y:int):
+    print(x * y)
+f(4294967291, 4294967291)
 ```
 expected output: `18446744030759878681\n`
 
 ### 15. * (mul, negate)
 ```python
-x : int = 4294967291
-y : int = -4294967291
-print(x * y)
+def f(x:int, y:int):
+    print(x * y)
+f(4294967291, -4294967291)
 ```
 expected output: `-18446744030759878681\n`
 
 ### 16. // (div)
 ```python
-x : int = 42949672910
-y : int = 4294967291
-print(x // y)
+def f(x:int, y:int):
+    print(x // y)
+f(42949672910, 4294967291)
 ```
 expected output: `10\n`
 
 ### 17. // (div, negate)
 ```python
-x : int = -42949672910
-y : int = -4294967291
-print(x // y)
+def f(x:int, y:int):
+    print(x // y)
+f(-42949672910, -4294967291)
 ```
 expected output: `10\n`
 
 ### 18. // (div, neg_denom)
 ```python
-x : int = 42949672910
-y : int = -4294967291
-print(x // y)
+def f(x:int, y:int):
+    print(x // y)
+f(42949672910, -4294967291)
 ```
 expected output: `-10\n`
 
 ### 19. // (div, neg_num)
 ```python
-x : int = -42949672910
-y : int = 4294967291
-print(x // y)
+def f(x:int, y:int):
+    print(x // y)
+f(-42949672910, 4294967291)
 ```
 expected output: `-10\n`
 
 ### 20. + (add)
 ```python
-x : int = 2147483648
-y : int = 40
-print(x + y)
+def f(x:int, y:int):
+    print(x + y)
+f(2147483648, 40)
 ```
 expected output: `2147483688\n`
 
 ### 21. + (add, negate)
 ```python
-x : int = 2147483648
-y : int = -2147483648
-print(x + y)
+def f(x:int, y:int):
+    print(x + y)
+f(2147483648, -2147483648)
 ```
 expected output: `0\n`
 
 ### 22. - (sub)
 ```python
-x : int = 2147483648
-y : int = 2
-print(x - y)
+def f(x:int, y:int):
+    print(x - y)
+f(2147483648, 2)
 ```
 expected output: `2147483646\n`
 
 ### 23. - (sub, negate)
 ```python
-x : int = 2147483648
-y : int = -2
-print(x - y)
+def f(x:int, y:int):
+    print(x - y)
+f(2147483648, -2)
 ```
 expected output: `2147483650\n`
 
 ### 24. - (sub, negate)
 ```python
-x : int = -2147483648
-y : int = 2
-print(x - y)
+def f(x:int, y:int):
+    print(x - y)
+f(-2147483648, 2)
 ```
 expected output: `-2147483650\n`
 
 ### 25. % (mod)
 ```python
-x : int = 42949672910
-y : int = 4294967290
-print(x % y)
+def f(x:int, y:int):
+    print(x % y)
+f(42949672910, 4294967290)
 ```
 expected output: `10\n`
 
 ### 26. % (mod, neg_denom)
 ```python
-x : int = 42949672910
-y : int = -4294967290
-print(x % y)
+def f(x:int, y:int):
+    print(x % y)
+f(42949672910, -4294967290)
 ```
 expected output: `10\n`
 
 ### 27. % (mod, neg_num)
 ```python
-x : int = -42949672910
-y : int = 4294967290
-print(x % y)
+def f(x:int, y:int):
+    print(x % y)
+f(-42949672910, 4294967290)
 ```
 expected output: `-10\n`
 
 ### 28. - (negate)
 ```python
-x : int = 100000000000000000000000
-print(-x)
+def f(x: int):
+    print(-x)
+f(100000000000000000000000)
 ```
 expected output: `-100000000000000000000000\n`
 
 ### 29. - (double negate)
 ```python
-x : int = -2147483648
-print(-x)
+def f(x: int):
+    print(-x)
+f(-2147483648)
 ```
 expected output: `2147483648\n`
 
@@ -279,3 +285,73 @@ def f(c:int) -> int:
 print(f(0))
 ```
 expected output: `-100000000000000000000000\n`
+
+## Bignums Interaction with Other Feature Testcases
+### 1. Recursive function and builtin (abs)
+```python
+def gcd(x : int, y : int) -> int:
+    if x == 0:
+      	return abs(y)
+    return gcd(y%x, x)
+print(gcd(24,9))
+print(gcd(5,8))
+print(gcd(-4,8))
+```
+expected output: ``[`3`, `1`, `4`]\n``
+
+### 2. List (len) and if condition
+```python
+def f(a : [int]):
+    i:int = 0
+    if len(a) > 0:
+      print(a[0])
+    else:
+      print(None)
+f([])
+f([-1,-1,-1])
+```
+expected output: ``[`None`, `-1`]\n``
+
+### 3. List (len + binop in index) and while loop
+```python
+def f(a : [int]):
+    i : int = 0
+    while i < len(a) - 1:
+        print(a[i + 1])
+        i = i + 1
+f([1, 2, 3])
+```
+expected output: ``[`2`, `3`]\n``
+
+### 4. For loop (list access + binop + class + function)
+```python
+
+class Range(object):
+    current : int = 0
+    min : int = 0
+    max : int = 0
+    def new(self:Range, min:int, max:int)->Range:
+        self.min = min
+        self.current = min
+        self.max = max
+        return self
+    def next(self:Range)->int:
+        c : int = 0
+        c = self.current
+        self.current = self.current + 1
+        return c
+    def hasnext(self:Range)->bool:
+        return self.current < self.max
+    def reset(self:Range) :
+        self.current = self.min
+  
+def f(a : [int]):
+    i : int = 0
+    cls : Range = None
+    cls = Range().new(0, len(a))
+    for i in cls:
+        print(a[i] + 1)
+f([1, 2, 3])
+```
+expected output: ``[`2`, `3`, `4`]\n``
+
