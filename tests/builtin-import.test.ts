@@ -4,6 +4,7 @@ import {
   assertTCFail,
   assertTC,
   assert,
+  assertClose,
 } from "./asserts.test";
 import { addLibs, importObject } from "./import-object.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test";
@@ -20,7 +21,7 @@ export function assert_eq(name: string, a: any, b: any) {
   });
 }
 
-describe("builtin tests: simple import", () => {
+describe("[builtins]: simple import", () => {
   // import / math
   assertTC("import-x-from-y", `from y import x`, NONE);
   assertTC("import-x", `import x`, NONE);
@@ -34,7 +35,7 @@ describe("builtin tests: simple import", () => {
   );
 });
 
-describe("builtin tests: random library", () => {
+describe("[builtins]: random library", () => {
   // import / random
   assertTCFail("use-randint-without-import", `randint(1, 100)`);
   assertTC(
@@ -62,7 +63,7 @@ describe("builtin tests: random library", () => {
   });
 });
 
-describe("builtin tests: math int function behavior", () => {
+describe("[builtins]: bigint math library", () => {
   assertPrint(
     "math-comb",
     `from math import comb
@@ -109,7 +110,40 @@ describe("builtin tests: math int function behavior", () => {
   );
 });
 
-describe("builtin test: function definition store", () => {
+describe("[builtins]: float math library", () => {
+  // ceil
+  assertPrint("fmath-ceil", `from float_math import ceil
+  print(ceil(1.5))`, ["2"]);
+  // floor
+  assertPrint("fmath-floor", `from float_math import floor
+  print(floor(1.5))`, ["1"]);
+  // round
+  assertPrint("fmath-round", `from float_math import round
+  print(round(1.5))`, ["2"]);
+  // exp
+  assertClose("fmath-exp", `from float_math import exp
+  print(exp(1.5))`, "4.4816890703380645");
+  // log
+  assertClose("fmath-log", `from float_math import log
+  print(log(1.5, 2.0))`, "0.5849625007211562");
+  // log10
+  assertClose("fmath-log10", `from float_math import log10
+  print(log10(1.5))`, "0.17609125905568124");
+  // sqrt
+  assertClose("fmath-sqrt", `from float_math import sqrt
+  print(sqrt(1.5))`, "1.2599210498948732");
+  // sin
+  assertClose("fmath-sin", `from float_math import sin
+  print(sin(1.5))`, "0.84147098480789650");
+  // cos
+  assertClose("fmath-cos", `from float_math import cos
+  print(cos(1.5))`, "0.54030230586813982");
+  // tan
+  assertClose("fmath-tan", `from float_math import tan
+  print(tan(1.5))`, "1.5574077246549023");
+});
+
+describe("[builtins]: function definition store", () => {
   assert_eq("builtin-has-gcd", isBuiltin("gcd"), true);
   assert_eq("builtin-has-lcm", isBuiltin("lcm"), true);
   assert_eq("builtin-has-factorial", isBuiltin("factorial"), true);

@@ -258,7 +258,7 @@ export function builtin_float(args: number[], builtin: Function, libmem: WebAsse
   if(args.length === 1)
     rslt = builtin(load_float(args[0], load));
   else if(args.length === 2)
-    rslt = builtin(load_float(args[0], load), load_float(args[1], load_float));
+    rslt = builtin(load_float(args[0], load), load_float(args[1], load));
   else
     throw new Error("Runtime Error: too many arguments for builtin functions");
   return save_float(rslt, libmem);

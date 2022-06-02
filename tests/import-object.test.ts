@@ -10,6 +10,8 @@ function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue): string
   switch (typ) {
     case Type.Num:
       return load_bignum(arg, loader).toString();
+    case Type.Float:
+      return load_float(arg, loader).toString();
     case Type.Bool:
       return (arg as boolean) ? "True" : "False";
     case Type.None:

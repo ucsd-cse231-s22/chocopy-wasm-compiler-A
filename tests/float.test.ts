@@ -1,7 +1,7 @@
 import { assertPrint, assertTCFail, assertTC, assertFail, assertClose } from "./asserts.test";
 import { NUM, BOOL, FLOAT, NONE, CLASS } from "./helpers.test"
 
-describe("float test", () => {
+describe("[builtins]: float test", () => {
     // 1
     assertTC("float-init", `x : float = 3.2` , NONE);
     // 2
