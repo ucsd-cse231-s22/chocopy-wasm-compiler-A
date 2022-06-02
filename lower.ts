@@ -631,7 +631,7 @@ function flattenExprToExpr(e: AST.Expr<Annotation>, blocks: Array<IR.BasicBlock<
         right: rval
       }, [...lclasses, ...rclasses]];
     case "call":
-      console.log(e.fn);
+      // console.log(e.fn);
       const [finits, fstmts, fval, fclasses] = flattenExprToVal(e.fn, blocks, env);
       const callpairs = e.arguments.map(a => flattenExprToVal(a, blocks, env));
       const callinits = callpairs.map(cp => cp[0]).flat();
@@ -641,7 +641,8 @@ function flattenExprToExpr(e: AST.Expr<Annotation>, blocks: Array<IR.BasicBlock<
       const checkObj: IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, fval);
       const zeroOffset: IR.Value<Annotation> = { tag: "wasmint", value: 0 };
       if (e.fn.tag === "id" && (e.fn.name === "buildin_open" || e.fn.name === "buildin_write" || e.fn.name === "buildin_read" || e.fn.name === "buildin_close" || e.fn.name === "buildin_seek")) {
-        console.log(e.fn);
+        // console.log(e.fn);
+        console.log("from id to call");
         return [
           [...finits, ...callinits],
           [...fstmts, checkObj, ...callstmts],

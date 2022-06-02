@@ -2,13 +2,12 @@ import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 
 import { Annotation, BinOp, Type, UniOp } from "./ast"
 import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
-import { stringifyTree } from "./treeprinter";
 import { equalType } from "./type-check";
 
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, Map<string, [number, Value<Annotation>]>>;
+  classes: Map<string, Map<string, [number, Value<Annotation>]>>;  
   classIndices: Map<string, number>;
   functionNames: Map<string, string>;
   locals: Set<string>;
@@ -17,15 +16,15 @@ export type GlobalEnv = {
   vtableMethods: Array<[string, number]>;
 }
 
-export const emptyEnv: GlobalEnv = {
-  globals: new Map(),
+export const emptyEnv : GlobalEnv = { 
+  globals: new Map(), 
   classes: new Map(),
-  classIndices: new Map(),
+  classIndices: new Map(), 
   functionNames: new Map(),
   locals: new Set(),
   labels: [],
   offset: 0,
-  vtableMethods: []
+  vtableMethods: [] 
 };
 
 type CompileResult = {
@@ -35,30 +34,30 @@ type CompileResult = {
   newEnv: GlobalEnv
 };
 
-export function makeLocals(locals: Set<string>): Array<string> {
-  const localDefines: Array<string> = [];
+export function makeLocals(locals: Set<string>) : Array<string> {
+  const localDefines : Array<string> = [];
   locals.forEach(v => {
     localDefines.push(`(local $${v} i32)`);
   });
   return localDefines;
 }
 
-export function compile(ast: Program<Annotation>, env: GlobalEnv): CompileResult {
+export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
-
-  const definedVars: Set<string> = new Set(); //getLocals(ast);
+  // console.log(`In compile, ${JSON.stringify(ast, null, 4)}`);
+  const definedVars : Set<string> = new Set(); //getLocals(ast);
   definedVars.add("$last");
   definedVars.add("$selector");
   definedVars.add("$scratch"); // for memory allocation
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
-  const funs: Array<string> = [];
+  const funs : Array<string> = [];
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
 
-  const classes: Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
+  const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
   const allFuns = funs.concat(classes).join("\n\n");
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
@@ -102,9 +101,9 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
       if (env.locals.has(stmt.name)) {
-        return valStmts.concat([`(local.set $${stmt.name})`]);
+        return valStmts.concat([`(local.set $${stmt.name})`]); 
       } else {
-        return valStmts.concat([`(global.set $${stmt.name})`]);
+        return valStmts.concat([`(global.set $${stmt.name})`]); 
       }
 
     case "return":
@@ -123,8 +122,8 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
       const thnIdx = env.labels.findIndex(e => e === stmt.thn);
       const elsIdx = env.labels.findIndex(e => e === stmt.els);
 
-      return [...codeGenValue(stmt.cond, env),
-      `(if 
+      return [...codeGenValue(stmt.cond, env), 
+        `(if 
           (then
             (local.set $$selector (i32.const ${thnIdx}))
             (br $loop)
@@ -143,7 +142,12 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
 }
 
 function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
+  try {
+    // console.log(`In codeGenExpr, expr: ${JSON.stringify(expr, null, 4)}`);
+  } catch (e) {
 
+  }
+  
   switch (expr.tag) {
     case "value":
       return codeGenValue(expr.value, env)
@@ -155,7 +159,7 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
-      switch (expr.op) {
+      switch(expr.op){
         case UniOp.Neg:
           // negate bignum length to indicate sign change
           return [
@@ -197,11 +201,13 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       return [...leftStmts, ...rightStmts, `(call $${expr.name})`]
 
     case "call":
+      // console.log(`=============> In compiler, call is called`);
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
-      if (expr.name === "len") {
+      if(expr.name === "len"){
         return [...valStmts, "(i32.const 0)", "call $load"];
       }
       valStmts.push(`(call $${expr.name})`);
+      // onsole.log(valStmts);
       return valStmts;
 
     case "call_indirect":
@@ -233,38 +239,38 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
       if (neg)
         x *= BigInt(-1)
       var n = 0
-      var digits: Number[] = []
-      while (x > 0) {
-        digits.push(Number(x & BigInt(0x7fffffff)))
-        x = x >> BigInt(31)
-        n = n + 1
+      var digits : Number[] = []
+      while(x > 0) {
+          digits.push(Number(x & BigInt(0x7fffffff)))
+          x = x >> BigInt(31)
+          n = n + 1
       }
       n = n + 1 // store (n+1) blocks (n: number of digits)
 
       var i = 0
-      var return_val: string[] = []
-
+      var return_val : string[] = []
+      
       return_val.push(`(i32.const ${n})`);
       return_val.push(`(call $alloc)`);
       return_val.push(`(local.set $$scratch)`);
-
+      
       // store the bignum in (n+1) blocks
       // store number of blocks in the first block
       return_val.push(`(local.get $$scratch)`);
       return_val.push(`(i32.const ${i})`);
       if (neg)
-        return_val.push(`(i32.const -${n - 1})`);
+        return_val.push(`(i32.const -${n-1})`);
       else
-        return_val.push(`(i32.const ${n - 1})`);
-      return_val.push(`call $store`);
-
+        return_val.push(`(i32.const ${n-1})`);
+      return_val.push(`call $store`); 
+      
       i = i + 1;
       // store the digits in the rest of blocks
       for (i; i < n; i++) {
         return_val.push(`(local.get $$scratch)`);
         return_val.push(`(i32.const ${i})`);
-        return_val.push(`(i32.const ${digits[i - 1]})`);
-        return_val.push(`call $store`);
+        return_val.push(`(i32.const ${digits[i-1]})`);
+        return_val.push(`call $store`);    
       }
       return_val.push(`(local.get $$scratch)`)
       return return_val;
@@ -283,8 +289,8 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
   }
 }
 
-function codeGenBinOp(op: BinOp): string {
-  switch (op) {
+function codeGenBinOp(op : BinOp) : string {
+  switch(op) {
     case BinOp.Plus:
       return "(call $$add)"
     case BinOp.Minus:
@@ -316,17 +322,17 @@ function codeGenBinOp(op: BinOp): string {
   }
 }
 
-function codeGenInit(init: VarInit<Annotation>, env: GlobalEnv): Array<string> {
+function codeGenInit(init : VarInit<Annotation>, env : GlobalEnv) : Array<string> {
   const value = codeGenValue(init.value, env);
   if (env.locals.has(init.name)) {
-    return [...value, `(local.set $${init.name})`];
+    return [...value, `(local.set $${init.name})`]; 
   } else {
-    return [...value, `(global.set $${init.name})`];
+    return [...value, `(global.set $${init.name})`]; 
   }
 }
 
-function codeGenDef(def: FunDef<Annotation>, env: GlobalEnv): Array<string> {
-  var definedVars: Set<string> = new Set();
+function codeGenDef(def : FunDef<Annotation>, env : GlobalEnv) : Array<string> {
+  var definedVars : Set<string> = new Set();
   def.inits.forEach(v => definedVars.add(v.name));
   definedVars.add("$last");
   definedVars.add("$selector");
@@ -363,9 +369,9 @@ function codeGenDef(def: FunDef<Annotation>, env: GlobalEnv): Array<string> {
     (return))`];
 }
 
-function codeGenClass(cls: Class<Annotation>, env: GlobalEnv): Array<string> {
+function codeGenClass(cls : Class<Annotation>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = createMethodName(cls.name, method.name));
   const result = methods.map(method => codeGenDef(method, env));
   return result.flat();
-}
+  }

@@ -89,11 +89,31 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>): GlobalEnv
 export async function run(source: string, config: Config): Promise<[Value<Annotation>, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   config.importObject.errors.src = source; // for error reporting
   const parsed = parse(source);
+  console.log("===============> program parsed");
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
+  console.log("===============> program tc");
   const tmprogram = monomorphizeProgram(tprogram);
+  console.log("===============> program monomorphizeProgram");
   const globalEnv = augmentEnv(config.env, tmprogram);
+  console.log("===============> program augmentEnv");
   const irprogram = lowerProgram(tmprogram, globalEnv);
+
+  if(irprogram.body[0].stmts[0].tag === 'assign') {
+    console.log(irprogram.body[0].stmts[0].value);
+  }
+  if(irprogram.body[0].stmts[4].tag === 'expr'  && irprogram.body[0].stmts[4].expr.tag === 'call') {
+    if(irprogram.body[0].stmts[4].expr.arguments[0].tag === 'id' && irprogram.body[0].stmts[4].expr.arguments[0].name === 'open') {
+      console.log(irprogram.body[0].stmts[4].expr.arguments[0].a);
+    }
+  }
+  console.log("===============> program lowerProgram");
   const optIr = optimizeProgram(irprogram);
+  console.log("===============> program optimizeProgram");
+  console.log(optIr.body[0].stmts[0]);
+  console.log(optIr.body[0].stmts[1]);
+  console.log(optIr.body[0].stmts[2]);
+  console.log(optIr.body[0].stmts[3]);
+  console.log(optIr.body[0].stmts[4]);
   const progTyp = tmprogram.a.type;
   var returnType = "";
   var returnExpr = "";
@@ -106,6 +126,7 @@ export async function run(source: string, config: Config): Promise<[Value<Annota
   }
   let globalsBefore = config.env.globals;
   // const compiled = compiler.compile(tprogram, config.env);
+  
   const compiled = compile(optIr, globalEnv);
 
   const vtable = `(table ${globalEnv.vtableMethods.length} funcref)

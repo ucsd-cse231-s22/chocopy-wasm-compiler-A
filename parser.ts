@@ -200,13 +200,15 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
         var expr: Expr<Annotation>;
-        if (callName === "print" || callName === "abs" || callName === "len") {
+        if (callName === "print" || callName === "abs" || callName === "len" || callName === "buildin_close") {
           return {
             tag: "builtin1",
             name: callName,
             arg: args[0],
           };
-        } else if (callName === "max" || callName === "min" || callName === "pow") {
+        } else if (callName === "max" || callName === "min" || callName === "pow"
+          || callName === "buildin_read" || callName === "buildin_write"
+          || callName === "buildin_seek" || callName === "buildin_open") {
           return {
             tag: "builtin2",
             name: callName,
