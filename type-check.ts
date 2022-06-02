@@ -992,7 +992,12 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
             cond = tcExpr(env, loc, expr.cond,SRC);
           if (cond && cond.a.type.tag !== "bool")
             throw new Error("TYPE ERROR: comprehension if condition must return bool")
-          return {...expr, left, elem, cond, iterable, a: {...expr.a, type: LIST(NUM)}};
+          if (expr.typ === "list") // for lists
+            return {...expr, left, elem, cond, iterable, a: {...expr.a, type: LIST(NUM)}};
+          else if (expr.typ === "set/dict") // for sets and dictionaries
+            return {...expr, left, elem, cond, iterable, a: {...expr.a, type: LIST(NUM)}}; // type variable to be changed based on sets implementation
+          else // for generators
+            return {...expr, left, elem, cond, iterable, a: {...expr.a, type: LIST(NUM)}}; // type variable to be changed based on generators implementation
         }
         else
           throw new Error("TYPE ERROR: elem has to be an id");
