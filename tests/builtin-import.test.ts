@@ -60,6 +60,30 @@ describe("builtin tests: random library", () => {
   });
 });
 
+describe("builtin tests: math int function behavior", () => {
+  it("math.comb", async () => {
+    await run(`from math import comb
+    print(comb(8,2))`);
+    const output = importObject.output.trim().split("\n");
+    //chai.expect(output.length).to.eq(1);
+    chai.expect(Number(output)).to.eq(28);
+  })
+  it("math.perm", async () => {
+    await run(`from math import perm
+    print(perm(8,2))`);
+    const output = importObject.output.trim().split("\n");
+    //chai.expect(output.length).to.eq(1);
+    chai.expect(Number(output)).to.eq(56);
+  })
+  it("math.copysign_int", async () => {
+    await run(`from math import copysign_int
+    print(copysign_int(8,-222))`);
+    const output = importObject.output.trim().split("\n");
+    //chai.expect(output.length).to.eq(1);
+    chai.expect(Number(output)).to.eq(-8);
+  })
+});
+
 describe("builtin test: function definition store", () => {
   assert_eq("builtin-has-gcd", isBuiltin("gcd"), true);
   assert_eq("builtin-has-lcm", isBuiltin("lcm"), true);
