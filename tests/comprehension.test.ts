@@ -112,6 +112,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,min:int,max:int)->Range:
         self.max=max
         self.min=min
@@ -138,6 +142,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,max:int)->Range:
         self.max=max
         return self
@@ -162,6 +170,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,min:int,max:int)->Range:
         self.max=max
         self.min=min
@@ -188,6 +200,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,min:int,max:int)->Range:
         self.max=max
         self.min=min
@@ -214,6 +230,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,min:int,max:int)->Range:
         self.max=max
         self.min=min
@@ -239,6 +259,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,min:int,max:int)->Range:
         self.max=max
         self.min=min
@@ -264,6 +288,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,min:int,max:int)->Range:
         self.max=max
         self.min=min
@@ -282,6 +310,64 @@ a=Range().new(1,5)
 [m for m in a if m!=3]`, ['1', '2', '4']
     );
 
+    assertPrint("simple comprehension output with set/dict format", `
+class Range(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
+    def new(self:Range,min:int,max:int)->Range:
+        self.max=max
+        self.min=min
+        self.curr=min
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
+        c:int=0
+        c=self.curr
+        self.curr=self.curr+1
+        return c
+a:Range=None
+m: int = 0
+a=Range().new(1,5)
+{m for m in a if m!=3}`, ['1', '2', '4']
+    );
+
+    assertPrint("simple comprehension output with generator format", `
+class Range(object):
+    min:int=0
+    max:int=0
+    curr:int=0
+    def __init__(self:Range):
+        pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
+    def new(self:Range,min:int,max:int)->Range:
+        self.max=max
+        self.min=min
+        self.curr=min
+        return self
+    def hasNext(self:Range)->bool:
+        return self.curr<self.max
+    def next(self:Range)->int:
+        c:int=0
+        c=self.curr
+        self.curr=self.curr+1
+        return c
+a:Range=None
+m: int = 0
+a=Range().new(1,5)
+(m for m in a if m!=3)`, ['1', '2', '4']
+    );
+
     assertPrint("simple comprehension output with bool binop expr values and if condition", `
 class Range(object):
     min:int=0
@@ -289,6 +375,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,max:int)->Range:
         self.max=max
         return self
@@ -313,6 +403,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,max:int)->Range:
         self.max=max
         return self
@@ -339,6 +433,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,max:int)->Range:
         self.max=max
         return self
@@ -366,6 +464,10 @@ class Range(object):
     step:int=1
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,min:int,max:int,step:int)->Range:
         self.max=max
         self.min=min
@@ -392,6 +494,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,min:int,max:int)->Range:
         self.max=max
         self.min=min
@@ -420,6 +526,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,max:int)->Range:
         self.max=max
         return self
@@ -445,6 +555,10 @@ class Range(object):
     curr:int=0
     def __init__(self:Range):
         pass
+    def iterator(self:Range)->int:
+        return self.curr - self.min + 2
+    def len(self:Range)->int:
+        return self.max - self.min + 2  
     def new(self:Range,max:int)->Range:
         self.max=max
         return self
@@ -471,6 +585,10 @@ class ABC(object):
     curr:int=0
     def __init__(self:ABC):
         pass
+    def iterator(self:ABC)->int:
+        return self.curr - self.min + 2
+    def len(self:ABC)->int:
+        return self.max - self.min + 2  
     def new(self:ABC,min:int,max:int)->ABC:
         self.min=min
         self.max=max
@@ -497,6 +615,10 @@ class ABC(object):
     curr:int=0
     def __init__(self:ABC):
         pass
+    def iterator(self:ABC)->int:
+        return self.curr - self.min + 2
+    def len(self:ABC)->int:
+        return self.max - self.min + 2  
     def new(self:ABC,min:int,max:int)->ABC:
         self.min=min
         self.max=max

@@ -1,5 +1,17 @@
 # Comprehensions Team Design Doc
 
+## Final Design Updates:
+
+As for the final milestone, we planned the following goals:
+ - Storing the list comprehensions as lists
+ - Adding support for other types of comprehensions
+
+Regarding the latter goal, we have added support for sets/dicts comprehensions as well as generator comprehensions which use the ```{}``` and ```()``` formats respectively. An additional field 'typ' has been added to the list-comp ast which is used to determine the type of comprehension. This field is determined in the parsing phase itself and will later be used to do different form of type-check and lowering based on its value. This will depend on the implementation of these data types by other teams and the functions will need to be modified accordingly.
+
+Regarding the first goal, we have tried storing the list comprehensions as lists, which were previously only being printed. We have used some code from the list team's implementation. Although this is not working correctly currently, we feel that we have implemented correctly. There are some other issues (either with front-end or lists or even possibly bignums) due to which the outputs are not coherent.
+
+Some additional functionalities from the lists team would have been very helpful (example - len() and append() or concat()). There is already ongoing discussions with other groups regarding implementation details on slack/piazza/mail. This PR will be continuously updated over the next 2 days to fix things and get it working properly.
+
 ## Week 8 Milestones:
 
 We plan on trying to support the below example programs:

@@ -261,7 +261,7 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
   var disp: AST.Stmt<AST.Annotation> = {tag:"expr", expr: displayExpr, a:{ ...e.a, type: NONE }};
   // var [einits, estmts, eexpr] = flattenExprToVal(displayExpr, localenv);
   var [body_init, body_class] = flattenStmt(disp, blocks, localenv);
-  console.log("disp",disp);
+  // console.log("disp",disp);
   var storeExpr : IR.Stmt<Annotation> = {
     tag: "store",
     start: { tag: "id", name: newListName },
@@ -277,17 +277,32 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
   var return_type_a = e.a;
   return_type_a.type = {tag:"list",itemType:{tag:"number"}};
   if (e.cond)
-    return [[...cinits, ...bodyinits, ...body_init, ...dinits, ...binits]
+    return [[...lengthinits,...cinits, ...iterinits, ...bodyinits, ...dinits, ...binits, ...body_init,
+      {
+        name: newListName,
+        type: e.a.type,
+        value: { a: e.a, tag: "none" },
+      },
+      {
+        name: newListLen,
+        type: e.a.type,
+        value: { a: e.a, tag: "none" }
+      },
+      {
+        name: newListIterator,
+        type: e.a.type,
+        value: { a: e.a, tag: "none" }
+      }]
       , [...cstmts, ...dstmts, ...bstmts]
       , {
-        a: e.a,
-        tag: "value",
-        value: {
-          a: { ...e.a, type: NUM },
-          tag: "id",
-          name: elem
+          a: return_type_a,
+          tag: "value",
+          value: {
+            a: e.a,
+            tag: "id",
+            name: newListName
         },
-      },[...ceclass, ...bodyclasses, ...body_class, ...declass, ...beclass]]
+      },[...lengthclasses,...ceclass, ...iterclasses, ...bodyclasses, ...declass, ...beclass, ...body_class]]
   else
     return [[...lengthinits,...cinits, ...iterinits, ...bodyinits, ...binits, ...body_init,
       {
