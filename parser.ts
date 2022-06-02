@@ -1,7 +1,7 @@
 import { parser } from "@lezer/python";
 import { TreeCursor } from "@lezer/common";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, Annotation, Location, NonlocalVarInit, TypeVar, DestructuringAssignment, AssignVar } from "./ast";
-import { NUM, BOOL, NONE, CLASS, CALLABLE, LIST } from "./utils";
+import { NUM, FLOAT, BOOL, NONE, ELLIPSIS, CLASS, CALLABLE, LIST } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
 const MKLAMBDA = "mklambda";
@@ -78,10 +78,22 @@ function wrap_locs<T extends Function>(traverser: T, storeSrc: boolean = false):
   };
 }
 
+export function isFloat(n : string) : boolean {
+  // 32-bit float, with form 1.234 or 1e15 (Lezer would consider both as float, for inf and nan we'll treat separately)
+  const floatChars = /[.e]/;
+  return floatChars.test(n);
+}
+
 export const traverseLiteral = wrap_locs(traverseLiteralHelper);
 export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv): Literal<Annotation> {
   switch (c.type.name) {
     case "Number":
+      if (isFloat(s.substring(c.from, c.to))){
+        return {
+        tag: "float",
+        value: Number(s.substring(c.from, c.to))
+        } 
+      }
       return {
         tag: "num",
         value: BigInt(s.substring(c.from, c.to))
@@ -95,14 +107,37 @@ export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv):
       return {
         tag: "none"
       }
+    // case "Ellipsis": // x: Ellipsis = ...
+    //   return {
+    //     tag: "..."
+    //   }
     case "VariableName":
       let vname = s.substring(c.from, c.to).trim();
-      if (vname !== "__ZERO__") {
+      if (vname === "__ZERO__") {
+        return { 
+          tag: "zero" 
+        };
+      }
+      else if (vname === "inf") { // here we treat inf as builtin type to avoid confusion
+        return {
+          tag: "float",
+          value: Infinity
+        }
+      }
+      else if (vname === "nan") {
+        return {
+          tag: "float",
+          value: NaN
+        }
+      }
+      else if (vname === "Ellipsis") { // x: Ellipsis = Ellipsis
+        return {
+          tag: "..."
+        }
+      }
+      else{
         throw new Error("ParseError: Not a literal");
       }
-      return { 
-        tag: "zero" 
-      };
     default:
       throw new Error("Not literal");
   }
@@ -114,6 +149,7 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
     case "Number":
     case "Boolean":
     case "None":
+    case "Ellipsis":
       return {
         tag: "literal",
         value: traverseLiteral(c, s, env)
@@ -731,6 +767,8 @@ export function traverseType(c : TreeCursor, s : string, env: ParserEnv) : Type 
       switch(name) {
         case "int": return NUM;
         case "bool": return BOOL;
+        case "float": return FLOAT;
+        case "Ellipsis": return ELLIPSIS;
         default: return CLASS(name);
       }
     case "None": // None is mentionable in Callable types

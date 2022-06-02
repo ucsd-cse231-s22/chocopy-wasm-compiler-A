@@ -144,6 +144,8 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $load_float (import "libmemory" "load_float") (param i32) (param i32) (result f32))
+    (func $store_float (import "libmemory" "store_float") (param i32) (param i32) (param f32))
     (func $$add (import "imports" "$add") (param i32) (param i32) (result i32))
     (func $$sub (import "imports" "$sub") (param i32) (param i32) (result i32))
     (func $$mul (import "imports" "$mul") (param i32) (param i32) (result i32))

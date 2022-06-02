@@ -2,7 +2,7 @@ import "mocha";
 import { expect } from "chai";
 import {augmentTEnv, emptyGlobalTypeEnv, tc, resolveClassTypeParams} from  '../../type-check';
 import { Annotation, Program, Type, TypeVar, BinOp } from '../../ast';
-import { NONE, NUM, BOOL, CLASS, TYPEVAR, PyZero, PyNone, PyInt } from '../../utils';
+import { NONE, NUM, BOOL, CLASS, TYPEVAR, PyZero, PyNone, PyInt, PyFloat } from '../../utils';
 
 describe('Generics Type-Checker Tests', () => {
   it('should add type-variables to the global environment', () => {

@@ -10,6 +10,10 @@ export function isTagNone(value: Value<any>): value is { tag: "none", a?: any} {
     return value.tag === "none";
 }
 
+export function isTagEllipsis(value: Value<any>): value is { tag: "...", a?: any} {
+    return value.tag === "...";
+}
+
 export function isTagBoolean(value: Value<any>): value is { tag: "bool", value: boolean, a?: any} {
     return value.tag === "bool";
 }
@@ -18,12 +22,16 @@ export function isTagBigInt(value: Value<any>): value is { tag: "num", value: bi
     return value.tag === "num";
 }
 
+export function isTagFloat(value: Value<any>): value is { tag: "float", value: number, a?: any} {
+    return value.tag === "float";
+}
+
 export function isTagNumber(value: Value<any>): value is { tag: "wasmint", value: number, a?: any} {
     return value.tag === "wasmint";
 }
 
 export function isTagEqual(a: Value<any>, b: Value<any>): boolean {
-    if(isTagBigInt(a) && isTagBigInt(b) || isTagBoolean(a) && isTagBoolean(b) || isTagNone(a) && isTagNone(b))
+    if(isTagBigInt(a) && isTagBigInt(b) || isTagBoolean(a) && isTagBoolean(b) || isTagNone(a) && isTagNone(b) || isTagFloat(a) && isTagFloat(b))
         return true
     else
         return false
@@ -33,6 +41,8 @@ export function checkValueEquality(a: Value<any>, b: Value<any>): boolean{
     if (a.tag !== b.tag)
         return false;
     else if (a.tag === "none" || b.tag === "none")
+        return true;
+    else if (a.tag === "..." || b.tag === "...")
         return true;
     else if (a.tag === "id" || b.tag === "id"){
         if (b.tag !== "id" || a.tag !== b.tag) throw new Error(`Compiler Error!`); //Will never be executed (to convince typescript)

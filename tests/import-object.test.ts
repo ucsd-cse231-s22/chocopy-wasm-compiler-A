@@ -3,7 +3,7 @@ import { binop_bignum, binop_comp_bignum, builtin_bignum, load_bignum, des_check
 import { bigMath } from "../utils";
 import { importObjectErrors } from "../errors";
 
-enum Type { Num, Bool, None }
+enum Type { Num, Float, Bool, None }
 
 function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue): string {
   switch (typ) {

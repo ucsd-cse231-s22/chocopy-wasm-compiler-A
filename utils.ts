@@ -157,6 +157,8 @@ export function PyValue(typ: Type, result: bigint): Value<Annotation> {
   switch (typ.tag) {
     case "number":
       return PyInt(result);
+    // case "float":
+    //   return PyFloat(result);
     case "bool":
       return PyBool(Boolean(result));
     case "class":
@@ -169,6 +171,10 @@ export function PyValue(typ: Type, result: bigint): Value<Annotation> {
 export function PyInt(n: bigint): Value<Annotation> {
   return { tag: "num", value: n };
 }
+
+export function PyFloat(n: bigint): Value<Annotation> {
+  return { tag: "float", value: Number(n)};
+} 
 
 export function PyBool(b: boolean): Value<Annotation> {
   return { tag: "bool", value: b };
@@ -188,8 +194,10 @@ export function PyZero(): Literal<Annotation> {
 }
 
 export const NUM : Type = {tag: "number"};
+export const FLOAT : Type = {tag: "float"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
+export const ELLIPSIS : Type = {tag: "..."};
 export function LIST(itemType : Type) : Type {return {tag: "list", itemType}};
 export function EMPTY(): Type {return {tag: "empty"}};
 

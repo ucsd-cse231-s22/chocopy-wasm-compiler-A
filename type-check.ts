@@ -1,5 +1,5 @@
 import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Callable, TypeVar, Parameter, DestructuringAssignment, Assignable, AssignVar } from './ast';
-import { NUM, BOOL, NONE, CLASS, CALLABLE, TYPEVAR, LIST } from './utils';
+import { NUM, FLOAT, BOOL, NONE, ELLIPSIS, CLASS, CALLABLE, TYPEVAR, LIST } from './utils';
 import { emptyEnv } from './compiler';
 import { fullSrcLine, drawSquiggly } from './errors';
 
@@ -139,7 +139,7 @@ export function equalTypeParams(params1: Type[], params2: Type[]) : boolean {
 
 export function equalType(t1: Type, t2: Type) : boolean {
   return (
-    (t1.tag === t2.tag && (t1.tag === NUM.tag || t1.tag === BOOL.tag || t1.tag === NONE.tag)) ||
+    (t1.tag === t2.tag && (t1.tag === NUM.tag || t1.tag === BOOL.tag || t1.tag === NONE.tag || t1.tag === FLOAT.tag)) ||
     (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
     (t1.tag === "callable" && t2.tag === "callable" && equalCallable(t1, t2)) ||
     (t1.tag === "typevar" && t2.tag === "typevar" && t1.name === t2.name) ||
@@ -172,7 +172,7 @@ export function join(env: GlobalTypeEnv, t1: Type, t2: Type): Type {
 // classes and that all instantiated type-parameters are valid.
 export function isValidType(env: GlobalTypeEnv, t: Type) : boolean {
   // primitive types are valid types.
-  if(t.tag === "number" || t.tag === "bool" || t.tag === "none") {
+  if(t.tag === "number" || t.tag === "float" || t.tag === "bool" || t.tag === "none" || t.tag === "...") {
     return true;
   }
 
@@ -269,7 +269,7 @@ export function specializeMethodType(env: GlobalTypeEnv, objTy: Type, [argTypes,
 // to their current instantiated types.
 export function specializeType(env: Map<string, Type>, t: Type) : Type {
   // primitive types cannot be specialized any further.
-  if(t.tag === "either" || t.tag === "none" || t.tag === "bool" || t.tag === "number") {
+  if(t.tag === "either" || t.tag === "none" || t.tag === "bool" || t.tag === "number" || t.tag === "float" || t.tag === "...") {
     return t;
   } 
 
@@ -1038,6 +1038,8 @@ export function tcIterator(env : GlobalTypeEnv, locals : LocalTypeEnv, iterator:
     switch (literal.tag) {
       case "bool": return BOOL;
       case "num": return NUM;
+      case "float": return FLOAT;
       case "none": return NONE;
+      case "...": return ELLIPSIS;
     }
   }

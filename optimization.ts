@@ -1,7 +1,7 @@
 import { BinOp, Parameter, Type, UniOp} from "./ast";
 import { Stmt, Expr, Value, VarInit, BasicBlock, Program, FunDef, Class } from "./ir";
 
-import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkCompileValEquality, checkStmtEquality } from "./optimization_utils"; 
+import { isTagBoolean, isTagNone, isTagId, isTagBigInt, isTagEqual, checkValueEquality, checkCompileValEquality, checkStmtEquality, isTagEllipsis } from "./optimization_utils"; 
 
 type Env = {
     vars: Map<string, compileVal>;
@@ -68,7 +68,7 @@ export function evaluateBinOp(op: BinOp, leftVal: Value<any>, rightVal: Value<an
         }
     }
     else if([BinOp.Eq, BinOp.Neq].includes(op)){
-        if(!isTagEqual(leftVal, rightVal) || isTagNone(leftVal) || isTagNone(rightVal) || isTagId(leftVal) || isTagId(rightVal))
+        if(!isTagEqual(leftVal, rightVal) || isTagNone(leftVal) || isTagNone(rightVal) || isTagEllipsis(leftVal) || isTagEllipsis(rightVal) || isTagId(leftVal) || isTagId(rightVal))
             throw new Error("Compiler Error: Function should be invoked only if the expression can be folded");
         switch(op){
             case BinOp.Eq: return {tag: "bool", value: leftVal.value === rightVal.value};
@@ -87,7 +87,7 @@ export function evaluateUniOp(op: UniOp, val: Value<any>): Value<any>{
     switch(op){
         case UniOp.Neg:
 
-            if (isTagId(val) || isTagNone(val) || isTagBoolean(val)) 
+            if (isTagId(val) || isTagNone(val) || isTagEllipsis(val) || isTagBoolean(val)) 
                 throw new Error("Compiler Error");
             const minus1: bigint = -1n;
             return {tag: "num", value: minus1 as bigint * (val.value as bigint)};

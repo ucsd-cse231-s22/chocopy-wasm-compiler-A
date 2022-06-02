@@ -14,9 +14,15 @@
   (func (export "load") (param $addr i32) (param $offset i32) (result i32)
     (i32.load (i32.add (local.get $addr) (i32.mul (local.get $offset) (i32.const 4)))))
 
+  (func (export "load_float") (param $addr i32) (param $offset i32) (result f32)
+    (f32.load (i32.add (local.get $addr) (i32.mul (local.get $offset) (i32.const 4)))))
+
   ;; Given an address handle and a new value, update the value at that adress to
   ;; that value
   (func (export "store") (param $addr i32) (param $offset i32) (param $val i32)
     (i32.store (i32.add (local.get $addr) (i32.mul (local.get $offset) (i32.const 4))) (local.get $val)))
+
+  (func (export "store_float") (param $addr i32) (param $offset i32) (param $val f32)
+    (f32.store (i32.add (local.get $addr) (i32.mul (local.get $offset) (i32.const 4))) (local.get $val)))
 
 )

@@ -17,8 +17,10 @@ export type Location = {
 export type Callable = {tag: "callable"; params: Array<Type>; ret: Type };
 export type Type =
   | {tag: "number"}
+  | {tag: "float"}
   | {tag: "bool"}
   | {tag: "none"}
+  | {tag: "..."}
   | {tag: "class", name: string, params: Array<Type> }
   | {tag: "either", left: Type, right: Type }
   | {tag: "typevar", name: string }
@@ -92,9 +94,11 @@ export type Expr<A> =
   // add annotation for reporting row/col in errors
 export type Literal<A> = 
     { a?: A, tag: "num", value: bigint }
+  | { a?: A, tag: "float", value: number }
   | { a?: A, tag: "bool", value: boolean }
   | { a?: A, tag: "none" }
   | { a?: A, tag: "zero" }
+  | { a?: A, tag: "..." }
 
 // TODO: should we split up arithmetic ops from bool ops?
 export enum BinOp { Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};

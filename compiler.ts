@@ -97,7 +97,31 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
-      if (env.locals.has(stmt.name)) {
+      if (stmt.value.a === "float") {
+        var ret: string[] = [];
+        ret.push(`local.set $$scratch`) // store address of rhs
+        // ret.push(`(i32.const 4)`);
+        // ret.push(`(call $alloc)`);
+        // ret.push(`(local.set $$scratch)`);
+        // ret.push(`(local.get $$scratch)`);
+        // ret.push(`(local.get $$scratch)`);
+        // ret.push(`(i32.const 0)`)
+        // ret = ret.concat(valStmts)
+        // ret.push(`(call $store_float)`);
+        // valStmts = ret
+        if (env.locals.has(stmt.name)) {
+          ret.push(`(local.get $${stmt.name})`); 
+        } else {
+          ret.push(`(global.get $${stmt.name})`); 
+        }
+        ret.push(`i32.const 0`) // offset 0
+        ret.push(`local.get $$scratch`) //get address of rhs
+        ret.push(`i32.const 0`)
+        ret.push(`call $load_float`) // load value of rhs
+        ret.push(`call $store_float`)
+        return valStmts.concat(ret); // store rhs value to lhs address
+      }
+      else if (env.locals.has(stmt.name)) {
         return valStmts.concat([`(local.set $${stmt.name})`]); 
       } else {
         return valStmts.concat([`(global.set $${stmt.name})`]); 
@@ -263,6 +287,31 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
       }
       return_val.push(`(local.get $$scratch)`)
       return return_val;
+    case "float":
+      const returnVal : string[] = [];
+      returnVal.push(`(i32.const 4)`);
+      returnVal.push(`(call $alloc)`);
+      returnVal.push(`(local.set $$scratch)`);
+      if (val.value === Infinity){
+        returnVal.push(`(local.get $$scratch)`);
+        returnVal.push(`(i32.const 0)`)
+        returnVal.push(`(f32.const inf)`);
+        returnVal.push(`(call $store_float)`);
+      }
+      else if (val.value === NaN){
+        returnVal.push(`(local.get $$scratch)`);
+        returnVal.push(`(i32.const 0)`)
+        returnVal.push(`(f32.const nan)`);
+        returnVal.push(`(call $store_float)`);
+      }
+      else {
+        returnVal.push(`(local.get $$scratch)`);
+        returnVal.push(`(i32.const 0)`)
+        returnVal.push("(f32.const " + val.value + ")");
+        returnVal.push(`(call $store_float)`);
+      }
+      returnVal.push(`(local.get $$scratch)`);
+      return returnVal;
     case "wasmint":
       return ["(i32.const " + val.value + ")"];
     case "bool":

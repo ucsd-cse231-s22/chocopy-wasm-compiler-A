@@ -155,8 +155,10 @@ function lowerClass(cls: AST.Class<Annotation>, env : GlobalEnv) : Array<IR.Clas
 function literalToVal(lit: AST.Literal<Annotation>) : IR.Value<Annotation> {
   switch(lit.tag) {
     case "num":
+    case "float":
     case "bool":
     case "none":
+    case "...":
         return lit
   }
 }
