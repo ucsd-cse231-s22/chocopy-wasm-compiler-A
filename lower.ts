@@ -47,6 +47,7 @@ export function lowerProgram(p : AST.Program<Annotation>, env : GlobalEnv) : IR.
     var [inits, generatedClasses] = flattenStmts([...cstmts, ...p.stmts], blocks, env);
     return {
         a: p.a,
+        imports: p.imports,
         funs: [],
         inits: [...inits, ...lowerVarInits([...cinits, ...p.inits], env)],
         classes: [...classes, ...generatedClasses],
@@ -155,8 +156,10 @@ function lowerClass(cls: AST.Class<Annotation>, env : GlobalEnv) : Array<IR.Clas
 function literalToVal(lit: AST.Literal<Annotation>) : IR.Value<Annotation> {
   switch(lit.tag) {
     case "num":
+    case "float":
     case "bool":
     case "none":
+    case "...":
         return lit
   }
 }

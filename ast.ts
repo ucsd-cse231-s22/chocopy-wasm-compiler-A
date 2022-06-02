@@ -17,8 +17,10 @@ export type Location = {
 export type Callable = {tag: "callable"; params: Array<Type>; ret: Type };
 export type Type =
   | {tag: "number"}
+  | {tag: "float"}
   | {tag: "bool"}
   | {tag: "none"}
+  | {tag: "..."}
   | {tag: "class", name: string, params: Array<Type> }
   | {tag: "either", left: Type, right: Type }
   | {tag: "typevar", name: string }
@@ -28,7 +30,15 @@ export type Type =
 
 export type Parameter<A> = { a?: A, name: string, type: Type }
 
-export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, typeVarInits: Array<TypeVar<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
+export type Program<A> = {
+  a?: A;
+  imports?: Map<string, Array<string>>;
+  funs: Array<FunDef<A>>;
+  inits: Array<VarInit<A>>;
+  typeVarInits: Array<TypeVar<A>>;
+  classes: Array<Class<A>>;
+  stmts: Array<Stmt<A>>;
+};
 
 export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, typeParams: Array<string> }
 
@@ -92,12 +102,14 @@ export type Expr<A> =
   // add annotation for reporting row/col in errors
 export type Literal<A> = 
     { a?: A, tag: "num", value: bigint }
+  | { a?: A, tag: "float", value: number }
   | { a?: A, tag: "bool", value: boolean }
   | { a?: A, tag: "none" }
   | { a?: A, tag: "zero" }
+  | { a?: A, tag: "..." }
 
 // TODO: should we split up arithmetic ops from bool ops?
-export enum BinOp { Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};
+export enum BinOp { Plus, Minus, Mul, Div, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};
 
 export enum UniOp { Neg, Not };
 
@@ -109,6 +121,7 @@ export function stringifyOp(op: Op): string {
     case BinOp.Plus: return "+";
     case BinOp.Minus: return "-";
     case BinOp.Mul: return "*";
+    case BinOp.Div: return "/";
     case BinOp.IDiv: return "//";
     case BinOp.Mod: return "%";
     case BinOp.Eq: return "==";

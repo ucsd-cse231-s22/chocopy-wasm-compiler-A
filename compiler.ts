@@ -1,6 +1,6 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { Annotation, BinOp, Type, UniOp } from "./ast"
-import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
+import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM, FLOAT } from "./utils";
 import { equalType } from "./type-check";
 
 export type GlobalEnv = {
@@ -97,7 +97,31 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
-      if (env.locals.has(stmt.name)) {
+      if (stmt.value.a === "float") {
+        var ret: string[] = [];
+        ret.push(`local.set $$scratch`) // store address of rhs
+        // ret.push(`(i32.const 4)`);
+        // ret.push(`(call $alloc)`);
+        // ret.push(`(local.set $$scratch)`);
+        // ret.push(`(local.get $$scratch)`);
+        // ret.push(`(local.get $$scratch)`);
+        // ret.push(`(i32.const 0)`)
+        // ret = ret.concat(valStmts)
+        // ret.push(`(call $store_float)`);
+        // valStmts = ret
+        if (env.locals.has(stmt.name)) {
+          ret.push(`(local.get $${stmt.name})`); 
+        } else {
+          ret.push(`(global.get $${stmt.name})`); 
+        }
+        ret.push(`i32.const 0`) // offset 0
+        ret.push(`local.get $$scratch`) //get address of rhs
+        ret.push(`i32.const 0`)
+        ret.push(`call $load_float`) // load value of rhs
+        ret.push(`call $store_float`)
+        return valStmts.concat(ret); // store rhs value to lhs address
+      }
+      else if (env.locals.has(stmt.name)) {
         return valStmts.concat([`(local.set $${stmt.name})`]); 
       } else {
         return valStmts.concat([`(global.set $${stmt.name})`]); 
@@ -146,7 +170,7 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
-      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)];
+      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op, expr.left.a.type)];
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
@@ -176,6 +200,8 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       var callName = expr.name;
       if (expr.name === "print" && equalType(argTyp, NUM)) {
         callName = "print_num";
+      } else if (expr.name === "print" && equalType(argTyp, FLOAT)) {
+        callName = "print_float"; 
       } else if (expr.name === "print" && equalType(argTyp, BOOL)) {
         callName = "print_bool";
       } else if (expr.name === "print" && equalType(argTyp, NONE)) {
@@ -263,6 +289,31 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
       }
       return_val.push(`(local.get $$scratch)`)
       return return_val;
+    case "float":
+      const returnVal : string[] = [];
+      returnVal.push(`(i32.const 1)`);
+      returnVal.push(`(call $alloc)`);
+      returnVal.push(`(local.set $$scratch)`);
+      if (val.value === Infinity){
+        returnVal.push(`(local.get $$scratch)`);
+        returnVal.push(`(i32.const 0)`)
+        returnVal.push(`(f32.const inf)`);
+        returnVal.push(`(call $store_float)`);
+      }
+      else if (val.value === NaN){
+        returnVal.push(`(local.get $$scratch)`);
+        returnVal.push(`(i32.const 0)`)
+        returnVal.push(`(f32.const nan)`);
+        returnVal.push(`(call $store_float)`);
+      }
+      else {
+        returnVal.push(`(local.get $$scratch)`);
+        returnVal.push(`(i32.const 0)`)
+        returnVal.push("(f32.const " + val.value + ")");
+        returnVal.push(`(call $store_float)`);
+      }
+      returnVal.push(`(local.get $$scratch)`);
+      return returnVal;
     case "wasmint":
       return ["(i32.const " + val.value + ")"];
     case "bool":
@@ -278,30 +329,33 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
   }
 }
 
-function codeGenBinOp(op : BinOp) : string {
+function codeGenBinOp(op : BinOp, typ: Type) : string {
   switch(op) {
     case BinOp.Plus:
-      return "(call $$add)"
+
+      return typ?.tag !== "float" ? "(call $$add)" : "(call $$add_float)"
     case BinOp.Minus:
-      return "(call $$sub)"
+      return typ.tag !== "float" ? "(call $$sub)" : "(call $$sub_float)"
     case BinOp.Mul:
-      return "(call $$mul)"
+      return typ.tag !== "float" ? "(call $$mul)" : "(call $$mul_float)"
     case BinOp.IDiv:
       return "(call $$div)"
     case BinOp.Mod:
       return "(call $$mod)"
+    case BinOp.Div:
+      return "(call $$div_float)"
     case BinOp.Eq:
-      return "(call $$eq)"
+      return typ.tag !== "float" ? "(call $$eq)" : "(call $$eq_float)"
     case BinOp.Neq:
-      return "(call $$neq)"
+      return typ.tag !== "float" ? "(call $$neq)" : "(call $$neq_float)"
     case BinOp.Lte:
-      return "(call $$lte)"
+      return typ.tag !== "float" ? "(call $$lte)" : "(call $$lte_float)"
     case BinOp.Gte:
-      return "(call $$gte)"
+      return typ.tag !== "float" ? "(call $$gte)" : "(call $$gte_float)"
     case BinOp.Lt:
-      return "(call $$lt)"
+      return typ.tag !== "float" ? "(call $$lt)" : "(call $$lt_float)"
     case BinOp.Gt:
-      return "(call $$gt)"
+      return typ.tag !== "float" ? "(call $$gt)" : "(call $$gt_float)"
     case BinOp.Is:
       return "(i32.eq)";
     case BinOp.And:

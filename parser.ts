@@ -1,8 +1,9 @@
 import { parser } from "@lezer/python";
 import { TreeCursor } from "@lezer/common";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, Annotation, Location, NonlocalVarInit, TypeVar, DestructuringAssignment, AssignVar } from "./ast";
-import { NUM, BOOL, NONE, CLASS, CALLABLE, LIST } from "./utils";
+import { NUM, FLOAT, BOOL, NONE, ELLIPSIS, CLASS, CALLABLE, LIST } from "./utils";
 import { stringifyTree } from "./treeprinter";
+import { isBuiltinNumArgs } from "./builtins";
 
 const MKLAMBDA = "mklambda";
 
@@ -78,10 +79,22 @@ function wrap_locs<T extends Function>(traverser: T, storeSrc: boolean = false):
   };
 }
 
+export function isFloat(n : string) : boolean {
+  // 32-bit float, with form 1.234 or 1e15 (Lezer would consider both as float, for inf and nan we'll treat separately)
+  const floatChars = /[.e]/;
+  return floatChars.test(n);
+}
+
 export const traverseLiteral = wrap_locs(traverseLiteralHelper);
 export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv): Literal<Annotation> {
   switch (c.type.name) {
     case "Number":
+      if (isFloat(s.substring(c.from, c.to))){
+        return {
+        tag: "float",
+        value: Number(s.substring(c.from, c.to))
+        } 
+      }
       return {
         tag: "num",
         value: BigInt(s.substring(c.from, c.to))
@@ -95,14 +108,37 @@ export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv):
       return {
         tag: "none"
       }
+    case "Ellipsis": // x: Ellipsis = ...
+      return {
+        tag: "..."
+      }
     case "VariableName":
       let vname = s.substring(c.from, c.to).trim();
-      if (vname !== "__ZERO__") {
+      if (vname === "__ZERO__") {
+        return { 
+          tag: "zero" 
+        };
+      }
+      else if (vname === "inf") { // here we treat inf as builtin type to avoid confusion
+        return {
+          tag: "float",
+          value: Infinity
+        }
+      }
+      else if (vname === "nan") {
+        return {
+          tag: "float",
+          value: NaN
+        }
+      }
+      else if (vname === "Ellipsis") { // x: Ellipsis = Ellipsis
+        return {
+          tag: "..."
+        }
+      }
+      else{
         throw new Error("ParseError: Not a literal");
       }
-      return { 
-        tag: "zero" 
-      };
     default:
       throw new Error("Not literal");
   }
@@ -114,6 +150,7 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
     case "Number":
     case "Boolean":
     case "None":
+    case "Ellipsis":
       return {
         tag: "literal",
         value: traverseLiteral(c, s, env)
@@ -199,13 +236,14 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
         var expr: Expr<Annotation>;
-        if (callName === "print" || callName === "abs" || callName === "len") {
+        // if (callName === "print" || callName === "abs" || callName === "len") 
+        if (isBuiltinNumArgs(callName, 1) || callName == "print" || callName == "len") {
           return {
             tag: "builtin1",
             name: callName,
             arg: args[0],
           };
-        } else if (callName === "max" || callName === "min" || callName === "pow") {
+        } else if (isBuiltinNumArgs(callName, 2)) {
           return {
             tag: "builtin2",
             name: callName,
@@ -230,6 +268,9 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
           break;
         case "*":
           op = BinOp.Mul;
+          break;
+        case "/":
+          op = BinOp.Div;
           break;
         case "//":
           op = BinOp.IDiv;
@@ -731,6 +772,8 @@ export function traverseType(c : TreeCursor, s : string, env: ParserEnv) : Type 
       switch(name) {
         case "int": return NUM;
         case "bool": return BOOL;
+        case "float": return FLOAT;
+        case "Ellipsis": return ELLIPSIS;
         default: return CLASS(name);
       }
     case "None": // None is mentionable in Callable types
@@ -921,6 +964,33 @@ export function traverseFunDefHelper(c: TreeCursor, s: string, env: ParserEnv): 
   return { name, parameters, ret, inits, body, nonlocals, children };
 }
 
+export function traverseImport(
+  c: TreeCursor,
+  s: string,
+  env: ParserEnv
+): Map<string, Array<string>> {
+  var m: Map<string, Array<string>> = new Map();
+  c.firstChild();
+  if (s.substring(c.from, c.to).trim() === "from") {
+    // from x import y
+    c.nextSibling();
+    const from_name = s.substring(c.from, c.to);
+    c.nextSibling();
+    c.nextSibling();
+    const import_name = s.substring(c.from, c.to);
+    // TODO(rongyi): did not handle multiple imports
+    // add from_name, import_name to m
+    m.set(from_name, (m.get(from_name) || []).concat([import_name]));
+  } else {
+    // import x
+    c.nextSibling();
+    const from_name = s.substring(c.from, c.to);
+    m.set(from_name, []);
+  }
+  c.parent();
+  return m;
+}
+
 export function traverseGenericParams(c : TreeCursor, s : string) : Array<string> {
   const typeParams : Array<string> = [];
   if (c.type.name !== "ArgList") {
@@ -1066,6 +1136,10 @@ export function isClassDef(c: TreeCursor, s: string, env: ParserEnv): Boolean {
   return c.type.name === "ClassDefinition";
 }
 
+export function isImport(c: TreeCursor, s: string, env: ParserEnv): Boolean {
+  return c.type.name === "ImportStatement";
+}
+
 export const traverse = wrap_locs(traverseHelper, true);
 export function traverseHelper(c: TreeCursor, s: string, env: ParserEnv): Program<Annotation> {
   switch (c.node.type.name) {
@@ -1075,6 +1149,7 @@ export function traverseHelper(c: TreeCursor, s: string, env: ParserEnv): Progra
       const classes: Array<Class<Annotation>> = [];
       const stmts: Array<Stmt<Annotation>> = [];
       const typeVarInits : Array<TypeVar<Annotation>> = [];
+      const imports: Map<string, Array<string>> = new Map();
       var hasChild = c.firstChild();
 
       while (hasChild) {
@@ -1086,6 +1161,18 @@ export function traverseHelper(c: TreeCursor, s: string, env: ParserEnv): Progra
           funs.push(traverseFunDef(c, s, env));
         } else if (isClassDef(c, s, env)) {
           classes.push(traverseClass(c, s, env));
+        } else if (isImport(c, s, env)) {
+          var m = traverseImport(c, s, env);
+          // merge m and imports
+          for (const [k, v] of m) {
+            if (imports.has(k)) {
+              imports.get(k).push(...v);
+            } else {
+              imports.set(k, v);
+            }
+          }
+
+          // imports.set(traverseImport(c, s, env), []);
         } else {
           break;
         }
@@ -1097,7 +1184,7 @@ export function traverseHelper(c: TreeCursor, s: string, env: ParserEnv): Progra
         hasChild = c.nextSibling();
       }
       c.parent();
-      return { funs, inits, typeVarInits, classes, stmts };
+      return { imports, funs, inits, typeVarInits, classes, stmts };
     default:
       throw new Error(
         "Could not parse program at " + c.node.from + " " + c.node.to

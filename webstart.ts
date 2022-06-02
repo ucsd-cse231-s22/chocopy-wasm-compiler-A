@@ -1,8 +1,9 @@
 import {BasicREPL} from './repl';
 import { Type, Value, Annotation, Class } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
-import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
+import { NUM, FLOAT, BOOL, NONE, load_bignum, load_float, builtin_bignum, binop_bignum, binop_comp_bignum, builtin_float, binop_float, binop_comp_float, bigMath, floatMath, des_check, bignum_to_i32 } from './utils';
 import { importObjectErrors } from './errors';
+import { generateImportMap } from './builtins';
 
 import CodeMirror from 'codemirror';
 import "codemirror/addon/edit/closebrackets";
@@ -20,6 +21,8 @@ function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : strin
   switch(typ.tag) {
     case "number":
       return load_bignum(arg, loader).toString();
+    case "float":
+      return load_float(arg, loader).toString();
     case "bool":
       return (arg as boolean) ? "True" : "False";
     case "none":
@@ -230,17 +233,15 @@ function webStart() {
     const editorBox = initCodeMirror();
 
     const loader = memoryModule.instance.exports.load;
+    const loader_float = memoryModule.instance.exports.load_float;
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
         print_num: (arg: number) => print(NUM, arg, loader),
+        print_float: (arg: number) => print(FLOAT, arg, loader_float),
         print_bool: (arg: number) => print(BOOL, arg, null),
         print_none: (arg: number) => print(NONE, arg, null),
         destructure_check: (hashNext: boolean) => des_check(hashNext),
-        abs:  (arg: number) => builtin_bignum([arg], bigMath.abs, memoryModule.instance.exports),
-        min: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.min, memoryModule.instance.exports),
-        max: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.max, memoryModule.instance.exports),
-        pow: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.pow, memoryModule.instance.exports),
         $add: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.add, memoryModule.instance.exports),
         $sub: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.sub, memoryModule.instance.exports),
         $mul: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.mul, memoryModule.instance.exports),
@@ -252,6 +253,16 @@ function webStart() {
         $gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, memoryModule.instance.exports),
         $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
         $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
+        $add_float: (arg1: number, arg2: number) => binop_float([arg1, arg2], floatMath.add, memoryModule.instance.exports),
+        $sub_float: (arg1: number, arg2: number) => binop_float([arg1, arg2], floatMath.sub, memoryModule.instance.exports),
+        $mul_float: (arg1: number, arg2: number) => binop_float([arg1, arg2], floatMath.mul, memoryModule.instance.exports),
+        $div_float: (arg1: number, arg2: number) => binop_float([arg1, arg2], floatMath.div, memoryModule.instance.exports),
+        $eq_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.eq, memoryModule.instance.exports),
+        $neq_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.neq, memoryModule.instance.exports),
+        $lte_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.lte, memoryModule.instance.exports),
+        $gte_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.gte, memoryModule.instance.exports),
+        $lt_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.lt, memoryModule.instance.exports),
+        $gt_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.gt, memoryModule.instance.exports),
         $bignum_to_i32: (arg: number) => bignum_to_i32(arg, loader), 
       },
       errors: importObjectErrors,
@@ -259,6 +270,7 @@ function webStart() {
       memory_values: memory,
       js: { memory: memory }
     };
+    // generateImportMap(new Map(), importObject);
     var repl = new BasicREPL(importObject);
 
     function renderResult(result : Value<Annotation>) : void {
@@ -268,6 +280,9 @@ function webStart() {
       document.getElementById("output").appendChild(elt);
       switch (result.tag) {
         case "num":
+          elt.innerText = String(result.value);
+          break;
+        case "float":
           elt.innerText = String(result.value);
           break;
         case "bool":

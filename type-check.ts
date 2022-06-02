@@ -1,7 +1,9 @@
 import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, Callable, TypeVar, Parameter, DestructuringAssignment, Assignable, AssignVar } from './ast';
-import { NUM, BOOL, NONE, CLASS, CALLABLE, TYPEVAR, LIST } from './utils';
+import { NUM, FLOAT, BOOL, NONE, ELLIPSIS, CLASS, CALLABLE, TYPEVAR, LIST } from './utils';
 import { emptyEnv } from './compiler';
 import { fullSrcLine, drawSquiggly } from './errors';
+import { findBuiltinByName, isBuiltin, builtins } from './builtins';
+
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 
@@ -76,10 +78,10 @@ const copyGlobals = (env: GlobalTypeEnv): GlobalTypeEnv => {
 export type NonlocalTypeEnv = LocalTypeEnv["vars"]
 
 const defaultGlobalFunctions = new Map();
-defaultGlobalFunctions.set("abs", [[NUM], NUM]);
-defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
-defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
-defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
+// defaultGlobalFunctions.set("abs", [[NUM], NUM]);
+// defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
+// defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
+// defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
 defaultGlobalFunctions.set("len", [[LIST(NUM)], NUM]);
 
@@ -139,7 +141,7 @@ export function equalTypeParams(params1: Type[], params2: Type[]) : boolean {
 
 export function equalType(t1: Type, t2: Type) : boolean {
   return (
-    (t1.tag === t2.tag && (t1.tag === NUM.tag || t1.tag === BOOL.tag || t1.tag === NONE.tag)) ||
+    (t1.tag === t2.tag && (t1.tag === NUM.tag || t1.tag === BOOL.tag || t1.tag === NONE.tag || t1.tag === FLOAT.tag || t1.tag === ELLIPSIS.tag)) ||
     (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
     (t1.tag === "callable" && t2.tag === "callable" && equalCallable(t1, t2)) ||
     (t1.tag === "typevar" && t2.tag === "typevar" && t1.name === t2.name) ||
@@ -172,7 +174,7 @@ export function join(env: GlobalTypeEnv, t1: Type, t2: Type): Type {
 // classes and that all instantiated type-parameters are valid.
 export function isValidType(env: GlobalTypeEnv, t: Type) : boolean {
   // primitive types are valid types.
-  if(t.tag === "number" || t.tag === "bool" || t.tag === "none") {
+  if(t.tag === "number" || t.tag === "float" || t.tag === "bool" || t.tag === "none" || t.tag === "...") {
     return true;
   }
 
@@ -269,7 +271,7 @@ export function specializeMethodType(env: GlobalTypeEnv, objTy: Type, [argTypes,
 // to their current instantiated types.
 export function specializeType(env: Map<string, Type>, t: Type) : Type {
   // primitive types cannot be specialized any further.
-  if(t.tag === "either" || t.tag === "none" || t.tag === "bool" || t.tag === "number") {
+  if(t.tag === "either" || t.tag === "none" || t.tag === "bool" || t.tag === "number" || t.tag === "float" || t.tag === "...") {
     return t;
   } 
 
@@ -302,24 +304,69 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
   const newClasses = new Map(env.classes);
   const newTypevars = new Map(env.typevars);
 
-  program.inits.forEach(init => newGlobs.set(init.name, init.type));
-  program.funs.forEach(fun => newGlobs.set(fun.name, CALLABLE(fun.parameters.map(p => p.type), fun.ret)));
-  program.classes.forEach(cls => {
+  // add imports to functions
+  builtins.forEach((b) => {
+    if (
+      !b.need_import ||
+      (program.imports?.has(b.name) &&
+        program.imports.get(b.name).includes(b.name))
+    ) {
+      newGlobs.set(b.name, CALLABLE(b.args, b.ret));
+      newFuns.set(b.name, [b.args, b.ret]);
+    }
+  });
+  program.imports?.forEach((names, mod) => {
+    names.forEach((name) => {
+      if (isBuiltin(name)) {
+        var bf = findBuiltinByName(name);
+        // console.log("Added FN", bf.name, bf.args, bf.ret);
+        newGlobs.set(name, CALLABLE(bf.args, bf.ret));
+        newFuns.set(name, [bf.args, bf.ret]);
+      }
+    });
+  });
+  program.inits.forEach((init) => newGlobs.set(init.name, init.type));
+  program.funs.forEach((fun) =>
+    newGlobs.set(
+      fun.name,
+      CALLABLE(
+        fun.parameters.map((p) => p.type),
+        fun.ret
+      )
+    )
+  );
+  program.classes.forEach((cls) => {
     const fields = new Map();
     const methods = new Map();
-    cls.fields.forEach(field => fields.set(field.name, field.type));
-    cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
+    cls.fields.forEach((field) => fields.set(field.name, field.type));
+    cls.methods.forEach((method) =>
+      methods.set(method.name, [
+        method.parameters.map((p) => p.type),
+        method.ret,
+      ])
+    );
     const typeParams = cls.typeParams;
     newClasses.set(cls.name, [fields, methods, [...typeParams]]);
   });
 
-  program.typeVarInits.forEach(tv => {
-    if(newGlobs.has(tv.name) || newTypevars.has(tv.name) || newClasses.has(tv.name)) {
-      throw new TypeCheckError(`Duplicate identifier '${tv.name}' for type-variable`);
+  program.typeVarInits.forEach((tv) => {
+    if (
+      newGlobs.has(tv.name) ||
+      newTypevars.has(tv.name) ||
+      newClasses.has(tv.name)
+    ) {
+      throw new TypeCheckError(
+        `Duplicate identifier '${tv.name}' for type-variable`
+      );
     }
     newTypevars.set(tv.name, [tv.canonicalName]);
   });
-  return { globals: newGlobs, functions: newFuns, classes: newClasses, typevars: newTypevars };
+  return {
+    globals: newGlobs,
+    functions: newFuns,
+    classes: newClasses,
+    typevars: newTypevars,
+  };
 }
 
 export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<Annotation>, GlobalTypeEnv] {
@@ -354,7 +401,7 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
     newEnv.globals.set(name, locals.vars.get(name));
   }
 
-  const aprogram = { a: { ...program.a, type: lastTyp }, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody, typeVarInits: tTypeVars };
+  const aprogram = { a: { ...program.a, type: lastTyp }, imports: program.imports, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody, typeVarInits: tTypeVars };
   return [aprogram, newEnv];
 }
 
@@ -752,6 +799,14 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
           }
         case BinOp.Minus:
         case BinOp.Mul:
+          if (equalType(tLeft.a.type, FLOAT) && equalType(tRight.a.type, FLOAT)) { return { ...tBin, a: { ...expr.a, type: FLOAT } } }
+          else if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: NUM } } }
+          else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${bigintSafeStringify(tLeft.a.type.tag)} and ${bigintSafeStringify(tRight.a.type.tag)}`,
+            expr.a); }
+        case BinOp.Div:
+          if (equalType(tLeft.a.type, FLOAT) && equalType(tRight.a.type, FLOAT)) { return { ...tBin, a: { ...expr.a, type: FLOAT } } }
+          else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${bigintSafeStringify(tLeft.a.type.tag)} and ${bigintSafeStringify(tRight.a.type.tag)}`,
+          expr.a); }
         case BinOp.IDiv:
         case BinOp.Mod:
           if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: NUM } } }
@@ -768,7 +823,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         case BinOp.Gte:
         case BinOp.Lt:
         case BinOp.Gt:
-          if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: BOOL } }; }
+          if ((equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) || (equalType(tLeft.a.type, FLOAT) && equalType(tRight.a.type, FLOAT))) { 
+            return { ...tBin, a: { ...expr.a, type: BOOL } }; 
+          }
           else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${bigintSafeStringify(tLeft.a.type.tag)} and ${bigintSafeStringify(tRight.a.type.tag)}`,
           expr.a); }
         case BinOp.And:
@@ -825,7 +882,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg, SRC);
         
-        if (!equalType(tArg.a.type, NUM) && !equalType(tArg.a.type, BOOL) && !equalType(tArg.a.type, NONE)) {
+        if (!equalType(tArg.a.type, NUM) && !equalType(tArg.a.type, FLOAT) && !equalType(tArg.a.type, BOOL) && !equalType(tArg.a.type, NONE)) {
            throw new TypeCheckError(SRC, `print() expects types "int" or "bool" or "none" as the argument, got ${bigintSafeStringify(tArg.a.type.tag)}`, tArg.a);
         }
         return { ...expr, a: tArg.a, arg: tArg };
@@ -1038,6 +1095,8 @@ export function tcIterator(env : GlobalTypeEnv, locals : LocalTypeEnv, iterator:
     switch (literal.tag) {
       case "bool": return BOOL;
       case "num": return NUM;
+      case "float": return FLOAT;
       case "none": return NONE;
+      case "...": return ELLIPSIS;
     }
   }

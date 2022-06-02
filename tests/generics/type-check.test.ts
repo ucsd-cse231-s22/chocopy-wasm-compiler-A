@@ -2,7 +2,7 @@ import "mocha";
 import { expect } from "chai";
 import {augmentTEnv, emptyGlobalTypeEnv, tc, resolveClassTypeParams} from  '../../type-check';
 import { Annotation, Program, Type, TypeVar, BinOp } from '../../ast';
-import { NONE, NUM, BOOL, CLASS, TYPEVAR, PyZero, PyNone, PyInt } from '../../utils';
+import { NONE, NUM, BOOL, CLASS, TYPEVAR, PyZero, PyNone, PyInt, PyFloat } from '../../utils';
 
 describe('Generics Type-Checker Tests', () => {
   it('should add type-variables to the global environment', () => {
@@ -14,7 +14,7 @@ describe('Generics Type-Checker Tests', () => {
       a: {src: 'test', eolLoc: {row: 0, col: 0, srcIdx: 0}},
     }); 
 
-    expect(tcProgram).to.deep.equal({
+    expect(tcProgram).excluding('imports').to.deep.equal({
       funs: [], inits: [], classes: [], stmts: [],
       typeVarInits: [
         {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
@@ -254,7 +254,7 @@ describe('Generics Type-Checker Tests', () => {
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
-    expect(tcProgram).to.deep.equal({
+    expect(tcProgram).excluding('imports').to.deep.equal({
       funs: [], inits: [], stmts: [],
       typeVarInits: [
         {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
@@ -352,7 +352,7 @@ describe('Generics Type-Checker Tests', () => {
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
-    expect(tcProgram).to.deep.equal({
+    expect(tcProgram).excluding('imports').to.deep.equal({
       funs: [], inits: [], stmts: [],
       typeVarInits: [
         {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
@@ -410,7 +410,7 @@ describe('Generics Type-Checker Tests', () => {
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
-    expect(tcProgram).to.deep.equal({
+    expect(tcProgram).excluding('imports').to.deep.equal({
       funs: [], stmts: [],
       typeVarInits: [
         {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}},
@@ -571,7 +571,7 @@ describe('Generics Type-Checker Tests', () => {
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
-    expect(tcProgram).to.deep.equal({
+    expect(tcProgram).excluding('imports').to.deep.equal({
       funs: [],
       typeVarInits: [
         {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
@@ -657,7 +657,7 @@ describe('Generics Type-Checker Tests', () => {
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
-    expect(tcProgram).to.deep.equal({
+    expect(tcProgram).excluding('imports').to.deep.equal({
       funs: [],
       typeVarInits: [
         {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
@@ -757,7 +757,7 @@ describe('Generics Type-Checker Tests', () => {
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
-    expect(tcProgram).to.deep.equal({
+    expect(tcProgram).excluding('imports').to.deep.equal({
       funs: [],
       typeVarInits: [
         {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
@@ -863,7 +863,7 @@ describe('Generics Type-Checker Tests', () => {
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
-    expect(tcProgram).to.deep.equal({
+    expect(tcProgram).excluding('imports').to.deep.equal({
       funs: [],
       typeVarInits: [
         {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}
@@ -958,7 +958,7 @@ describe('Generics Type-Checker Tests', () => {
     }; 
 
     let [tcProgram, tcGlobalEnv] = tc(env, program);
-    expect(tcProgram).to.deep.equal({
+    expect(tcProgram).excluding('imports').to.deep.equal({
       funs: [],
       typeVarInits: [
         {name: 'T', canonicalName: 'T', types: [], a: {type: NONE, eolLoc: {row: 0, col: 0, srcIdx: 0}}}

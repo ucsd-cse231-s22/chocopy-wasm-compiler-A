@@ -13,6 +13,7 @@ import { closureName, lowerProgram } from './lower';
 import { monomorphizeProgram } from './monomorphizer';
 import { optimizeProgram } from './optimization';
 import { wasmErrorImports } from './errors';
+import { generateImportMap, generateWasmSource } from './builtins';
 
 export type Config = {
   importObject: any;
@@ -124,26 +125,28 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     `(global $${name} (export "${name}") (mut i32) (i32.const 0))`
   ).join("\n");
 
+  const builtins_wasm = generateWasmSource(tprogram.imports);
+
   const importObject = config.importObject;
   if(!importObject.js) {
     const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
     importObject.js = { memory: memory };
   }
-
+  generateImportMap(tprogram.imports, importObject);
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     ${wasmErrorImports}
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
+    (func $print_float (import "imports" "print_float") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
-    (func $abs (import "imports" "abs") (param i32) (result i32))
-    (func $min (import "imports" "min") (param i32) (param i32) (result i32))
-    (func $max (import "imports" "max") (param i32) (param i32) (result i32))
-    (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
+    ${builtins_wasm}
     (func $destructure_check (import "imports" "destructure_check") (param i32) (result i32))
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $load_float (import "libmemory" "load_float") (param i32) (param i32) (result f32))
+    (func $store_float (import "libmemory" "store_float") (param i32) (param i32) (param f32))
     (func $$add (import "imports" "$add") (param i32) (param i32) (result i32))
     (func $$sub (import "imports" "$sub") (param i32) (param i32) (result i32))
     (func $$mul (import "imports" "$mul") (param i32) (param i32) (result i32))
@@ -155,6 +158,16 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $$gte (import "imports" "$gte") (param i32) (param i32) (result i32))
     (func $$lt (import "imports" "$lt") (param i32) (param i32) (result i32))
     (func $$gt (import "imports" "$gt") (param i32) (param i32) (result i32))
+    (func $$add_float (import "imports" "$add_float") (param i32) (param i32) (result i32))
+    (func $$sub_float (import "imports" "$sub_float") (param i32) (param i32) (result i32))
+    (func $$mul_float (import "imports" "$mul_float") (param i32) (param i32) (result i32))
+    (func $$div_float (import "imports" "$div_float") (param i32) (param i32) (result i32))
+    (func $$eq_float (import "imports" "$eq_float") (param i32) (param i32) (result i32))
+    (func $$neq_float (import "imports" "$neq_float") (param i32) (param i32) (result i32))
+    (func $$lte_float (import "imports" "$lte_float") (param i32) (param i32) (result i32))
+    (func $$gte_float (import "imports" "$gte_float") (param i32) (param i32) (result i32))
+    (func $$lt_float (import "imports" "$lt_float") (param i32) (param i32) (result i32))
+    (func $$gt_float (import "imports" "$gt_float") (param i32) (param i32) (result i32))
     (func $$bignum_to_i32 (import "imports" "$bignum_to_i32") (param i32) (result i32))
     ${types}
     ${globalImports}
