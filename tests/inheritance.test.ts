@@ -344,25 +344,25 @@ kitten : Kitten = None
 kitten = Kitten()
 kitten.speak()
 `,[`0`]);
-// assertPrint("multiple-inheritance-field-access", `
-// class Pet(object):
-// 	y : int = 1
-// 	def speak(self : Pet):
-// 		print(0)
+assertPrint("multiple-inheritance-field-access", `
+class Pet(object):
+	y : int = 1
+	def speak(self : Pet):
+		print(0)
 
-// class Cat(object):
-// 	x : int = 0
-// 	def speak(self : Cat):
-// 		print(1)
+class Cat(object):
+	x : int = 0
+	def speak(self : Cat):
+		print(1)
 
-// class Kitten(Pet, Cat):
-// 	z : int = 3
+class Kitten(Pet, Cat):
+	z : int = 3
 
-// kitten : Kitten = None
-// kitten = Kitten()
-// print(kitten.y)
-// print(kitten.x)
-// `,[`1`, `0`]);
+kitten : Kitten = None
+kitten = Kitten()
+print(kitten.y)
+print(kitten.x)
+`,[`1`, `0`]);
 assertTCFail("dynamic-dispatch-error", `
 class Pet(object):
 	def speak(self : Pet):
@@ -447,5 +447,143 @@ for i in cls:
 	continue 
    	print(i)
 `,[`0`, `1`, `2`, `3`, `4`, `5`, `6`, `7`]);
+assertPrint("multiple-multilevel-field-access", `
+class F(object):
+  g:int = 9
+
+class A(object):
+  a:int = 1
+  f:int = 2
+      
+class B(A, F):
+  b:int = 3
+
+class D(object):
+  d:int = 4
+      
+class E(D):
+  e:int = 5
+
+class Pet(B):
+	y : int = 6
+	def speak(self : Pet):
+		print(0)
+
+class Cat(E):
+	x : int = 7
+	def speak(self : Cat):
+		print(1)
+
+class Kitten(Pet, Cat):
+	z : int = 8
+
+kitten : Kitten = None
+kitten = Kitten()
+print(kitten.a)
+print(kitten.f)
+print(kitten.b)
+print(kitten.d)
+print(kitten.e)
+print(kitten.y)
+print(kitten.x)
+print(kitten.z)
+print(kitten.g)
+`, ["1","2","3","4","5","6","7","8", "9"]);
+assertPrint("multiple3-multilevel-field-access", `
+class F(object):
+  g:int = 9
+
+class A(object):
+  a:int = 1
+  f:int = 2
+      
+class B(A):
+  b:int = 3
+
+class D(object):
+  d:int = 4
+      
+class E(D):
+  e:int = 5
+
+class Pet(B):
+	y : int = 6
+	def speak(self : Pet):
+		print(0)
+
+class Cat(E):
+	x : int = 7
+	def speak(self : Cat):
+		print(1)
+
+class Kitten(Pet, Cat, F):
+	z : int = 8
+
+kitten : Kitten = None
+kitten = Kitten()
+print(kitten.a)
+print(kitten.f)
+print(kitten.b)
+print(kitten.d)
+print(kitten.e)
+print(kitten.y)
+print(kitten.x)
+print(kitten.z)
+print(kitten.g)
+`, ["1","2","3","4","5","6","7","8", "9"]);
+assertPrint("comprehension-class-field-lookup", `
+class Range(object):
+	min:int=0
+	max:int=0
+	curr:int=0
+	def __init__(self:Range):
+			pass
+	def new(self:Range,min:int,max:int)->Range:
+			self.max=max
+			self.min=min
+			self.curr=min
+			return self
+	def hasNext(self:Range)->bool:
+			return self.curr<self.max
+	def next(self:Range)->int:
+			c:int=0
+			c=self.curr
+			self.curr=self.curr+1
+			return c
+
+class A(object):
+    x:int=1
+class B(A):
+    y:int=2
+class C(B):
+    z:int=3
+
+a:Range=None
+i: int = 0
+c:C=None
+c=C()
+a=Range().new(0,2)
+[c.y for i in a]
+`, ['2','2']);
+assertPrint("list-field-with-inheritance", `
+class A(object):
+  a : int = 1
+  def __init__(self: A):
+    pass
+
+class B(A):
+		b : int = 2
+		def __init__(self: B):
+			pass
+
+l : B = None 
+m : B = None
+class_list : [B] = None
+l = B()
+m = B()
+class_list = [l, m]
+print(class_list[0].a)
+print(class_list[1].b)
+`, ['1','2']);
 });
 
