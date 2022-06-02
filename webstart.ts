@@ -1,3 +1,4 @@
+import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
 import CodeMirror from 'codemirror';
 import "codemirror/addon/edit/closebrackets";
 import "codemirror/addon/hint/show-hint";
@@ -8,14 +9,9 @@ import { Annotation, Type, Value } from './ast';
 import { autocompleteHint } from "./autocomplete";
 import { default_functions, default_keywords } from "./const";
 import { importObjectErrors } from './errors';
-import { OptimizationSwitch } from './optimizations/optimization_common';
 import { BasicREPL } from './repl';
 import "./style.scss";
 import { TypeCheckError } from './type-check';
-import { bigMath, binop_bignum, binop_comp_bignum, BOOL, builtin_bignum, load_bignum, NONE, NUM } from './utils';
-
-
-
 
 function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : string {
   switch(typ.tag) {
@@ -153,7 +149,7 @@ function webStart() {
 
     // https://github.com/mdn/webassembly-examples/issues/5
     var codeContent: string | ArrayBuffer
-    let optmizationSwtich: OptimizationSwitch = "4";
+    let optmizationSwtich: "0"|"1"|"2" = "2";
     const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
     const memoryModule = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()
@@ -238,6 +234,7 @@ function webStart() {
         print_num: (arg: number) => print(NUM, arg, loader),
         print_bool: (arg: number) => print(BOOL, arg, null),
         print_none: (arg: number) => print(NONE, arg, null),
+        destructure_check: (hashNext: boolean) => des_check(hashNext),
         abs:  (arg: number) => builtin_bignum([arg], bigMath.abs, memoryModule.instance.exports),
         min: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.min, memoryModule.instance.exports),
         max: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.max, memoryModule.instance.exports),
@@ -253,6 +250,7 @@ function webStart() {
         $gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, memoryModule.instance.exports),
         $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
         $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
+        $bignum_to_i32: (arg: number) => bignum_to_i32(arg, loader), 
       },
       errors: importObjectErrors,
       libmemory: memoryModule.instance.exports,
