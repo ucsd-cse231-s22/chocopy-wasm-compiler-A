@@ -744,12 +744,8 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       var fields = [...classdata[0].entries()];
       var superClass = [...classdata[2].keys()];
 
-      while(superClass.length !== 0 && superClass[0] !== "object") {
-        const superClassFields = [...env.classes.get(superClass[0])[0].entries()]
-        superClass = [...env.classes.get(superClass[0])[2].keys()]
-        fields = [...superClassFields, ...fields]
-      }
-      
+      var superClassFields = getSuperclassFields(e.name, env);
+      fields = [...superClassFields, ...fields]
       const assigns : IR.Stmt<Annotation>[] = fields.map(f => {
 
         const [_, [index, value]] = f;
@@ -963,21 +959,68 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
 }
 
 function getClassFieldOffet(className: string, fieldName: string, env: GlobalEnv) : number {
-  while (className !== "object") {
-    const classdata = env.classes.get(className);
-    if (classdata[0].has(fieldName)) {
-      return classdata[0].get(fieldName)[0] + 1;  // + 1 to store class method index in vtable
+  var classfields = Array.from(env.classes.get(className)[0].entries());
+  var superfields = getSuperclassFields(className, env);
+  var fieldOffset = 0;
+  for(let f of [...classfields, ...superfields]){
+    const [name, [offset, _]] = f;
+    if (name === fieldName) {
+      fieldOffset = offset;
+      break;
     }
-    className = [...classdata[2].keys()][0];
   }
+  return fieldOffset + 1; // + 1 to store class method index in vtable
 }
 
 // fetches class name of a method, including searching for method in super classes
 function getMethodClassName(className: string, methodName: string, env: GlobalEnv) : string {
-  if (env.classes.get(className)[1].has(methodName)) {
+  if (className === "object") {
+    return ""
+  } else if (env.classes.get(className)[1].has(methodName)) {
     return className
   } else {
-    return getMethodClassName([...env.classes.get(className)[2].keys()][0], methodName, env);
+    var superclasses = [...env.classes.get(className)[2].keys()]
+    var foundclass = "";
+    for (var sc of superclasses) {
+      foundclass = getMethodClassName(sc, methodName, env);
+      if (foundclass !== "")
+        break
+    }
+    return foundclass
+  }
+}
+
+export function getSuperclassFields(className: string, env: GlobalEnv) : Array<[string, [number, IR.Value<Annotation>]]> {
+  var offset = 0;
+  var fields : Array<[string, [number, IR.Value<Annotation>]]> = [];
+  if (className === "object")
+    return fields
+  else {
+    const superclasses = [...env.classes.get(className)[2].keys()];
+    var maxFieldOffset = 0; // records the max field offset of the previous super class. Need to add this offset to next super class's fields
+    superclasses.forEach((cls, index) => {
+      var superClassFields = getSuperclassFields(cls, env);
+      // push super class fields offset
+      const newSuperClassFields : Array<[string, [number, IR.Value<Annotation>]]> = superClassFields.map(field => {
+        const [key, [fieldOffset, value]] = field;
+        const newOffset = fieldOffset + maxFieldOffset*Number(index>0);
+        return [key, [newOffset, value]]
+      })
+      fields.push(...newSuperClassFields);
+      if (cls !== "object") {
+            var classFields = Array.from(env.classes.get(cls)[0].entries());
+            // push current class fields offset
+            const newClassFields : Array<[string, [number, IR.Value<Annotation>]]> = classFields.map(field => {
+              const [key, [fieldOffset, value]] = field;
+              const newOffset = fieldOffset + maxFieldOffset*Number(index>0);
+              maxFieldOffset = Math.max(newOffset) + 1;
+              return [key, [newOffset, value]]
+            })
+            offset += maxFieldOffset + 1;
+            fields.push(...newClassFields);
+          }
+    })
+    return fields;
   }
 }
 

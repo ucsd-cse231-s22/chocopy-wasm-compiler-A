@@ -316,9 +316,316 @@ We were able to pass all the test cases we had committed to in week 7. Below we 
 
   5. Added code generation for generating table in WAT.
 
+	
+</br>
 
+# Milestone 2
+
+</br>
+
+## Features:
+
+### Integration with other features:
+
+ - Class fields of type lists, sets, strings, etc.
+ - Inheritance with generics
+ - Closures/first class/anonymous functions
+
+</br>
+
+### Multiple Inheritance:
+Along with dynamic dispatch, we finally leverage the Map<string, Array<string>> superclasses that we have defined in our ast.ts and ir.ts to support multiple inheritance. The v-table structure for it is similar to milestone 1 with added pointers to the multiple superclasses, keeping the overall skeleton of the feature to be the same.
+
+</br>
+
+# Updates Week 9 - 10: Integration with other features
+
+### Closure Merge:
+
+  1. Both inheritance (our) and closure group had added the `classIndices` and `Vtable` in the global environment. The definition of the variables were slightly different according to the requirements of each group. First, closures had added the information about number of parameters for each method in the vtable. Second, we added both start and end index of a class methods in the vtable in `classIndices` but closures group only had the start index. We merged these definitions to create the below:
+
+	vtable: Array<[string, number]> // stores method name and number of parameters in the method
+	classIndices: Map<string, [number, number]> // stores the start and end index of a class methods in the vtable
+	
+  2. Merged the definition of call indirect in the IR and compiler.ts.
+
+
+  3. Updated the working of our code and closure code so that they work with the new definitions of classIndices and Vtable
+
+
+  4. Closures group did not have closure or lambda constructors in the vtable, this conflicted with our design of class constructors which were called using the vtable and also made it difficult to handle constructors separately. We updated the code to store closure and lambda constructor in the vtable.
+
+
+  5. Updated runner.ts `augmentEnv` method to accomodate changes for adding method and field offsets for each class as well as adding closure/lambda as classes in the environment. It would be necesaary to put the method and field information of the closure/lambda in the environment at this point to make sure free and nonlocal variables work when added.
+
+
+### Generics Merge:
+
+  1. Changed the definition of super class data in order to support Generics. Generics group needed information about the type of generic superclass used, so instead of an array with just the superclass names, we agreed on storing this type information as a map with entries containing super class names as key and an array of storing type information as value. The Class definition in the ast is now:
+    
+	export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, typeParams: Array<string>, super: Map<string, Array<string>> }
+
+
+  2. Updated parser to store generic member expression for all valid superclasses (whose names are not 'Generic') while parsing class arguments.
+
+
+  3. Updated type checker environment to store both typeParams and super class information. Also, accomodated the ast change.
+
+
+  4. Updated monomorphizer to pass on the super class metadata along when the new classes are created.
+
+
+  5. As the order of class definitions is not maintained after monomorphizing the program, we accomodated super class checks and references in lower.ts and runner.ts to be done in a loop until super class data is found, unlike comparing it directly to super class references created after typechecking.
+
+  6. Changed webstart.ts to pick the first Map when the 'print_class' method is invoked.
+
+
+### For loops merge:
+
+  1. Changed type checker to look for 'hasnext', 'next' and 'reset' methods in superclass along with the check in current class. This is important for use cases of creating a custom iterator/ inheriting from the Range class.
+
+
+
+</br>
+
+## Test Cases:
+
+### 1. Dynamic dispatch with function (Passes):
+
+    class Pet(object):
+        def speak(self):
+            print(0)
+    
+    class Cat(Pet):
+        def speak(self: Cat):
+            print(1)
+
+    class Dog(Pet):
+        def speak(self: Dog):
+            print(2)
+
+
+    def speak(pet : Pet):
+        pet.speak()
+
+    cat : Cat = None
+    cat = Cat()
+    speak(cat)  # prints 1
+    dog : Dog = None
+    dog = Dog()
+    speak(dog)  # prints 2
+
+
+### 2. Dynamic dispatch with function (Throws Error):
+
+    class Pet(object):
+        def speak(self):
+            print(0)
+    
+    class Cat(Pet):
+        def speak(self: Cat):
+            print(1)
+
+    class Dog(object):
+        def speak(self: Dog):
+            print(2)
+
+
+    def speak(pet : Pet):
+        pet.speak()
+
+    cat : Cat = None
+    cat = Cat()
+    speak(cat)  # prints 1
+    dog : Dog = None
+    dog = Dog()
+    speak(dog)  # TypeError: Object of class 'Dog' cannot be assigned to class 'Pet'
+
+### 3. Multiple Inheritance (Passes):
+
+    class Pet(object):
+        def speak(self):
+            print(0)
+    
+    class Cat(object):
+        def speak(self):
+            print(1)
+
+    class Kitten(Pet, Cat):
+        pass
+
+    kitten : Kitten = None
+    kitten = Kitten()
+    kitten.speak()  # prints 0
+    
+### 4. Multiple Inheritance Field Access (Passes):
+
+	class Pet(object):
+	    y : int = 1
+	    def speak(self):
+		print(0)
+
+	class Cat(object):
+	    x : int = 0
+	    def speak(self):
+		print(1)
+
+	class Kitten(Pet, Cat):
+	    pass
+
+	kitten : Kitten = None
+	kitten = Kitten()
+	kitten.speak()   # prints 0
+	print(kitten.y)  # prints 1
+	print(kitten.x)  # prints 0
+	
+### 5. Inheritance with sets
+
+	class A(object): 
+	    a : int = 1 
+	    s1:set = set()
+	    def __init__(self: A):
+		s1 = {3,5,7}
+	    def get(self: A) -> int: 
+		return self.s1 
+
+	class B(A): 
+	    c : int = 3 
+
+	x : B = None 
+	x = B() 
+	print(x.s1) # prints {3,5,7}
+	x.s1.add(8)
+	print(x.s1) # prints {3,5,8}
+	
+### 6. Inheritance with lists (Passes)
+
+	class A(object): 
+	    a : int = 1 
+	    itemsa: [int] = None
+	    itemsa = [0, 1, 2]
+	    def get(self: A) -> int: 
+		return self.a 
+	class B(A): 
+	    itemsb: [int] = None
+	    itemsb = [3, 4, 5]
+	    c : int = 3 
+
+	x : B = None 
+	x = B() 
+	print(x.itemsa) # prints [0, 1, 2]
+	print(x.itemsb) # prints [3, 4, 5]
+	print(x.c) # prints 3
+	print(x.a) # prints 1
+	
+### 7. Inheritance with Strings (Passes)
+
+	class A(object): 
+	    a : int = 1 
+	    d:  str = “hello A”
+	    def get(self: A) -> int: 
+		return self.a 
+	class B(A): 
+	    b : str = “hello B”
+	    c : int = 3 
+
+	x : B = None 
+	x = B() 
+	print(x.b) # prints hello B
+	print(x.d) # prints hello A
+	print(x.d[0]) # prints h
+	print(x.c) # prints 3
+	print(x.a) # prints 1
+	
+
+### 8. Testing Inheritance with For Loops and Continue (Passes)  
+    
+	class Range():
+	  current : int = 0
+	  min : int = 0
+	  max : int = 0
+	  def new(self:Range, min:int, max:int)->Range:
+	    self.min = min
+	    self.current = min
+	    self.max = max
+	    return self
+	  def next(self:Range)->int:
+	    c : int = 0
+	    c = self.current
+	    self.current = self.current + 1
+	    return c
+	  def hasnext(self:Range)->bool:
+	    return self.current < self.max
+
+	class NumberIterator(Range):
+	   len: int = 0
+	   
+	   def new(self:NumberIterator, len: int)->NumberIterator:
+	    self.len = len
+	    self.min = 0
+	    self.current = 0
+	    self.max = len
+	    return self
+	   
+
+
+	cls:NumberIterator = None
+	i:int = 0
+	cls = NumberIterator().new(8)
+
+	for i in cls:
+	   print(i)
+	   continue 
+   	   print(i)
+
+### 9. Testing Inheritance with Fancy Calling (Passes)
+	class A():
+	    x = 0
+	    def __init__(self : A, x: int  = 5):
+		self.x = x
+		
+	class B(A):
+	    y = 0
+	    def __init__(self : B, x: int = 8, y: int = 2):
+	        self.y = y
+		self.x = x
+	    
+	a1: A = None
+	a1 = A()
+	a2: B = None
+	a2 = B()
+	print(a1.x) // Should print 5
+	print(a2.x) // SHould print 8
+	print(a2.y) // Should print 2
+	
+### 10. Testing Inheritance with Generics (Passes)  
+	
+    L = TypeVar('L')
+    R = TypeVar('R')
+    
+    class A():
+    	a: int = 5
+	def __init__(self):
+	    pass
+	    
+    class Pair(Generic[L, R], A):
+	left: L = __ZERO__
+	right: R = __ZERO__
+    
+    p1 : Pair[int, int] = None
+    p1 = Pair()
+    p1.left = 10
+    p1.right = 20
+    
+    print(p1.left) // Should print 10
+    print(p1.right) // Should print 20
+    print(p1.a) // Should print 5
+    
+    
 
 # Update Week 9 - 10
+
+### Integration with other features:
 
 ### Closure Merge:
 
@@ -354,4 +661,31 @@ We were able to pass all the test cases we had committed to in week 7. Below we 
   4. Updated type checker environment to store both typeParams and super class information.
 
 
+### Multiple Inheritance:
+
+
+#### Things that work:
+
+   1. **Constructor**: Constructing objects of a class that inherits from multiple classes works. This involved dynamically calculating the offsets for the superclass fields in lower.ts. We first traverse the multiple superclasses from left to right and recursively add the fields for each of the superclasses to lay out the fields in the memory correctly.
+
+        For example: Let class A have a1,a2 fields, class B have b1,b2 fields, and class C inherits from A & B (in this order) and has c1, c2 fields. Then memory would look like this: 
+     
+     		Memory Layout -> vtable_offset | a1 | a2 | b1 | b2 | c1 | c2 |
+
+       If class C inherits in order B & A then memory would look like this: 
+  
+     		Memory Layout -> vtable_offset | b1 | b2 | a1 | a2 | c1 | c2 |
+
+2. **Field Lookup**: for the case of field lookup in multiple inheritance we need to dynamically calculate the correct offset of the given field to access it at the correct location in memory. We looked up the documentation of python to see how python searches and resolves field mapping in case of multiple inheritance. We follow the same strategy of searching i.e we check the derived class first, and if the field is not found in the derived class we then search the superclasses recursively in depth-first - left to right order. 
+
+
+3. **Parsing, IR, and Type Checking**: our code can parse multiple classes as arguments in a class definition and represent them in the AST and IR. We are also able to type check each of the superclasses (whether superclass exist) in case of multiple inheritance. 
+
+
+#### Things that don't work:
+
+   1. **Diamond Problem**: this refers to an ambiguity that arises when two classes B and C inherit from A, and class D inherits from both B and C. If there is a method in A that B and C have overridden, and D does not override it, then which version of the method does D inherit: that of B, or that of C? We looked up the specific ways to resolve this but couldn't accommodate these changes due to time constraints. 
+
+
 	
+

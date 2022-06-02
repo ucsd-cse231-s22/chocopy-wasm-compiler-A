@@ -75,9 +75,13 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
       const superclasses = Array.from( cls.super.keys() )
       if(!superclasses.filter(scls => scls !== 'object').every(scls => newClasses.has(scls))) { return; }
       if (superclasses[0] !== "object") { 
-        newClasses.get(superclasses[0])[0].forEach((value, key) => {
-          offset = Math.max(value[0]) + 1
-        });
+        superclasses.forEach(cls => {
+          var superClassOffset = 0;
+          newClasses.get(cls)[0].forEach((value, key) => {
+            superClassOffset = Math.max(value[0]) + 1
+          });
+          offset = superClassOffset + offset;
+        })
       }
 
       var superClassMethodsCount = 0;
