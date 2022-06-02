@@ -109,3 +109,4 @@ function optimizeProgramBody(program: Program<any>, optimizationSwitch: Optimiza
 
     return program;
 }
+

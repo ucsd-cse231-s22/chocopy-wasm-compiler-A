@@ -1,5 +1,5 @@
 import { sensitiveHeaders } from "http2";
-import { Parameter } from "../ast";
+import { BinOp, Parameter } from "../ast";
 import { emptyEnv } from "../compiler";
 import { BasicBlock, Expr, FunDef, Program, Stmt, VarInit } from "../ir";
 import { Env, generateEnvironmentFunctionsForLiveness, generateEnvironmentProgramForLiveness } from "./optimization_common";
@@ -218,7 +218,19 @@ function optimizeBlock(block: BasicBlock<any>, env: liveEnv): [BasicBlock<any>, 
             else {
                 newStmts.push(s);
             }
-        } else {
+        }
+        else if (s.tag === "expr") {
+            if(!["binop", "call", "call_indirect", "alloc", "builtin1", "load"].includes(s.expr.tag)){
+                blockOptimized = true
+            }
+            else if(s.expr.tag === "binop" && [BinOp.IDiv, BinOp.Mod].includes(s.expr.op)){
+                blockOptimized = true
+            }
+            else{
+                newStmts.push(s);
+            }
+        }
+        else {
             newStmts.push(s);
         }
         env.updateStmtLiveVariables(s, env);

@@ -6,17 +6,13 @@ import { addLibs } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-  def f(x: int) -> int:
-    1+1
-    1+1
-    return x + 10
-  def q(x: int) -> int:
-    return x - 10
-  def z() -> bool:
-    return True
-l : int = 0
-l = f(10) if z() else q(10)
-print(l)`
+  def printRetNone(x: int):
+    print(x)
+  i: int = 0
+  while i<11:
+     printRetNone(i) if i % 2 == 0 else None
+     i=i+1
+  `
   // var source = `
   // class C(object):
   //   def __init__(self:C, other:D):

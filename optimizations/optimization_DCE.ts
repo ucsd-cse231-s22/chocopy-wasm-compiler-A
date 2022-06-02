@@ -1,5 +1,7 @@
+import { stringify } from "querystring";
 import { BasicBlock, FunDef, Program, Stmt } from "../ir";
 import { computePredecessorSuccessor } from "./optimization_common";
+import { checkStmtEquality } from "./optimization_utils";
 
 const varDefEnvTag: string = "$$VD$$";
 
@@ -71,7 +73,11 @@ function eliminateBlockUnreachableCode(block: BasicBlock<any>,
 
 function getReachableBlocks(body: BasicBlock<any>[],
     blockMapping: Map<string, BasicBlock<any>>): BasicBlock<any>[] {
+    // body.forEach(b => {
+    //     console.log("B initial -> ", b.label);
+    // });
     const reachableBlocks: BasicBlock<any>[] = [];
+    const reachableBlocksLabels: String[] = [];
     const endBlock = body[body.length - 1];
     var blockQueue: BasicBlock<any>[] = [blockMapping.get(varDefEnvTag)];
     var visitedBlocks: Map<string, boolean> = new Map();
@@ -80,30 +86,37 @@ function getReachableBlocks(body: BasicBlock<any>[],
         const currBlock = blockQueue[0];
         blockQueue = blockQueue.slice(1, blockQueue.length);
 
-        // if(currBlock.label===endBlock.label)
-        //     continue;
-        visitedBlocks.set(currBlock.label, true)
         const lastStmt = currBlock.stmts[currBlock.stmts.length - 1];
         if (lastStmt && lastStmt.tag === "ifjmp") {
             if (!visitedBlocks.has(lastStmt.thn)) {
-                reachableBlocks.push(blockMapping.get(lastStmt.thn));
+                // reachableBlocks.push(blockMapping.get(lastStmt.thn));
+                reachableBlocksLabels.push(lastStmt.thn);
                 blockQueue.push(blockMapping.get(lastStmt.thn));
+                visitedBlocks.set(lastStmt.thn, true);
+                // console.log("Final B -> ", reachableBlocksLabels[reachableBlocksLabels.length - 1]);
             }
             if (!visitedBlocks.has(lastStmt.els)) {
-                reachableBlocks.push(blockMapping.get(lastStmt.els));
+                // reachableBlocks.push(blockMapping.get(lastStmt.els));
+                reachableBlocksLabels.push(lastStmt.els);
                 blockQueue.push(blockMapping.get(lastStmt.els));
+                visitedBlocks.set(lastStmt.els, true);
+                // console.log("Final B -> ", reachableBlocksLabels[reachableBlocksLabels.length - 1]);
             }
         }
         else if (lastStmt && lastStmt.tag === "jmp") {
             if (!visitedBlocks.has(lastStmt.lbl)) {
-                reachableBlocks.push(blockMapping.get(lastStmt.lbl));
+                // reachableBlocks.push(blockMapping.get(lastStmt.lbl));
+                reachableBlocksLabels.push(lastStmt.lbl);
                 blockQueue.push(blockMapping.get(lastStmt.lbl));
+                visitedBlocks.set(lastStmt.lbl, true);
+                // console.log("Final B -> ", reachableBlocksLabels[reachableBlocksLabels.length - 1]);
             }
         }
-        // else if(lastStmt.tag!=="return"){
-        //     throw new Error("Compiler Error: Last stmt is not a jump stmt");
-        // }
     }
+    body.forEach(b => {
+        if (!b) console.log("b is undefined");
+        if (reachableBlocksLabels.includes(b.label)) reachableBlocks.push(b);
+    })
     return reachableBlocks;
 }
 
@@ -155,7 +168,25 @@ function checkIfBodyChanged(preOptimizedBody: BasicBlock<any>[], optimizedBody: 
 
 }
 
-export function eliminateDeadCodeProgram(program: Program<any>): [Program<any>, boolean] {
+function checkIfBodyDeepChanged(optimizedBody: BasicBlock<any>[], blockMapping: Map<string, BasicBlock<any>>): [Array<[Stmt<any>, Stmt<any>]>, boolean] {
+    var bodyChanged: boolean = false
+    // var changedStmt : Map<string, Stmt<any>[]> = new Map();
+    var changedStmts: Array<[Stmt<any>, Stmt<any>]> = [];
+
+    optimizedBody.forEach(block => {
+        var preBlock = blockMapping.get(block.label);
+        block.stmts.forEach((stmt, index) => {
+            var stmtChanged : boolean = checkStmtEquality(stmt, preBlock.stmts[index]);
+            if(!stmtChanged)
+                changedStmts.push([stmt, preBlock.stmts[index]]);
+            bodyChanged = bodyChanged || !stmtChanged;
+        })
+    })
+
+    return [changedStmts, bodyChanged];
+}
+
+function getInfo(program: Program<any>): [Map<string, string[]>, Map<string, string[]>, Map<string, BasicBlock<any>>]{
     var [preds, succs, blockMapping]: [Map<string, string[]>, Map<string, string[]>, Map<string, BasicBlock<any>>] = computePredecessorSuccessor(program.body);
     preds.set(program.body[0].label, [varDefEnvTag]);
     blockMapping.set(varDefEnvTag, {
@@ -166,10 +197,18 @@ export function eliminateDeadCodeProgram(program: Program<any>): [Program<any>, 
         }]
     });
     succs.set(varDefEnvTag, [program.body[0].label]);
+    return [preds, succs, blockMapping];
+}
+
+export function eliminateDeadCodeProgram(program: Program<any>): [Program<any>, boolean] {
+    var [preds, succs, blockMapping] = getInfo(program);
+    var preBlockMapping = new Map<string, BasicBlock<any>>(blockMapping);
 
     // program = eliminateUselessVariables(program);
-    const preOptimizedBody = program.body;
     program.body = eliminateUnreachableCode(program.body, preds, succs, blockMapping);
 
-    return [program, checkIfBodyChanged(preOptimizedBody, program.body)];
+    var [_changedStmts, bodyChanged] = checkIfBodyDeepChanged(program.body, preBlockMapping);
+
+    // return [program, checkIfBodyChanged(preOptimizedBody, program.body)];
+    return [program, bodyChanged];
 }
