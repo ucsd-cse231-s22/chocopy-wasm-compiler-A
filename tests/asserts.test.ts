@@ -4,6 +4,7 @@ import chaiExclude from 'chai-exclude';
 import "mocha";
 import { Annotation, Value } from "../ast";
 import { Program } from '../ir';
+import { OptimizationSwitch } from '../optimizations/optimization_common';
 import { BasicREPL } from "../repl";
 import { run, typeCheck } from "./helpers.test";
 import { addLibs, importObject } from "./import-object.test";
@@ -24,12 +25,12 @@ before(function () {
 export function assert(name: string, source: string, expected: Value<Annotation>) {
   it(name, async () => {
     const repl = new BasicREPL(importObject);
-    const result = await repl.run(source, "2");
+    const result = await repl.run(source, "4");
     chai.expect(result).to.deep.eq(expected);
   });
 }
 
-export async function assertOptimizeIR(name: string, source: string, expectedIR: Program<Annotation>, optimizationSwitch: "0" | "1" | "2") {
+export async function assertOptimizeIR(name: string, source: string, expectedIR: Program<Annotation>, optimizationSwitch: OptimizationSwitch) {
   it(name, async () => {
     const repl = new BasicREPL(await addLibs());
     const [ _, optimizedIr ] = repl.optimize(source, optimizationSwitch);
@@ -103,7 +104,8 @@ export async function assertOptimizeDCE(name: string, source: string, expected: 
     if (!expected.isIrDifferent)
       chai.expect(preDCEOptimizedIrStmtCount).to.deep.eq(DCEOptimizedIrStmtCount);
     else
-      chai.expect(preDCEOptimizedIrStmtCount).greaterThan(DCEOptimizedIrStmtCount);
+      // chai.expect(preDCEOptimizedIrStmtCount).greaterThan(DCEOptimizedIrStmtCount);
+      chai.expect(preDCEOptimizedIrStmtCount).greaterThanOrEqual(DCEOptimizedIrStmtCount);
     // throw new Error(`
     // ${JSON.stringify(preDCEOptimizedIrStmtCount)},
     // ${JSON.stringify(DCEOptimizedIrStmtCount)}`);
@@ -115,9 +117,10 @@ export async function assertOptimizeDCE(name: string, source: string, expected: 
   });
 }
 
-export async function assertOptimize(name: string, source: string, expected: { print: Array<string>, isIrDifferent: boolean }, optimizationSwitch: "0" | "1" | "2") {
+export async function assertOptimize(name: string, source: string, expected: { print: Array<string>, isIrDifferent: boolean }, optimizationSwitch: OptimizationSwitch) {
   it(name, async () => {
     const repl = new BasicREPL(await addLibs());
+    
     const [ preOptimizedIr, optimizedIr ] = repl.optimize(source, optimizationSwitch);
     
     if (!expected.isIrDifferent)
@@ -135,7 +138,7 @@ export function asserts(name: string, pairs: Array<[string, Value<Annotation>]>)
 
   it(name, async () => {
     for (let i = 0; i < pairs.length; i++) {
-      const result = await repl.run(pairs[i][0], "2");
+      const result = await repl.run(pairs[i][0], "4");
       chai.expect(result).to.deep.eq(pairs[i][1]);
     }
   });

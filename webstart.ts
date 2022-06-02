@@ -1,9 +1,3 @@
-// import {BasicREPL} from './repl';
-// import { Type, Value, Annotation, Class } from './ast';
-// import { defaultTypeEnv, TypeCheckError } from './type-check';
-import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
-// import { importObjectErrors } from './errors';
-
 import CodeMirror from 'codemirror';
 import "codemirror/addon/edit/closebrackets";
 import "codemirror/addon/hint/show-hint";
@@ -14,13 +8,11 @@ import { Annotation, Type, Value } from './ast';
 import { autocompleteHint } from "./autocomplete";
 import { default_functions, default_keywords } from "./const";
 import { importObjectErrors } from './errors';
+import { OptimizationSwitch } from './optimizations/optimization_common';
 import { BasicREPL } from './repl';
 import "./style.scss";
 import { TypeCheckError } from './type-check';
-// import { bigMath, binop_bignum, binop_comp_bignum, BOOL, builtin_bignum, load_bignum, NONE, NUM } from './utils';
-
-
-
+import { bigMath, bignum_to_i32, binop_bignum, binop_comp_bignum, BOOL, builtin_bignum, des_check, load_bignum, NONE, NUM } from './utils';
 
 function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : string {
   switch(typ.tag) {
@@ -158,7 +150,7 @@ function webStart() {
 
     // https://github.com/mdn/webassembly-examples/issues/5
     var codeContent: string | ArrayBuffer
-    let optmizationSwtich: "0"|"1"|"2" = "2";
+    let optmizationSwtich: OptimizationSwitch = "4";
     const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
     const memoryModule = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()
