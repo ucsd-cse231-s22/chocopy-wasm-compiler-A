@@ -15,8 +15,8 @@ export async function run(source: string) {
 export const NUM : Type = {tag: "number"}
 export const BOOL : Type = {tag: "bool"}
 export const NONE : Type = {tag: "none"}
-export function CLASS(name : string) : Type { 
-  return {tag: "class", name}
+export function CLASS(name : string, params: Array<Type> = []) : Type { 
+  return {tag: "class", name, params}
 };
 export function CALLABLE(params: Array<Type>, ret: Type): Type {
   return { tag: "callable", params, ret };

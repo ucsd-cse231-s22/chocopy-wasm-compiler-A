@@ -1,7 +1,7 @@
 import { parser } from "@lezer/python";
 import { TreeCursor } from "@lezer/common";
-import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, Annotation, Location, NonlocalVarInit } from "./ast";
-import { NUM, BOOL, NONE, CLASS, CALLABLE } from "./utils";
+import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, Annotation, Location, NonlocalVarInit, TypeVar, DestructuringAssignment, AssignVar } from "./ast";
+import { NUM, BOOL, NONE, CLASS, CALLABLE, LIST } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
 export class SyntaxError extends Error {
@@ -95,19 +95,27 @@ export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv):
     case "Number":
       return {
         tag: "num",
-        value: Number(s.substring(c.from, c.to))
+        value: BigInt(s.substring(c.from, c.to))
       }
     case "Boolean":
       return {
         tag: "bool",
-        value: s.substring(c.from, c.to) === "True"
-      }
+        value: s.substring(c.from, c.to) === "True",
+      };
     case "None":
       return {
         tag: "none"
       }
+    case "VariableName":
+      let vname = s.substring(c.from, c.to).trim();
+      if (vname !== "__ZERO__") {
+        throw new Error("ParseError: Not a literal");
+      }
+      return { 
+        tag: "zero" 
+      };
     default:
-      throw new Error("Not literal")
+      throw new Error("Not literal");
   }
 }
 
@@ -125,6 +133,33 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       return {
         tag: "id",
         name: s.substring(c.from, c.to)
+      }
+    case "ArrayComprehensionExpression":
+      c.firstChild(); // '['
+      c.nextSibling();
+      const left = traverseExpr(c, s, env); // left
+      c.nextSibling(); // for
+      c.nextSibling();
+      const elem = traverseExpr(c, s, env); // elem
+      c.nextSibling(); // in
+      c.nextSibling();
+      // conditions for parsing iterable to be added --!!
+      const iterable = traverseExpr(c, s, env); // iterable
+      c.nextSibling();
+      var cond;
+      if (s.substring(c.from, c.to) !== ']'){
+        if (s.substring(c.from, c.to) !== 'if')
+          throw new Error("PARSE TYPE ERROR: only if condition allowed in comprehensions");
+        c.nextSibling();
+        cond = traverseExpr(c, s, env); // cond which evaluates to a binary expr
+      }
+      c.parent();
+      return {
+        tag: "list-comp",
+        left,
+        elem,
+        iterable,
+        cond
       }
     case "CallExpression":
       c.firstChild();
@@ -176,11 +211,11 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
         var expr: Expr<Annotation>;
-        if (callName === "print" || callName === "abs") {
+        if (callName === "print" || callName === "abs" || callName === "len") {
           return {
             tag: "builtin1",
             name: callName,
-            arg: args[0]
+            arg: args[0],
           };
         } else if (callName === "max" || callName === "min" || callName === "pow") {
           return {
@@ -213,7 +248,7 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
           break;
         case "%":
           op = BinOp.Mod;
-          break
+          break;
         case "==":
           op = BinOp.Eq;
           break;
@@ -242,7 +277,14 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
           op = BinOp.Or;
           break;
         default:
-          throw new Error("Could not parse op at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to))
+          throw new Error(
+            "Could not parse op at " +
+              c.from +
+              " " +
+              c.to +
+              ": " +
+              s.substring(c.from, c.to)
+          );
       }
       c.nextSibling(); // go to rhs
       const rhsExpr = traverseExpr(c, s, env);
@@ -251,8 +293,8 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         tag: "binop",
         op: op,
         left: lhsExpr,
-        right: rhsExpr
-      }
+        right: rhsExpr,
+      };
     case "ParenthesizedExpression":
       c.firstChild(); // Focus on (
       c.nextSibling(); // Focus on inside
@@ -271,7 +313,14 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
           op = UniOp.Not;
           break;
         default:
-          throw new Error("Could not parse op at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to))
+          throw new Error(
+            "Could not parse op at " +
+              c.from +
+              " " +
+              c.to +
+              ": " +
+              s.substring(c.from, c.to)
+          );
       }
       c.nextSibling(); // go to expr
       var expr = traverseExpr(c, s, env);
@@ -279,39 +328,148 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       return {
         tag: "uniop",
         op: op,
-        expr: expr
-      }
+        expr: expr,
+      };
     case "MemberExpression":
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s, env);
-      c.nextSibling(); // Focus on .
-      c.nextSibling(); // Focus on property
-      var propName = s.substring(c.from, c.to);
-      c.parent();
-      return {
-        tag: "lookup",
-        obj: objExpr,
-        field: propName
+      c.nextSibling(); // Focus on . or [
+      if (s.substring(c.from, c.to) == "[") {
+        // Start with :
+        c.nextSibling(); // Focus on start index or : or index
+        if (s.substring(c.from, c.to) == ":") {
+          c.nextSibling(); // Focus on end index or ]
+          if (s.substring(c.from, c.to) == "]") {
+            c.parent();
+            return { tag: "slice", obj: objExpr };
+          }
+          var endIndex = traverseExpr(c, s, env);
+          c.parent();
+          return { tag: "slice", obj: objExpr, index_e: endIndex };
+        }
+
+        // Start index or index
+        var startIndex = traverseExpr(c, s, env);
+        c.nextSibling(); // Focus on : or ]
+        if (s.substring(c.from, c.to) == "]") {
+          c.parent();
+          return { tag: "index", obj: objExpr, index: startIndex };
+        }
+
+        // Start index and :
+        c.nextSibling(); // Focus on end index or ]
+        if (s.substring(c.from, c.to) == "]") {
+          c.parent();
+          return { tag: "slice", obj: objExpr, index_s: startIndex };
+        }
+        var endIndex = traverseExpr(c, s, env);
+        c.parent();
+        return {
+          tag: "slice",
+          obj: objExpr,
+          index_s: startIndex,
+          index_e: endIndex,
+        };
+      } else {
+        c.nextSibling(); // Focus on property
+        var propName = s.substring(c.from, c.to);
+        c.parent();
+        return {
+          tag: "lookup",
+          obj: objExpr,
+          field: propName,
+        };
       }
     case "self":
       return {
         tag: "id",
-        name: "self"
+        name: "self",
+      };
+
+    case "ArrayExpression":
+      const elements = traverseArray(c, s, env);
+      // if there are multiple brackets like [1,a][x], treat first section as array construction and second as index
+      return {
+        tag: "construct-list",
+        items: elements,
+      };
+
+    case "ArrayExpression": // a, b, c = [1, 2, 3]
+      let arrayElements: Expr<Annotation>[] = [];
+      c.firstChild();
+      c.nextSibling();
+      while (s.substring(c.from, c.to).trim() !== "]") {
+        arrayElements.push(traverseExpr(c, s, env));
+        c.nextSibling();
+        c.nextSibling();
+      }
+      c.parent();
+      return {
+        tag: "array-expr",
+        elements: arrayElements,
+      };
+    case "TupleExpression": // a, b, c = (1, 2, 3)
+      let tupleElements: Expr<Annotation>[] = [];
+      c.firstChild();
+      c.nextSibling();
+      while (s.substring(c.from, c.to).trim() !== ")") {
+        tupleElements.push(traverseExpr(c, s, env));
+        c.nextSibling();
+        c.nextSibling();
+      }
+      c.parent();
+      return {
+        tag: "array-expr",
+        elements: tupleElements,
       };
     case "ConditionalExpression":
       c.firstChild();
       var thn = traverseExpr(c, s, env);
       c.nextSibling();//if
       c.nextSibling();
-      var cond = traverseExpr(c, s, env);
+      var cond:any = traverseExpr(c, s, env);
       c.nextSibling();//else
       c.nextSibling();
       var els = traverseExpr(c, s, env);
       c.parent();
       return {tag:"if-expr", thn, cond, els};
+
     default:
-      throw new Error("Could not parse expr at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to));
+      throw new Error(
+        "Could not parse expr at " +
+          c.from +
+          " " +
+          c.to +
+          ": " +
+          s.substring(c.from, c.to)
+      );
   }
+}
+
+export function traverseTypeArray(c: TreeCursor, s: string, env: ParserEnv): Array<Type> {
+  c.firstChild(); // Focus on [
+  c.nextSibling(); // Focus on inside
+  var elements = [];
+  while (c.type.name !== "]") {
+    elements.push(traverseType(c, s, env));
+    c.nextSibling(); // Focuses on either "," or ")"
+    c.nextSibling(); // Focuses on a VariableName
+  }
+  c.parent();
+  return elements;
+}
+
+export function traverseArray(c: TreeCursor, s: string, env: ParserEnv): Array<Expr<Annotation>> {
+  c.firstChild(); // Focus on [
+  c.nextSibling(); // Focus on inside
+  var elements = [];
+  while (c.type.name !== "]") {
+    elements.push(traverseExpr(c, s, env));
+    c.nextSibling(); // Focuses on either "," or ")"
+    c.nextSibling(); // Focuses on a VariableName
+  }
+  c.parent();
+  return elements;
 }
 
 export function traverseArguments(c: TreeCursor, s: string, env: ParserEnv): Array<Expr<Annotation>> {
@@ -395,33 +553,52 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
       return { tag: "return", value };
     case "AssignStatement":
       c.firstChild(); // go to name
-      const target = traverseExpr(c, s, env);
+      if (c.type.name === "MemberExpression") {
+        c.nextSibling();
+        // @ts-ignore
+        if (c.type.name === "AssignOp") {
+          c.prevSibling();
+          let target = traverseExpr(c, s, env);
+          c.nextSibling(); // go to equals
+          c.nextSibling(); // go to value
+          let value = traverseExpr(c, s, env);
+          if (target.tag === "lookup") {
+            c.parent();
+            return {
+              tag: "field-assign",
+              obj: target.obj,
+              field: target.field,
+              value: value,
+            }
+          } else if (target.tag === "index") {
+            c.parent();
+            return {
+              tag: "index-assign",
+              obj: target.obj,
+              index: target.index,
+              value: value,
+            };
+          } else {
+            throw new Error("Unknown target while parsing assignment");
+          }
+        }
+        c.prevSibling();
+      }
+      const destruct = traverseDestructure(c, s, env);
       c.nextSibling(); // go to equals
       c.nextSibling(); // go to value
       var value = traverseExpr(c, s, env);
       c.parent();
-
-      if (target.tag === "lookup") {
-        return {
-          tag: "field-assign",
-          obj: target.obj,
-          field: target.field,
-          value: value
-        }
-      } else if (target.tag === "id") {
-        return {
-          tag: "assign",
-          name: target.name,
-          value: value
-        }
-      } else {
-        throw new Error("Unknown target while parsing assignment");
-      }
-    case "ExpressionStatement":
+      return {
+        tag: "assign",
+        destruct: destruct,
+        value: value,
+      };
+   case "ExpressionStatement":
       c.firstChild();
       const expr = traverseExpr(c, s, env);
       c.parent(); // pop going into stmt
-      return { tag: "expr", expr: expr }
+      return { tag: "expr", expr: expr };
     // case "FunctionDefinition":
     //   c.firstChild();  // Focus on def
     //   c.nextSibling(); // Focus on name of function
@@ -476,8 +653,8 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
         tag: "if",
         cond: cond,
         thn: thn,
-        els: els
-      }
+        els: els,
+      };
     case "WhileStatement":
       c.firstChild(); // Focus on while
       c.nextSibling(); // Focus on condition
@@ -494,38 +671,144 @@ export function traverseStmtHelper(c: TreeCursor, s: string, env: ParserEnv): St
       return {
         tag: "while",
         cond,
-        body
-      }
+        body,
+      };
     case "PassStatement":
       return { tag: "pass" }
+    case "ContinueStatement":
+        return { tag: "continue" }
+    case "BreakStatement":
+        return { tag: "break" }
+    case "ForStatement":
+      c.firstChild(); // Focus on for
+      c.nextSibling(); // Focus on variablename
+      if(c.type.name!="VariableName")
+       throw new Error("Iterator must be a variable")
+      var iterator = s.substring(c.from, c.to);   // considering iterator as string
+      c.nextSibling(); // Focus on in
+      c.nextSibling(); // Focus on values/list
+      var values = traverseExpr(c, s, env);
+      c.nextSibling(); // Focus on Body
+      var body = [];
+      c.firstChild(); // Focus on :
+      while(c.nextSibling()) {
+        body.push(traverseStmt(c, s, env));
+      }
+      c.parent(); 
+      c.parent();
+      return {tag:"for",iterator,values,body}
     default:
-      throw new Error("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to));
+      throw new Error(
+        "Could not parse stmt at " +
+          c.node.from +
+          " " +
+          c.node.to +
+          ": " +
+          s.substring(c.from, c.to)
+      );
   }
 }
 
-export function traverseType(c: TreeCursor, s: string, env: ParserEnv): Type {
-  // For now, always a VariableName
-  c.firstChild();
-  let name = s.substring(c.from, c.to);
-  switch (name) {
-    case "int":
-      return NUM;
-    case "bool":
-      return BOOL;
+function traverseDestructure(c: TreeCursor, s: string, env: ParserEnv): DestructuringAssignment<Annotation> {
+  const vars: AssignVar<Annotation>[] = [];
+  if (c.type.name === "ArrayExpression" || c.type.name === "TupleExpression") {
+    c.firstChild();
+    c.nextSibling();
+    vars.push(traverseAssignVar(c, s, env));
+    c.nextSibling();
+    while (c.name !== "]" && c.name !== ")") {
+      c.nextSibling();
+      if (c.name === "]" || c.name === ")") break;
+      let variable = traverseAssignVar(c, s, env);
+      vars.push(variable);
+      c.nextSibling();
+    }
+    c.parent();
+    return {
+      isSimple: false,
+      vars,
+    };
+  } else {
+    vars.push(traverseAssignVar(c, s, env));
+    let isSimple = true;
+    c.nextSibling();
+    while (c.name !== "AssignOp") {
+      isSimple = false;
+      c.nextSibling();
+      if (c.name === "AssignOp") break;
+      let variable = traverseAssignVar(c, s, env);
+      vars.push(variable);
+      c.nextSibling();
+    }
+    c.prevSibling();
+    return {
+      isSimple,
+      vars,
+    };
+  }
+}
+
+function traverseAssignVar(c: TreeCursor, s: string, env: ParserEnv): AssignVar<Annotation> {
+  // todo check if target is *
+  let target = traverseExpr(c, s, env);
+  let ignorable = false;
+  if (target.tag !== "id" && target.tag !== "lookup") {
+    throw new Error("Unknown variable expression");
+  }
+  if (target.tag === "id" && target.name === "_") {
+    ignorable = true;
+  }
+  return {
+    target,
+    ignorable,
+    star: false,
+  };
+}
+
+export function traverseType(c : TreeCursor, s : string, env: ParserEnv) : Type {
+  switch (c.type.name) {
+    case "ArrayExpression":
+      const elements = traverseTypeArray(c, s, env);
+      // if there are multiple brackets like [1,a][x], treat first section as array construction and second as index
+      return {
+        tag: "list",
+        itemType: elements[0],
+      };
+    case "VariableName":
+      let name = s.substring(c.from, c.to);
+      switch(name) {
+        case "int": return NUM;
+        case "bool": return BOOL;
+        default: return CLASS(name);
+      }
     case "None": // None is mentionable in Callable types
       return NONE;
-    case "Callable":
-      c.nextSibling();
-      c.nextSibling();
-      const params = traverseTypeList(c, s, env);
-      c.nextSibling();
-      c.nextSibling();
-      const ret = traverseType(c, s, env);
+    case "MemberExpression":
+      c.firstChild(); // focus on class
+      let cname = s.substring(c.from, c.to).trim();
+      if(cname === "Callable") {
+          c.nextSibling();
+          c.nextSibling();
+          const params = traverseTypeList(c, s, env);
+          c.nextSibling();
+          c.nextSibling();
+          const ret = traverseType(c, s, env);
+          c.parent();
+          // return NONE;
+          return CALLABLE(params, ret);
+      }
+      c.nextSibling(); // focus on [
+      c.nextSibling(); // focus on VariableName or ]
+      const params : Array<Type> = [];
+      while (c.type.name as any !== "]") {
+        params.push(traverseType(c, s, env));
+        c.nextSibling(); // focus on , or ]
+        c.nextSibling(); // focus on VariableName or ]
+      }
       c.parent();
-      // return NONE;
-      return CALLABLE(params, ret);
+      return { tag: "class", name: cname, params }
     default:
-      return CLASS(name);
+      throw new Error("ParseError : Could not parse type");
   }
 }
 
@@ -666,7 +949,38 @@ export function traverseVarInitHelper(c: TreeCursor, s: string, env: ParserEnv):
   var value = traverseLiteral(c, s, env);
   c.parent();
 
-  return { name, type, value }
+  return { name, type, value };
+}
+
+export const traverseTypeVarInit = wrap_locs(traverseTypeVarInitHelper);
+export function traverseTypeVarInitHelper(c : TreeCursor, s : string, env: ParserEnv) : TypeVar<Annotation> {
+  c.firstChild(); // focus on type var name
+  var name = s.substring(c.from, c.to).trim();
+  c.nextSibling(); // focus on AssignOp
+  c.nextSibling(); // focus on CallExpression
+
+  c.firstChild(); // focus on TypeVar
+  c.nextSibling(); // focus on ArgList
+
+  c.firstChild();  // Focuses on open parens
+  c.nextSibling(); // Focuses on a String | close parens
+  let canonicalName : string = name;
+  if (c.type.name === "String") {
+    canonicalName = s.substring(c.from + 1, c.to - 1).trim();
+    c.nextSibling(); // Focus on or close parens
+  }
+
+  if (c.type.name !== ")") {
+    throw Error("ParseError : constrained type variables are not supported.");
+  }
+
+  c.parent(); // go to ArgList
+  c.parent(); // go to CallExpression
+  c.parent(); // go to AssigmentStatement
+
+  // TODO : Need to delete this once we have removed types from AST
+  const types : Array<Type> = [];
+  return { name, canonicalName, types};
 }
 
 export function traverseScopeDef(c : TreeCursor, s : string, env: ParserEnv) : NonlocalVarInit<null> {
@@ -700,7 +1014,7 @@ export function traverseFunDefHelper(c: TreeCursor, s: string, env: ParserEnv): 
     c.parent();
     c.nextSibling();
   }
-  c.firstChild();  // Focus on :
+  c.firstChild(); // Focus on :
   var inits = [];
   var nonlocals: Array<NonlocalVarInit<Annotation>> = [];
   var children: Array<FunDef<Annotation>> = [];
@@ -727,10 +1041,46 @@ export function traverseFunDefHelper(c: TreeCursor, s: string, env: ParserEnv): 
   }
 
   // console.log("Before pop to body: ", c.type.name);
-  c.parent();      // Pop to Body
+  c.parent(); // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
   c.parent();      // Pop to FunctionDefinition
   return { name, parameters, ret, inits, body, nonlocals, children, arbarg_idx, kwarg_idx };
+}
+
+export function traverseGenericParams(c : TreeCursor, s : string) : Array<string> {
+  const typeParams : Array<string> = [];
+  if (c.type.name !== "ArgList") {
+    return typeParams;
+  }
+
+  c.firstChild(); // Focus on (
+  c.nextSibling(); // Focus on first argument
+  let arg1C = c; 
+  if (arg1C.type.name !== "MemberExpression") {
+    c.parent();
+    return typeParams;
+  }
+
+  c.firstChild();
+  if (s.substring(c.from, c.to).trim() !== "Generic") {
+    c.parent();
+    c.parent();
+    return typeParams;
+  }
+
+  c.nextSibling(); // Focus on [
+  c.nextSibling(); // Focus on VariableName or ]
+  let typeVarC = c;
+  while (typeVarC.type.name !== "]") {
+    typeParams.push(s.substring(typeVarC.from, typeVarC.to).trim());
+    typeVarC.nextSibling(); // Focus on , or ]
+    typeVarC.nextSibling(); // Focus on VariableName
+  }
+
+  c.parent(); // / Go back to MemberExpression
+  c.parent(); // Go back to ArgList
+
+  return typeParams;
 }
 
 export const traverseClass = wrap_locs(traverseClassHelper);
@@ -740,7 +1090,10 @@ export function traverseClassHelper(c: TreeCursor, s: string, env: ParserEnv): C
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
-  c.nextSibling(); // Focus on arglist/superclass
+  c.nextSibling(); // Focus on arglist/superclass/generic type vars(s)
+
+  const typeParams : Array<string> = traverseGenericParams(c, s);
+
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
   while (c.nextSibling()) { // Focuses first field
@@ -756,12 +1109,16 @@ export function traverseClassHelper(c: TreeCursor, s: string, env: ParserEnv): C
   c.parent();
 
   if (!methods.find(method => method.name === "__init__")) {
-    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [] });
+    const typeVars : Type[] = typeParams.map(tp => {
+      return CLASS(tp);
+    })
+    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className, typeVars) }], ret: NONE, inits: [], body: [], nonlocals: [], children: [] });
   }
   return {
     name: className,
+    typeParams,
     fields,
-    methods
+    methods,
   };
 }
 
@@ -782,7 +1139,6 @@ export function traverseDefs(c: TreeCursor, s: string, env: ParserEnv): [Array<V
     }
     c.nextSibling();
   }
-
 }
 
 export function isVarInit(c: TreeCursor, s: string, env: ParserEnv): Boolean {
@@ -790,9 +1146,35 @@ export function isVarInit(c: TreeCursor, s: string, env: ParserEnv): Boolean {
     c.firstChild(); // Focus on lhs
     c.nextSibling(); // go to : type
 
-    const isVar = c.type.name as any === "TypeDef";
+    const isVar = (c.type.name as any) === "TypeDef";
     c.parent();
     return isVar;
+  } else {
+    return false;
+  }
+}
+
+export function isTypeVarInit(c : TreeCursor, s : string) : Boolean {
+  if (c.type.name === "AssignStatement") {
+    c.firstChild(); // Focus on lhs
+    c.nextSibling(); // go to AssignOp
+    c.nextSibling(); // go to CallExpression
+
+    if (c.type.name as any !== "CallExpression") {
+      c.parent();
+      return false;
+    }
+
+    c.firstChild(); // Focus on TypeVar
+    if (c.type.name as any !== "VariableName" || s.substring(c.from, c.to).trim() !== "TypeVar") {
+      c.parent();
+      c.parent();
+      return false;
+    }
+
+    c.parent();
+    c.parent();
+    return true;  
   } else {
     return false;
   }
@@ -818,11 +1200,14 @@ export function traverseHelper(c: TreeCursor, s: string, env: ParserEnv): Progra
       const funs: Array<FunDef<Annotation>> = [];
       const classes: Array<Class<Annotation>> = [];
       const stmts: Array<Stmt<Annotation>> = [];
+      const typeVarInits : Array<TypeVar<Annotation>> = [];
       var hasChild = c.firstChild();
 
       while (hasChild) {
         if (isVarInit(c, s, env)) {
           inits.push(traverseVarInit(c, s, env));
+        } else if (isTypeVarInit(c, s)) {
+          typeVarInits.push(traverseTypeVarInit(c, s, env));
         } else if (isFunDef(c, s, env)) {
           funs.push(traverseFunDef(c, s, env));
         } else if (isClassDef(c, s, env)) {
@@ -838,9 +1223,11 @@ export function traverseHelper(c: TreeCursor, s: string, env: ParserEnv): Progra
         hasChild = c.nextSibling();
       }
       c.parent();
-      return { funs, inits, classes, stmts };
+      return { funs, inits, typeVarInits, classes, stmts };
     default:
-      throw new Error("Could not parse program at " + c.node.from + " " + c.node.to);
+      throw new Error(
+        "Could not parse program at " + c.node.from + " " + c.node.to
+      );
   }
 }
 

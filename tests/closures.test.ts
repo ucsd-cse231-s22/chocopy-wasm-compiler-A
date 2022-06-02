@@ -156,6 +156,55 @@ print(add_ref(5, 8))`,
     ["13", "14"]
   );
 
+  assertPrint(
+    "Loop in function with call in body",
+    `class Range(object):
+    current : int = 0
+    min : int = 0
+    max : int = 0
+    def new(self:Range, min:int, max:int)->Range:
+      self.min = min
+      self.current = min
+      self.max = max
+      return self
+    def next(self:Range)->int:
+      c : int = 0
+      c = self.current
+      self.current = self.current + 1
+      return c
+    def hasnext(self:Range)->bool:
+      return self.current < self.max
+    def reset(self:Range) :
+      self.current = self.min
+   
+   def foreach(r : Range, f : Callable[[int], int]):
+     i : int = 0
+     for i in r:
+       print(f(i))
+   
+   n : int = 0
+       
+   def add_n(x : int) -> int:
+     return x + n
+   def double(x : int) -> int:
+     return x * 2
+   n = 99
+   
+   foreach(Range().new(2, 7), add_n)
+   foreach(Range().new(2, 7), double)`,[
+     "101",
+     "102",
+     "103",
+     "104",
+     "105",
+     "4",
+     "6",
+     "8",
+     "10",
+     "12"
+   ]
+  )
+
 //   assertPrint(
 //     "Fixed-point Combinator - Design doc #11",
 //     `def fix(f: Callable[[Callable[[int], int]], Callable[[int], int]]) -> Callable[[int], int]:
