@@ -244,17 +244,17 @@ export function livenessProgramBody(program: Program<any>): [Program<any>, boole
     return [{ ...program, body: newBody }, programOptimized];
 }
 
-// export function livenessProgramFuns(func: FunDef<any>): [FunDef<any>, boolean] {
-//     if (func.body.length === 0) return [func, false];
-//     var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctionsForLiveness(func, computeInitEnv, addParamsToLiveEnv);
+export function livenessProgramFuns(func: FunDef<any>): [FunDef<any>, boolean] {
+    if (func.body.length === 0) return [func, false];
+    var [inEnvMapping, _outEnvMapping]: [Map<string, Env>, Map<string, Env>] = generateEnvironmentFunctionsForLiveness(func, computeInitEnv, addParamsToLiveEnv);
 
-//     var functionOptimized: boolean = false;
-//     var newBody: Array<BasicBlock<any>> = func.body.map(b => {
-//         var tempBlockEnv: liveEnv = duplicateEnv(inEnvMapping.get(b.label)) as liveEnv;
-//         var [optimizedBlock, blockOptimized]: [BasicBlock<any>, boolean] = optimizeBlock(b, tempBlockEnv);
-//         if (!functionOptimized && blockOptimized) functionOptimized = true;
-//         return optimizedBlock;
-//     });
+    var functionOptimized: boolean = false;
+    var newBody: Array<BasicBlock<any>> = func.body.map(b => {
+        var tempBlockEnv: liveEnv = duplicateEnv(inEnvMapping.get(b.label)) as liveEnv;
+        var [optimizedBlock, blockOptimized]: [BasicBlock<any>, boolean] = optimizeBlock(b, tempBlockEnv);
+        if (!functionOptimized && blockOptimized) functionOptimized = true;
+        return optimizedBlock;
+    });
 
-//     return [{ ...func, body: newBody }, functionOptimized];
-// }
+    return [{ ...func, body: newBody }, functionOptimized];
+}

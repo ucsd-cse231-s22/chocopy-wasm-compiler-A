@@ -12,6 +12,7 @@ import { importObjectErrors } from './errors';
 import { BasicREPL } from './repl';
 import "./style.scss";
 import { TypeCheckError } from './type-check';
+import { OptimizationSwitch } from './optimizations/optimization_common';
 
 function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : string {
   switch(typ.tag) {
@@ -149,7 +150,7 @@ function webStart() {
 
     // https://github.com/mdn/webassembly-examples/issues/5
     var codeContent: string | ArrayBuffer
-    let optmizationSwtich: "0"|"1"|"2" = "2";
+    let optmizationSwtich: OptimizationSwitch = "4";
     const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
     const memoryModule = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()

@@ -220,8 +220,8 @@ export function generateEnvironmentFunctionsForLiveness(
     func: FunDef<any>, computeInitEnv: Function,
     addParamsToEnv: Function
     ): [Map<string, Env>, Map<string, Env>] {
-    var initialEnv = computeInitEnv(func.inits, false);
-    addParamsToEnv(func.parameters, initialEnv, false);
+    // var initialEnv = computeInitEnv(func.inits, false);
+    // addParamsToEnv(func.parameters, initialEnv, false);
 
     var inEnvMapping: Map<string, Env> = new Map<string, Env>();
     var outEnvMapping: Map<string, Env> = new Map<string, Env>();

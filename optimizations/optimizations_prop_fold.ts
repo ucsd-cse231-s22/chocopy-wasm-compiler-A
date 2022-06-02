@@ -122,7 +122,7 @@ function optimizeExpression(e: Expr<Type>, env: Env): Expr<Type>{
             if (arg.tag === "id")
                 return {...e, expr: arg};
             var val: Value<any> = evaluateUniOp(e.op, arg);
-            return e;
+            return {tag: "value", value: val};
  
         case "builtin1":
             var arg = optimizeValue(e.arg, env);
