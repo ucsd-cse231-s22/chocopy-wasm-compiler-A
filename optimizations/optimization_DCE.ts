@@ -27,14 +27,14 @@ function eliminateIfJmp(stmt: Stmt<any>,
         lbl: truthBlock
     }
 
-    preds.forEach((pred) => {
-        var predBlock = blockMapping.get(pred);
-        predBlock.stmts[predBlock.stmts.length - 1] = {
-            tag: "jmp",
-            lbl: truthBlock
-        };
-        blockMapping.set(pred, predBlock);
-    });
+    // preds.forEach((pred) => {
+    //     var predBlock = blockMapping.get(pred);
+    //     predBlock.stmts[predBlock.stmts.length - 1] = {
+    //         tag: "jmp",
+    //         lbl: truthBlock
+    //     };
+    //     blockMapping.set(pred, predBlock);
+    // });
 }
 
 function eliminateBlockUnreachableCode(block: BasicBlock<any>,
