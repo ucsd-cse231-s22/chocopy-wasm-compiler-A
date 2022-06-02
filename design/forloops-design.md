@@ -1,27 +1,34 @@
 We have implemented bsic for-loop structure that expects object as an values in[for i in values] with a conditation that the class of the object should have next, hasnext and reset methods with return type of iterator, boolean and none respectively.
 
-Week -7
+**Week -7**
+
 In the earlier- submitted milestones, we mentioned to work on builtin range class, but post the discussion in the class we implented above functionality.
 
 Test cases 1- 11 were submitted as initial commit for the feature.
 
-Week -8 
+**Week -8**
+
 Test cases to cover the functionality of break, continue in while, for loops are included (single and nested loops). Also, test cases for iterator in for-loop to be a non-integer (boolean) are included.
 
 Test cases 1-29 are working post week-8.
 
-Design Decisions:
+**Week - 9/10:**
+ For-loops functionality is extended to support lists (variable (items), direct [1,2,3,4], function call). Test cases 31-41 are added as part of this extension.
+
+**Design Decisions:**
 1. As per the comments on ealier pull-request, iterator type is changed to string and using the enviroment type of the iterator is computed. The function to find out the type in type-check.ts and iterator in ast.ts will be extended as when new features are included like tuples, etc.  
 2. Every class, which is used as values in the for loop should have reset method whose objective is to reset the current pointer to minimum. This method is called before the loop iteration to ensure the usage of object in multiple parallel loops and nested loops (test cases are presented below).
 3. start, body, end labels of while and for loops are appened to the labels of enviroment to use them later for break and continue statements.     
 4. Test case 12 is tested in the browser for parser error, as we are not sure if modifications to asserts.test.ts are allowed, hence commented the same test case in forloops.test.ts file as well.
+5. For lists, the iterator has to be of same type as list items.
+6. In case of lists, the value is copied to another variable (generated from backend) and a index variable is also created at the backend. As the loop progresses, index variable is incremented by 1 and the iterator say i is assigned to list[index]. List is copied to ensure, the changes to the values within the loop, wont affect the number of times a loop is run.
 
 Below are the test cases team tried for the above-mentioned functionality. 
 
-Test case 1:
+# Test case 1:
 
-Input:
-
+## Input:
+```
 class Range(object):
   current : int = 0
   min : int = 0
@@ -48,13 +55,15 @@ i:int = 0
 cls = Range().new(1,3)
 for i in cls:
   print(i)
+```
+## Output: 
+Error: TypeCheck failed (has no method called 'next1')
 
-Output: Error: TypeCheck failed (has no method called 'next1')
 
+# Test case 2:
 
-Test case 2:
-
-Input:
+## Input:
+```
 class Range(object):
   current : int = 0
   min : int = 0
@@ -81,13 +90,14 @@ i:int = 0
 cls = Range().new(1,3)
 for i in cls:
   print(i)
+```
+## Output: 
+Error: TypeCheck failed (has no method called 'hasnext')
 
-Output: Error: TypeCheck failed (has no method called 'hasnext')
+# Test case 3:
 
-Test case 3:
-
-Input:
-
+## Input:
+```
 class Range(object):
    current : int = 0
    min : int = 0
@@ -114,12 +124,15 @@ class Range(object):
  cls = Range().new(1,3)
  for i in cls:
    print(i)
+```
+## Output: 
+Error: TypeCheck failed (has no method called 'reset')
 
- Output: Error: TypeCheck failed (has no method called 'reset')
+# Test case 4:
 
-Test case 4:
+## Input:
 
-Input:
+```
 class Range(object):
   current : int = 0
   min : int = 0
@@ -146,10 +159,11 @@ i:bool = True
 cls = Range().new(1,3)
 for i in cls:
   print(i)
+```
+## Output: Error: 
+TypeCheck failed
 
-Output: Error: TypeCheck failed
-
-
+```
 Base Range Class definition:
 
 class Range(object):
@@ -170,37 +184,39 @@ class Range(object):
     return self.current < self.max
   def reset(self:Range) :
     self.current = self.min
+```
 
+# Test case 5:
 
-Test case 5:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 i:int = 0
 cls = Range().new(10, 1)
 for i in cls:
   print(i)
 
+```
+## Output: 
+[""]
 
-Output: [""]
+# Test case 6:
 
-Test case 6:
-
-Input:
-
+## Input:
+```
   cls:Range = None
   i:int = 0
   cls = Range().new(3, 6)
   for i in cls:
     print(i)
+```
+## Output:
+[3, 4, 5]
 
-Output:[3, 4, 5]
+# Test case 7:
 
-Test case 7:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 i:int = 0
 cls = Range().new(1, 4)
@@ -209,13 +225,14 @@ for i in cls:
    print(i)
    i = 10 
    print(i)
+```
+## Output: 
+1, 10, 2, 10, 3, 10
 
-Output: 1, 10, 2, 10, 3, 10
+# Test case 8:
 
-Test case 8:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 i:int = 0
 cls = Range().new(1, 4)
@@ -224,13 +241,14 @@ for i in cls:
    print(i)
    i = True
    print(i)
+```
+## Output: 
+Error: TypeCheck error (iterator type changing inside loop)
 
-Output: Error: TypeCheck error (iterator type changing inside loop)
+# Test case 9:
 
-Test case 9:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 i:int = 0
 cls = Range().new(1, 4)
@@ -242,13 +260,14 @@ for i in cls:
    
 i = 20
 print(i)
+```
+## Output: 
+1, 2, 3, 20
 
-Output: 1, 2, 3, 20
+# Test case 10:
 
-Test case 10:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 i:int = 0
 cls = Range().new(1, 4)
@@ -260,13 +279,14 @@ for i in cls:
   
 i = 20
 print(i)
+```
+## Output:
+1, 20
 
-Output:1, 20
+# Test case 11:
 
-Test case 11:
-
-Input:
-
+## Input:
+```
 def checkForLoop(n:int):
   c:Range = None
   i:int = 0
@@ -276,25 +296,27 @@ def checkForLoop(n:int):
   return
 
 checkForLoop(2)
+```
+## Output:
+2, 3, 4, 5, 6
 
-Output:2, 3, 4, 5, 6
+# Test case 12:
 
-Test case 12:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 i:int = 0
 cls = Range().new(1,3)
 for 1+2 in cls:
   print(i)
+```
+## Output: Error:
+parser error 
 
-Output: Error: parser error 
+# Test case 13:
 
-Test case 13:
-
-Input:
-
+## Input:
+```
 i:int = 0
 cls: Range = None
 cls = Range().new(1,3)
@@ -304,13 +326,14 @@ for i in cls:
 
 for i in cls:
   print(i)
+```
+## Output: 
+1,2,1,2
 
-Output: 1,2,1,2
+# Test case 14:
 
-Test case 14:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 innercls:Range = None
 i:int = 0
@@ -322,13 +345,14 @@ for i in cls:
   print(i)
   for j in innercls:
     print(j)
+```
+## Output: 
+1, 5, 6, 2, 5, 6, 3, 5 
 
-Output: 1, 5, 6, 2, 5, 6, 3, 5 
+# Test case 15:
 
-Test case 15:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 innercls:Range = None
 i:int = 0
@@ -342,13 +366,14 @@ for i in cls:
    print(j)
    continue
    print(i+1)
+```
+## Output: 
+1, 5, 6, 2, 5, 6,
 
-Output: 1, 5, 6, 2, 5, 6,
+# Test case 16:
 
-Test case 16:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 innercls:Range = None
 i:int = 0
@@ -362,13 +387,14 @@ for i in cls:
    print(j)
    break
    print(i+1)
+```
+## Output:
+ 1, 5, 2, 5
 
-Output: 1, 5, 2, 5
+# Test case 17:
 
-Test case 17:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 innercls:Range = None
 i:int = 0
@@ -381,13 +407,14 @@ for i in cls:
  break
  for j in innercls:
    print(j) 
+```
+## Output: 
+1
 
-Output: 1
+# Test case 18:
 
-Test case 18:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 innercls:Range = None
 i:int = 0
@@ -400,13 +427,14 @@ for i in cls:
  continue
  for j in innercls:
    print(j)  
+```
+## Output: 
+1, 2
 
-Output: 1, 2
+# Test case 19:
 
-Test case 19:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 innercls:Range = None
 i:int = 0
@@ -419,13 +447,14 @@ for i in cls:
  break
  for j in innercls:
    print(j)  
+```
+## Output: 
+1
 
-Output: 1
+# Test case 20:
 
-Test case 20:
-
-Input:
-
+## Input:
+```
 cls:Range = None
 innercls:Range = None
 i:int = 0
@@ -438,13 +467,14 @@ for i in cls:
  for j in innercls:
    print(j-1)
  print(i+1)  
+```
+## Output: 
+1, 4, 5, 2, 2, 4, 5, 3 
 
-Output: 1, 4, 5, 2, 2, 4, 5, 3 
+# Test case 21:
 
-Test case 21:
-
-Input:
-
+## Input:
+```
 i:int = 0
 
 while(i<10):
@@ -452,13 +482,14 @@ while(i<10):
  if(i==5):
   continue
  print(i)
+```
+## Output: 
+1, 2, 3, 4, 6, 7, 8, 9, 10 
 
-Output: 1, 2, 3, 4, 6, 7, 8, 9, 10 
+# Test case 22:
 
-Test case 22:
-
-Input:
-
+## Input:
+```
 i:int = 0
 j:int = 5
 while(i<3):
@@ -471,12 +502,14 @@ while(i<3):
   print(j)
  j = 5
  
+```
+## Output: 
+1, 3, 2, 1, 0, 2, 3, 2, 1, 0, 3, 3, 2, 1, 0
 
-Output: 1, 3, 2, 1, 0, 2, 3, 2, 1, 0, 3, 3, 2, 1, 0
+# Test case 23:
 
-Test case 23:
-
-Input:
+## Input:
+```
 i:int = 0
 j:int = 5
 while(i<3):
@@ -488,13 +521,14 @@ while(i<3):
   j = j-1
   print(j)
  j = 5 
+```
+## Output: 
+2, 4, 3, 2, 1, 0, 3, 4, 3, 2, 1, 0 
 
-Output: 2, 4, 3, 2, 1, 0, 3, 4, 3, 2, 1, 0 
+# Test case 24:
 
-Test case 24:
-
-Input:
-
+## Input:
+```
 i:int = 0
 j:int = 5
 while(i<3):
@@ -506,12 +540,14 @@ while(i<3):
   j = j-1
   print(j)
  j = 5
+```
+## Output:
+1, 4, 3, 2, 1, 0, 2
 
-Output: 1, 4, 3, 2, 1, 0, 2
+# Test case 25:
 
-Test case 25:
-
-Input:
+## Input:
+```
 i:int = 0
 j:int = 5
 while(i<3):
@@ -523,12 +559,14 @@ while(i<3):
    break
   print(j)
  j = 5
+```
+## Output: 
+1, 2, 3
 
-Output: 1, 2, 3
+# Test case 26:
 
-Test case 26:
-
-Input:
+## Input:
+```
 def breakInFunction(n:int, b:int)->int:
  i:int = 0
  sum:int = 0
@@ -540,13 +578,14 @@ def breakInFunction(n:int, b:int)->int:
  return sum
 
 print(breakInFunction(10,5))
+```
+## Output: 
+10
 
-Output: 10
+# Test case 27:
 
-Test case 27:
-
-Input:
-
+## Input:
+```
 def breakInFunction(n:int, b:int)->int:
  i:int = 0
  sum:int = 0
@@ -558,26 +597,29 @@ def breakInFunction(n:int, b:int)->int:
  return sum
 
 print(breakInFunction(10,5))
+```
+## Output: 
+50
 
-Output: 50
+# Test case 28:
 
-Test case 28:
-
-Input:
-
+## Input:
+```
 i:bool = True
 cls:Range = None
 cls = Range().new(1, 5)
 
 for i in cls:
  print(i)
-    
+```   
 
-Output: False, True, False, True
+## Output: 
+False, True, False, True
 
-Test case 29:
+# Test case 29:
 
-Input:
+## Input:
+```
 
 class BoolRange(object):
  current : int = 0
@@ -616,85 +658,272 @@ def checkMultiLoopFunction(min:int, max:int) ->int:
 
 
 print(checkMultiLoopFunction(1,6))
+```
 
-Output: False, True, 1, 2, 3, 4, 5, False, True, 1, 2, 3, 4, 5, False, 30
+## Output: 
+False, True, 1, 2, 3, 4, 5, False, True, 1, 2, 3, 4, 5, False, 30
 
 
-Week-9 Plan:
+# **Week-9 Plan:**
 
 The plan for week 9  is to extend the functionality of for-loops to iterate over lists, sets, dictionaries, strings with support of tuples as iterator along with fixing any merge conflicts with other functionalities. 
 
 Below are the test cases for verifying above-mentioned functionalities.
 
-Test case 1: strings
+# Test case 1: strings
+     ```
 
     str:string = "test"
     for i in str:
       print(i)
+     ```
 
-    Output: t
-            e 
-            s 
-            t
+  ## Output: 
+  t
+  e 
+  s 
+  t
 
-Test case 2: empty strings
-
+# Test case 2: empty strings
+     ```
     str:string = ""
     for i in str:
       print(i)
 
-    Output: ""
+     ```
+## Output:
+"" (Empty string)
 
-Test case 3: lists
+# Test case 3: lists
+     ```
      i:int = 0
      items: [int] = None
      items = [0, 1, 2, 5]
      for i in items:
       print(i)
+     ```
 
-     Output: 0, 1, 2, 5
+## Output:
+ 0, 1, 2, 5
 
-Test case 4: lists-sub array indexing
-     Test case:
+# Test case 4: lists-sub array indexing
+     ```
      items: [int] = None
      items = [0, 1, 2, 5]
      for i in items[0:3]:
       print(i)
+     ```
+     
+   ## Output: 
+    0, 1, 2, 5
+# Test case 5: sets
+  ```
+  s:set = set()
+  s = {1,2,5,7}
+  for i in s:
+    print(i) 
+  ```
+## Output :
+ 1, 2, 5, 7
 
-     Output: 0, 1, 2, 5
+# Test case 6: BigNums
+  ```
+  i:int = 0
+  for i in Range(1000000000000000, 1000000000000002):
+    print(i) 
+  ```
+   ## Output : 
+    1000000000000000, 1000000000000001
 
-Test case 5: sets
-    s:set = set()
-    s = {1,2,5,7}
-    for i in s:
-      print(i) 
-    Output : 1, 2, 5, 7
-
-Test case 6: BigNums
-    
-    i:int = 0
-    for i in Range(1000000000000000, 1000000000000002):
-      print(i) 
-    Output : 1000000000000000, 1000000000000001
-
-Test case 7: set update
-   s:set = set()
-   s = {1,2,5,7}
-   for i in s:
-      print(i) 
-      s.add(8)
-  Output : 1, 2, 5, 7
+# Test case 7: set update
+  ```
+  s:set = set()
+  s = {1,2,5,7}
+  for i in s:
+    print(i) 
+    s.add(8)
+```
+## Output : 1, 2, 5, 7
   Python implementation for the same gives output as 1, 2, 5, 7 which can be obtained by taking a copy of values to iterate over which ensures the numebr of times a loop is run. 
 
-Test case 8: list update
-
-   i:int = 0
-     items: [int] = None
-     items = [0, 1, 2, 5]
-     for i in items:
-      print(i)
-      items = [1, 3, 5]
-
-     Output: 0, 1, 2, 5
+# Test case 8: list update
+```
+  i:int = 0
+  items: [int] = None
+  items = [0, 1, 2, 5]
+  for i in items:
+  print(i)
+  items = [1, 3, 5]
+```
+## Output: 
+  0, 1, 2, 5
 
   Python implementation for the same gives output as 0, 1, 2, 5 which can be obtained by taking a copy of values to iterate over which ensures the numebr of times a loop is run. 
+
+# **Week-9/10 Update:**
+
+Below are the testcases whose implementation is supported in week 9/10. Due to the merge delays, extension of for-loops to strings/sets etc was not done. Extension to include lists is implemented. 
+
+# Test case 1 (31):  List stored in a variable
+
+## Input:
+```
+items:[int] = None
+index:int = 0
+i:int = 0
+
+items = [1,2,5,60]
+for i in items:
+  print(i)
+```
+## Output: 
+1, 2, 5, 60
+
+# Test case 2 (32):  Boolean List stored in a variable
+
+## Input:
+```
+items:[bool] = None
+index:int = 0
+i:bool = True
+
+items = [True, False, True, False]
+for i in items:
+  print(i)
+```
+## Output: 
+True, False, True, False
+
+# Test case 3 (33):  Empty List
+
+## Input:
+
+```
+items:[bool] = None
+index:int = 0
+i:bool = True
+for i in items:
+  print(i)
+  
+print(not(i))
+```
+
+## Output: 
+False
+
+# Test case 4 (34):  If condiiton - lists
+
+## Input:
+```
+items:[int] = None
+index:int = 0
+i:int = 0
+items = [1,2,3,4]
+for i in items:
+  if(i%2==0):
+    print(i)
+```
+## Output: 
+2, 4 
+
+# Test case 5 (35):  Continue - Lists
+
+## Input:
+```
+items:[int] = None
+index:int = 0
+i:int = 0
+items = [1,2,3,4]
+for i in items:
+  if(i%2==0):
+    continue
+  print(i)
+```
+## Output:
+1, 3  
+
+# Test case 6 (36):  Break - Lists
+
+## Input:
+```
+items:[int] = None
+index:int = 0
+i:int = 0
+items = [1,2,3,4]
+for i in items:
+  print(i)
+  if(i%2==0):
+    break
+```
+## Output:
+1, 2
+
+# Test case 7 (37):  Direct Lists
+
+## Input:
+```
+index:int = 0
+i:int = 0
+for i in [10,20,30,40]:
+  print(i)
+```
+## Output:
+10,20,30,40
+
+# Test case 8 (38):  Function - Lists
+
+## Input:
+```
+def returnList(n:int)->[int]:
+  return [n, n+1, n+2,n+3,n+4]
+
+i:int = 0
+for i in returnList(9):
+  print(i)
+```
+## Output:
+9, 10, 11, 12, 13
+
+
+# Test case 9 (39):  Loop-list-within-function
+
+## Input:
+```
+def loopList():
+  i:int = 0
+  for i in [2,3,4,5]:
+    print(i)
+
+loopList()
+```
+## Output:
+2, 3, 4, 5
+
+# Test case 10 (40):  Changing the list
+
+## Input:
+```
+i:int = 0
+items:[int] = None
+items = [1,2,3,5]
+for i in items:
+  print(i)
+  items = [2,3]
+```
+## Output:
+1, 2, 3, 5
+
+# Test case 11 (41):  Basic Nested Lists
+
+## Input:
+```
+a :[[int]] = None
+i:[int] = None
+j:int = 0
+a = [[1,2,3,4], [10,20]]
+for j in a[0]:
+  print(j)
+```
+## Output:
+1, 2, 3, 4
+

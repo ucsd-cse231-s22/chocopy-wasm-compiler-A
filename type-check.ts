@@ -662,22 +662,8 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
     case "continue":
       return {a: { ...stmt.a, type: NONE }, tag: stmt.tag};
     case "for":
-      var tIterator = tcIterator(env, locals, stmt.iterator)
-      var tValObject = tcExpr(env, locals, stmt.values, SRC);
-      if (tValObject.a.type.tag !== "class") 
-        throw new TypeCheckError("values require an object");
-      if (!env.classes.has(tValObject.a.type.name)) 
-        throw new TypeCheckError("values on an unknown class");
-      const [__, methods] = env.classes.get(tValObject.a.type.name);
-      if(!(methods.has("hasnext")) || methods.get("hasnext")[1].tag != BOOL.tag)
-        throw new TypeCheckError(SRC, "iterable class must have hasnext method with boolean return type");
-      if(!(methods.has("next"))) { throw new TypeCheckError(SRC, "No next method"); }
-      const methodType = specializeMethodType(env, tValObject.a.type, methods.get("next"));
-      if(!equalType(methodType[1],tIterator)) {
-        throw new TypeCheckError(SRC, "iterable class must have next method with same return type as iterator");
-      }
-      if(!(methods.has("reset")) || methods.get("reset")[1].tag != NONE.tag)
-        throw new TypeCheckError(SRC, "iterable class must have reset method with none return type");
+      var tIterator = tcIterator(env, locals, stmt.iterator);
+      var tValObject = tcLoopValue(env, locals, stmt.values, tIterator, SRC);
       const tforBody = tcBlock(env, locals, stmt.body, SRC);
       return {a: {...stmt.a, type: tIterator}, tag: stmt.tag, iterator:stmt.iterator, values: tValObject, body: tforBody }
     case "field-assign":
@@ -723,6 +709,39 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
 
       return {a: { ...stmt.a, type: NONE }, tag: stmt.tag, obj: tList, index: tIndex, value: tValue}
   }
+}
+
+/// Function used to type check the values/iterable lisr/class of the for-loop
+export function tcLoopValue(env: GlobalTypeEnv, locals: LocalTypeEnv, stmtValues:  Expr<Annotation>, tIterator : Type, SRC: string) :Expr<Annotation> {
+  
+  var tValObject = tcExpr(env, locals, stmtValues, SRC);
+  
+  switch(tValObject.a.type.tag){
+    case "class": 
+    {
+      if (!env.classes.has(tValObject.a.type.name)) 
+        throw new TypeCheckError(SRC,"values on an unknown class");
+      const [__, methods] = env.classes.get(tValObject.a.type.name);
+      if(!(methods.has("hasnext")) || methods.get("hasnext")[1].tag != BOOL.tag)
+        throw new TypeCheckError(SRC, "iterable class must have hasnext method with boolean return type");
+      if(!(methods.has("next"))) { throw new TypeCheckError(SRC, "No next method"); }
+      const methodType = specializeMethodType(env, tValObject.a.type, methods.get("next"));
+      if(!equalType(methodType[1],tIterator)) {
+        throw new TypeCheckError(SRC, "iterable class must have next method with same return type as iterator");
+      }
+      if(!(methods.has("reset")) || methods.get("reset")[1].tag != NONE.tag)
+         throw new TypeCheckError(SRC, "iterable class must have reset method with none return type");
+    }
+      break
+    case "list":
+      if(!equalType(tValObject.a.type.itemType,tIterator)) {
+        throw new TypeCheckError(SRC, "List must be of same type as iterator");
+      }
+      break
+    default:
+      throw new TypeCheckError(SRC,"Unsupported type of values");
+  }
+  return tValObject
 }
 
 export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Annotation>, SRC: string): Expr<Annotation> {
@@ -1041,3 +1060,4 @@ export function tcIterator(env : GlobalTypeEnv, locals : LocalTypeEnv, iterator:
       case "none": return NONE;
     }
   }
+
