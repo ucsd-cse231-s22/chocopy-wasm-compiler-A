@@ -289,7 +289,7 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
         },
       },[...ceclass, ...bodyclasses, ...body_class, ...declass, ...beclass]]
   else
-    return [[...iterinits,...lengthinits, ...cinits, ...bodyinits, ...body_init, ...binits,
+    return [[...lengthinits,...cinits, ...iterinits, ...bodyinits, ...binits, ...body_init,
       {
         name: newListName,
         type: e.a.type,
@@ -314,7 +314,7 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
             tag: "id",
             name: newListName
         },
-      },[...iterclasses,...lengthclasses, ...ceclass, ...bodyclasses, ...body_class, ...beclass]]
+      },[...lengthclasses,...ceclass, ...iterclasses, ...bodyclasses, ...beclass, ...body_class]]
 }
 
 
