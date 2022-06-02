@@ -1,20 +1,18 @@
-import {BasicREPL} from './repl';
-import { Type, Value, Annotation, Class } from './ast';
-import { defaultTypeEnv, TypeCheckError } from './type-check';
-import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
-import { importObjectErrors } from './errors';
-
 import CodeMirror from 'codemirror';
 import "codemirror/addon/edit/closebrackets";
-import "codemirror/mode/python/python";
 import "codemirror/addon/hint/show-hint";
 import "codemirror/addon/lint/lint";
-
 import "codemirror/addon/scroll/simplescrollbars";
-import "./style.scss";
-
+import "codemirror/mode/python/python";
+import { Annotation, Type, Value } from './ast';
 import { autocompleteHint } from "./autocomplete";
-import { default_keywords, default_functions } from "./const";
+import { default_functions, default_keywords } from "./const";
+import { importObjectErrors } from './errors';
+import { OptimizationSwitch } from './optimizations/optimization_common';
+import { BasicREPL } from './repl';
+import "./style.scss";
+import { TypeCheckError } from './type-check';
+import { bigMath, bignum_to_i32, binop_bignum, binop_comp_bignum, BOOL, builtin_bignum, des_check, load_bignum, NONE, NUM } from './utils';
 
 function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : string {
   switch(typ.tag) {
@@ -152,6 +150,7 @@ function webStart() {
 
     // https://github.com/mdn/webassembly-examples/issues/5
     var codeContent: string | ArrayBuffer
+    let optmizationSwtich: OptimizationSwitch = "3";
     const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
     const memoryModule = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()
@@ -315,7 +314,7 @@ function webStart() {
           const source = replCodeElement.value;
           elt.value = source;
           replCodeElement.value = "";
-          repl.run(source).then((r) => {
+          repl.run(source, optmizationSwtich).then((r) => {
             renderResult(r);
             printMem();
             console.log("run finished")
@@ -416,7 +415,7 @@ function webStart() {
       repl = new BasicREPL(importObject);
       const source = document.getElementById("user-code") as HTMLTextAreaElement;
       resetRepl();
-      repl.run(source.value).then((r) => { renderResult(r); console.log("run finished") })
+      repl.run(source.value, optmizationSwtich).then((r) => { renderResult(r); console.log("run finished") })
         .catch((e) => { renderError(e); console.log("run failed", e) });;
     });
     setupRepl();

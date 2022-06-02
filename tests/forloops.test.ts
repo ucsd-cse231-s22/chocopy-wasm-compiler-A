@@ -1,5 +1,4 @@
-import { assertPrint, assertFail, assertTCFail, assertTC } from "./asserts.test";
-import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
+import { assertPrint, assertTCFail } from "./asserts.test";
 
 describe("FOR LOOPS tests", () => {
   // 1

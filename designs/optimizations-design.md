@@ -182,40 +182,45 @@ This will not get transformed in the current iteration of constant propagation.
 
 ## List of changes to AST/IR
 
-We will not be making any changes to the IR/AST. We will need to take in changes to these from all teams.
-Our work will be to just update IR statements values and (or) annotations and also to reduce them.
+From the previous milestone, we have now implemented constant propagation, folding, copy propagation and dead variable anaylsis. We have also implemented dead code elimination, however right now we are facing certain issues in getting it compatible with closures.
+
+We have also restructured the code a bit, to move all of the major functions to the `optimizations/` directory. The worklist algorithm has also been modified to handle multiple optmization analysis. Environment analysis has been moved to a generic class, which can then handle analysis techniques for multiple types of optimization.
 
 ## Description of files/functions/datatypes to be added/ added
 
 A description of any new functions, datatypes, and/or files added to the codebase. 
 These can be actual code diffs in the PR or written in your design.md.
 <ol>
-    <li>optimization.ts - Contains all the optimization functionalities. Currently implemented - constant propagation within the same scope, constant folding.
+    <li>optimization.ts - Contains major optimizations handlers
     </li>
-    <ul>
-        <li>Datatypes : 
-        <ul>
-            <li>Env - An environment type that contains a map from variables to their compile time value (compileVal).
-            </li>
-            <li> compileVal - A compile time value type that extends type 'Value' from ir.ts to include types "nac" (Not a Constant) and "undef" (Undefined). These add-ons are used to resolve merge conflicts during constant propagation.
-            </li>
-        </ul>
+    <li>optimizations/* :
+        <li>
+            Algorithm for various analysis techniques - constant propagation, constant folding, copy propagation, 
+            dead code elimination, dead variable analysis.
         </li>
-        <li>Functions (only the important ones are listed here) :  
+        <li>
+            Generic worklist algorithm, environment class for various analysis techniques.
+        </li>
+    </li>
+</ol>
+<ol>
+    <li>
+        Major handlers:
             <ul>
-                <li>optimizeProgram() - Maps a source program IR to an optimized program IR. Optimization is done in multiple passes and ends when the IR stabilizes. Currently - Each basic block contains in-environments (Env). In-environments are used for constant propagation within the basic block and are updated accordingly. To be implemented - Dead code elimination.
-                </li>
-                <li>optimizeFunction() - Maps a function's IR to an optimized function's IR. Operates identically to optimizeProgram().
-                </li>
-                <li>computeInitEnv() - Computes the in-environment to the first basic block consisting of all vardefs mapped to type "undef". 
-                </li>
-                <li>mergeAllPreds() - A helper function for the worklist algorithm that merges the out-environments of all predecessor basic blocks.
-                </li>
-                <li> generateEnvironments() - A recursive forward-pass worklist algorithm that computes a stable set of in-environments for all basic-blocks.
-                </li>
+                optimizeProgramBody() - Takes a program IR as input, along with an optimization switch and performs multiple optmimization analysis on the same. Returns an optimized IR
+                    * Optimization switch configurations:
+                    <ul>
+                        <ul>1: Constant propagation and folding</ul>
+                        <ul>2: Previous level optimizations and copy propagation</ul>
+                        <ul>3: Previous level optimizations and dead variable analysis</ul>
+                        <ul>4: Previous level analysis and dead code elimination</ul>
+                    </ul>
             </ul>
-        </li>
-    </ul>
+    </li>
+</ol>
+
+<ol>
+    Other major files:
     <li>optimization_utils.ts - Contains utility functions required for optimization; mainly includes type equality checks and deep equality checks on IRs to decide the termination of our multiple-pass optimization algorithm.
     </li>
     <li>optimizations.test.ts - Contains optimization test cases. Current tests are sanity checks which compare the IRs and outputs of the source and optimized programs.
@@ -225,16 +230,8 @@ These can be actual code diffs in the PR or written in your design.md.
 </ol>
 ## Description of memory layout or value representation
 
-A description of the value representation and memory layout for any new runtime 
-values you will add. These should be described in design.md rather than implemented 
-directly.
+No direct interaction with memory layout. Optimizations performed at IR level.
 
 
 ## Next steps
-Currently, we have implemented all features (constant propagation and folding which was described in the first week milestone).
-
-We will try and implement the following features by the next milestone:
-- Dead code elimination
-- Copy Propagation
-- Structured control flow
-- Adding string/list support to constant folding and propagation
+- To fix dead code elimination, implement structured control flow.

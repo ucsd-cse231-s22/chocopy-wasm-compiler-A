@@ -1,6 +1,6 @@
 import { parse } from "./parser";
 import { BasicREPL } from "./repl";
-import { addLibs  } from "./tests/import-object.test";
+import { addLibs } from "./tests/import-object.test";
 
 
 // entry point for debugging
@@ -22,7 +22,8 @@ class C(object):
 const ast = parse(source);
 // console.log(ast);
   const repl = new BasicREPL(await addLibs());
-  const result = repl.run(source).then(result => {
+  const optimizationSwitch = "3";
+  const result = repl.run(source, optimizationSwitch).then(result => {
     console.log(result);    
   })  
 }
