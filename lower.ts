@@ -3,7 +3,7 @@ import * as IR from './ir';
 import { Type, UniOp, Annotation } from './ast';
 import * as ERRORS from './errors';
 import { GlobalEnv } from './compiler';
-import { APPLY, CLASS, createMethodName, BOOL, NONE, NUM } from './utils';
+import { APPLY, CLASS, createMethodName, BOOL, NONE, NUM, getFieldType } from './utils';
 
 let nameCounters : Map<string, number> = new Map();
 export function resetNameCounters() {
@@ -663,7 +663,7 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       }
       const className = objTyp.type.name;
       const checkObj : IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, objval);
-      const callMethod : IR.Expr<Annotation> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
+      const callMethod : IR.Expr<Annotation> = {a: e.a, tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
@@ -687,7 +687,13 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<Annotation> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length + 1} };
+      const alloc : IR.Expr<Annotation> = {
+        a: e.a,
+        tag: "alloc",
+        amount: { tag: "wasmint", value: fields.length + 1},
+        fixed: [false].concat(getFieldType(fields.map(f => f[1][1]))) // first field is a wasmint
+      };
+      //console.log(alloc);
       const assigns : IR.Stmt<Annotation>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {
@@ -716,9 +722,12 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
     case "construct-list":
       const newListName = generateName("newList");
       const listAlloc: IR.Expr<Annotation> = {
+        a: e.a,
         tag: "alloc",
-        amount: { tag: "wasmint", value: e.items.length + 2 },
-      };
+        amount: { tag: "wasmint", value: e.items.length + 2},
+        fixed: [true, false], // first field is a bigInt, second is a i32
+        rest: e.a.type?.tag === "class" || e.a.type?.tag === "list" || e.a.type?.tag === "none"
+      }
       var inits: Array<IR.VarInit<Annotation>> = [];
       var stmts: Array<IR.Stmt<Annotation>> = [];
       var classes: Array<IR.Class<Annotation>> = [];
@@ -835,9 +844,9 @@ function flattenExprToExpr(e : AST.Expr<Annotation>, blocks: Array<IR.BasicBlock
         [...objClasses, ...idxClasses]
       ];
     case "id":
-      return [[], [], {tag: "value", value: { ...e }}, []];
+      return [[], [], {a: e.a,tag: "value", value: { ...e }}, []];
     case "literal":
-      return [[], [], {tag: "value", value: literalToVal(e.value) }, [] ];
+      return [[], [], {a: e.a, tag: "value", value: literalToVal(e.value) }, [] ];
     case "if-expr": {
       var thenLbl = generateName("$ifExprThen");
       var elseLbl = generateName("$ifExprElse");

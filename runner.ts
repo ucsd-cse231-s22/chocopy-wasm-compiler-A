@@ -12,6 +12,7 @@ import { PyValue, NONE, BOOL, NUM, CLASS, makeWasmFunType } from "./utils";
 import { closureName, lowerProgram } from './lower';
 import { monomorphizeProgram } from './monomorphizer';
 import { optimizeProgram } from './optimization';
+import { memInit } from './memory';
 import { wasmErrorImports } from './errors';
 
 export type Config = {
@@ -129,7 +130,8 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
     importObject.js = { memory: memory };
   }
-
+  memInit(new Int32Array(importObject.js.memory.buffer));
+  // memory functions are explicitly declared rn, they can be added to config.functions when implemented in WASM
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     ${wasmErrorImports}
@@ -140,10 +142,14 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))
     (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
-    (func $destructure_check (import "imports" "destructure_check") (param i32) (result i32))
-    (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
+    (func $alloc (import "libmemory" "alloc") (param i32) (param i32) (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $ref_lookup (import "libmemory" "refLookup") (param i32) (result i32))
+    (func $add_scope (import "libmemory" "addScope"))
+    (func $remove_scope (import "libmemory" "removeScope"))
+    (func $traverse_update (import "libmemory" "traverseUpdate") (param i32) (param i32) (param i32) (param i32) (result i32))
+    (func $destructure_check (import "imports" "destructure_check") (param i32) (result i32))
     (func $$add (import "imports" "$add") (param i32) (param i32) (result i32))
     (func $$sub (import "imports" "$sub") (param i32) (param i32) (result i32))
     (func $$mul (import "imports" "$mul") (param i32) (param i32) (result i32))
