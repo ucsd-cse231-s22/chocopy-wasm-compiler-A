@@ -236,7 +236,7 @@ export function binop_comp_float(args: number[], builtin: Function, libmem: WebA
 
 export function save_float(float: number, libmem: WebAssembly.Exports): number {
   const alloc = libmem.alloc;
-  const store = libmem.store;
+  const store = libmem.store_float;
   const addr = alloc_float(1, alloc);
   store_float(addr, float, store);
   return addr;
