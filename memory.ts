@@ -1,4 +1,3 @@
-import { Template } from "webpack";
 import { Annotation, Type } from "./ast";
 import { Value } from "./ir";
 import { importObject } from "./tests/import-object.test";
