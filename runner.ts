@@ -158,6 +158,16 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $$gte (import "imports" "$gte") (param i32) (param i32) (result i32))
     (func $$lt (import "imports" "$lt") (param i32) (param i32) (result i32))
     (func $$gt (import "imports" "$gt") (param i32) (param i32) (result i32))
+    (func $$add_float (import "imports" "$add_float") (param i32) (param i32) (result i32))
+    (func $$sub_float (import "imports" "$sub_float") (param i32) (param i32) (result i32))
+    (func $$mul_float (import "imports" "$mul_float") (param i32) (param i32) (result i32))
+    (func $$div_float (import "imports" "$div_float") (param i32) (param i32) (result i32))
+    (func $$eq_float (import "imports" "$eq_float") (param i32) (param i32) (result i32))
+    (func $$neq_float (import "imports" "$neq_float") (param i32) (param i32) (result i32))
+    (func $$lte_float (import "imports" "$lte_float") (param i32) (param i32) (result i32))
+    (func $$gte_float (import "imports" "$gte_float") (param i32) (param i32) (result i32))
+    (func $$lt_float (import "imports" "$lt_float") (param i32) (param i32) (result i32))
+    (func $$gt_float (import "imports" "$gt_float") (param i32) (param i32) (result i32))
     (func $$bignum_to_i32 (import "imports" "$bignum_to_i32") (param i32) (result i32))
     ${types}
     ${globalImports}

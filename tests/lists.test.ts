@@ -489,7 +489,10 @@ describe("runner for lists", () => {
   assertPrint(`list access 2`, `
   print([False, False, True][2])
   `, [`True`]);
-  assertFail(`list access 3`, `[False, False, True][-1]`);
+  assertPrint(`list access 3`, `
+  print([False, False, True][-1])
+  `, [`True`])
+  // assertFail(`list access 3`, `[False, False, True][-1]`);
   assertFail(`list access 4`, `[False, False, True][3]`);
   assertFail(`list access 5`, `[][3])`);
   assertFail(`list access 6`, `[][0]`);

@@ -799,6 +799,14 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
           }
         case BinOp.Minus:
         case BinOp.Mul:
+          if (equalType(tLeft.a.type, FLOAT) && equalType(tRight.a.type, FLOAT)) { return { ...tBin, a: { ...expr.a, type: FLOAT } } }
+          else if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: NUM } } }
+          else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${bigintSafeStringify(tLeft.a.type.tag)} and ${bigintSafeStringify(tRight.a.type.tag)}`,
+            expr.a); }
+        case BinOp.Div:
+          if (equalType(tLeft.a.type, FLOAT) && equalType(tRight.a.type, FLOAT)) { return { ...tBin, a: { ...expr.a, type: FLOAT } } }
+          else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${bigintSafeStringify(tLeft.a.type.tag)} and ${bigintSafeStringify(tRight.a.type.tag)}`,
+          expr.a); }
         case BinOp.IDiv:
         case BinOp.Mod:
           if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: NUM } } }
@@ -815,7 +823,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         case BinOp.Gte:
         case BinOp.Lt:
         case BinOp.Gt:
-          if (equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) { return { ...tBin, a: { ...expr.a, type: BOOL } }; }
+          if ((equalType(tLeft.a.type, NUM) && equalType(tRight.a.type, NUM)) || (equalType(tLeft.a.type, FLOAT) && equalType(tRight.a.type, FLOAT))) { 
+            return { ...tBin, a: { ...expr.a, type: BOOL } }; 
+          }
           else { throw new TypeCheckError(SRC, `Binary operator \`${stringifyOp(expr.op)}\` expects type "number" on both sides, got ${bigintSafeStringify(tLeft.a.type.tag)} and ${bigintSafeStringify(tRight.a.type.tag)}`,
           expr.a); }
         case BinOp.And:

@@ -57,6 +57,60 @@ export const bigMath = {
   },
 }
 
+export const floatMath = {
+  // https://stackoverflow.com/a/64953280
+  abs(x: number) {
+    return x < 0 ? -x : x
+  },
+  sign(x: number) {
+    if (x === 0) return 0
+    return x < 0 ? -1 : 1
+  },
+  pow(base: number, exponent: number) {
+    return base ** exponent
+  },
+  min(value: number, ...values: number[]) {
+    for (const v of values)
+      if (v < value) value = v
+    return value
+  },
+  max(value: number, ...values: number[]) {
+    for (const v of values)
+      if (v > value) value = v
+    return value
+  },
+  add(value1: number, value2: number) {
+    return value1 + value2
+  },
+  sub(value1: number, value2: number) {
+    return value1 - value2
+  },
+  mul(value1: number, value2: number) {
+    return value1 * value2
+  },
+  div(value1: number, value2: number) {
+    return value1 / value2
+  },
+  eq(value1: number, value2: number) {
+    return Math.abs(value1-value2) < 0.00000001
+  },
+  neq(value1: number, value2: number) {
+    return value1 !== value2
+  },
+  lte(value1: number, value2: number) {
+    return value1 <= value2
+  },
+  gte(value1: number, value2: number) {
+    return value1 >= value2
+  },
+  lt(value1: number, value2: number) {
+    return value1 < value2
+  },
+  gt(value1: number, value2: number) {
+    return value1 > value2
+  },
+}
+
 export function des_check(hashNext: boolean) : boolean {
   if(hashNext === false) {
     throw new Error(`invalid assignment`);
@@ -156,6 +210,58 @@ export function builtin_bignum(args: number[], builtin: Function, libmem: WebAss
   else
     throw new Error("Runtime Error: too many arguments for builtin functions");
   return save_bignum(rslt, libmem);
+}
+
+export function binop_float(args: number[], builtin: Function, libmem: WebAssembly.Exports): number {
+  var rslt : number = 0;
+  const load = libmem.load_float;
+  
+  if(args.length === 2)
+    rslt = builtin(load_float(args[0], load), load_float(args[1], load));
+  else
+    throw new Error("Runtime Error: too many arguments for builtin functions");
+  return save_float(rslt, libmem);
+}
+
+export function binop_comp_float(args: number[], builtin: Function, libmem: WebAssembly.Exports): number {
+  var rslt : number = 0;
+  const load = libmem.load_float;
+  
+  if(args.length === 2)
+    rslt = builtin(load_float(args[0], load), load_float(args[1], load));
+  else
+    throw new Error("Runtime Error: too many arguments for builtin functions");
+  return Number(rslt);
+}
+
+export function save_float(float: number, libmem: WebAssembly.Exports): number {
+  const alloc = libmem.alloc;
+  const store = libmem.store;
+  const addr = alloc_float(1, alloc);
+  store_float(addr, float, store);
+  return addr;
+}
+
+export function alloc_float(numlength: number, allocator: WebAssembly.ExportValue): number {
+  const alloc = allocator as CallableFunction;
+  return alloc(Math.abs(numlength));
+}
+
+export function store_float(addr: number, num: number, storer: WebAssembly.ExportValue) {
+  const store = storer as CallableFunction;
+  store(addr, 0, num);
+}
+
+export function builtin_float(args: number[], builtin: Function, libmem: WebAssembly.Exports): number {
+  var rslt : number = 0;
+  const load = libmem.load_float;
+  if(args.length === 1)
+    rslt = builtin(load_float(args[0], load));
+  else if(args.length === 2)
+    rslt = builtin(load_float(args[0], load), load_float(args[1], load_float));
+  else
+    throw new Error("Runtime Error: too many arguments for builtin functions");
+  return save_float(rslt, libmem);
 }
 
 export function PyValue(typ: Type, result: bigint): Value<Annotation> {

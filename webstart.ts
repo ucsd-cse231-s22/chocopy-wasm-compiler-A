@@ -1,7 +1,7 @@
 import {BasicREPL} from './repl';
 import { Type, Value, Annotation, Class } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
-import { NUM, FLOAT, BOOL, NONE, load_bignum, load_float, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
+import { NUM, FLOAT, BOOL, NONE, load_bignum, load_float, builtin_bignum, binop_bignum, binop_comp_bignum, builtin_float, binop_float, binop_comp_float, bigMath, floatMath, des_check, bignum_to_i32 } from './utils';
 import { importObjectErrors } from './errors';
 import { generateImportMap } from './builtins';
 
@@ -253,6 +253,16 @@ function webStart() {
         $gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, memoryModule.instance.exports),
         $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
         $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
+        $add_float: (arg1: number, arg2: number) => binop_float([arg1, arg2], floatMath.add, memoryModule.instance.exports),
+        $sub_float: (arg1: number, arg2: number) => binop_float([arg1, arg2], floatMath.sub, memoryModule.instance.exports),
+        $mul_float: (arg1: number, arg2: number) => binop_float([arg1, arg2], floatMath.mul, memoryModule.instance.exports),
+        $div_float: (arg1: number, arg2: number) => binop_float([arg1, arg2], floatMath.div, memoryModule.instance.exports),
+        $eq_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.eq, memoryModule.instance.exports),
+        $neq_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.neq, memoryModule.instance.exports),
+        $lte_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.lte, memoryModule.instance.exports),
+        $gte_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.gte, memoryModule.instance.exports),
+        $lt_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.lt, memoryModule.instance.exports),
+        $gt_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.gt, memoryModule.instance.exports),
         $bignum_to_i32: (arg: number) => bignum_to_i32(arg, loader), 
       },
       errors: importObjectErrors,

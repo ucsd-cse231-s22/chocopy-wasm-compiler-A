@@ -170,7 +170,7 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
-      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)];
+      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op, expr.left.a.type)];
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
@@ -329,30 +329,32 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
   }
 }
 
-function codeGenBinOp(op : BinOp) : string {
+function codeGenBinOp(op : BinOp, typ: Type) : string {
   switch(op) {
     case BinOp.Plus:
-      return "(call $$add)"
+      return typ.tag !== "float" ? "(call $$add)" : "(call $$add_float)"
     case BinOp.Minus:
-      return "(call $$sub)"
+      return typ.tag !== "float" ? "(call $$sub)" : "(call $$sub_float)"
     case BinOp.Mul:
-      return "(call $$mul)"
+      return typ.tag !== "float" ? "(call $$mul)" : "(call $$mul_float)"
     case BinOp.IDiv:
       return "(call $$div)"
     case BinOp.Mod:
       return "(call $$mod)"
+    case BinOp.Div:
+      return "(call $$div_float)"
     case BinOp.Eq:
-      return "(call $$eq)"
+      return typ.tag !== "float" ? "(call $$eq)" : "(call $$eq_float)"
     case BinOp.Neq:
-      return "(call $$neq)"
+      return typ.tag !== "float" ? "(call $$neq)" : "(call $$neq_float)"
     case BinOp.Lte:
-      return "(call $$lte)"
+      return typ.tag !== "float" ? "(call $$lte)" : "(call $$lte_float)"
     case BinOp.Gte:
-      return "(call $$gte)"
+      return typ.tag !== "float" ? "(call $$gte)" : "(call $$gte_float)"
     case BinOp.Lt:
-      return "(call $$lt)"
+      return typ.tag !== "float" ? "(call $$lt)" : "(call $$lt_float)"
     case BinOp.Gt:
-      return "(call $$gt)"
+      return typ.tag !== "float" ? "(call $$gt)" : "(call $$gt_float)"
     case BinOp.Is:
       return "(i32.eq)";
     case BinOp.And:

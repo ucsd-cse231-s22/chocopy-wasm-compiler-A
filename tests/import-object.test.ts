@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
-import { binop_bignum, binop_comp_bignum, builtin_bignum, load_bignum, des_check, bignum_to_i32, load_float } from "../utils";
-import { bigMath } from "../utils";
+import { binop_bignum, binop_comp_bignum, builtin_bignum, builtin_float, binop_float, binop_comp_float, load_bignum, load_float, des_check, bignum_to_i32 } from "../utils";
+import { bigMath, floatMath } from "../utils";
 import { importObjectErrors } from "../errors";
 import { generateImportMap } from "../builtins";
 
@@ -73,6 +73,16 @@ export const importObject : any = {
     $gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, importObject.libmemory),
     $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, importObject.libmemory),
     $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, importObject.libmemory),
+    $add_float: (arg1: number, arg2: number) => binop_float([arg1, arg2], floatMath.add, importObject.libmemory),
+    $sub_float: (arg1: number, arg2: number) => binop_float([arg1, arg2], floatMath.sub, importObject.libmemory),
+    $mul_float: (arg1: number, arg2: number) => binop_float([arg1, arg2], floatMath.mul, importObject.libmemory),
+    $div_float: (arg1: number, arg2: number) => binop_float([arg1, arg2], floatMath.div, importObject.libmemory),
+    $eq_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.eq, importObject.libmemory),
+    $neq_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.neq, importObject.libmemory),
+    $lte_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.lte, importObject.libmemory),
+    $gte_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.gte, importObject.libmemory),
+    $lt_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.lt, importObject.libmemory),
+    $gt_float: (arg1: number, arg2: number) => binop_comp_float([arg1, arg2], floatMath.gt, importObject.libmemory),
     $bignum_to_i32: (arg: number) => bignum_to_i32(arg, importObject.libmemory.load), 
   },
   errors: importObjectErrors,

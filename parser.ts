@@ -269,6 +269,9 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         case "*":
           op = BinOp.Mul;
           break;
+        case "/":
+          op = BinOp.Div;
+          break;
         case "//":
           op = BinOp.IDiv;
           break;

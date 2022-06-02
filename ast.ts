@@ -109,7 +109,7 @@ export type Literal<A> =
   | { a?: A, tag: "..." }
 
 // TODO: should we split up arithmetic ops from bool ops?
-export enum BinOp { Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};
+export enum BinOp { Plus, Minus, Mul, Div, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, Gt, Is, And, Or};
 
 export enum UniOp { Neg, Not };
 
@@ -121,6 +121,7 @@ export function stringifyOp(op: Op): string {
     case BinOp.Plus: return "+";
     case BinOp.Minus: return "-";
     case BinOp.Mul: return "*";
+    case BinOp.Div: return "/";
     case BinOp.IDiv: return "//";
     case BinOp.Mod: return "%";
     case BinOp.Eq: return "==";
