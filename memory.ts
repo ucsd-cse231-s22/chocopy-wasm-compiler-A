@@ -41,7 +41,6 @@ export let refMap: Map<ref, memAddr> = new Map();
 let refNum = 0; // immutable reference number for objects
 export let memHeap: Int32Array;
 let activeStack: Set<ref>[]; // maintains objects created in the local scope
-//let recRefSet: Set<ref> = new Set();
 let inactiveRefList: ref[] = [];
 let reclaimable: number = 0;
 
@@ -127,7 +126,6 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number, fromAssig
 
 export function compact(): memAddr {
     let free: memAddr = heapStart;
-    //console.log(refMap);
     
     function isGarbage(r: ref): boolean {
         const addr = refLookup(r) / 4;
@@ -136,7 +134,6 @@ export function compact(): memAddr {
     function move(fromAddr: memAddr, toAddr: memAddr, amount: number) {
         fromAddr /= 4;
         toAddr /= 4;
-        //const amount = memHeap[fromAddr + amountOffset];
         for (let i = 0; i < amount + metadataAmt; i++) {
             memHeap[toAddr + i] = memHeap[fromAddr + i];
         }
@@ -152,7 +149,6 @@ export function compact(): memAddr {
             inactiveRefList.push(r);
         }
     }
-    // console.log(memHeap);
     
     return free;
 }
@@ -198,13 +194,8 @@ export function getTypeInfo(fields: Value<Annotation>[]): number {
 
 //debug function for tests
 export function debugId(id: number, offset: number) { // id should be of type int and the first field in the object
-    //console.log(memHeap);
-    //console.log(refMap);
-    
     for (const [_, addr] of refMap) {
-        //console.log("addr", memHeap[addr/4 + dataOffset + 1]);
         let n = load_bignum(memHeap[addr/4 + dataOffset + 1], importObject.libmemory.load);
-        //console.log("n", n);
         if (n as any == id) {
             return memHeap[addr/4 + offset];
         }

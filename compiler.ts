@@ -128,7 +128,6 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
     case "assign":
       console.log(stmt);
       var valStmts = codeGenExpr(stmt.value, env);
-      //console.log("stmt",stmt);
       if (((stmt.value.a?.type?.tag === "list" || stmt.value.a?.type?.tag === "class" || (stmt.value.tag === "value" && stmt.value.value.tag === "none")) || (stmt.value?.tag === "value" && stmt.value.value.tag === "num")) && (stmt.value.tag !== "alloc")) { // if the assignment is object assignment
         valStmts.push(`(i32.const 0)`, `(i32.const 1)`, `(i32.const 1)` , `(call $traverse_update)`) // update the count of the object on the RHS
         if (env.locals.has(stmt.name)) {
@@ -271,7 +270,6 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
         `(i32.const ${expr.fixed.length})`,
         `call $alloc`
         ]
-        //console.log(r);
         return(r);
       }
       let fields = [...env.classes.get(expr?.a?.type?.tag === "class" && expr.a.type.name).values()];
@@ -390,10 +388,6 @@ function codeGenBinOp(op : BinOp) : string {
 
 function codeGenInit(init : VarInit<Annotation>, env : GlobalEnv) : Array<string> {
   const value = codeGenValue(init.value, env);
-//  console.log("init", init);
-  // if (init.value.tag === "num") {
-  //   value.push(`(i32.const 0)`, `(i32.const 1)`, `(i32.const 1)`, `(call $traverse_update)`)
-  // }
   if (env.locals.has(init.name)) {
     return [...value, `(local.set $${init.name})`]; 
   } else {
