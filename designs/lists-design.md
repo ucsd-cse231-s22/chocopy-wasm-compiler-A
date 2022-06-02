@@ -157,12 +157,10 @@ We also expect to have changes to the globals so we can support a function to pr
 We decided to store the number of elements in the list at the first 4 bytes so it will be easy to use later for other functions such as print or len. We plan to incorporate the other functions and especially slicing functionality in the upcoming milestones. 
 
 ## Error Handling
+
 Our compiler is able to handle the index of bounds exception among the type check errors (see lists.test.ts).
 
 ## Remaining Features
-We'd like to finish what we've left off from the previous milestone, namely:
-- List concatenation
-- List Print/Insert/Remove methods
 
 We'll also add more test cases as we start merging with other features.
 We'll hear feedback and discuss with groups that are working on overlapping features as described in lists-conflicts.md. In particular, we'll coordinate with the for-loop group, inheritance group, error handling group and list-comprehension group to make sure our features can work together.
