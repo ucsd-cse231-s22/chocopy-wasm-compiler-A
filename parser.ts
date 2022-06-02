@@ -278,9 +278,27 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       //Indexing
       if (s.substring(c.from,c.to) == '['){
         c.nextSibling();
-        const indexExpr = traverseExpr(c,s,env);
-        c.parent();
-        return {tag: "index", obj:objExpr, index:indexExpr};
+        const index1 = traverseExpr(c,s,env);
+        c.nextSibling()
+        if (s.substring(c.from,c.to) != "]") {
+          c.nextSibling()
+          const index2 = traverseExpr(c,s,env)
+          c.nextSibling()
+          if (s.substring(c.from,c.to) != "]") {
+            c.nextSibling()
+            const step = traverseExpr(c,s,env)
+            c.parent()
+            return {tag: "slice", obj:objExpr, start: index1, stop: index2, step: step};
+          }
+          else {
+            c.parent();
+            return {tag: "slice", obj:objExpr, start: index1, stop: index2, step: {tag: "literal", value: {tag: "num", value: 1}}};
+          }
+        }
+        else {
+          c.parent();
+          return {tag: "index", obj:objExpr, index:index1};
+        }
       }
       c.nextSibling(); // Focus on property
       var propName = s.substring(c.from, c.to);
