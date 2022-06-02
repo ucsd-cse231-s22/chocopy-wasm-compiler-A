@@ -10,8 +10,9 @@ export function ceil_int(x: bigint): bigint {
 }
 
 export function comb(n: bigint, k: bigint): bigint {
-    if ((k < 0) || (n < 0))
+    if ((k < 0) || (n < 0)) {
         throw new Error("comb(n,k): n and k must be positive");
+    }
     if (k > n) {return 0n;}
     return factorial(n) / (factorial(k) * factorial(n-k));
 }
@@ -213,12 +214,15 @@ export function tan(x: any): number {
 
 // constants:
 
-export const pi = Math.PI;
+export function get_pi() : number {
+    return Math.PI;
+}
 
-export const e = Math.E;
+export function get_e() : number {
+    return Math.E;
+}
 
 // skipping tau; it's just 2pi
 
-export const inf = Infinity;
+// no need for inf or nan; we have those elsewhere
 
-export const nan = NaN;

@@ -11,6 +11,8 @@ import {
   isBuiltinNumArgs as is_builtin_with_args,
 } from "../builtins";
 import * as chai from "chai";
+import { run, typeCheck } from "./helpers.test";
+import { importObject } from "./import-object.test";
 
 export function assert_eq(name: string, a: any, b: any) {
   it(name, async () => {
@@ -36,6 +38,30 @@ describe("builtin tests: simple import", () => {
   print(gcd(1238476981736498572634, 1857715472604747858951))`,
     ["619238490868249286317"]
   );
+});
+
+describe("builtin tests: math int function behavior", () => {
+  it("math.comb", async () => {
+    await run(`from math import comb
+    print(comb(8,2))`);
+    const output = importObject.output.trim().split("\n");
+    //chai.expect(output.length).to.eq(1);
+    chai.expect(Number(output)).to.eq(28);
+  })
+  it("math.perm", async () => {
+    await run(`from math import perm
+    print(perm(8,2))`);
+    const output = importObject.output.trim().split("\n");
+    //chai.expect(output.length).to.eq(1);
+    chai.expect(Number(output)).to.eq(56);
+  })
+  it("math.copysign_int", async () => {
+    await run(`from math import copysign_int
+    print(copysign_int(8,-222))`);
+    const output = importObject.output.trim().split("\n");
+    //chai.expect(output.length).to.eq(1);
+    chai.expect(Number(output)).to.eq(-8);
+  })
 });
 
 describe("builtin test: function definition store", () => {
