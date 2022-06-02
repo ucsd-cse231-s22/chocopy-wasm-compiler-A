@@ -291,7 +291,7 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
       return return_val;
     case "float":
       const returnVal : string[] = [];
-      returnVal.push(`(i32.const 4)`);
+      returnVal.push(`(i32.const 1)`);
       returnVal.push(`(call $alloc)`);
       returnVal.push(`(local.set $$scratch)`);
       if (val.value === Infinity){
@@ -332,6 +332,7 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
 function codeGenBinOp(op : BinOp, typ: Type) : string {
   switch(op) {
     case BinOp.Plus:
+
       return typ?.tag !== "float" ? "(call $$add)" : "(call $$add_float)"
     case BinOp.Minus:
       return typ.tag !== "float" ? "(call $$sub)" : "(call $$sub_float)"
