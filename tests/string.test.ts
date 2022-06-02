@@ -266,7 +266,6 @@ describe("String tests", () => {
   print(s[1:3])  
   `,['bc'])
 
-
   assertPrint("String-Slicing-In-Function",`
   def f(s:str, x:int) -> str:
      return s[1:3]
@@ -281,5 +280,26 @@ describe("String tests", () => {
   c = C()
   print(c.s[0:2])
   `,['ab'])
+
+  assertPrint("String-Slicing-Concatenation-Multiplication",`
+  s:str = "abc"
+  print(s[1:3]*2+s+"xyz")  
+  `,['bcbcabcxyz'])
+
+  assertPrint("String-Slicing-Concatenation-Multiplication-In-Function",`
+  def f(s:str,t:str, x:int) -> str:
+      return s * x + t
+  x:str = "123"
+  print(f(x,"abc",2))  
+  `,['123123abc'])
+
+  assertPrint("String-Slicing-Concatenation-Multiplication-In-Class",`
+  class C(object):
+    s:str = "abc"
+    x:int = 3
+  c:C = None
+  c = C()
+  print("123" + c.s[0:2]*3+"xy")
+  `,['123abababxy'])
 
 });
