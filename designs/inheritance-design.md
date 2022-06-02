@@ -662,6 +662,6 @@ Note: We wanted to test out if inherited fields of type strings, set, tuple, but
 
    1. **Diamond Problem**: this refers to an ambiguity that arises when two classes B and C inherit from A, and class D inherits from both B and C. If there is a method in A that B and C have overridden, and D does not override it, then which version of the method does D inherit: that of B, or that of C? We looked up the specific ways to resolve this but couldn't accommodate these changes due to time constraints. 
 
-
+   2. **Multiple Inheritance Method Access**: when accessing superclass methods while using multiple inheritance, we managed to get the fields working for all superclasses. However, we faced issues in vtable lookup for method offset referencing. Method invocation seems to be working for methods in the first superclass, but not for subsequent ones.
 	
 

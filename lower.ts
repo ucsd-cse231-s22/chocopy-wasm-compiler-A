@@ -36,17 +36,21 @@ export function generateVtable(p : AST.Program<Annotation>, env : GlobalEnv) {
   var methodIndex = 0;
   while(classIndices.size !== p.classes.length) {
     p.classes.forEach(cls => {
-      if ([...cls.super.keys()][0] !== "object") {
-        const superClassIndexes = classIndices.get([...cls.super.keys()][0])
-        var superClassVtable = vtable.slice(superClassIndexes[0], superClassIndexes[1])
-        cls.methods.forEach(m => {
-          const methodOffset = env.classes.get(cls.name)[1].get(m.name);
-          if (methodOffset >= superClassVtable.length) {
-            superClassVtable.push([`$${cls.name}$${m.name}`, m.parameters.length])
-          } else {
-            superClassVtable[methodOffset] = [`$${cls.name}$${m.name}`, m.parameters.length];
-          }
-        })
+      var supe = [...cls.super.keys()]
+      if (supe[0] !== "object") {
+        var superClassVtable : Array<[string, number]> = [];
+        for (var sup of supe) {
+          const superClassIndexes = classIndices.get(sup)
+          superClassVtable = [...superClassVtable, ...vtable.slice(superClassIndexes[0], superClassIndexes[1])]
+          cls.methods.forEach(m => {
+            const methodOffset = env.classes.get(cls.name)[1].get(m.name);
+            if (methodOffset >= superClassVtable.length) {
+              superClassVtable.push([`$${cls.name}$${m.name}`, m.parameters.length])
+            } else {
+              superClassVtable[methodOffset] = [`$${cls.name}$${m.name}`, m.parameters.length];
+            }
+          })
+        }
         classIndices.set(cls.name, [vtable.length, vtable.length +superClassVtable.length])
         vtable = [...vtable , ...superClassVtable]
       } else {
