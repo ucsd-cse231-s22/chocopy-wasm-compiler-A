@@ -13,7 +13,9 @@
 // print(f.write(x))`, ["4"]);
 
 //   assertPrint("Set+For loops", `
-// x:set = {1, 2, 3, 4, 5}
+// x: set = set()
+// i : int = 0
+// x = {1, 2, 3, 4, 5}
 // for i in range(2, 5):
 //   x.remove(i)
 // print(x)`, ["1", "5"]);
@@ -32,10 +34,11 @@
 //       print(i+j)`, ["2", "3","4", "3","4", "5", "4","5", "6"]);
 
 // assertPrint("Sum of Even and Odd Places", `
-// A : [int] = [1,2,3,4,5,6,7,8,9,10]
+// A : [int] = None
 // s1 : int = 0
 // s2 : int = 0
 // i : int = 0
+// A = [1,2,3,4,5,6,7,8,9,10]
 // for i in range(0,len(A),2):
 //    s1 = s1 + A[i]
 // for i in range(1,len(A),2):
@@ -45,7 +48,8 @@
 
 // assertPrint("List+Inheritance", `
 // class A(object):
-//   a : [int] = [1, 2, 3]
+//   a : [int] = None
+//   a = [1, 2, 3]
 // class B(A):
 //   pass
 // x : B = None
@@ -53,11 +57,13 @@
 // print(x.a)`, ["1", "2", "3"]);
 
 // assertPrint("For + Lists + Dict", `
-// A : [int] = [1,2,3]
-// B : dict = {1:5,2:10,3:15}
+// A : [int] = None
+// B : dict = dict()
 // s1 : int = 0
 // i : int = 0
 // j : int = 0
+// A = [1,2,3]
+// B = {1:5,2:10,3:15}
 // for i in A:
 //   for j in B:
 //     s1 = s1+ i + j
@@ -101,10 +107,11 @@
 // `,["dlroW olleH","HELLO WORLD"]);
 
 // assertPrint("Diff3",`
-// A : [[int]]] = [[10,20,30],[20,30,40]]
+// A : [[int]]] = None
 // sum : int = 0
 // i : int = 0
 // j : int = 0
+// A = [[10,20,30],[20,30,40]]
 // for i in range(0,len(A)):
 //   for j in range(0,len(i)):
 //     sum = sum + A[i][j]
@@ -176,11 +183,12 @@
 // obj.m()`, ["In Class2"]);
 
 // assertPrint("Diff12",`
-// input_list : [int] = [1, 2, 3, 4, 4, 5, 6, 7, 7]
+// input_list : [int] = None
 // list_using_comp : [int] = None
 // dict_using_comp : dict = dict()
 // output_gen : set = set()
 // var : int : = 0
+// input_list = [1, 2, 3, 4, 4, 5, 6, 7, 7]
 // list_using_comp = [var for var in input_list if var % 2 == 0]
 // dict_using_comp = {var:var ** 3 for var in input_list if var % 2 != 0}
 // output_gen = (var for var in input_list if var % 2 == 0)
@@ -221,8 +229,9 @@
 // assertPrint("Case 1",`
 // a : int = 200
 // b : int = 10
-// ops : [int] = [1,2,3,4,5]
+// ops : [int] = None
 // i : int = 0
+// ops = [1,2,3,4,5]
 // for i in ops:
 //   if i == 1:
 //     print(a+b)
@@ -339,7 +348,8 @@
 
 // assertRunTimeFail("Wrong builtin Methods", `
 // def method1():
-//   A : [int] = [1,23,5]
+//   A : [int] = None
+//   A = [1,23,5]
 //   A.add(50)
 // method1()
 // `);
@@ -384,7 +394,8 @@
 // print("Total number of days: " + days)`);
 
 //   assertTCFail("List None Type", `
-// days : [int] = [10]
+// days : [int] = None
+// days = [10]
 // print("Total number of days: " + days[0] + " in a month")`);
 
 // assertTCFail("Fail1", `
@@ -402,8 +413,9 @@
 // print(st["Hello"])`);
 
 // assertTCFail("List None Type", `
-// cars : dict = {"brand": "Ford","model": "Mustang",}
+// cars : dict = dict()
 // i : str = None
+// cars = {"brand": "Ford","model": "Mustang"}
 // for i in cars:
 //   print("brand: " + i["brand"])
 //   print("model: " + i["model"])`);

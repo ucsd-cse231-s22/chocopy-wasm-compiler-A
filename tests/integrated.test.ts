@@ -77,7 +77,8 @@
 
 //   // 10, 4294967296=2^32
 //   assertPrint("Bignums+Set", `
-// x:set = {1,2,4294967296}
+// x:set = set()
+// x = {1,2,4294967296}
 // print(4294967296 in x)`, [`True`]);
 
 //   // 11
@@ -86,21 +87,24 @@
 //   def printIsIn(element: int):
 //     print(element in val)
 //   return printIsIn
-// x:set = {1,2,3}
+// x:set = set()
+// x = {1,2,3}
 // func: Callable[[], None] = print_msg(x)
 // func(2)
 // func(4)`, [`True`, `False`]);
 
 //   // 12, 
 //   assertPrint("Set+Comprehensions", `
-// x:set = {i for i in range(5)}
+// x:set = set()
+// i : int = 0
+// x = {i for i in range(5)}
 // print(3 in x)
 // print(5 in x)`, [`True`, `False`]);
 
 //   // 13, 
 //   assertPrint("Set+Destructuring assignment", `
-// x:set = {}
-// y:set = {}
+// x:set = set()
+// y:set = set()
 // x, y = {1, 2}, {4}
 // print(x)
 // print(y)`, [`1`, `2`, `4`]);
@@ -114,7 +118,9 @@
 
 //   // 15, 
 //   assertPrint("Set+For loops", `
-// x:set = {1, 2, 3, 4, 5}
+// x:set = set()
+// x = {1, 2, 3, 4, 5}
+// i : int = 0
 // for i in range(2, 5):
 //   x.remove(i)
 // print(x)`, [`1`, `5`]);
@@ -132,7 +138,8 @@
 //   // 17, 
 //   assertPrint("Set+Inheritance", `
 // class A(object):
-//   a : set = {1, 2, 3}
+//   a : set = set()
+//   a = {1, 2, 3}
 // class B(A):
 //   pass
 // x : B = None
@@ -148,7 +155,8 @@
 
 //   // 19, 
 //   assertPrint("Set+Strings", `
-// x:set = {"abc", "def"}
+// x:set = set()
+// x = {"abc", "def"}
 // print(x)`, [`abc`, `def`]);
 
 //   // 20, 
@@ -170,10 +178,11 @@
 
 // //22,
 //   assertPrint("Sum of Even and Odd Places", `
-// A : [int] = [1,2,3,4,5,6,7,8,9,10]
+// A : [int] = None
 // s1 : int = 0
 // s2 : int = 0
 // i : int = 0
+// A = [1,2,3,4,5,6,7,8,9,10]
 // for i in range(0,len(A),2):
 //    s1 = s1 + A[i]
 // for i in range(1,len(A),2):
@@ -184,7 +193,8 @@
 // //23,
 //   assertPrint("List+Inheritance", `
 // class A(object):
-//   a : [int] = [1, 2, 3]
+//   a : [int] = None
+//   a = [1, 2, 3]
 // class B(A):
 //   pass
 // x : B = None
@@ -193,10 +203,11 @@
 
 // //24,
 //   assertPrint("Nested While", `
-// A : [int] = [1,2,3]
+// A : [int] = None
 // s1 : int = 0
 // i : int = 0
 // j : int = 0
+// A = [1,2,3]
 // while i < len(A):
 //   j = 0
 //   while j < len(A):
@@ -207,11 +218,13 @@
 
 // //25,
 //    assertPrint("For + Lists + Dict", `
-// A : [int] = [1,2,3]
-// B : dict = {1:5,2:10,3:15}
+// A : [int] = None
+// B : dict = dict()
 // s1 : int = 0
 // i : int = 0
 // j : int = 0
+// A = [1,2,3]
+// B = {1:5,2:10,3:15}
 // for i in A:
 //   for j in B:
 //     s1 = s1+ i + j
@@ -219,30 +232,33 @@
 
 // //26,
 //   assertPrint("For Reverse", `
-// A : [int] = [1,2,3]
+// A : [int] = None
 // i : int = 0
+// A = [1,2,3]
 // for i in range(len(A)-1,-1,-1):
 //   print(A[i])`, [`3`,`2`,`1`]);
 
 // //27
 //   assertPrint("List+Destructuring assignment", `
-// x:list = [1,2,3]
+// x:list = None
 // t : int = 0
 // y = int = 0
+// x =[1,2,3]
 // t, y = x[0], x[1]
 // print(t)
 // print(y)`, [`1`, `2`]);
 
 // //28
 //   assertPrint("List+Strings", `
-// genre : [str]= ['pop', 'rock', 'jazz']
-// i: str = None
+// genre : [str]= None
+// i: int = 0
+// genre = ['pop', 'rock', 'jazz']
 // for i in range(len(genre)):
 //     print("I like", genre[i])`, [`I like pop`, `I like rock`,`I like jazz` ]);
 
 // //29
 //   assertPrint("List+Loops", `
-// A : : [int] = []
+// A : : [int] = None
 // i : bool = True
 // for i:
 //    A.append(1)
@@ -251,7 +267,7 @@
 
 // //30
 //   assertPrint("List+Fancy calling conventions", `
-// def test(x : int, y : [int] = [1,2,3]) -> list:
+// def test(x : int, y : [int] = [1,2,3]) -> [int]:
 //   return y.append(x)
 // print(test(5))`,[`1`,`2`,`3`,`5`]);
 
@@ -358,8 +374,9 @@
 
 // //42  Type Errors
 //   assertTCFail("List None Type", `
-// list1 : [int] = [1, 2]
-// list1 : [int] = list.sort(list1)
+// list1 : [int] = None
+// list1 : [1,2]
+// list1 = list1.sort(list1)
 // temp :int = list1[0]
 // print(temp)`);
 
@@ -370,8 +387,9 @@
 
 // //44 Index Errors
 //   assertFail("Loop and List", `
-// numbers : [int] = [1,2,3]
+// numbers : [int] = None
 // i : int = 0
+// numbers = = [1,2,3]
 // for i in range(0,5)
 // print(numbers[i])`);
 
@@ -435,7 +453,8 @@
 
 // //52  Type Errors Conversion
 //   assertTCFail("List None Type", `
-// days : [int] = [10]
+// days : [int] = None
+// days = [10]
 // print("Total number of days: " + days[0] + " in a month")`);
 
 // //53 Cant convert to int
@@ -450,15 +469,18 @@
 // //54 Cant convert to int
 // assertFail("Convert 2", `
 // def method1():
-//   x : [str] = ["One"]
-//   y : int = int(x)
+//   x : [str] = None
+//   y : int = 0
+//   x = ["One"]
+//   y = int(x)
 // method1()
 // `);
 
 // // 55 Method Errors
 // assertFail("Wrong builtin Methods", `
 // def method1():
-//   A : [int] = [1,23,5]
+//   A : [int] = None
+//   A = [1,23,5]
 //   A.add(50)
 // method1()
 // `);
@@ -491,8 +513,9 @@
 
 // //59 TypeError: string indices must be integers
 // assertTCFail("List None Type", `
-// cars : dict = {"brand": "Ford","model": "Mustang",}
+// cars : dict = dict()
 // i : str = None
+// cars = {"brand": "Ford","model": "Mustang"}
 // for i in cars:
 //   print("brand: " + i["brand"])
 //   print("model: " + i["model"])`);
@@ -501,6 +524,7 @@
 
 // assertFail("Wrong builtin Methods", `
 // f : File = open('filename.ext','r')
+// l : str = None
 // for l in f:
 //   print(l)
 // `);
@@ -533,23 +557,27 @@
 // list.listprint()`, [`Mon`,`Tue`,`Wed`]);
 
 // assertPrint("Diff2",`
-// diction : dict = { 'C1' : [10,20,30] ,'C2' : [20,30,40]}
-// diction1 : dict = { 'C1' : (10,20,30) ,'C2' : (20,30,40)}
+// diction : dict = dict()
+// diction1 : dict = dict()
+// diction = { 'C1' : [10,20,30] ,'C2' : [20,30,40]}
+// diction1= { 'C1' : (10,20,30) ,'C2' : (20,30,40)}
 // print(diction['C1'][0])
 // print(diction1['C2'][2])`, [`10`,`40`]);
 
 // assertPrint("Diff3",`
-// A : [[int]]] = [[10,20,30],[20,30,40]]
+// A : [[int]] = None
 // sum : int = 0
 // i : int = 0
 // j : int = 0
+// A = [[10,20,30],[20,30,40]]
 // for i in range(0,len(A)):
 //   for j in range(0,len(i)):
 //     sum = sum + A[i][j]
 // print(sum)`, [`150`]);
 
 // assertPrint("Diff4",`
-// A : [int] = ['abc','bcd','cde','efg','ghi','igh']
+// A : [str] = None
+// A = ['abc','bcd','cde','efg','ghi','igh']
 // print(A[0][1])`, [`b`]);
 
 // assertPrint("Diff5",`
@@ -597,9 +625,10 @@
 // print(b)`, [`0`,`1`]);
 
 // assertPrint("Diff8",`
-// diction : dict = {'x':10 , 'y':20}
+// diction : dict = dict()
 // a:str = None
 // b:str = None
+// diction = {'x':10 , 'y':20}
 // a , b = diction
 // print(a)
 // print(b)`, [`x`,`y`]);
@@ -645,11 +674,12 @@
 
 
 // assertPrint("Diff12",`
-// input_list : [int] = [1, 2, 3, 4, 4, 5, 6, 7, 7]
+// input_list : [int] = None
 // list_using_comp : [int] = None
 // dict_using_comp : dict = dict()
 // output_gen : set = set()
 // var : int : = 0
+// input_list = [1, 2, 3, 4, 4, 5, 6, 7, 7]
 // list_using_comp = [var for var in input_list if var % 2 == 0]
 // dict_using_comp = {var:var ** 3 for var in input_list if var % 2 != 0}
 // output_gen = (var for var in input_list if var % 2 == 0)
@@ -754,8 +784,9 @@
 //     def printDouble():
 //         print(val*2)
 //     return printDouble
-// iterations: [int] = [1, 2, 3, 4]
+// iterations: [int] = None
 // i : int = 0
+// iterations = [1, 2, 3, 4]
 // for i in iterations:
 //     func: Callable[[], None] = print_msg(i)
 //     func()`, [`2`,`4`,`6`,`8`]);
@@ -786,8 +817,9 @@
 // assertPrint("Case 1",`
 // a : int = 200
 // b : int = 10
-// ops : [int] = [1,2,3,4,5]
+// ops : [int] = None
 // i : int = 0
+// ops = [1,2,3,4,5]
 // for i in ops:
 //   if i == 1:
 //     print(a+b)
@@ -977,8 +1009,8 @@
 //     for word in B.split():
 //         count[word] = count.get(word, 0) + 1
 //     return [word for word in count if count[word] == 1]
-// A : str = "Geeks for Geeks"
-// B : str = "Learning from Geeks for Geeks"
+// A : str = "Peeks for Peeks"
+// B : str = "Learning from Peeks for Peeks"
 // C : [str] = UncommonWords(A, B)
 // i : int = 0
 // for i in range(0,len(C):
@@ -995,9 +1027,10 @@
 // print(findLen(str))`, [`11`]);
 
 // assertPrint("Case 14",`
-// test_dict : dict = {'gfg': [7, 6, 3], 'is': [2, 10, 3], 'best': [19, 4]}
+// test_dict : dict = dict()
 // res : dict = dict()
 // key : str = None
+// test_dict = {'gfg': [7, 6, 3], 'is': [2, 10, 3], 'best': [19, 4]}
 // for key in sorted(test_dict):
 //     res[key] = sorted(test_dict[key])
 // print(res)`, [`{‘best’: [4, 19], ‘gfg’: [3, 6, 7], ‘is’: [2, 3, 10]}`]);
@@ -1007,7 +1040,7 @@
 //     lst : int= len(tup)
 //     i : int = 0
 //     j : int = 0
-//     temp : tuple = None
+//     temp : tuple = tuple()
 //     for i in range(0, lst):
 //         for j in range(0, lst-i-1):
 //             if (tup[j][1] > tup[j + 1][1]):
@@ -1020,10 +1053,11 @@
 // print(Sort_Tuple(tup))`, [`[('Frown', 5), ('is', 10), ('a', 15), ('portal', 20), ('for', 24), ('Prop', 28)]`]);
 
 // assertPrint("Case 16",`
-// A : [int] = [64, 25, 12, 22, 11]
+// A : [int] = None
 // i : int = 0
 // min_idx : int = 0
 // j : int = 0 
+// A = [64, 25, 12, 22, 11]
 // for i in range(len(A)):
 //     min_idx = i
 //     for j in range(i+1, len(A)):
@@ -1049,13 +1083,16 @@
 //     print("NO")`, [`Yes`]);
 
 // assertPrint("Case 18",`
-// A : [[int]] = [[12, 7, 3],[4, 5, 6],[7, 8, 9]] 
-// B : [[int]] = [[5, 8, 1, 2],[6, 7, 3, 0],[4, 5, 9, 1]]  
-// result : [[int]] = [[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0]]
+// A : [[int]] = None
+// B : [[int]] = None 
+// result : [[int]] = None
 // i : int = 0
 // j : int = 0
 // k : int = 0
 // r : [int] = None
+// A = [[12, 7, 3],[4, 5, 6],[7, 8, 9]] 
+// B = [[5, 8, 1, 2],[6, 7, 3, 0],[4, 5, 9, 1]]
+// result = [[0, 0, 0, 0],[0, 0, 0, 0],[0, 0, 0, 0]]
 // for i in range(len(A)):
 //     for j in range(len(B[0])):
 //         for k in range(len(B)):
@@ -1066,15 +1103,19 @@
 
 // assertPrint("Case 19",`
 // from collections import Counter
-// l : [int] = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]
+// l : [int] = None
 // x : int = 3
-// d : dict = Counter(l)
+// d : dict = dict()
+// l = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5] 
+// d = Counter(l)
 // print(d[x])`, [`2`]);
 
 // assertPrint("Case 20",`
 // import math
-// list1 : [int] = [1, 2, 3]
-// list2 : [int] = [3, 2, 4]
+// list1 : [int] = None
+// list2 : [int] = None
+// list1  = [1, 2, 3]
+// list2  = [3, 2, 4]
 // result1 : int = math.prod(list1)
 // result2 : int = math.prod(list2)
 // print(result1)
@@ -1082,7 +1123,9 @@
 
 
 // assertTCFail("Fail1", `
-// spam : [str] = ['cat', 'dog', 'mouse']
+// spam : [str] = None 
+// spam = ['cat', 'dog', 'mouse']
+// i : int = 0
 // for i in range(spam):
 //     print(spam[i])`);
 
@@ -1155,7 +1198,8 @@
 
 
 // assertFail("Fail12", `
-// d1 : dict = {20:50,30:60,40:70}
+// d1 : dict = dict()
+// d1 = {20:50,30:60,40:70}
 // print(d1[50])`);
 
 // assertFail("Fail13", `
@@ -1188,9 +1232,10 @@
 // print(obj.c)`);
 
 // assertFail("Fail17",`
-// li : [int] = [8,4,0,18,24]
+// li : [int] = None
 // li2 : [int] = None
 // e1 : int = 0
+// li =  [8,4,0,18,24]
 // li2 = [1/e1 for e1 in li]`);
 
 // assertFail("Fail18",`
@@ -1221,9 +1266,10 @@
 //   `, CLASS("Dep"));
 
 // assertTC("Type 2", `
-// li : [int] = [8,4,0,18,24]
+// li : [int] = None
 // i : int = 0
 // li2 : [int] = None
+// li = [8,4,0,18,24]
 // for i in li:
 //   li2.append(i)
 // li2`, LIST);
@@ -1241,7 +1287,9 @@
 // x`, BOOL);
 
 // assertTC("Type 4", `
-// x:set = {1, 2, 3, 4, 5}
+// x:set = set()
+// i : int = 0
+// x = {1, 2, 3, 4, 5}
 // for i in range(2, 5):
 //   x.remove(i)
 // x`, SET);
@@ -1265,9 +1313,10 @@
 // c.d.c`, CLASS("C"));
 
 // assertTC("Type 6", `
-// li : [int] = [8,4,0,18,24]
+// li : [int] = None
 // i : int = 0
 // li2 : [int] = None
+// li = [8,4,0,18,24]
 // for i in li:
 //   li2.append(i)
 // li2[2]`, NUM);
@@ -1278,57 +1327,66 @@
 // li2[2]`, STRING);
 
 // assertTC("Type 8", `
-// A : [int] = [1,2,3]
-// B : dict = {1:5,2:10,3:15}
+// A : [int] = None
+// B : dict = dict()
 // s1 : int = 0
 // i : int = 0
 // j : int = 0
+// A = [1,2,3]
+// B = {1:5,2:10,3:15}
 // for i in A:
 //   for j in B:
 //     s1 = s1+ i + j
 // B`, DICT);
 
 // assertTC("Type 9", `
-// li : [int] = [8,4,0,18,24]
+// li : [int] = None
 // i : int = 0
-// li2 : tuple = None
+// li2 : tuple = tuple()
+// li = [8,4,0,18,24]
 // for i in li:
 //   li2.append(i)
 // li2`, TUPLE);
 
 // assertTC("Type 10", `
-// A : [int] = [1,2,3]
-// B : dict = {1:[5,65],2:[10,56],3:[15,34]}
+// A : [int] = None
+// B : dict = dict()
 // s1 : int = 0
 // i : int = 0
 // j : int = 0
+// A = [1,2,3]
+// B = {1:[5,65],2:[10,56],3:[15,34]}
 // for i in A:
 //   for j in B:
 //     s1 = s1+ i + j
 // B[1]`, LIST);
 
 // assertTC("Type 11", `
-// li : [[int]] = [[8,4],[0,18],[24]]
+// li : [[int]] = None
 // i : int = 0
-// li2 : tuple = None
+// li2 : tuple = tuple()
+// li = [[8,4],[0,18],[24]]
 // for i in li:
 //   li2.append(i)
 // li`, LIST);
 
 // assertTC("Type 12", `
-// li : [[int]] = [[8,4],[0,18],[24]]
+// li : [[int]] = None
 // i : int = 0
-// li2 : tuple = None
+// li2 : tuple = tuple()
+// li = [[8,4],[0,18],[24]]
 // for i in li:
 //   li2.append(i)
 // li[0]`, LIST);
 
 // assertTC("Type 13", `
-// A : [int] = [1,2,3]
-// B : dict = {1:"abss",2:"bvf",3:"cdf}
+// A : [int] = None
+// B : dict = dict()
 // s1 : int = 0
 // i : int = 0
 // j : int = 0
+// A = [1,2,3]
+// B = {1:"abss",2:"bvf",3:"cdf}
 // for i in A:
 //   for j in B:
 //     s1 = s1+ i + j
