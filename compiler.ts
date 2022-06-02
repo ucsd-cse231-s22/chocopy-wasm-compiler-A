@@ -1,7 +1,9 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
+
 import { Annotation, BinOp, Type, UniOp } from "./ast"
 import { APPLY, BOOL, createMethodName, makeWasmFunType, NONE, NUM } from "./utils";
 import { equalType } from "./type-check";
+
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -42,7 +44,7 @@ export function makeLocals(locals: Set<string>) : Array<string> {
 
 export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
-
+  // console.log(`In compile, ${JSON.stringify(ast, null, 4)}`);
   const definedVars : Set<string> = new Set(); //getLocals(ast);
   definedVars.add("$last");
   definedVars.add("$selector");
@@ -54,6 +56,7 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
+
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
   const allFuns = funs.concat(classes).join("\n\n");
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
@@ -139,6 +142,12 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
 }
 
 function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
+  try {
+    // console.log(`In codeGenExpr, expr: ${JSON.stringify(expr, null, 4)}`);
+  } catch (e) {
+
+  }
+  
   switch (expr.tag) {
     case "value":
       return codeGenValue(expr.value, env)
@@ -192,11 +201,13 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       return [...leftStmts, ...rightStmts, `(call $${expr.name})`]
 
     case "call":
+      // console.log(`=============> In compiler, call is called`);
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       if(expr.name === "len"){
         return [...valStmts, "(i32.const 0)", "call $load"];
       }
       valStmts.push(`(call $${expr.name})`);
+      // onsole.log(valStmts);
       return valStmts;
 
     case "call_indirect":

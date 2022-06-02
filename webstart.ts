@@ -1,8 +1,9 @@
-import {BasicREPL} from './repl';
+import { BasicREPL } from './repl';
 import { Type, Value, Annotation, Class } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
 import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
 import { importObjectErrors } from './errors';
+import { open, read, write, close, seek } from './IO_File/FileSystem';
 
 import CodeMirror from 'codemirror';
 import "codemirror/addon/edit/closebrackets";
@@ -16,8 +17,8 @@ import "./style.scss";
 import { autocompleteHint } from "./autocomplete";
 import { default_keywords, default_functions } from "./const";
 
-function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : string {
-  switch(typ.tag) {
+function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue): string {
+  switch (typ.tag) {
     case "number":
       return load_bignum(arg, loader).toString();
     case "bool":
@@ -29,7 +30,7 @@ function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : strin
   }
 }
 
-export function print_class(memory: WebAssembly.Memory, repl: BasicREPL, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number, loader : WebAssembly.ExportValue): Array<string> {
+export function print_class(memory: WebAssembly.Memory, repl: BasicREPL, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number, loader: WebAssembly.ExportValue): Array<string> {
 
   var fields_offset_ = repl.currentEnv.classes.get(classname);
   var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
@@ -70,7 +71,7 @@ export function print_class(memory: WebAssembly.Memory, repl: BasicREPL, pointer
   return display;
 }
 
-function print(typ: Type, arg : number, loader: WebAssembly.ExportValue) : any {
+function print(typ: Type, arg: number, loader: WebAssembly.ExportValue): any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
@@ -237,7 +238,7 @@ function webStart() {
         print_bool: (arg: number) => print(BOOL, arg, null),
         print_none: (arg: number) => print(NONE, arg, null),
         destructure_check: (hashNext: boolean) => des_check(hashNext),
-        abs:  (arg: number) => builtin_bignum([arg], bigMath.abs, memoryModule.instance.exports),
+        abs: (arg: number) => builtin_bignum([arg], bigMath.abs, memoryModule.instance.exports),
         min: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.min, memoryModule.instance.exports),
         max: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.max, memoryModule.instance.exports),
         pow: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.pow, memoryModule.instance.exports),
@@ -252,7 +253,12 @@ function webStart() {
         $gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, memoryModule.instance.exports),
         $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, memoryModule.instance.exports),
         $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, memoryModule.instance.exports),
-        $bignum_to_i32: (arg: number) => bignum_to_i32(arg, loader), 
+        bignum_to_i32: (arg: number) => bignum_to_i32(arg, loader),
+        buildin_open: (arg1: number, arg2: number) => open(arg1, arg2),
+        buildin_read: (arg1: number, arg2: number) => read(arg1, arg2),
+        buildin_write: (arg1: number, arg2: number) => write(arg1, arg2),
+        buildin_close: (arg1: number) => close(arg1),
+        buildin_seek: (arg1: number, arg2: number) => seek(arg1, arg2),
       },
       errors: importObjectErrors,
       libmemory: memoryModule.instance.exports,
@@ -261,8 +267,8 @@ function webStart() {
     };
     var repl = new BasicREPL(importObject);
 
-    function renderResult(result : Value<Annotation>) : void {
-      if(result === undefined) { console.log("skip"); return; }
+    function renderResult(result: Value<Annotation>): void {
+      if (result === undefined) { console.log("skip"); return; }
       if (result.tag === "none") return;
       const elt = document.createElement("pre");
       document.getElementById("output").appendChild(elt);
@@ -281,7 +287,7 @@ function webStart() {
       }
     }
 
-    function renderError(result : any) : void {
+    function renderError(result: any): void {
       // only `TypeCheckError` has `getA` and `getErrMsg`
       if (result instanceof TypeCheckError) {
         console.log(result.getA()); // could be undefined if no Annotation information is passed to the constructor of TypeCheckError

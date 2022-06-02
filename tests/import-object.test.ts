@@ -1,7 +1,9 @@
 import { readFileSync } from "fs";
+
 import { binop_bignum, binop_comp_bignum, builtin_bignum, load_bignum, des_check, bignum_to_i32 } from "../utils";
 import { bigMath } from "../utils";
 import { importObjectErrors } from "../errors";
+import { open, read, write, close, seek } from '../IO_File/FileSystem';
 
 enum Type { Num, Bool, None }
 
@@ -19,7 +21,7 @@ function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue): string
 function print(typ: Type, arg: any, loader: WebAssembly.ExportValue): any {
   importObject.output += stringify(typ, arg, loader);
   importObject.output += "\n";
-  if(typ === Type.Num)
+  if (typ === Type.Num)
     return Number(load_bignum(arg, loader));
   return arg;
 }
@@ -32,15 +34,15 @@ function print(typ: Type, arg: any, loader: WebAssembly.ExportValue): any {
 
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
-  const memory = new WebAssembly.Memory({initial:10, maximum:100});
+  const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })
   importObject.libmemory = memoryModule.instance.exports,
-  importObject.memory_values = memory;
-  importObject.js = {memory};
+    importObject.memory_values = memory;
+  importObject.js = { memory };
   return importObject;
 }
 
-export const importObject : any = {
+export const importObject: any = {
   imports: {
     // we typically define print to mean logging to the console. To make testing
     // the compiler easier, we define print so it logs to a string object.
@@ -51,7 +53,7 @@ export const importObject : any = {
     print_bool: (arg: number) => print(Type.Bool, arg, null),
     print_none: (arg: number) => print(Type.None, arg, null),
     destructure_check: (hashNext: boolean) => des_check(hashNext),
-    abs:  (arg: number) => builtin_bignum([arg], bigMath.abs, importObject.libmemory),
+    abs: (arg: number) => builtin_bignum([arg], bigMath.abs, importObject.libmemory),
     min: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.min, importObject.libmemory),
     max: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.max, importObject.libmemory),
     pow: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.pow, importObject.libmemory),
@@ -66,7 +68,12 @@ export const importObject : any = {
     $gte: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gte, importObject.libmemory),
     $lt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.lt, importObject.libmemory),
     $gt: (arg1: number, arg2: number) => binop_comp_bignum([arg1, arg2], bigMath.gt, importObject.libmemory),
-    $bignum_to_i32: (arg: number) => bignum_to_i32(arg, importObject.libmemory.load), 
+    bignum_to_i32: (arg: number) => bignum_to_i32(arg, importObject.libmemory.load),
+    buildin_open: (arg1: number, arg2: number) => open(arg1, arg2),
+    buildin_read: (arg1: number, arg2: number) => read(arg1, arg2),
+    buildin_write: (arg1: number, arg2: number) => write(arg1, arg2),
+    buildin_close: (arg1: number) => close(arg1),
+    buildin_seek: (arg1: number, arg2: number) => seek(arg1, arg2),
   },
   errors: importObjectErrors,
 

@@ -5,14 +5,17 @@
 
 import wabt from 'wabt';
 import { compile, GlobalEnv } from './compiler';
-import {parse} from './parser';
-import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
+import { parse } from './parser';
+import { emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt } from './type-check';
+
 import { Annotation, FunDef, Program, Type, Value } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS, makeWasmFunType } from "./utils";
 import { closureName, lowerProgram } from './lower';
 import { monomorphizeProgram } from './monomorphizer';
 import { optimizeProgram } from './optimization';
 import { wasmErrorImports } from './errors';
+import { buildin_file_libs } from './IO_File/FileSystem';
+
 
 export type Config = {
   importObject: any;
@@ -28,15 +31,15 @@ export type Config = {
 // is given for this in the docs page, and I haven't spent time on the domain
 // module to figure out what's going on here. It doesn't seem critical for WABT
 // to have this support, so we patch it away.
-if(typeof process !== "undefined") {
+if (typeof process !== "undefined") {
   const oldProcessOn = process.on;
-  process.on = (...args : any) : any => {
-    if(args[0] === "uncaughtException") { return; }
+  process.on = (...args: any): any => {
+    if (args[0] === "uncaughtException") { return; }
     else { return oldProcessOn.apply(process, args); }
   };
 }
 
-export async function runWat(source : string, importObject : any) : Promise<any> {
+export async function runWat(source: string, importObject: any): Promise<any> {
   const wabtInterface = await wabt();
   const myModule = wabtInterface.parseWat("test.wat", source);
   var asBinary = myModule.toBinary({});
@@ -46,7 +49,7 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 }
 
 
-export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEnv {
+export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>): GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
   const newClassIndices = new Map(env.classIndices);
@@ -83,32 +86,53 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
 
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
 
-export async function run(source : string, config: Config) : Promise<[Value<Annotation>, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
+export async function run(source: string, config: Config): Promise<[Value<Annotation>, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
   config.importObject.errors.src = source; // for error reporting
   const parsed = parse(source);
+  console.log("===============> program parsed");
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
+  console.log("===============> program tc");
   const tmprogram = monomorphizeProgram(tprogram);
+  console.log("===============> program monomorphizeProgram");
   const globalEnv = augmentEnv(config.env, tmprogram);
+  console.log("===============> program augmentEnv");
   const irprogram = lowerProgram(tmprogram, globalEnv);
+
+  if(irprogram.body[0].stmts[0].tag === 'assign') {
+    console.log(irprogram.body[0].stmts[0].value);
+  }
+  if(irprogram.body[0].stmts[4].tag === 'expr'  && irprogram.body[0].stmts[4].expr.tag === 'call') {
+    if(irprogram.body[0].stmts[4].expr.arguments[0].tag === 'id' && irprogram.body[0].stmts[4].expr.arguments[0].name === 'open') {
+      console.log(irprogram.body[0].stmts[4].expr.arguments[0].a);
+    }
+  }
+  console.log("===============> program lowerProgram");
   const optIr = optimizeProgram(irprogram);
+  console.log("===============> program optimizeProgram");
+  console.log(optIr.body[0].stmts[0]);
+  console.log(optIr.body[0].stmts[1]);
+  console.log(optIr.body[0].stmts[2]);
+  console.log(optIr.body[0].stmts[3]);
+  console.log(optIr.body[0].stmts[4]);
   const progTyp = tmprogram.a.type;
   var returnType = "";
   var returnExpr = "";
   // const lastExpr = parsed.stmts[parsed.stmts.length - 1]
   // const lastExprTyp = lastExpr.a;
   // console.log("LASTEXPR", lastExpr);
-  if(progTyp !== NONE) {
+  if (progTyp !== NONE) {
     returnType = "(result i32)";
     returnExpr = "(local.get $$last)"
-  } 
+  }
   let globalsBefore = config.env.globals;
   // const compiled = compiler.compile(tprogram, config.env);
+  
   const compiled = compile(optIr, globalEnv);
 
   const vtable = `(table ${globalEnv.vtableMethods.length} funcref)
     (elem (i32.const 0) ${globalEnv.vtableMethods.map(method => `$${method[0]}`).join(" ")})`;
   const typeSet = new Set<number>();
-  globalEnv.vtableMethods.forEach(([_, paramNum])=>typeSet.add(paramNum));
+  globalEnv.vtableMethods.forEach(([_, paramNum]) => typeSet.add(paramNum));
   let types = "";
   typeSet.forEach(paramNum => {
     let paramType = "";
@@ -125,8 +149,9 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
   ).join("\n");
 
   const importObject = config.importObject;
-  if(!importObject.js) {
-    const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
+
+  if (!importObject.js) {
+    const memory = new WebAssembly.Memory({ initial: 2000, maximum: 2000 });
     importObject.js = { memory: memory };
   }
 
@@ -156,6 +181,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
     (func $$lt (import "imports" "$lt") (param i32) (param i32) (result i32))
     (func $$gt (import "imports" "$gt") (param i32) (param i32) (result i32))
     (func $$bignum_to_i32 (import "imports" "$bignum_to_i32") (param i32) (result i32))
+    ${buildin_file_libs}
     ${types}
     ${globalImports}
     ${globalDecls}
@@ -167,6 +193,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
       ${returnExpr}
     )
   )`;
+  // console.log(wasmSource);
   const [result, instance] = await runWat(wasmSource, importObject);
 
   return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance];
