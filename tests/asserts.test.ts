@@ -86,6 +86,16 @@ export function assertPrint(name: string, source: string, expected: Array<string
   });
 }
 
+export function assertClose(name: string, source: string, expected: string) {
+  it(name, async () => {
+    await run(source);
+    const output = Number(importObject.output);
+    const expectedVal = Number(expected);
+    
+    chai.expect(Math.abs(output - expectedVal) < 0.0000001);
+  });
+}
+
 export function assertTC(name: string, source: string, result: any) {
   it(name, async () => {
     const typ = typeCheck(source);

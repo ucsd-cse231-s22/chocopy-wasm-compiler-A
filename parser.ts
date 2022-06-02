@@ -108,10 +108,10 @@ export function traverseLiteralHelper(c: TreeCursor, s: string, env: ParserEnv):
       return {
         tag: "none"
       }
-    // case "Ellipsis": // x: Ellipsis = ...
-    //   return {
-    //     tag: "..."
-    //   }
+    case "Ellipsis": // x: Ellipsis = ...
+      return {
+        tag: "..."
+      }
     case "VariableName":
       let vname = s.substring(c.from, c.to).trim();
       if (vname === "__ZERO__") {
