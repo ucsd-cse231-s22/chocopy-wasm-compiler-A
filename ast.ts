@@ -28,7 +28,15 @@ export type Type =
 
 export type Parameter<A> = { a?: A, name: string, type: Type }
 
-export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, typeVarInits: Array<TypeVar<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
+export type Program<A> = {
+  a?: A;
+  imports?: Map<string, Array<string>>;
+  funs: Array<FunDef<A>>;
+  inits: Array<VarInit<A>>;
+  typeVarInits: Array<TypeVar<A>>;
+  classes: Array<Class<A>>;
+  stmts: Array<Stmt<A>>;
+};
 
 export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, typeParams: Array<string> }
 

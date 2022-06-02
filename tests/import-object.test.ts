@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import { binop_bignum, binop_comp_bignum, builtin_bignum, load_bignum, des_check, bignum_to_i32 } from "../utils";
 import { bigMath } from "../utils";
 import { importObjectErrors } from "../errors";
+import { generateImportMap } from "../builtins";
 
 enum Type { Num, Bool, None }
 
@@ -37,6 +38,9 @@ export async function addLibs() {
   importObject.libmemory = memoryModule.instance.exports,
   importObject.memory_values = memory;
   importObject.js = {memory};
+  // empty import map because we don't have source now
+  generateImportMap(new Map(), importObject);
+  // console.log(importObject)
   return importObject;
 }
 
@@ -51,10 +55,10 @@ export const importObject : any = {
     print_bool: (arg: number) => print(Type.Bool, arg, null),
     print_none: (arg: number) => print(Type.None, arg, null),
     destructure_check: (hashNext: boolean) => des_check(hashNext),
-    abs:  (arg: number) => builtin_bignum([arg], bigMath.abs, importObject.libmemory),
-    min: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.min, importObject.libmemory),
-    max: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.max, importObject.libmemory),
-    pow: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.pow, importObject.libmemory),
+    // abs:  (arg: number) => builtin_bignum([arg], bigMath.abs, importObject.libmemory),
+    // min: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.min, importObject.libmemory),
+    // max: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.max, importObject.libmemory),
+    // pow: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.pow, importObject.libmemory),
     $add: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.add, importObject.libmemory),
     $sub: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.sub, importObject.libmemory),
     $mul: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.mul, importObject.libmemory),
@@ -72,3 +76,4 @@ export const importObject : any = {
 
   output: "",
 };
+

@@ -3,6 +3,7 @@ import { Type, Value, Annotation, Class } from './ast';
 import { defaultTypeEnv, TypeCheckError } from './type-check';
 import { NUM, BOOL, NONE, load_bignum, builtin_bignum, binop_bignum, binop_comp_bignum, bigMath, des_check, bignum_to_i32 } from './utils';
 import { importObjectErrors } from './errors';
+import { generateImportMap } from './builtins';
 
 import CodeMirror from 'codemirror';
 import "codemirror/addon/edit/closebrackets";
@@ -237,10 +238,6 @@ function webStart() {
         print_bool: (arg: number) => print(BOOL, arg, null),
         print_none: (arg: number) => print(NONE, arg, null),
         destructure_check: (hashNext: boolean) => des_check(hashNext),
-        abs:  (arg: number) => builtin_bignum([arg], bigMath.abs, memoryModule.instance.exports),
-        min: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.min, memoryModule.instance.exports),
-        max: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.max, memoryModule.instance.exports),
-        pow: (arg1: number, arg2: number) => builtin_bignum([arg1, arg2], bigMath.pow, memoryModule.instance.exports),
         $add: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.add, memoryModule.instance.exports),
         $sub: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.sub, memoryModule.instance.exports),
         $mul: (arg1: number, arg2: number) => binop_bignum([arg1, arg2], bigMath.mul, memoryModule.instance.exports),
@@ -259,6 +256,7 @@ function webStart() {
       memory_values: memory,
       js: { memory: memory }
     };
+    // generateImportMap(new Map(), importObject);
     var repl = new BasicREPL(importObject);
 
     function renderResult(result : Value<Annotation>) : void {

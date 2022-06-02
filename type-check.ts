@@ -2,6 +2,8 @@ import { Annotation, Location, stringifyOp, Stmt, Expr, Type, UniOp, BinOp, Lite
 import { NUM, BOOL, NONE, CLASS, CALLABLE, TYPEVAR, LIST } from './utils';
 import { emptyEnv } from './compiler';
 import { fullSrcLine, drawSquiggly } from './errors';
+import { findBuiltinByName, isBuiltin, builtins } from './builtins';
+
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 
@@ -76,10 +78,10 @@ const copyGlobals = (env: GlobalTypeEnv): GlobalTypeEnv => {
 export type NonlocalTypeEnv = LocalTypeEnv["vars"]
 
 const defaultGlobalFunctions = new Map();
-defaultGlobalFunctions.set("abs", [[NUM], NUM]);
-defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
-defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
-defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
+// defaultGlobalFunctions.set("abs", [[NUM], NUM]);
+// defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
+// defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
+// defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
 defaultGlobalFunctions.set("len", [[LIST(NUM)], NUM]);
 
@@ -302,24 +304,69 @@ export function augmentTEnv(env: GlobalTypeEnv, program: Program<Annotation>): G
   const newClasses = new Map(env.classes);
   const newTypevars = new Map(env.typevars);
 
-  program.inits.forEach(init => newGlobs.set(init.name, init.type));
-  program.funs.forEach(fun => newGlobs.set(fun.name, CALLABLE(fun.parameters.map(p => p.type), fun.ret)));
-  program.classes.forEach(cls => {
+  // add imports to functions
+  builtins.forEach((b) => {
+    if (
+      !b.need_import ||
+      (program.imports?.has(b.name) &&
+        program.imports.get(b.name).includes(b.name))
+    ) {
+      newGlobs.set(b.name, CALLABLE(b.args, b.ret));
+      newFuns.set(b.name, [b.args, b.ret]);
+    }
+  });
+  program.imports?.forEach((names, mod) => {
+    names.forEach((name) => {
+      if (isBuiltin(name)) {
+        var bf = findBuiltinByName(name);
+        // console.log("Added FN", bf.name, bf.args, bf.ret);
+        newGlobs.set(name, CALLABLE(bf.args, bf.ret));
+        newFuns.set(name, [bf.args, bf.ret]);
+      }
+    });
+  });
+  program.inits.forEach((init) => newGlobs.set(init.name, init.type));
+  program.funs.forEach((fun) =>
+    newGlobs.set(
+      fun.name,
+      CALLABLE(
+        fun.parameters.map((p) => p.type),
+        fun.ret
+      )
+    )
+  );
+  program.classes.forEach((cls) => {
     const fields = new Map();
     const methods = new Map();
-    cls.fields.forEach(field => fields.set(field.name, field.type));
-    cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
+    cls.fields.forEach((field) => fields.set(field.name, field.type));
+    cls.methods.forEach((method) =>
+      methods.set(method.name, [
+        method.parameters.map((p) => p.type),
+        method.ret,
+      ])
+    );
     const typeParams = cls.typeParams;
     newClasses.set(cls.name, [fields, methods, [...typeParams]]);
   });
 
-  program.typeVarInits.forEach(tv => {
-    if(newGlobs.has(tv.name) || newTypevars.has(tv.name) || newClasses.has(tv.name)) {
-      throw new TypeCheckError(`Duplicate identifier '${tv.name}' for type-variable`);
+  program.typeVarInits.forEach((tv) => {
+    if (
+      newGlobs.has(tv.name) ||
+      newTypevars.has(tv.name) ||
+      newClasses.has(tv.name)
+    ) {
+      throw new TypeCheckError(
+        `Duplicate identifier '${tv.name}' for type-variable`
+      );
     }
     newTypevars.set(tv.name, [tv.canonicalName]);
   });
-  return { globals: newGlobs, functions: newFuns, classes: newClasses, typevars: newTypevars };
+  return {
+    globals: newGlobs,
+    functions: newFuns,
+    classes: newClasses,
+    typevars: newTypevars,
+  };
 }
 
 export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<Annotation>, GlobalTypeEnv] {
@@ -354,7 +401,7 @@ export function tc(env: GlobalTypeEnv, program: Program<Annotation>): [Program<A
     newEnv.globals.set(name, locals.vars.get(name));
   }
 
-  const aprogram = { a: { ...program.a, type: lastTyp }, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody, typeVarInits: tTypeVars };
+  const aprogram = { a: { ...program.a, type: lastTyp }, imports: program.imports, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody, typeVarInits: tTypeVars };
   return [aprogram, newEnv];
 }
 
