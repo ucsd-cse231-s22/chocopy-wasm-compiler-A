@@ -206,6 +206,7 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
   pushStmtsToLastBlock(blocks, { tag: "assign", name: newListName, value: listAlloc });
   pushStmtsToLastBlock(blocks, storeBigLength);
   pushStmtsToLastBlock(blocks, storeLength);
+  var compPreStartLbl = generateName("$compprestart");
   var compStartLbl = generateName("$compstart");
   var compbodyLbl = generateName("$compbody");
   var compEndLbl = generateName("$compend");
