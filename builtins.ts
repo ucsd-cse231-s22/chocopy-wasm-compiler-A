@@ -3,6 +3,7 @@ import { builtin_bignum } from "./utils";
 import { gcd, lcm, factorial } from "./stdlib/math";
 import { NUM, BOOL, NONE, CLASS, CALLABLE, TYPEVAR, LIST } from './utils';
 import { Type } from "./ast";
+import { randint, randrange } from "./stdlib/random";
 
 export type BuiltinFunction = {
   name: string;
@@ -81,6 +82,24 @@ export const builtins: Array<BuiltinFunction> = [
     need_import: true,
     is_bignum: true,
   },
+  {
+    name: "randint",
+    mod: "random",
+    args: [NUM, NUM],
+    ret: NUM,
+    fn: randint,
+    need_import: true,
+    is_bignum: true,
+  },
+  {
+    name: "randrange",
+    mod: "random",
+    args: [NUM],
+    ret: NUM,
+    fn: randrange,
+    need_import: true,
+    is_bignum: true,
+  }
 ];
 
 export function isBuiltin(name: string): boolean {
