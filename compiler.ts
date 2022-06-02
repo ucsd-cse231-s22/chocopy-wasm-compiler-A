@@ -332,7 +332,7 @@ function codeGenValue(val: Value<Annotation>, env: GlobalEnv): Array<string> {
 function codeGenBinOp(op : BinOp, typ: Type) : string {
   switch(op) {
     case BinOp.Plus:
-      return typ.tag !== "float" ? "(call $$add)" : "(call $$add_float)"
+      return typ?.tag !== "float" ? "(call $$add)" : "(call $$add_float)"
     case BinOp.Minus:
       return typ.tag !== "float" ? "(call $$sub)" : "(call $$sub_float)"
     case BinOp.Mul:
