@@ -5,24 +5,25 @@ import { equalType } from "./type-check";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, Map<string, [number, Value<Annotation>]>>;  
-  classIndices: Map<string, number>;
-  functionNames: Map<string, string>;
+  // class name    ->   field -> field offset, value, method -> method offset, super classes, super class method count
+  classes: Map<string, [Map<string, [number, Value<Annotation>]>, Map<string, number>, Map<string,Array<string>>, number]>;
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
-  vtableMethods: Array<[string, number]>;
+  vtable: Array<[string, number]>;
+  classIndices: Map<string, [number, number]>
+  functionNames: Map<string, string>;
 }
 
 export const emptyEnv : GlobalEnv = { 
   globals: new Map(), 
   classes: new Map(),
-  classIndices: new Map(), 
   functionNames: new Map(),
   locals: new Set(),
   labels: [],
   offset: 0,
-  vtableMethods: [] 
+  vtable: [],
+  classIndices: new Map(),
 };
 
 type CompileResult = {
@@ -30,6 +31,7 @@ type CompileResult = {
   functions: string,
   mainSource: string,
   newEnv: GlobalEnv
+  vtable: string,
 };
 
 export function makeLocals(locals: Set<string>) : Array<string> {
@@ -54,8 +56,17 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
-  const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
-  const allFuns = funs.concat(classes).join("\n\n");
+  const classesMethods : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
+
+  const allFuns = funs.join("\n\n");
+
+  const vtable = `
+  (table ${env.vtable.length} funcref)
+  (elem (i32.const 0) ${env.vtable.map(method => `${method[0]}`).join(" ")})
+  ${classesMethods.join("\n")}
+  `
+
+
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
   withDefines.labels = ast.body.map(block => block.label);
@@ -82,7 +93,8 @@ export function compile(ast: Program<Annotation>, env: GlobalEnv) : CompileResul
     globals: globalNames,
     functions: allFuns,
     mainSource: allCommands.join("\n"),
-    newEnv: withDefines
+    newEnv: withDefines,
+    vtable: vtable,
   };
 }
 
@@ -191,6 +203,18 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       const rightStmts = codeGenValue(expr.right, env);
       return [...leftStmts, ...rightStmts, `(call $${expr.name})`]
 
+    case "call_indirect":
+      var valStmts : Array<string> = codeGenExpr(expr.fn, env);
+      var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      const methodOffsetCode = codeGenValue(expr.methodOffset, env).join("");
+      return [
+        ...fnStmts, 
+        ...valStmts, 
+        methodOffsetCode,
+        `(i32.add)`,
+        `(call_indirect (type ${expr.name}))`
+      ];
+
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       if(expr.name === "len"){
@@ -198,11 +222,6 @@ function codeGenExpr(expr: Expr<Annotation>, env: GlobalEnv): Array<string> {
       }
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
-
-    case "call_indirect":
-      var valStmts = codeGenExpr(expr.fn, env);
-      var fnStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
-      return [...fnStmts, ...valStmts, `(call_indirect (type ${makeWasmFunType(expr.arguments.length)}))`];
 
     case "alloc":
       return [
@@ -361,6 +380,9 @@ function codeGenDef(def : FunDef<Annotation>, env : GlobalEnv) : Array<string> {
 function codeGenClass(cls : Class<Annotation>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = createMethodName(cls.name, method.name));
-  const result = methods.map(method => codeGenDef(method, env));
+  const result = methods.map(method => {
+    var params = method.parameters.map(p => `(param $${p.name} i32)`).join(" ");
+    return codeGenDef(method, env).flat();
+  });
   return result.flat();
   }

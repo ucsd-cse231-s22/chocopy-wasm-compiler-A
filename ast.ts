@@ -15,11 +15,12 @@ export type Location = {
 
 // export enum Type {NUM, BOOL, NONE, OBJ}; 
 export type Callable = {tag: "callable"; params: Array<Type>; ret: Type };
+export type ClassT = {tag: "class", name: string, params: Array<Type> };
 export type Type =
   | {tag: "number"}
   | {tag: "bool"}
   | {tag: "none"}
-  | {tag: "class", name: string, params: Array<Type> }
+  | ClassT
   | {tag: "either", left: Type, right: Type }
   | {tag: "typevar", name: string }
   | Callable
@@ -30,7 +31,7 @@ export type Parameter<A> = { a?: A, name: string, type: Type }
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, typeVarInits: Array<TypeVar<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
 
-export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, typeParams: Array<string> }
+export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>, typeParams: Array<string>, super: Map<string, Array<string>> }
 
 export type TypeVar<A> = { a?: A, name: string, canonicalName: string, types: Array<Type> }
 
@@ -129,4 +130,3 @@ export function stringifyOp(op: Op): string {
 export type Value<A> =
     Literal<A>
   | { a?: A, tag: "object", name: string, address: number}
-  

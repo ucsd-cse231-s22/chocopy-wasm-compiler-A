@@ -961,12 +961,44 @@ export const traverseClass = wrap_locs(traverseClassHelper);
 export function traverseClassHelper(c: TreeCursor, s: string, env: ParserEnv): Class<Annotation> {
   const fields: Array<VarInit<Annotation>> = [];
   const methods: Array<FunDef<Annotation>> = [];
+  var superClasses : Map<string, Array<string>> = new Map();
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
   c.nextSibling(); // Focus on arglist/superclass/generic type vars(s)
 
   const typeParams : Array<string> = traverseGenericParams(c, s);
+
+  c.firstChild();  // Focuses on open paren
+  c.nextSibling(); // Focuses on a VariableName
+  while(c.type.name !== ")") {
+    if (c.type.name === "MemberExpression") {
+      c.firstChild();
+      const superclassname = s.substring(c.from, c.to);
+      if (superclassname !== "Generic") {
+        c.nextSibling();
+        c.nextSibling();
+        var types = [];
+        while(c.name !== "]") {
+          types.push(s.substring(c.from, c.to).trim());
+          c.nextSibling();
+          c.nextSibling();
+        }
+        superClasses.set(superclassname, types);
+      }
+      c.parent();
+    } else if (c.type.name !== "MemberExpression"  && c.type.name !== ",") {
+      let name = s.substring(c.from, c.to);
+      superClasses.set(name, []);
+    }
+    c.nextSibling(); // Focuses on a VariableName
+  }
+  c.parent();  
+
+  // add 'object' to super class if not specified
+  if ([...superClasses.keys()].length === 0) {
+    superClasses.set("object", [])
+  }
 
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
@@ -993,6 +1025,7 @@ export function traverseClassHelper(c: TreeCursor, s: string, env: ParserEnv): C
     typeParams,
     fields,
     methods,
+    super: superClasses
   };
 }
 

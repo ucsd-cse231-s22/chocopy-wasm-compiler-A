@@ -6,12 +6,25 @@ import { addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-class C(object):
-  def f(self: C) -> int:
-    if True:
-      return 0
-    else:
-      return`
+  T = TypeVar('T')
+
+  class Box(Generic[T]):
+    v: T = __ZERO__
+
+    def map(self: Box[T], f: Callable[[T], T]) -> Box[T]:
+      b : Box[T] = None
+      b = Box()
+
+      b.v = f(self.v)
+      return b
+
+  b1 : Box[int] = None
+  b1 = Box()
+  print(b1.v)
+  print(b1.map(mklambda(Callable[[int], int], lambda a: a + 2)).v)
+  print(b1.map(mklambda(Callable[[int], int], lambda a: (a + 1) * 10)).v)
+  print(b1.v)
+  `
   // var source = `
   // class C(object):
   //   def __init__(self:C, other:D):
