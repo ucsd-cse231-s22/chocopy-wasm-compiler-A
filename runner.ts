@@ -63,28 +63,35 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Annotation>) : GlobalEn
     // TODO(anuj): update to support multiple inheritance
     var offset : number  = 0;
     const superclasses = Array.from( cls.super.keys() )
-    if (superclasses[0] !== "object") { 
-      newClasses.get(superclasses[0])[0].forEach((value, key) => {
-        offset = Math.max(value[0]) + 1
-      });
+    for (let i = 0; i < superclasses.length; i++){
+      if (superclasses[i] !== "object") {
+        newClasses.get(superclasses[i])[0].forEach((value, key) => {
+          offset += Math.max(value[0]);
+        });
+      }
     }
+    offset += 1;
 
     var superClassMethodsCount = 0;
-    if (superclasses[0] !== "object") {
-      superClassMethodsCount = newClasses.get(superclasses[0])[3];
+    for (let i = 0; i < superclasses.length; i++){
+      if (superclasses[i] !== "object") {
+        superClassMethodsCount += newClasses.get(superclasses[i])[3];
+      }
     }
 
     cls.methods.forEach((method, index) => {
 
       var methodClassOffset = superClassMethodsCount + index - overridenMethods;
 
-      if (superclasses[0] !== "object"){
-        newClasses.get(superclasses[0])[1].forEach((value, key) => {
-          if (key === method.name) {
-            overridenMethods += 1;
-            methodClassOffset = value;
-          }
-        })
+      for (let i = 0; i < superclasses.length; i++){
+        if (superclasses[i] !== "object"){
+          newClasses.get(superclasses[i])[1].forEach((value, key) => {
+            if (key === method.name) {
+              overridenMethods += 1;
+              methodClassOffset = value;
+            }
+          })
+        }
       }
       classMethods.set(method.name, methodClassOffset)
     })
