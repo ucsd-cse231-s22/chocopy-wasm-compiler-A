@@ -1,5 +1,5 @@
 import { dataOffset, debugId, heapStart, refNumOffset, sizeOffset, typeOffset } from "../memory";
-import { assertPrint, assertTCFail, assertTC, assertFail, assertMemState, assertMemAlloc, assertHeap } from "./asserts.test";
+import { assertPrint, assertTCFail, assertTC, assertFail, assertMemState, assertHeap } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("Memory tests", () => {
@@ -209,33 +209,6 @@ assertMemState("simple-cycle-deletion", `
     [123, refNumOffset, 1], // 1 references at the end of the program where object id is 123
     [456, refNumOffset, 1], // 1 references at the end of the program where object id is 456
     ]);
-    assertHeap("single-delete", `
-     class Rat(object):
-         id: int = 123
-         y: int = 0
-         def __init__(self: Rat):
-             self.y = 1
-     x: Rat = None
-     x = Rat()
-     x = None
-   `, heapStart); 
-
- assertHeap("delete-in-a-loop", `
-     class Rat(object):
-        id: int = 123
-        y: int = 0
-        def __init__(self: Rat):
-            self.y = 1
-     n: int = 1124
-     a: Rat = None
-     a = Rat()
-     while n >= 0:
-         a = Rat()
-         n = n - 1
-     a = None
-     n = 0
- `, heapStart) // 2 ints in the object, each is 4 byte
-
 
 assertMemState("less-simple-cycle", `
     class Link(object):
@@ -327,179 +300,56 @@ assertMemState("less-simple-cycle-complete-deletion", `
     [789, refNumOffset, 2], // 2 references in the program where object id is 789
     ]); // all types are values or non-references
 
-// assertMemState("simple-inherited-reference", `
-//     class Link(Object):
-//         id: int = 0
-//         next: Link = None
 
-//         def addB(l: Link, val: int) -> BLink:
-//             m: Link = None
-//             m = BLink()
-//             m.id = val
-//             l.next = m
-//             return m
+    assertHeap("single-delete", `
+    class Rat(object):
+        id: int = 123
+        y: int = 0
+        def __init__(self: Rat):
+            self.y = 1
+    x: Rat = None
+    x = Rat()
+    x = None
+`, heapStart); 
 
-//     class ALink(Link):
-//         def __init__(self: ALink):
-//             super().__init__()
+ assertHeap("delete-in-a-loop", `
+     class Rat(object):
+        id: int = 123
+        y: int = 0
+        def __init__(self: Rat):
+            self.y = 1
+     n: int = 1124
+     a: Rat = None
+     a = Rat()
+     while n >= 0:
+         a = Rat()
+         n = n - 1
+     a = None
+     n = 0
+ `, heapStart) // 2 ints in the object, each is 4 byte
+ 
+ assertHeap("list-delete", `
+    a : [int] = None
+    a = [1,2,3,4]
+    a = None
+`, heapStart); 
 
-//     class BLink(Link):
-//         other_id: int = 0
+assertHeap("gc-out-of-scope", `
+    class Rat(object):
+        id: int = 123
+        y: int = 456
+        def __init__(self: Rat):
+            self.y = 1
+        def someFunc(self: Rat):
+            r: Rat = None
+            r = Rat()
 
-//         def __init__(self: BLink):
-//             super().__init__()
-
-//     x: Link = None
-//     y: Link = None
-//     x = ALink()
-//     x.id = 123
-//     y = x.addB(456)
-//     `, [
-//     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-//     [123, refNumOffset, 1], // 1 references in the program where object id is 123
-//     [123, typeOffset, 2], // first field is a value, the next is a reference
-//     [456, refNumOffset, 2], // 2 references in the program where object id is 456
-//     [456, typeOffset, 2] // first field is a value, the next is a reference
-//     ]); // all types are values or non-references
-
-// assertPrint("simple-inherited-reference-print", `
-//     class Link(Object):
-//         id: int = 0
-//         next: Link = None
-
-//         def addB(l: Link, val: int) -> BLink:
-//             m: Link = None
-//             m = BLink()
-//             m.id = val
-//             l.next = m
-//             return m
-
-//     class ALink(Link):
-//         def __init__(self: ALink):
-//             super().__init__()
-//         def add(l: Link, val: int) -> BLink:
-//             m: Link = None
-//             m = ALink()
-//             m.id = val
-//             l.next = m
-//             print("hello from Alink")
-//             return m
-
-//     x: Link = None
-//     y: Link = None
-//     x = ALink()
-//     x.id = 123
-//     y = x.addB(456)
-//     `, [
-//         "hello from Alink"
-//     ]); // assert print "hello from Alink"  
-
-// assertMemState("simple-global-reference", `
-//     class Link(object):
-//         id: int = 0
-
-//         def assign_global(self: Link):
-//             global global_link
-//             global_link = self
-
-//     global_link: Link = None
-//     x: Link = None
-//     x = Link()
-//     x.id = 123
-//     x.assign_global()
-//     `, [
-//     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-//     [123, refNumOffset, 2], // 2 references in the program where object id is 123
-//     [123, typeOffset, 2] // first field is a value, the next is a reference
-//     ]); // all types are values or non-references
-
-// assertMemState("simple-global-reference-deletion", `
-//     class Link(object):
-//         id: int = 0
-//         next: Link = None
-
-//         def assign_global(self: Link):
-//             global global_link
-//             global_link = self
-
-//     global_link: Link = None
-//     x: Link = None
-//     x = Link()
-//     x.id = 123
-//     x.next = Link()
-//     x.next.id = 456
-//     x.assign_global()
-//     x = None
-//     global_link = None
-//     `, [
-//     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-//     [123, refNumOffset, 0], // 0 references in the program where object id is 123
-//     [123, typeOffset, 2], // first field is a value, the next is a reference
-//     [456, refNumOffset, 0], // 0 references in the program where object id is 456
-//     [456, typeOffset, 2] // first field is a value, the next is a reference
-//     ]); // all types are values or non-references
-
-// assertMemState("simple-global-reference-reassign", `
-//     class Link(object):
-//         id: int = 0
-//         next: Link = None
-
-//         def assign_global(self: Link):
-//             global global_link
-//             global_link = self
-
-//     global_link: Link = None
-//     x: Link = None
-//     x = Link()
-//     x.id = 123
-//     x.assign_global()
-//     x.next = Link()
-//     x.next.id = 456
-//     x.next.assign_global()
-//     x = None
-//     `, [
-//     // first value in the tuple denotes id, NOTE: this is a hack since we dont have access to object names
-//     [123, refNumOffset, 0], // 0 references in the program where object id is 123
-//     [123, typeOffset, 2], // first field is a value, the next is a reference
-//     [456, refNumOffset, 1], // 1 references in the program where object id is 456
-//     [456, typeOffset, 2] // first field is a value, the next is a reference
-//     ]); // all types are values or non-references
-
-// assertMemAlloc("gc-out-of-scope", `
-//     class Rat(object):
-//         id: int = 123
-//         y: int = 456
-//         def __init__(self: Rat):
-//             self.y = 1
-//         def someFunc(self: Rat):
-//             r: Rat = None
-//             r = Rat()
-
-//     x: Rat = None
-//     y: Rat = None
-//     x = Rat()
-//     x.someFunc()
-// `, 6); // Expect amount of memory allocated for this code to be 2 ints + 4 metadata blocks
-
-// assertMemAlloc("list-integration", `
-//     a: [int] = [1,2,3,4]
-//     b: [int] = [4, 6, 7]
-//     a = a + b
-//     a = None
-//     b = None
-// `, 0); // Expect amount of memory allocated to be 0 blocks
-
-// assertMemAlloc("self-assign-not-gc", `
-//     class Rat(object):
-//         id: int = 123
-//         y: int = 0
-//         def __init__(self: Rat):
-//             self.y = 1
-
-//     x: Rat = None
-//     x = Rat()
-//     x = x
-// `, 6); // Expect memory not to be garbage collected and to still be allocated (2 ints + 4 metadata blocks)
+    x: Rat = None
+    y: Rat = None
+    x = Rat()
+    x.someFunc()
+    x = None
+`, heapStart); // Expect amount of memory allocated for this code to be 2 ints + 4 metadata blocks
 
 });
 

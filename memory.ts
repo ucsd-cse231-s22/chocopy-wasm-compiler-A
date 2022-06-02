@@ -109,19 +109,17 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number, fromAssig
         let size = memHeap[addr + sizeOffset]; 
         const amt = memHeap[addr + amountOffset];
 
-        for (let i = 0; i < size; i++) {
+        for (let i = 0; i <= size; i++) {
             if ((types & (1 << i)) !== 0) {
-                for (let a = 0; a < amt / size; a++) {
-                    let temp = memHeap[addr + dataOffset + size*a + i];
-                    if (temp !== 0 && !explored.has(temp)) { // 0 is None
-                        explored.add(temp);
-                        travQueue.push(temp);
-                        if (update < 0 && fromAssign) {
-                            memHeap[(refLookup(temp)/4) + refNumOffset] += update;
-                        } 
-                    }
+                let temp = memHeap[addr + dataOffset  + i];
+                if (temp !== 0 && !explored.has(temp)) { // 0 is None
+                    explored.add(temp);
+                    travQueue.push(temp);
+                    if (update < 0 && fromAssign) {
+                        memHeap[(refLookup(temp)/4) + refNumOffset] += update;
+                    } 
                 }
-            }
+                }
         }
     }
     return r
@@ -130,7 +128,7 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number, fromAssig
 export function compact(): memAddr {
     let free: memAddr = heapStart;
     //console.log(refMap);
-    //console.log(memHeap);
+    
     function isGarbage(r: ref): boolean {
         const addr = refLookup(r) / 4;
         return memHeap[addr + refNumOffset] === 0;
@@ -154,6 +152,7 @@ export function compact(): memAddr {
             inactiveRefList.push(r);
         }
     }
+    // console.log(memHeap);
     
     return free;
 }
@@ -213,14 +212,3 @@ export function debugId(id: number, offset: number) { // id should be of type in
     throw new Error(`no such id: ${id}`);
 }
 
-
-export function debugMemAlloc() {
-    let x = 0;
-    for (let i = 2; i < memHeap.length; i += x) {
-        x = memHeap[i] + i + 3
-        if ( memHeap[x] === 0 ) {
-            return x - 1;
-        }
-    }
-    throw new Error('memory is full');
-}

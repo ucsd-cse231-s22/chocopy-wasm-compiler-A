@@ -4,7 +4,7 @@ import { Value, Annotation } from "../ast";
 import { addLibs, importObject } from "./import-object.test";
 import { run, typeCheck } from "./helpers.test";
 import { fail } from 'assert'
-import { compact, debugId, debugMemAlloc, memAddr } from "../memory";
+import { compact, debugId, memAddr } from "../memory";
 import {Program} from '../ir'
 import {Type} from '../ast'
 import * as chai from 'chai';
@@ -114,12 +114,5 @@ export function assertHeap(name:string, source: string, heap: memAddr) {
   it(name, async () => {
     await run(source);
     chai.expect(compact()).to.eq(heap)
-  });
-}
-
-export function assertMemAlloc(name: string, source: string, expected: number) {
-  it(name, async () => {
-    await run(source);
-    chai.expect(debugMemAlloc()).to.eq(expected)
   });
 }
