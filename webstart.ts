@@ -31,7 +31,7 @@ function stringify(typ: Type, arg: any, loader: WebAssembly.ExportValue) : strin
 
 export function print_class(memory: WebAssembly.Memory, repl: BasicREPL, pointer: number, classname: string, level: number, met_object: Map<number, number>, object_number: number, loader : WebAssembly.ExportValue): Array<string> {
 
-  var fields_offset_ = repl.currentEnv.classes.get(classname);
+  var fields_offset_ = repl.currentEnv.classes.get(classname)[0];
   var fields_type = repl.currentTypeEnv.classes.get(classname)[0];
   var mem = new Uint32Array(memory.buffer);
   var display: Array<string> = [];

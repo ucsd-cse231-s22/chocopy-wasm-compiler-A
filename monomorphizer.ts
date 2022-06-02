@@ -177,6 +177,7 @@ export function monomorphizeClass(cname: string, canonicalName: string, classes:
     // https://github.com/GoogleChromeLabs/jsbi/issues/30#issuecomment-521460510
     let mClass : Class<Annotation> = JSON.parse(JSON.stringify(cClass, (key, value) => typeof value === "bigint" ? value.toString() : value));
     mClass.name = canonicalName;
+    mClass.super = cClass.super;
     mClass.typeParams = [];
     mClass.fields = mClass.fields.map(field => {
         if (field.type.tag === "typevar" || (field.type.tag === "class" && field.type.params.length > 0)) {
