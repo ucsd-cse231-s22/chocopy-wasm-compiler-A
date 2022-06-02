@@ -50,6 +50,7 @@ export function memInit(memory: Int32Array) {
     activeStack = [new Set()];
     reclaimable = 0;
     inactiveRefList = [];
+    memory.fill(0);
 }
 
 // generate a reference number for the memory address
@@ -75,8 +76,10 @@ export function refLookup(r: ref) :  ref {
     if (refMap.has(r)) {
         return refMap.get(r);
     }
+    console.log(refMap, memHeap);
     throw new MemError(`invalid reference: ${r}`)
 }
+
 
 // traverse nodes in a BFS manner amking updates to reference counts
 export function traverseUpdate(r: ref, assignRef: ref, update: number, fromAssign: number): ref { // returns r so that stack state can be maintained
@@ -112,7 +115,7 @@ export function traverseUpdate(r: ref, assignRef: ref, update: number, fromAssig
                 if (temp !== 0 && !explored.has(temp)) { // 0 is None
                     explored.add(temp);
                     travQueue.push(temp);
-                    if (update < 0 && fromAssign) {
+                    if (fromAssign) {
                         memHeap[(refLookup(temp)/4) + refNumOffset] += update;
                     } 
                 }
@@ -137,31 +140,34 @@ export function compact(): memAddr {
         }
     }
     for (const [r, addr] of refMap) {
+        
         if (!isGarbage(r)) {
             const amount = memHeap[addr / 4 + amountOffset];
             move(addr, free, amount);
             refMap.set(r, free);
-            free += (amount + metadataAmt) * 4;
+            free += ((amount + metadataAmt) * 4);
         } else {
             refMap.delete(r);
             inactiveRefList.push(r);
         }
     }
-    
     return free;
 }
 
 export function memReclaim(heap: number, amount: number): memAddr {
     const memSize = memHeap.length;
-    const memfits = () => heap/4 + amount + metadataAmt < memSize;
+    
+    const memfits = () => (heap/4 + amount + metadataAmt) < memSize;
     if (!memfits()) {
         heap = compact();
         if (!memfits()) {
             throw new MemError("out of memory :(");
         }
-    } else if (reclaimable > memHeap.length / 2) {
+    } else if (reclaimable / 4 > memHeap.length / 2) {
         heap = compact();
+        
     }
+    
     return heap;
 }
 

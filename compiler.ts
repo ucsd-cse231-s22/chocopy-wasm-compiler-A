@@ -126,7 +126,6 @@ function codeGenStmt(stmt: Stmt<Annotation>, env: GlobalEnv): Array<string> {
       return pre.concat(post);
 
     case "assign":
-      console.log(stmt);
       var valStmts = codeGenExpr(stmt.value, env);
       if (((stmt.value.a?.type?.tag === "list" || stmt.value.a?.type?.tag === "class" || (stmt.value.tag === "value" && stmt.value.value.tag === "none")) || (stmt.value?.tag === "value" && stmt.value.value.tag === "num")) && (stmt.value.tag !== "alloc")) { // if the assignment is object assignment
         valStmts.push(`(i32.const 0)`, `(i32.const 1)`, `(i32.const 1)` , `(call $traverse_update)`) // update the count of the object on the RHS
