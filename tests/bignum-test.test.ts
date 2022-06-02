@@ -44,6 +44,79 @@ export function test_param_return(des: string, c: bigint, param: bigint, res: st
         [`${res}`]);
 }
 
+export function test_list_len_if(des: string) {
+    assertPrint(des, 
+        `def f(a : [int]):
+        i:int = 0
+        if len(a) > 0:
+          print(a[0])
+        else:
+          print(None)
+    f([])
+    f([-1,-1,-1])`, 
+    [`None`, `-1`]);
+}
+
+export function test_recursive_builtin(des: string) {
+    assertPrint(des, 
+        `def gcd(x : int, y : int) -> int:
+        if x == 0:
+              return abs(y)
+        return gcd(y%x, x)
+    print(gcd(24,9))
+    print(gcd(5,8))
+    print(gcd(-4,8))`, 
+    [`3`, `1`, `4`]);
+}
+
+export function test_list_len(des: string) {
+    assertPrint(des, 
+        `def f(a : [int]):
+        i : int = 0
+        while i < len(a) - 1:
+            print(a[i + 1])
+            i = i + 1
+    f([1, 2, 3])`, 
+        [`2`, `3`]);
+}
+
+export function test_for_loop(des: string) {
+    assertPrint(
+        des,
+        `
+        class Range(object):
+        current : int = 0
+        min : int = 0
+        max : int = 0
+        def new(self:Range, min:int, max:int)->Range:
+          self.min = min
+          self.current = min
+          self.max = max
+          return self
+        def next(self:Range)->int:
+          c : int = 0
+          c = self.current
+          self.current = self.current + 1
+          return c
+        def hasnext(self:Range)->bool:
+          return self.current < self.max
+        def reset(self:Range) :
+          self.current = self.min
+      
+    def f(a : [int]):
+        i : int = 0
+        cls : Range = None
+        cls = Range().new(0, len(a))
+        for i in cls:
+            print(a[i] + 1)
+    f([1, 2, 3])
+        `,
+        [`2`, `3`, `4`]
+      );
+}
+
+
+
 describe("Bignums test cases", () => {
     test_print(BigInt("100000000000000000000000"));
     test_init_assign(BigInt(0), BigInt(10), BigInt("100000000000000000000000"));
@@ -76,4 +149,11 @@ describe("Bignums test cases", () => {
     test_uniop("29_test_doublenegate", BigInt("-2147483648"), "-", "2147483648");
     test_param_return("30_test_param_return", BigInt("100000000000000000000000"), BigInt(0), "100000000000000000000000");
     test_param_return("31_test_param_return_neg", BigInt("-100000000000000000000000"), BigInt(0), "-100000000000000000000000");
+});
+
+describe("Bignums Interaction with Other Feature Testcases", () => {
+    test_recursive_builtin("1_test_recursive_builtin");
+    test_list_len_if("2_test_list_len_if");
+    test_list_len("3_test_list_len_binop_index");
+    test_for_loop("4_test_for_loop_list_access");
 });
