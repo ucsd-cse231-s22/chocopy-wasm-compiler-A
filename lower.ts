@@ -640,9 +640,9 @@ function flattenExprToExpr(e: AST.Expr<Annotation>, blocks: Array<IR.BasicBlock<
       const callclasses = callpairs.map(cp => cp[3]).flat();
       const checkObj: IR.Stmt<Annotation> = ERRORS.flattenAssertNotNone(e.a, fval);
       const zeroOffset: IR.Value<Annotation> = { tag: "wasmint", value: 0 };
-      if (e.fn.tag === "id" && (e.fn.name === "buildin_open" || e.fn.name === "buildin_write" || e.fn.name === "buildin_read" || e.fn.name === "buildin_close" || e.fn.name === "buildin_seek")) {
+      if (e.fn.tag === "id") {
         // console.log(e.fn);
-        console.log("from id to call");
+        
         return [
           [...finits, ...callinits],
           [...fstmts, checkObj, ...callstmts],
