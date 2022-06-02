@@ -28,5 +28,3 @@ const ast = parse(source);
 }
 
 debug();
-
-

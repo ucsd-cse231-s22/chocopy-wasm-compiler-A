@@ -8,6 +8,7 @@ import {Program} from '../ir'
 import {Type} from '../ast'
 import * as chai from 'chai';
 import chaiExclude from 'chai-exclude';
+import { expect } from 'chai';
 
 chai.use(chaiExclude);
 
@@ -98,6 +99,14 @@ export function assertTCFail(name: string, source: string) {
     chai.expect(function () {
       typeCheck(source);
     }).to.throw('TYPE ERROR:');
+  });
+}
+
+export function assertParseFail(name: string, source: string) {
+  it(name, async () => {
+    expect(function(){
+      typeCheck(source);
+  }).to.throw('Syntax ERROR:');
   });
 }
 

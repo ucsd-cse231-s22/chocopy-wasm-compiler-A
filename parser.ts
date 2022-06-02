@@ -4,6 +4,17 @@ import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Cl
 import { NUM, BOOL, NONE, CLASS, CALLABLE, LIST } from "./utils";
 import { stringifyTree } from "./treeprinter";
 
+export class SyntaxError extends Error {
+  __proto__: Error
+  constructor(message?: string) {
+   const trueProto = new.target.prototype;
+   super("Syntax ERROR: " + message);
+
+   // Alternatively use Object.setPrototypeOf if you have an ES6 environment.
+   this.__proto__ = trueProto;
+ } 
+}
+
 const MKLAMBDA = "mklambda";
 
 export type ParserEnv = {
@@ -186,7 +197,7 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         };
       }
 
-      let args = traverseArguments(c, s, env);
+      let [args, kwargs] = traverseArgumentsWithKW(c, s, env);
       c.parent(); // pop CallExpression
 
       if (callExpr.tag === "lookup") {
@@ -195,7 +206,8 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
           obj: callExpr.obj,
           method: callExpr.field,
           arguments: args,
-        };
+          kwarguments: kwargs,
+        }
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
         var expr: Expr<Annotation>;
@@ -212,9 +224,9 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
             left: args[0],
             right: args[1]
           }
-        } 
-      } 
-      return { tag: "call", fn: callExpr, arguments: args};
+        }
+      }
+      return { tag: "call", fn: callExpr, arguments: args, kwarguments: kwargs};
     case "BinaryExpression":
       c.firstChild(); // go to lhs 
       const lhsExpr = traverseExpr(c, s, env);
@@ -472,6 +484,42 @@ export function traverseArguments(c: TreeCursor, s: string, env: ParserEnv): Arr
   }
   c.parent();       // Pop to ArgList
   return args;
+}
+
+export function traverseArgumentsWithKW(c : TreeCursor, s : string, env : ParserEnv) : [Array<Expr<Annotation>>, Map<string, Expr<Annotation>>] {
+  c.firstChild();  // Focuses on open paren
+  const args = [];
+  const kwargs : Map<string, Expr<Annotation>> = new Map();
+  var keywordArgsBegin = false;
+  c.nextSibling();
+  while(c.type.name !== ")") {
+    let expr = traverseExpr(c, s, env);
+    c.nextSibling(); // Focuses on either "=", "," or ")"
+    if (c.type.name === "AssignOp") {
+      keywordArgsBegin = true;
+      c.nextSibling(); // value
+      let value = traverseExpr(c, s, env);
+      var keyword = "";
+      if (expr.tag !== "id" ) { 
+        throw new SyntaxError("keyword can't be an expression");
+      } else {
+        keyword = expr.name;
+      }
+      if (kwargs.has(keyword)) {
+        throw new SyntaxError("keyword argument '" + keyword + "' repeated")
+      }
+      kwargs.set(keyword, value);
+      c.nextSibling(); // Focuses on either "," or ")"
+    } else {
+      if (keywordArgsBegin) {
+        throw new SyntaxError("positional argument follows keyword argument");
+      }
+      args.push(expr);
+    }
+    c.nextSibling(); // Focuses on a VariableName
+  } 
+  c.parent();       // Pop to ArgList
+  return [args, kwargs];
 }
 
 export function traverseLambdaParams(c : TreeCursor, s : string) : Array<string> {
@@ -792,18 +840,93 @@ export function traverseParameterHelper(c: TreeCursor, s: string, env: ParserEnv
   return { name, type: typ };
 }
 
+export function traverseArg_Kwarg(name:string):Type{
+  if (name=='*'){
+    return {tag: "tuple", contentTypes: Array<null>() }
+  }
+  else if(name=='**'){
+    return {tag: "dict", key: null, value: null }
+  }
+}
 
-export function traverseParameters(c: TreeCursor, s: string, env: ParserEnv): Array<Parameter<Annotation>> {
+export function traverseParameters(c : TreeCursor, s : string, env: ParserEnv) : [Array<Parameter<Annotation>>, number, number] {
   c.firstChild();  // Focuses on open paren
   const parameters = [];
+  var index = -1
+  var arg_index = undefined
+  var kwarg_index = undefined
+  let exist_name = new Set<string>();
   c.nextSibling(); // Focuses on a VariableName
-  while (c.type.name !== ")") {
-    parameters.push(traverseParameter(c, s, env));
-    c.nextSibling(); // Move on to comma or ")"
-    c.nextSibling(); // Focuses on a VariableName or 
+  var default_start = false
+  while(c.type.name !== ")") {
+    index += 1
+    let name = s.substring(c.from, c.to);// variablemName
+    if (name ==='*'){
+      if (arg_index != undefined){
+        throw new SyntaxError("duplicate *")
+      }
+      arg_index = index
+      c.nextSibling();
+      const arg_name = s.substring(c.from, c.to)
+      parameters.push({name: arg_name, type: traverseArg_Kwarg(name)});
+      c.nextSibling();// focus on ,
+      c.nextSibling();// focus on next parameter
+      continue
+    }
+    else if(name==='**'){
+      if (kwarg_index != undefined){
+        throw new SyntaxError("duplicate **")
+      }
+      kwarg_index = index
+      c.nextSibling();
+      const kwarg_name = s.substring(c.from, c.to)
+      if (c.type.name ==='⚠'){
+        throw new SyntaxError("too many *")
+      }
+      //Parameter<A> = { name: string, type: Type, value?: Expr<A> }
+      parameters.push({name: kwarg_name, type:  traverseArg_Kwarg(name) });
+      c.nextSibling();// focus on ,
+      c.nextSibling();// focus on next parameter
+      continue
+    }
+    if (exist_name.has(name)){
+      throw new SyntaxError("duplicate argument")
+    }
+    else{
+      exist_name.add(name)
+    }
+    c.nextSibling(); // Focuses on "TypeDef", hopefully, or "," if mistake
+    let nextTagName = c.type.name; // NOTE(joe): a bit of a hack so the next line doesn't if-split
+    if(nextTagName !== "TypeDef" && nextTagName !== "TypeDef") { throw new SyntaxError("Missed type annotation for parameter " + name)};
+    c.firstChild();  // Enter TypeDef
+    c.nextSibling(); // Focuses on type itself
+    let typ = traverseType(c, s, env);
+    c.parent();
+    c.nextSibling(); // Move on to comma or ")" or "="
+    if (s.substring(c.from, c.to) ===',' || s.substring(c.from, c.to) ===')' ){//no default value
+      parameters.push({name, type: typ});
+      c.nextSibling(); // Focuses on a VariableName
+      if (default_start){
+        throw new SyntaxError("non-default argument follows default argument")
+      }
+    }
+    else if(s.substring(c.from, c.to) ==='='){// has default value
+      default_start = true
+      c.nextSibling(); // Focuses on a Expression
+      let expr = traverseExpr(c, s, env)
+      parameters.push({name, type: typ, value: expr});
+      c.nextSibling();// focus on "," or ")"
+      c.nextSibling(); // Focuses on a VariableName
+    }
+    else if(s.substring(c.from, c.to) !=')'){// should be an error
+      throw new SyntaxError("Unexpected Op in default value assign " + name)
+    }
   }
-  c.parent(); // Pop to ParamList
-  return parameters;
+  c.parent();       // Pop to ParamList
+  if(kwarg_index!= undefined && kwarg_index!= parameters.length - 1){
+      throw new SyntaxError("kwarg should be the last of the argument")
+  }
+  return [parameters, arg_index, kwarg_index];
 }
 
 export const traverseVarInit = wrap_locs(traverseVarInitHelper);
@@ -879,7 +1002,10 @@ export function traverseFunDefHelper(c: TreeCursor, s: string, env: ParserEnv): 
   c.nextSibling(); // Focus on name of function
   var name = s.substring(c.from, c.to);
   c.nextSibling(); // Focus on ParamList
-  var parameters = traverseParameters(c, s, env)
+  var parameters_arg_kwarg = traverseParameters(c, s, env)
+  var parameters = parameters_arg_kwarg[0]
+  const arbarg_idx = parameters_arg_kwarg[1]
+  const kwarg_idx = parameters_arg_kwarg[2]
   c.nextSibling(); // Focus on Body or TypeDef
   let ret: Type = NONE;
   if (c.type.name === "TypeDef") {
@@ -918,7 +1044,7 @@ export function traverseFunDefHelper(c: TreeCursor, s: string, env: ParserEnv): 
   c.parent(); // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
   c.parent();      // Pop to FunctionDefinition
-  return { name, parameters, ret, inits, body, nonlocals, children };
+  return { name, parameters, ret, inits, body, nonlocals, children, arbarg_idx, kwarg_idx };
 }
 
 export function traverseGenericParams(c : TreeCursor, s : string) : Array<string> {
