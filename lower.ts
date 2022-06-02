@@ -54,11 +54,14 @@ let stringVTable: Map<string, Array<[string, string]>>;
 
 export function updateEnv(env: GlobalEnv, p: AST.Program<Type>) {
   const newClasses = new Map(env.classes);
-  const fieldMap: Map<string,IR.VarInit<AST.Type>[]>  = new Map();
-  const methodMap: Map<string, Array<[string, string]>>  = new Map();
-  vTable = new Map();
-  stringVTable = new Map();
+  const fieldMap  = new Map(env.fieldMap);
+  const methodMap  = new Map(env.methodMap);
+  vTable = new Map(env.vtable);
+  stringVTable = new Map(env.stringVTable);
   let methodCnt = 0;
+  vTable.forEach((value, key) => {
+    methodCnt += value.length;
+  });
 
   p.classes.forEach(cls => {
     const classFields = new Map();
@@ -94,6 +97,10 @@ export function updateEnv(env: GlobalEnv, p: AST.Program<Type>) {
     methodCnt += methods.length;
   });
   env.classes = newClasses;
+  env.vtable = vTable;
+  env.fieldMap = fieldMap;
+  env.methodMap = methodMap;
+  env.stringVTable = stringVTable;
 }
 
 export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Program<Type> {

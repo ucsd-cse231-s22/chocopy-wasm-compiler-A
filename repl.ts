@@ -4,6 +4,7 @@ import { GlobalEnv } from "./compiler";
 import { tc, defaultTypeEnv, GlobalTypeEnv } from "./type-check";
 import { Value, Type } from "./ast";
 import { parse } from "./parser";
+import { Vtable } from "./ir";
 
 export let addInBuiltClass: boolean = true;
 
@@ -15,6 +16,7 @@ export class BasicREPL {
   currentEnv: GlobalEnv
   currentTypeEnv: GlobalTypeEnv
   functions: string
+  vTable: Vtable
   importObject: any
   memory: any
   addClassFlag: number
@@ -31,10 +33,16 @@ export class BasicREPL {
       classes: new Map(),
       locals: new Set(),
       labels: [],
-      offset: 1
+      offset: 1,
+      vtable: new Map(),
+      methodMap: new Map(),
+      fieldMap: new Map(),
+      stringVTable: new Map(),
+      typedata: new Map(),
     };
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";
+    this.vTable = new Map();
     this.addClassFlag = 0;
   }
   async run(source : string) : Promise<Value> {
@@ -44,11 +52,12 @@ export class BasicREPL {
     } else {
       addInBuiltClass = false;
     }
-    const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions};
+    const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions, vTable: this.vTable};
     const [result, newEnv, newTypeEnv, newFunctions, instance] = await run(source, config);
     this.currentEnv = newEnv;
     this.currentTypeEnv = newTypeEnv;
     this.functions += newFunctions;
+    this.vTable = config.vTable;
     const currentGlobals = this.importObject.env || {};
     console.log(instance);
     Object.keys(instance.instance.exports).forEach(k => {
@@ -62,7 +71,7 @@ export class BasicREPL {
     return result;
   }
   tc(source: string): Type {
-    const config: Config = { importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions };
+    const config: Config = { importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions, vTable: this.vTable };
     const parsed = parse(source);
     const [result, _] = tc(this.currentTypeEnv, parsed);
     return result.a;

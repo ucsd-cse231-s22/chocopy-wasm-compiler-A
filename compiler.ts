@@ -8,6 +8,11 @@ export type GlobalEnv = {
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
+  vtable: Vtable;
+  stringVTable: Map<string, Array<[string, string]>>;
+  methodMap: Map<string, Array<[string, string]>>;
+  fieldMap: Map<string,VarInit<Type>[]>;
+  typedata: Map<number, string>;
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -15,15 +20,19 @@ export const emptyEnv : GlobalEnv = {
   classes: new Map(),
   locals: new Set(),
   labels: [],
-  offset: 0 
+  offset: 0 ,
+  vtable: new Map(),
+  stringVTable: new Map(),
+  methodMap: new Map(),
+  fieldMap: new Map(),
+  typedata: new Map(),
 };
 
 type CompileResult = {
   globals: string[],
   functions: string,
   mainSource: string,
-  newEnv: GlobalEnv,
-  vTable: string
+  newEnv: GlobalEnv
 };
 
 export function makeLocals(locals: Set<string>) : Array<string> {
@@ -34,9 +43,7 @@ export function makeLocals(locals: Set<string>) : Array<string> {
   return localDefines;
 }
 
-let classesdata: Class<Type>[] = [];
 let typedata: Map<number, string>;
-let object_init_defined :boolean = false;
 
 export function getTypeSignature(params: number): string {
 
@@ -54,9 +61,7 @@ export function getTypeSignature(params: number): string {
 
 export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
-  classesdata = ast.classes;
-  typedata = new Map();
-  object_init_defined = false;
+  typedata = new Map(env.typedata);
 
   const definedVars : Set<string> = new Set(); //getLocals(ast);
   definedVars.add("$last");
@@ -107,22 +112,16 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
     ...inits,
     bodyCommands];
   withDefines.locals.clear();
-  const typedInfo: string[] = [];
-  typedata.forEach((data) => {
-    typedInfo.push(data);
-  });
-  allFuns += typedInfo.join("\n");
-  allFuns += "\n";
+  env.typedata = typedata;
   return {
     globals: globalNames,
     functions: allFuns,
     mainSource: allCommands.join("\n"),
     newEnv: withDefines,
-    vTable: codeGenVTable(ast.vtable)
   };
 }
 
-function codeGenVTable(vTable: Vtable) : string {
+export function codeGenVTable(vTable: Vtable) : string {
   let elems :string[] = [];
   let methodCnt = 0;
   vTable.forEach((methods, offset) => {
@@ -538,11 +537,6 @@ function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
 }
 
 function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
-  if (def.name === "object$__init__" && object_init_defined) {
-    return [];
-  } else if (def.name === "object$__init__") {
-    object_init_defined = true;
-  }
   var definedVars : Set<string> = new Set();
   def.inits.forEach(v => definedVars.add(v.name));
   definedVars.add("$last");

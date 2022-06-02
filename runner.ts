@@ -4,7 +4,7 @@
 // - https://developer.mozilla.org/en-US/docs/WebAssembly/Using_the_JavaScript_API
 
 import wabt from 'wabt';
-import { compile, GlobalEnv } from './compiler';
+import { codeGenVTable, compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import * as IR from './ir';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
@@ -19,6 +19,7 @@ export type Config = {
   env: GlobalEnv,
   typeEnv: GlobalTypeEnv,
   functions: string        // prelude functions
+  vTable: IR.Vtable
 }
 
 // NOTE(joe): This is a hack to get the CLI Repl to run. WABT registers a global
@@ -63,7 +64,12 @@ export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
     classes: newClasses,
     locals: env.locals,
     labels: env.labels,
-    offset: newOffset
+    offset: newOffset,
+    vtable: env.vtable,
+    stringVTable: env.stringVTable,
+    fieldMap: env.fieldMap,
+    methodMap: env.methodMap,
+    typedata: env.typedata
   }
 }
 
@@ -78,6 +84,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const nprogram = nested(tprogram);
   console.log("PARSED NESTD AST: ", nprogram);
   const irprogram = lowerProgram(nprogram, globalEnv);
+
   console.log("IR AST: ", irprogram);
   const progTyp = tprogram.a;
   var returnType = "";
@@ -106,6 +113,14 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     importObject.js = { memory: memory };
   }
 
+  let typedInfoStr = "";
+  const typedInfo: string[] = [];
+  globalEnv.typedata.forEach((data) => {
+    typedInfo.push(data);
+  });
+  typedInfoStr += typedInfo.join("\n");
+  typedInfoStr += "\n";
+
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
@@ -124,8 +139,9 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     ${globalImports}
     ${globalDecls}
+    ${typedInfoStr}
     ${config.functions}
-    ${compiled.vTable}
+    ${codeGenVTable(globalEnv.vtable)}
     ${compiled.functions}
     (func (export "exported_func") ${returnType}
       ${compiled.mainSource}
