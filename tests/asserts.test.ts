@@ -4,11 +4,12 @@ import { Value, Annotation } from "../ast";
 import { addLibs, importObject } from "./import-object.test";
 import { run, typeCheck } from "./helpers.test";
 import { fail } from 'assert'
-import { compact, memAddr } from "../memory";
+import { compact, dataOffset, memAddr, memHeap, refMap } from "../memory";
 import {Program} from '../ir'
 import {Type} from '../ast'
 import * as chai from 'chai';
 import chaiExclude from 'chai-exclude';
+import { load_bignum } from "../utils";
 
 chai.use(chaiExclude);
 
@@ -103,6 +104,16 @@ export function assertTCFail(name: string, source: string) {
 }
 
 export function assertMemState(name: string, source: string, pairs: Array<[number, number, number]>) {
+  //debug function for tests
+  function debugId(id: number, offset: number) { // id should be of type int and the first field in the object
+    for (const [_, addr] of refMap) {
+        let n = load_bignum(memHeap[addr/4 + dataOffset + 1], importObject.libmemory.load);
+        if (n as any == id) {
+            return memHeap[addr/4 + offset];
+        }
+    }
+    throw new Error(`no such id: ${id}`);
+  }
   it(name, async () => {
     await run(source);
     for (const p of pairs) {
@@ -116,7 +127,5 @@ export function assertHeap(name:string, source: string, heap: memAddr) {
     chai.expect(compact()).to.eq(heap)
   });
 }
-function debugId(arg0: number, arg1: number): any {
-  throw new Error("Function not implemented.");
-}
+
 
