@@ -18,6 +18,8 @@ export const NONE : Type = {tag: "none"}
 export function CLASS(name : string, params: Array<Type> = []) : Type { 
   return {tag: "class", name, params}
 };
+export function LIST(itemType : Type) : Type {return {tag: "list", itemType}};
+export function EMPTY(): Type {return {tag: "empty"}};
 export function CALLABLE(params: Array<Type>, ret: Type): Type {
   return { tag: "callable", params, ret };
 }
