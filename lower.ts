@@ -182,7 +182,13 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
   var lengthdestructureAss : AST.DestructuringAssignment<AST.Annotation> = { isSimple: true, vars: [lengthassignVar] };
   var lengthAssign : AST.Stmt<AST.Annotation>[] = [{tag:"assign", destruct: lengthdestructureAss, value: lengthCall,a:{ ...e.a, type: NONE }}];
   var [lengthinits,lengthclasses] = flattenStmts(lengthAssign, blocks, localenv);
-  
+  var setLenFromBigNumAddr : IR.Stmt<Annotation> = {
+    tag: "assign",
+    a: e.a,
+    name: newListLen,
+    value: { a: {...e.a, type: {tag: "number"}}, tag: "call", name: "$bignum_to_i32", arguments: [{tag:"id",name:newListLen}] } 
+  };
+  pushStmtsToLastBlock(blocks, setLenFromBigNumAddr);
   const listAlloc: IR.Expr<Annotation> = {
     tag: "alloc",
     amount: {tag:"id",name:newListLen},
@@ -261,7 +267,15 @@ function flattenListComp(e: any, env : GlobalEnv, blocks: Array<IR.BasicBlock<An
   var disp: AST.Stmt<AST.Annotation> = {tag:"expr", expr: displayExpr, a:{ ...e.a, type: NONE }};
   // var [einits, estmts, eexpr] = flattenExprToVal(displayExpr, localenv);
   var [body_init, body_class] = flattenStmt(disp, blocks, localenv);
-  // console.log("disp",disp);
+  
+  // storing in a list (above print can be removed!)
+  var setIteratorFromBigNumAddr : IR.Stmt<Annotation> = {
+    tag: "assign",
+    a: e.a,
+    name: newListIterator,
+    value: { a: {...e.a, type: {tag: "number"}}, tag: "call", name: "$bignum_to_i32", arguments: [{tag:"id",name:newListIterator}] } 
+  };
+  pushStmtsToLastBlock(blocks, setIteratorFromBigNumAddr);
   var storeExpr : IR.Stmt<Annotation> = {
     tag: "store",
     start: { tag: "id", name: newListName },
