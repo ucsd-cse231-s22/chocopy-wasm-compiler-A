@@ -581,8 +581,11 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Anno
           // we are assigning to.
           tValExpr.a.type.params = [...tDestruct.a.type.params];
         }
-        if(!isAssignable(env, tValExpr.a.type, tDestruct.a.type)) {
+        if(tValExpr.tag !== "list-comp" && !isAssignable(env, tValExpr.a.type, tDestruct.a.type)) {
           throw new TypeCheckError(SRC, `Assignment value should have assignable type to type ${bigintSafeStringify(tDestruct.a.type.tag)}, got ${bigintSafeStringify(tValExpr.a.type.tag)}`, tValExpr.a);
+        }
+        if(tValExpr.tag === "list-comp" && tDestruct.a.type.tag !== "list") {
+          throw new TypeCheckError(SRC, `Assignment value should have assignable type to type ${bigintSafeStringify(tDestruct.a.type.tag)}, got list comprehension`, tValExpr.a);
         }
       }else if(!tDestruct.isSimple && tValExpr.tag === "array-expr") {
         // for plain destructure like a, b, c = 1, 2, 3
@@ -982,14 +985,19 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Anno
         var loc = locals;
         if (expr.elem.tag === "id"){
           loc.vars.set(expr.elem.name, NUM);
-          const elem = {...expr.elem, a: {...expr, type: NUM}};
+          const elem = {...expr.elem, a: {...expr.a, type: NUM}};
           const left = tcExpr(env, loc, expr.left,SRC);
           var cond;
           if (expr.cond)
             cond = tcExpr(env, loc, expr.cond,SRC);
           if (cond && cond.a.type.tag !== "bool")
             throw new Error("TYPE ERROR: comprehension if condition must return bool")
-          return {...expr, left, elem, cond, iterable, a: {...expr, type: CLASS(iterable.a.type.name)}};
+          if (expr.typ === "list") // for lists
+            return {...expr, left, elem, cond, iterable, a: {...expr.a, type: LIST(NUM)}};
+          else if (expr.typ === "set/dict") // for sets and dictionaries
+            return {...expr, left, elem, cond, iterable, a: {...expr.a, type: LIST(NUM)}}; // type variable to be changed based on sets implementation
+          else // for generators
+            return {...expr, left, elem, cond, iterable, a: {...expr.a, type: LIST(NUM)}}; // type variable to be changed based on generators implementation
         }
         else
           throw new Error("TYPE ERROR: elem has to be an id");

@@ -123,8 +123,17 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
         tag: "id",
         name: s.substring(c.from, c.to)
       }
+    case "ComprehensionExpression":
+    case "SetComprehensionExpression":
     case "ArrayComprehensionExpression":
-      c.firstChild(); // '['
+      c.firstChild(); // '[' or '{' or '('
+      var typ = "";
+      if (s.substring(c.from, c.to) == '[')
+        typ = "list"
+      else if (s.substring(c.from, c.to) == '{')
+        typ = "set/dict"
+      else
+        typ = "generator"
       c.nextSibling();
       const left = traverseExpr(c, s, env); // left
       c.nextSibling(); // for
@@ -132,11 +141,10 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       const elem = traverseExpr(c, s, env); // elem
       c.nextSibling(); // in
       c.nextSibling();
-      // conditions for parsing iterable to be added --!!
       const iterable = traverseExpr(c, s, env); // iterable
       c.nextSibling();
       var cond;
-      if (s.substring(c.from, c.to) !== ']'){
+      if (s.substring(c.from, c.to) !== ']' && s.substring(c.from, c.to) !== '}' && s.substring(c.from, c.to) !== ')'){
         if (s.substring(c.from, c.to) !== 'if')
           throw new Error("PARSE TYPE ERROR: only if condition allowed in comprehensions");
         c.nextSibling();
@@ -145,6 +153,7 @@ export function traverseExprHelper(c: TreeCursor, s: string, env: ParserEnv): Ex
       c.parent();
       return {
         tag: "list-comp",
+        typ,
         left,
         elem,
         iterable,

@@ -87,9 +87,12 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
   config.importObject.errors.src = source; // for error reporting
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
+  // console.log("tprogram",tprogram);
+  // console.log("tenv",tenv);
   const tmprogram = monomorphizeProgram(tprogram);
   const globalEnv = augmentEnv(config.env, tmprogram);
   const irprogram = lowerProgram(tmprogram, globalEnv);
+  // console.log("irprogram",irprogram);
   const optIr = optimizeProgram(irprogram);
   const progTyp = tmprogram.a.type;
   var returnType = "";
@@ -167,6 +170,7 @@ export async function run(source : string, config: Config) : Promise<[Value<Anno
       ${returnExpr}
     )
   )`;
+  // console.log("WASM CODE :: ",wasmSource);
   const [result, instance] = await runWat(wasmSource, importObject);
 
   return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance];
