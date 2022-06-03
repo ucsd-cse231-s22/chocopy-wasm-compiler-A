@@ -8,7 +8,8 @@ As for the final milestone, we planned the following goals:
 
 Regarding the latter goal, we have added support for sets/dicts comprehensions as well as generator comprehensions which use the ```{}``` and ```()``` formats respectively. An additional field 'typ' has been added to the list-comp ast which is used to determine the type of comprehension. This field is determined in the parsing phase itself and will later be used to do different form of type-check and lowering based on its value. This will depend on the implementation of these data types by other teams and the functions will need to be modified accordingly.
 
-Regarding the first goal, we have tried storing the list comprehensions as lists, which were previously only being printed. We have used some code from the list team's implementation. Although this is not working correctly currently, we feel that we have implemented correctly. There are some other issues (either with front-end or lists or even possibly bignums) due to which the outputs are not coherent.
+We faced a couple of roadblocks (merge conflicts with the list team changes and bignum changes) in order to complete the first goal. One major issue that we faced is that, whenever we were storing numbers as variables, the numbers were stored as bignums. The variable (or id) instead of storing the number was actually storing the address of the bignum.
+As of now, comprehensions only work with range(), and unfortunately we did not have sufficient time to expand it to lists, strings or sets (for example: [a for a in [1,2,3]]).
 
 Some additional functionalities from the lists team would have been very helpful (example - len() and append() or concat()). There is already ongoing discussions with other groups regarding implementation details on slack/piazza/mail. This PR will be continuously updated over the next 2 days to fix things and get it working properly.
 
