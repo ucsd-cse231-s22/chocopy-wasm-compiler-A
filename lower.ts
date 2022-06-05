@@ -399,7 +399,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
     case "list-obj":
       var flattenentries:[Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Value<Type>][]= e.entries.map(e =>flattenExprToVal(e, env))
       var listName = generateName("newList");
-      var listalloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: e.length } };
+      var listalloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: e.length+1 } };
       var listassign:  IR.Stmt<Type>[] = [];
       var entryinits: Array<IR.VarInit<Type>> = [];
       var entrystmts: Array<IR.Stmt<Type>> = [];
