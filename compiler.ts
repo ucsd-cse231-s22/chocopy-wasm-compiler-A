@@ -390,7 +390,8 @@ function StoreConcatList(lhsStmts: string[], rhsStmts: string[]) : string[] {
     `(call $copy)`,
     ...rhsStmts,
     ...GetListLen(rhsStmts),
-    `(call $copy)`
+    `(call $copy)`,
+    `(drop)`
   ];
 }
 

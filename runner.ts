@@ -179,8 +179,8 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     (func $copy (import "libmemory" "copy") (param i32) (param i32) (param i32) (result i32))
-    ${compiled.vtable}
     ${globalImports}
+    ${compiled.vtable}
     ${globalDecls}
     ${config.functions}
     ${compiled.functions}
