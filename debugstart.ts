@@ -7,14 +7,12 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 async function debug() {
   var source =
 `
-def f(x : int) -> int:
-  def h(z : int) -> int:
-    nonlocal x
-    x = z+x
-    return x
-  return h(x) + h(7)
-
-print(f(6))
+a:[int] =None
+b: [int] = None
+c:[int] = None
+a = [1,2,3,4,5]
+b = [11,22,33,44,55]
+c = a+b
 `
 
 //   `

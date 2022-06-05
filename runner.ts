@@ -169,7 +169,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $print_str (import "imports" "print_str") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
     (func $len_str (import "imports" "len_str") (param i32) (result i32))
-    (func $len_list (import "imports" "len_list") (param i32) (param i32) (result i32))
+    (func $len_list (import "imports" "len_list") (param i32) (result i32))
     (func $eq_str (import "imports" "eq_str") (param i32) (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
@@ -179,8 +179,8 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     (func $copy (import "libmemory" "copy") (param i32) (param i32) (param i32) (result i32))
-    ${compiled.vtable}
     ${globalImports}
+    ${compiled.vtable}
     ${globalDecls}
     ${config.functions}
     ${compiled.functions}

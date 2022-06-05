@@ -167,9 +167,14 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       const rhsStmts = codeGenValue(expr.right, env);
       if (expr.left.a === STR) {
         return codeGenBinOpStr(expr.op, lhsStmts, rhsStmts);
-      } else {
+      }
+      else if(expr.left.a.tag === "list"){
+        return codeGenConcatList(lhsStmts, rhsStmts);
+      } 
+      else {
         return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
       }
+      
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
@@ -195,7 +200,7 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       } else if (expr.name === "len" && argTyp === STR) {
         callName = "len_str";
       } else if (expr.name === "len" && argTyp.tag === "list") {
-        argStmts = argStmts.concat([`(i32.const ${argTyp.listsize})`])  // this is the length of list
+        // argStmts = argStmts.concat([`(i32.const ${argTyp.listsize})`])  // this is the length of list
         callName = "len_list"
       }
       return argStmts.concat([`(call $${callName})`]);
@@ -338,6 +343,53 @@ function StoreConcatStr(lhsStmts: string[], rhsStmts: string[]) : string[] {
     `(call $copy)`,
     ...rhsStmts,
     ...GetStrLen(rhsStmts),
+    `(call $copy)`,
+    `(drop)`
+  ];
+}
+
+function codeGenConcatList(lhsStmts: string[], rhsStmts: string[]): string[]{
+  return [
+    ...AllocConcatList(lhsStmts, rhsStmts),
+    `(local.set $$last)`,
+    ...StoreConcatList(lhsStmts, rhsStmts),
+    `(local.get $$last)`
+  ];
+}
+
+function AllocConcatList(lhsStmts: string[], rhsStmts: string[]) : string[] {
+  return [
+    ...GetListLen(lhsStmts),
+    ...GetListLen(rhsStmts),
+    `(i32.add)`,
+    `(i32.const 1)`,
+    `(i32.add)`,
+    `(call $alloc)`
+  ];
+}
+
+function GetListLen(Stmts: string[]): string[]{
+  return [
+    ...Stmts,
+    `(i32.const 0)`,
+    `(call $load)`
+  ];
+}
+
+function StoreConcatList(lhsStmts: string[], rhsStmts: string[]) : string[] {
+  return [
+    `(local.get $$last)`,
+    `(i32.const 0)`,
+    ...GetListLen(lhsStmts),
+    ...GetListLen(rhsStmts),
+    `(i32.add)`,
+    `(call $store)`,
+    `(i32.add (local.get $$last) (i32.const 4))`,
+    ...lhsStmts,
+    ...GetListLen(lhsStmts),
+    `(call $copy)`,
+    ...rhsStmts,
+    ...GetListLen(rhsStmts),
     `(call $copy)`,
     `(drop)`
   ];

@@ -57,8 +57,8 @@ function assert_out_of_bound(length: any, index: any): any{
   return index;
 }
 
-function len_list(arg:any, listlen: any):any{
-  return listlen;
+function len_list(memory: WebAssembly.Memory, arg:any):any{
+  return new Uint32Array(memory.buffer, arg, 1)[0];
 }
 
 function webStart() {
@@ -83,7 +83,7 @@ function webStart() {
         print_none: (arg: number) => print(memory, NONE, arg),
         len: (arg: any) => len(memory, STR, arg),
         len_str: (arg: number) => len(memory, STR, arg),
-        len_list: (arg: number, listlen: number) => len_list(arg, listlen),
+        len_list: (arg: number) => len_list(memory, arg),
         eq_str: (left: number, right: number) => eq_str(memory, left, right),
         abs: Math.abs,
         min: Math.min,
