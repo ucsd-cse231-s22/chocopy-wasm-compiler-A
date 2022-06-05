@@ -1,5 +1,16 @@
 # ChocoPy Compiler
 
+This is a [ChocoPy](https://chocopy.org/) to [WASM](https://webassembly.org/) compiler written by typescript. Basically all the grammers and function are supported in ChocoPy including
+
+- Basic Types: number (i32 only), boolean, none, string, lists
+- Basic Statements: while / for loops, if / elif branches
+- Function Definitions: with nested function & nonlocal supported
+- Class Definition: with inheritance supported
+
+The compiler is also with a REPL environment allows interaction as follow
+
+![](./sample.png)
+
 How to run:
 
 Install node modules and make package (run only once)
@@ -19,13 +30,10 @@ python -m SimpleHTTPServer
 
 Run your ChocoPy codes at ```localhost:8000```
 
-TODO List:
+To test the codes simply run
 
-- Inheritance
-- Type : string & list
-- for loops
-- nested functions & nonlocal
-- optimization
-- MORE: type inference
+```bash
+npm test
+```
 
 Plz read ```developer.md``` before uploading codes
