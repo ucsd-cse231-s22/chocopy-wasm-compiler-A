@@ -46,4 +46,4 @@ export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
 export const STR : Type = {tag: "str"};
 export function CLASS(name : string) : Type {return {tag: "class", name}};
-export function LIST(elementtype: Type): Type {return {tag: "list", listsize:0, elementtype: elementtype}}
+export function LIST(elementtype: Type): Type {return {tag: "list",elementtype: elementtype}}

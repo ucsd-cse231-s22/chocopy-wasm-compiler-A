@@ -30,8 +30,8 @@ function eq_str(left: number, right: number): number {
   return (leftStr === rightStr) ? 1 : 0;
 }
 
-function len_list(arg:any, listlen: any):any{
-  return listlen;
+function len_list(arg:any):any{
+  return new Uint32Array(importObject.memory_values.buffer, arg, 1)[0];
 }
 
 function len(typ: Type, arg: any): Number {
@@ -80,7 +80,7 @@ export const importObject : any = {
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_str: (arg: number) => print(Type.Str, arg),
     print_none: (arg: number) => print(Type.None, arg),
-    len_list: (arg: number, listlen:number) => len_list(arg, listlen),
+    len_list: (arg: number) => len_list(arg),
     len_str: (arg: number) => len(Type.Str, arg),
     eq_str: (left: number, right: number) => eq_str(left, right),
     abs: Math.abs,

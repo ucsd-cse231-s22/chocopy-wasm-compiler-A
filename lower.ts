@@ -256,61 +256,59 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       var [linits, lstmts, lval] = flattenExprToVal(e.left, env);
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, env);
       
-      if (lval.a.tag === "list" && rval.a.tag === "list"){
-        var listconstruct:  IR.Stmt<Type>[] = [];
-        var newlength = lval.a.listsize+rval.a.listsize
-        var listalloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: newlength } };
-        var listName = generateName("newList");
-        var newlistinits:IR.VarInit<AST.Type>[] = [];
-        listconstruct.push(  // first element of a list should be length
-          {
-            tag: "store",
-            start: { tag: "id", name: listName },
-            offset: { tag: "wasmint", value: 0 },
-            value: {tag: "wasmint", value: newlength}
-          }
-        )
-        for(var i=0; i<lval.a.listsize; i++){
-          var entryname = generateName("e");
-          newlistinits.push({name: entryname, type: (e.a as any).elementtype, value: { tag: "wasmint", value: 0 } })
-          listconstruct.push(
-            {tag: "assign", 
-            name: entryname, 
-            value: {tag: "load", start: lval, offset: { tag: "wasmint", value: i+1 }}}
-          )
-        }
-        for(var i=0; i<rval.a.listsize; i++){
-          var entryname = generateName("e");
-          newlistinits.push({name: entryname, type: (e.a as any).elementtype, value: { tag: "wasmint", value: 0 } })
-          listconstruct.push(
-            {tag: "assign", 
-            name: entryname, 
-            value: {tag: "load", start: rval, offset: { tag: "wasmint", value: i+1 }}}
-          )
-        }
-        for(var i=0; i<newlength; i++){
-          listconstruct.push(
-            {
-              tag: "store",
-              start: { tag: "id", name: listName },
-              offset: { tag: "wasmint", value: i+1 },
-              value: { tag: "id", name: (listconstruct[i+1] as any).name }
-            }
-          )
-        }
-        return[
-          [...linits, ...rinits, ...newlistinits, {name: listName, type: e.a, value: { tag: "none" } }],
-          [...lstmts, ...rstmts, { tag: "assign", name: listName, value: listalloc}, ...listconstruct],
-          { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: listName } }
-        ]
-      }
-      else{
-        return [[...linits, ...rinits], [...lstmts, ...rstmts], {
-          ...e,
-          left: lval,
-          right: rval
-        }];
-      }
+      // if (lval.a.tag === "list" && rval.a.tag === "list"){
+      //   var listconstruct:  IR.Stmt<Type>[] = [];
+      //   var newlength = lval.a.listsize+rval.a.listsize
+      //   var listalloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: newlength } };
+      //   var listName = generateName("newList");
+      //   var newlistinits:IR.VarInit<AST.Type>[] = [];
+      //   listconstruct.push(  // first element of a list should be length
+      //     {
+      //       tag: "store",
+      //       start: { tag: "id", name: listName },
+      //       offset: { tag: "wasmint", value: 0 },
+      //       value: {tag: "wasmint", value: newlength}
+      //     }
+      //   )
+      //   for(var i=0; i<lval.a.listsize; i++){
+      //     var entryname = generateName("e");
+      //     newlistinits.push({name: entryname, type: (e.a as any).elementtype, value: { tag: "wasmint", value: 0 } })
+      //     listconstruct.push(
+      //       {tag: "assign", 
+      //       name: entryname, 
+      //       value: {tag: "load", start: lval, offset: { tag: "wasmint", value: i+1 }}}
+      //     )
+      //   }
+      //   for(var i=0; i<rval.a.listsize; i++){
+      //     var entryname = generateName("e");
+      //     newlistinits.push({name: entryname, type: (e.a as any).elementtype, value: { tag: "wasmint", value: 0 } })
+      //     listconstruct.push(
+      //       {tag: "assign", 
+      //       name: entryname, 
+      //       value: {tag: "load", start: rval, offset: { tag: "wasmint", value: i+1 }}}
+      //     )
+      //   }
+      //   for(var i=0; i<newlength; i++){
+      //     listconstruct.push(
+      //       {
+      //         tag: "store",
+      //         start: { tag: "id", name: listName },
+      //         offset: { tag: "wasmint", value: i+1 },
+      //         value: { tag: "id", name: (listconstruct[i+1] as any).name }
+      //       }
+      //     )
+      //   }
+      //   return[
+      //     [...linits, ...rinits, ...newlistinits, {name: listName, type: e.a, value: { tag: "none" } }],
+      //     [...lstmts, ...rstmts, { tag: "assign", name: listName, value: listalloc}, ...listconstruct],
+      //     { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: listName } }
+      //   ]
+      // }
+      return [[...linits, ...rinits], [...lstmts, ...rstmts], {
+        ...e,
+        left: lval,
+        right: rval
+      }];
     case "builtin1":
       var [inits, stmts, val] = flattenExprToVal(e.arg, env);
       return [inits, stmts, {tag: "builtin1", a: e.a, name: e.name, arg: val}];

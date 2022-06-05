@@ -355,7 +355,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Plus:
           if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
           else if(equalType(tLeft.a, tRight.a) && tLeft.a.tag === "list" && tRight.a.tag === "list" ){
-            var a = {tag:"list", listsize: tLeft.a.listsize+tRight.a.listsize, elementtype: tLeft.a.elementtype};
+            var a = {tag:"list", elementtype: tLeft.a.elementtype};
             return {a: a as Type, ...tBin}
           }
           else if (equalType(tLeft.a, STR) && equalType(tRight.a, STR)) { return { a: STR, ...tBin } }
@@ -543,7 +543,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         }
       })
       if(flag == true){ // if all entries have same type
-        return {...expr, entries: typedentries, a: {tag: "list", listsize: expr.length, elementtype: a0}};
+        return {...expr, entries: typedentries, a: {tag: "list", elementtype: a0}};
       }
       else{  //
         throw new TypeCheckError("not support different types in one list");;
